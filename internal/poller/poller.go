@@ -63,9 +63,18 @@ type OurPR struct {
 	ClosedAt    *time.Time
 }
 
+// IssueTotals are exact open-issue counts for a repo whose issue list was too long to fetch
+// in full; without them its counts would describe only the fetched pages.
+type IssueTotals struct {
+	Open, GFI, Unassigned int
+}
+
 // Status is the result of the most recent completed cycle.
 type Status struct {
-	Targets       []Target
+	Targets []Target
+	// Totals holds exact counts for repos whose open issues exceeded the page cap, keyed by
+	// lowercase owner/name.
+	Totals        map[string]IssueTotals
 	Errors        map[string]string
 	LastPoll      time.Time
 	CycleDuration time.Duration
@@ -85,6 +94,10 @@ func (p *Poller) Status() Status {
 	}
 	st.Targets = append([]Target(nil), p.status.Targets...)
 	st.OurPRs = append([]OurPR(nil), p.status.OurPRs...)
+	st.Totals = make(map[string]IssueTotals, len(p.status.Totals))
+	for k, v := range p.status.Totals {
+		st.Totals[k] = v
+	}
 	return st
 }
 
@@ -96,12 +109,17 @@ func (p *Poller) PollAll(ctx context.Context) error {
 	}
 	cycleStart, reqStart := time.Now(), p.GH.Requests()
 	errs := map[string]string{}
+	totals := map[string]IssueTotals{}
 	for _, t := range targets {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
 		start := time.Now()
-		if err := p.pollRepo(ctx, t); err != nil {
+		tot, err := p.pollRepo(ctx, t)
+		if tot != nil {
+			totals[strings.ToLower(t.Owner+"/"+t.Name)] = *tot
+		}
+		if err != nil {
 			errs[strings.ToLower(t.Owner+"/"+t.Name)] = err.Error()
 			log.Printf("poll %s/%s: FAILED after %s: %v", t.Owner, t.Name, time.Since(start).Round(time.Millisecond), err)
 			if errors.Is(err, github.ErrRateLimited) {
@@ -119,6 +137,7 @@ func (p *Poller) PollAll(ctx context.Context) error {
 	p.status = Status{
 		Targets:       targets,
 		Errors:        errs,
+		Totals:        totals,
 		LastPoll:      p.now(),
 		CycleDuration: time.Since(cycleStart),
 		CycleRequests: p.GH.Requests() - reqStart,
@@ -174,20 +193,20 @@ func (p *Poller) now() time.Time {
 	return time.Now().UTC()
 }
 
-func (p *Poller) pollRepo(ctx context.Context, t Target) error {
+func (p *Poller) pollRepo(ctx context.Context, t Target) (*IssueTotals, error) {
 	now := p.now()
 	repoID, err := p.Store.UpsertRepo(t.Owner, t.Name, t.Upstream)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	lastCommit, err := p.GH.LastCommit(ctx, t.Owner, t.Name)
 	if err != nil {
-		return fmt.Errorf("last commit: %w", err)
+		return nil, fmt.Errorf("last commit: %w", err)
 	}
 
 	watch, err := p.Store.WatchList(repoID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	watched := map[int]bool{}
 	for _, w := range watch {
@@ -200,7 +219,7 @@ func (p *Poller) pollRepo(ctx context.Context, t Target) error {
 	}
 	issues, complete, err := p.GH.OpenIssues(ctx, t.Owner, t.Name, pages)
 	if err != nil {
-		return fmt.Errorf("open issues: %w", err)
+		return nil, fmt.Errorf("open issues: %w", err)
 	}
 	signals := map[int]string{}
 	openNumbers := make([]int, 0, len(issues))
@@ -208,32 +227,36 @@ func (p *Poller) pollRepo(ctx context.Context, t Target) error {
 		openNumbers = append(openNumbers, gi.Number)
 		row, err := p.issueRow(ctx, t, repoID, gi, watched[gi.Number], now)
 		if err != nil {
-			return fmt.Errorf("issue #%d: %w", gi.Number, err)
+			return nil, fmt.Errorf("issue #%d: %w", gi.Number, err)
 		}
 		if err := p.Store.UpsertIssue(row); err != nil {
-			return err
+			return nil, err
 		}
 		signals[gi.Number] = row.ClaimSignal
 		delete(watched, gi.Number)
 	}
+	var totals *IssueTotals
+	var totalsErr error
 	if complete {
 		if err := p.Store.MarkMissingIssuesClosed(repoID, openNumbers); err != nil {
-			return err
+			return nil, err
 		}
+	} else {
+		totals, totalsErr = p.exactTotals(ctx, t)
 	}
 
 	// Watched issues not in the open list are closed (or past the page cap); look them up directly.
 	for number := range watched {
 		gi, err := p.GH.Issue(ctx, t.Owner, t.Name, number)
 		if err != nil {
-			return fmt.Errorf("watched issue #%d: %w", number, err)
+			return nil, fmt.Errorf("watched issue #%d: %w", number, err)
 		}
 		row, err := p.issueRow(ctx, t, repoID, *gi, true, now)
 		if err != nil {
-			return fmt.Errorf("watched issue #%d: %w", number, err)
+			return nil, fmt.Errorf("watched issue #%d: %w", number, err)
 		}
 		if err := p.Store.UpsertIssue(row); err != nil {
-			return err
+			return nil, err
 		}
 		signals[number] = row.ClaimSignal
 		if row.State == "closed" && row.ClaimSignal == "" {
@@ -246,16 +269,38 @@ func (p *Poller) pollRepo(ctx context.Context, t Target) error {
 		if next != w.Status {
 			log.Printf("watch %s/%s#%d: %s -> %s", t.Owner, t.Name, w.IssueNumber, w.Status, next)
 			if err := p.Store.SetWatchStatus(w.ID, next, now); err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
 
 	if err := p.pollPRs(ctx, t, repoID); err != nil {
-		return fmt.Errorf("pull requests: %w", err)
+		return nil, fmt.Errorf("pull requests: %w", err)
 	}
 
-	return p.Store.SetRepoPoll(repoID, now, lastCommit, health(lastCommit, now))
+	if err := p.Store.SetRepoPoll(repoID, now, lastCommit, health(lastCommit, now)); err != nil {
+		return totals, err
+	}
+	if totalsErr != nil {
+		return nil, fmt.Errorf("open issues exceed %d pages and exact totals are unavailable: %w", pages, totalsErr)
+	}
+	return totals, nil
+}
+
+func (p *Poller) exactTotals(ctx context.Context, t Target) (*IssueTotals, error) {
+	base := "repo:" + t.Owner + "/" + t.Name + " is:issue is:open"
+	var tot IssueTotals
+	var err error
+	if tot.Open, err = p.GH.SearchCount(ctx, base); err != nil {
+		return nil, err
+	}
+	if tot.GFI, err = p.GH.SearchCount(ctx, base+` label:"good first issue","good-first-issue","good_first_issue"`); err != nil {
+		return nil, err
+	}
+	if tot.Unassigned, err = p.GH.SearchCount(ctx, base+" no:assignee"); err != nil {
+		return nil, err
+	}
+	return &tot, nil
 }
 
 func (p *Poller) issueRow(ctx context.Context, t Target, repoID int64, gi github.Issue, isWatched bool, now time.Time) (store.Issue, error) {
@@ -397,7 +442,7 @@ func findClaim(comments []github.Comment, since time.Time) *github.Comment {
 }
 
 func containsClaim(body string) bool {
-	b := strings.ToLower(strings.NewReplacer("’", "'", "‘", "'").Replace(body))
+	b := strings.ToLower(strings.NewReplacer("'", "'", "’", "'").Replace(body))
 	for _, phrase := range claimPhrases {
 		if strings.Contains(b, phrase) {
 			return true

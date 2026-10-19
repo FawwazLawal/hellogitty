@@ -175,3 +175,57 @@ func TestSearchRateLimitDoesNotOverwriteCoreQuota(t *testing.T) {
 		t.Errorf("requests counted %d, want 2", c.Requests())
 	}
 }
+
+func TestSecondaryRateLimitWaitsAndRetries(t *testing.T) {
+	var calls int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if atomic.AddInt32(&calls, 1) == 1 {
+			w.WriteHeader(http.StatusForbidden)
+			fmt.Fprint(w, `{"message":"You have exceeded a secondary rate limit. Please wait a few minutes before you try again."}`)
+			return
+		}
+		fmt.Fprint(w, `{"total_count":9771}`)
+	}))
+	defer srv.Close()
+	c, slept := testClient(srv)
+	n, err := c.SearchCount(context.Background(), "repo:golang/go is:issue is:open")
+	if err != nil || n != 9771 {
+		t.Fatalf("got %d, %v", n, err)
+	}
+	if calls != 2 {
+		t.Errorf("calls %d, want a retry", calls)
+	}
+	waitedMinute := false
+	for _, d := range *slept {
+		if d >= time.Minute {
+			waitedMinute = true
+		}
+	}
+	if !waitedMinute {
+		t.Errorf("should wait at least a minute after a secondary limit, slept %v", *slept)
+	}
+}
+
+func TestSearchCallsAreSpaced(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"total_count":1}`)
+	}))
+	defer srv.Close()
+	c, slept := testClient(srv)
+	now := time.Date(2026, 10, 19, 0, 0, 0, 0, time.UTC)
+	c.now = func() time.Time { return now }
+	for i := 0; i < 3; i++ {
+		if _, err := c.SearchCount(context.Background(), "q"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var spaced int
+	for _, d := range *slept {
+		if d >= 2*time.Second {
+			spaced++
+		}
+	}
+	if spaced < 2 {
+		t.Errorf("3 back-to-back searches should wait twice, slept %v", *slept)
+	}
+}

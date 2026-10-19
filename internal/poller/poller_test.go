@@ -200,3 +200,58 @@ func TestPollAllContinuesPastFailingRepo(t *testing.T) {
 		t.Error("ok/y should have been polled after gone/x failed")
 	}
 }
+
+func TestCappedIssueListUsesExactTotals(t *testing.T) {
+	var srv *httptest.Server
+	searchFails := false
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/repos/big/repo/issues":
+			w.Header().Set("Link", fmt.Sprintf(`<%s/repos/big/repo/issues?page=2>; rel="next"`, srv.URL))
+			fmt.Fprint(w, `[{"number":1,"title":"a","state":"open","labels":[],"assignees":[]}]`)
+		case "/search/issues":
+			if searchFails {
+				w.WriteHeader(http.StatusUnprocessableEntity)
+				return
+			}
+			q := r.URL.Query().Get("q")
+			switch {
+			case strings.Contains(q, "label:"):
+				fmt.Fprint(w, `{"total_count":40}`)
+			case strings.Contains(q, "no:assignee"):
+				fmt.Fprint(w, `{"total_count":8100}`)
+			case strings.Contains(q, "is:issue is:open"):
+				fmt.Fprint(w, `{"total_count":9400}`)
+			default:
+				fmt.Fprint(w, `{"items":[]}`)
+			}
+		case "/user":
+			fmt.Fprint(w, `{"login":"me"}`)
+		default:
+			fmt.Fprint(w, `[]`)
+		}
+	}))
+	defer srv.Close()
+	run := func() Status {
+		st, _ := store.Open(filepath.Join(t.TempDir(), "m.db"))
+		defer st.Close()
+		gh := github.New("t")
+		gh.BaseURL = srv.URL
+		p := &Poller{GH: gh, Store: st, MaxIssuePages: 1, Targets: func() ([]Target, error) {
+			return []Target{{Owner: "big", Name: "repo"}}, nil
+		}}
+		if err := p.PollAll(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+		return p.Status()
+	}
+	ps := run()
+	if got, ok := ps.Totals["big/repo"]; !ok || got != (IssueTotals{Open: 9400, GFI: 40, Unassigned: 8100}) || len(ps.Errors) != 0 {
+		t.Errorf("exact totals %+v ok=%v errors %v", got, ok, ps.Errors)
+	}
+	searchFails = true
+	ps = run()
+	if _, ok := ps.Totals["big/repo"]; ok || !strings.Contains(ps.Errors["big/repo"], "exact totals are unavailable") {
+		t.Errorf("a failed totals search must surface as a poll failure: totals %v errors %v", ps.Totals, ps.Errors)
+	}
+}

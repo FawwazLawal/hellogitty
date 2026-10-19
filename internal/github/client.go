@@ -23,6 +23,9 @@ const (
 	// A wait longer than this would stall the whole poll, so the request fails instead and the
 	// repo is retried on the next cycle.
 	maxRateWait = 15 * time.Minute
+	// Search allows 30 requests a minute; spacing them keeps a poll under that and clear of
+	// GitHub's burst ("secondary") limits.
+	searchSpacing = 2100 * time.Millisecond
 )
 
 var ErrRateLimited = errors.New("github: rate limited beyond max wait")
@@ -36,8 +39,9 @@ type Client struct {
 
 	requests atomic.Int64
 
-	mu        sync.Mutex
-	remaining int
+	mu         sync.Mutex
+	lastSearch time.Time
+	remaining  int
 	limit     int
 	reset     time.Time
 }
@@ -243,6 +247,15 @@ func (p SearchPR) Repo() (owner, name string) {
 	return parts[len(parts)-2], parts[len(parts)-1]
 }
 
+// SearchCount returns how many issues or pull requests match a GitHub search query.
+func (c *Client) SearchCount(ctx context.Context, query string) (int, error) {
+	var res struct {
+		TotalCount int `json:"total_count"`
+	}
+	_, err := c.get(ctx, c.url("/search/issues", url.Values{"q": {query}, "per_page": {"1"}}), &res)
+	return res.TotalCount, err
+}
+
 func (c *Client) AuthenticatedUser(ctx context.Context) (string, error) {
 	var u User
 	if _, err := c.get(ctx, c.url("/user", nil), &u); err != nil {
@@ -292,6 +305,11 @@ func (c *Client) get(ctx context.Context, rawURL string, out any) (next string, 
 		if err := c.waitIfExhausted(ctx); err != nil {
 			return "", err
 		}
+		if strings.Contains(rawURL, "/search/") {
+			if err := c.spaceSearch(ctx); err != nil {
+				return "", err
+			}
+		}
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 		if err != nil {
 			return "", err
@@ -327,7 +345,7 @@ func (c *Client) get(ctx context.Context, rawURL string, out any) (next string, 
 			}
 			return nextLink(resp.Header.Get("Link")), nil
 
-		case isRateLimited(resp):
+		case isRateLimited(resp) || isSecondaryLimit(resp.StatusCode, body):
 			wait := c.rateWait(resp.Header)
 			if wait > maxRateWait || attempt >= maxAttempts {
 				return "", fmt.Errorf("%w (wait %s, %s)", ErrRateLimited, wait.Round(time.Second), rawURL)
@@ -360,6 +378,26 @@ func isRateLimited(resp *http.Response) bool {
 		return false
 	}
 	return resp.Header.Get("Retry-After") != "" || resp.Header.Get("X-RateLimit-Remaining") == "0"
+}
+
+// isSecondaryLimit spots GitHub's burst limit, which can arrive as a plain 403 with no rate
+// headers; GitHub asks clients to wait at least a minute and retry.
+func isSecondaryLimit(code int, body []byte) bool {
+	return code == http.StatusForbidden && strings.Contains(strings.ToLower(string(body)), "secondary rate limit")
+}
+
+func (c *Client) spaceSearch(ctx context.Context) error {
+	c.mu.Lock()
+	wait := c.lastSearch.Add(searchSpacing).Sub(c.now())
+	if wait < 0 {
+		wait = 0
+	}
+	c.lastSearch = c.now().Add(wait)
+	c.mu.Unlock()
+	if wait > 0 {
+		return c.sleep(ctx, wait)
+	}
+	return nil
 }
 
 func (c *Client) recordRate(h http.Header) {

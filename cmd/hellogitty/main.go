@@ -236,15 +236,25 @@ func tracked(st *store.Store, pl *poller.Poller) ([]store.RepoReport, error) {
 	if err != nil {
 		return nil, err
 	}
-	targets := pl.Status().Targets
-	if targets == nil {
+	ps := pl.Status()
+	applyTotals(reports, ps.Totals)
+	if ps.Targets == nil {
 		return reports, nil
 	}
-	keys := make([]snapshot.Key, 0, len(targets))
-	for _, t := range targets {
+	keys := make([]snapshot.Key, 0, len(ps.Targets))
+	for _, t := range ps.Targets {
 		keys = append(keys, snapshot.Key{Owner: t.Owner, Name: t.Name})
 	}
 	return snapshot.Filter(reports, keys), nil
+}
+
+// applyTotals replaces counts computed from a capped issue fetch with the exact totals.
+func applyTotals(reports []store.RepoReport, totals map[string]poller.IssueTotals) {
+	for i := range reports {
+		if t, ok := totals[strings.ToLower(reports[i].Owner+"/"+reports[i].Name)]; ok {
+			reports[i].OpenIssuesTotal, reports[i].OpenIssuesGFI, reports[i].OpenIssuesUnassigned = t.Open, t.GFI, t.Unassigned
+		}
+	}
 }
 
 type source struct {
