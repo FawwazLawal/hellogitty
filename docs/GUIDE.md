@@ -3,23 +3,24 @@
 A guide to every part of the dashboard and what to do with it. For installing and configuring,
 see the [README](../README.md).
 
-HelloGitty is built to be left open all day and glanced at. Most of the screen stays dark and
-neutral on purpose. Colour appears only when something is true that you may need to act on, so
+HelloGitty is built to be left open all day and glanced at. It answers two questions without you
+opening a single GitHub tab: **what is waiting on me?** and **how are the projects I care about
+doing?** Most of the page stays calm on purpose. Colour appears only when something needs you, so
 the first rule of reading it is simple: **if nothing is lit, nothing needs you.**
 
 ![HelloGitty dashboard](screenshot.png)
 
 ---
 
-## The three-second check
+## The five-second check
 
-1. Look at the row of cells under the header (the caution and warning panel).
-2. All dark? You're done.
-3. Something lit? Read its name, then the repository names written inside it, then find that
-   repository in the table below.
+1. Look at the row of cells under the header.
+2. Is **Your move** lit? Read the **Your move** list at the top of the page.
+3. Is anything else lit? Read its name, then the names written inside it.
+4. Nothing lit? You're done.
 
-Red means stop and look now. Amber means worth knowing today. Green means healthy. Nothing else
-on the page uses those colours.
+Red means stop and look now. Amber means it's your turn, or worth knowing today. Green means good
+news. Nothing else on the page uses those colours.
 
 ---
 
@@ -27,192 +28,237 @@ on the page uses those colours.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ HELLOGITTY  version   UTC clock  POLL AGE  CYCLE  API USED   REPOS     [cat] │  status line
+│ HelloGitty  version  Last check · GitHub API · repos   [Auto|Light|Dark] [cat]│  header
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ [ WATCH CLAIMED ] [POLL FAIL] [DATA STALE] [WATCH CLOSED] [DORMANT] ...       │  caution and warning panel
+│ [Watched issue claimed] [Your move] [Check failed] [Data is stale] ...        │  alerts
 ├──────────────────────────────────────────────┬───────────────────────────────┤
-│ REPOS                                         │ WATCH CHANNEL                 │
-│  ● owner/name   counts …   last commit  ›     │ YOUR PRS                      │
-│  ● owner/name   counts …   last commit  ›     │ POLL TELEMETRY                │
+│ Your work                                     │ Watched issues                │
+│   Your move · Waiting on others · Finished    │ Merge rate                    │
+│ Your repositories                             │ Checks                        │
+│   Needs you · Waiting on contributors         │                               │
+│ Tracked repositories                          │                               │
 └──────────────────────────────────────────────┴───────────────────────────────┘
 ```
 
-On a phone the same parts stack in one column: header, panel, repositories, then the right-hand
-panels.
+On a phone the same parts stack in one column.
 
 ---
 
-## Status line (top)
+## Header
 
-| Item | Meaning | When to care |
-|---|---|---|
-| **HELLOGITTY** and version | The build you are running, e.g. `V0.1.0 · BLACK BOMBAY (baby)`. `DEV BUILD` means an untagged build. | Quote it when reporting a bug. |
-| **UTC** | The current time in UTC, with seconds. | Every other time on the page is UTC too. |
-| **POLL AGE** | How long ago HelloGitty last finished checking GitHub (hours:minutes:seconds). | Longer than the poll interval means a check is late; over two hours lights DATA STALE. |
-| **CYCLE** | How long the last check of every repository took. | A sudden jump usually means GitHub was rate-limiting. |
-| **API USED** | GitHub API calls used against your hourly budget, with a small gauge. | The gauge turns amber at 90%. |
-| **REPOS** | How many repositories are tracked. | |
-| **IN PIPELINE** | Only with a pipeline command configured: how many repositories it reports a stage for. | |
+| Item | Meaning |
+|---|---|
+| **HelloGitty** and version | The build you are running, e.g. `v0.1.0 · Black Bombay (baby)`. `dev build` means an untagged build. Quote it when reporting a bug. |
+| **Last check** | How long ago HelloGitty last finished checking your tracked repositories, in words. Hover for the exact UTC time. |
+| **GitHub API** | Calls used against your hourly GitHub budget, with a small gauge that turns amber at 90%. |
+| **Repos** | How many repositories are tracked (and, with a pipeline command, how many it reports a stage for). |
+| **Auto / Light / Dark** | The colour theme. Auto follows your system setting; Light or Dark overrides it and is remembered in this browser. |
 
 The kitten at the right end is the mascot (see [The mascot](#the-mascot)). It carries no data.
 
 ---
 
-## Caution and warning panel
+## Alerts
 
 One cell per condition. Each cell has three looks:
 
 - **Dark with a label:** the condition is not true. This is the normal state.
-- **Dashed border:** the cell has nothing to watch yet (for example NONE WATCHED). This is not an
-  all-clear; it means the channel is empty.
-- **Solid colour:** the condition is true. The count is on the right, and the repositories
-  involved are named underneath. If more are involved than fit, it shows `+N`; hover the cell for
-  the full list.
+- **Dashed border:** there is nothing to check yet (for example "nothing watched"). This is not
+  an all-clear.
+- **Solid colour:** the condition is true. The count is on the right, and what's involved is named
+  underneath. If more are involved than fit, it shows `+N`; hover the cell for the full list.
 
 | Cell | Colour when lit | Lights when | What to do |
 |---|---|---|---|
-| **WATCH CLAIMED** | red | An issue you are watching was assigned to someone, or someone commented in the last 30 days that they are taking it. | Don't start work on it. Check the issue, then pick something else or coordinate with that person. |
-| **POLL FAIL** | red | A repository, or the search for your own pull requests, failed on the last check. | Open the repository's row to see the error. See [Troubleshooting](#troubleshooting). |
-| **DATA STALE** | red | The last successful check finished more than two hours ago. | HelloGitty has probably stopped. Restart it. |
-| **WATCH CLOSED** | amber | A watched issue was closed, either fixed by a merged pull request or commit, or closed without a fix. | Read how it was closed, then unwatch it (`hellogitty unwatch owner/name 123`). |
-| **REPO DORMANT** | amber | A repository has had no commit for more than 90 days. | Work sent there may never be reviewed. |
-| **REPO SLOW** | amber | No commit for more than 30 days. | Expect slower reviews. |
-| **API LOW** | amber | Less than 10% of the hourly GitHub budget is left; shows how many calls remain. | Wait for the reset (time shown under Poll telemetry). |
+| **Watched issue claimed** | red | An issue you are watching was assigned to someone, or someone commented in the last 30 days that they are taking it. | Don't start work on it. Pick something else or talk to that person. |
+| **Your move** | amber | Anything in **Your move** or **Needs you** (below). Names the items. | Work through the Your move list. |
+| **Check failed** | red | A tracked repository, the pull request search, or the Your work refresh failed. | Open the repository's row, or read the error in the panel. See [Troubleshooting](#troubleshooting). |
+| **Data is stale** | red | The last successful check of your repositories finished more than two hours ago. | HelloGitty has probably stopped. Restart it. |
+| **Watched issue closed** | amber | A watched issue was closed, fixed or not. | Read how it was closed, then unwatch it. |
+| **Repo dormant** | amber | A tracked repository has had no commit for more than 90 days. | Work sent there may never be reviewed. |
+| **Repo slowing** | amber | No commit for more than 30 days. | Expect slower reviews. |
+| **API running low** | amber | Less than 10% of the hourly GitHub budget is left. | Wait for the reset (see Checks). |
 
-With a pipeline command configured, two more cells appear (their names can be renamed by your
-command): one for repositories your command marks as needing attention, one for a stage your
-command reports as failed.
+With a pipeline command configured, two more cells appear, named by your command: one for
+repositories it marks as needing attention, one for a stage it reports as failed.
 
 ---
 
-## Repositories table
+## Your work
 
-One row per repository. Rows that your pipeline command reports are listed first, furthest stage
-first; everything else follows alphabetically.
+Every pull request and issue your GitHub account has out, **anywhere on GitHub**, not only in
+tracked repositories. It refreshes every 5 minutes. Items fall into three groups:
+
+- **Your move:** the next step is yours. Longest waiting first.
+- **Waiting on others:** you've done your part; a reviewer, maintainer or reporter hasn't
+  answered yet. Longest waiting first.
+- **Finished in the last 30 days:** merged or closed. Click the heading to open or fold it; the
+  page remembers.
+
+### Reading a row
+
+```
+●  Add retry to the uploader
+   ⎇ owner/repo #123 · You opened it
+   Changes requested by @alice   [Merge conflict]                    2 days ago
+   ┌──────────────────────────────────────────────────────┐
+   │ @alice Could you add a test for the timeout path?   │
+   └──────────────────────────────────────────────────────┘
+```
+
+- **Dot:** amber means it's your move; green means good news (approved, merged); a hollow ring
+  means it's neutral.
+- **Title:** opens the pull request or issue on GitHub.
+- **Second line:** a pull request or issue icon, the repository and number, and why it's on your
+  board (you opened it, it's assigned to you, or you joined the thread).
+- **Status:** one sentence saying what happened last and whose turn it is.
+- **Chips:** extra facts worth a glance: *Checks failing* or *Merge conflict* (amber), *Checks
+  passed* (green), *Checks running*.
+- **Quote:** when someone else spoke last, their words, so you know what's being asked before you
+  click. Formatting, code blocks and quoted replies are stripped.
+- **Time:** how long the item has been in its current state. Hover for the exact time.
+
+### What each status means
+
+**Your pull requests**
+
+| Status | Whose move | Meaning |
+|---|---|---|
+| Changes requested by @name | yours | A reviewer asked for changes and you haven't pushed since. |
+| @name commented / left a review | yours | Someone spoke after your last push or comment. |
+| Checks are failing | yours | CI failed on your latest commit. |
+| Merge conflict to resolve | yours | The branch no longer merges cleanly. |
+| Draft: mark it ready… | yours | It's still a draft. |
+| You pushed changes; waiting for @name to look again | theirs | You answered a change request with new commits. |
+| Approved by @name; waiting to be merged | theirs | Approved; a maintainer needs to merge it. |
+| Review requested from @name | theirs | A reviewer is assigned and hasn't reviewed yet. |
+| You replied; waiting for a response | theirs | You spoke last. |
+| Waiting for a first review | theirs | Nobody has looked yet. |
+| Merged by @name / Closed without merging | finished | The quote shows the last thing a maintainer said. |
+
+A push after someone's comment counts as your answer, so the item moves to Waiting on others.
+
+**Your issues** (opened, assigned, or a thread you joined)
+
+| Status | Whose move |
+|---|---|
+| @name replied / commented after you | yours |
+| Assigned to you | yours |
+| No replies yet | theirs |
+| You replied; waiting for a response | theirs |
+| Closed as completed / not planned / a duplicate | finished |
+
+---
+
+## Your repositories
+
+Open pull requests and issues **from other people** in repositories your account owns, plus any
+you list under `"maintain"` in `hellogitty.json` (a repository like `"org/name"` or a whole
+organisation like `"org"`). Pull requests where your review was requested appear here too, from any
+repository.
+
+- **Needs you:** a review was requested from you; a pull request was updated since your review;
+  a new pull request nobody has reviewed; an approved pull request ready to merge; a new issue
+  nobody has answered; someone commented after you.
+- **Waiting on contributors:** you spoke last, or the pull request is a draft.
+
+---
+
+## Tracked repositories
+
+The repositories you follow, from your config, with their health. Rows your pipeline command
+reports come first, furthest stage first; the rest follow alphabetically.
 
 | Column | Meaning |
 |---|---|
-| **Light** (first column) | Health from the last commit. Green dot: active, a commit within 30 days. Amber ring: slow, 31 to 90 days. Amber dot: dormant, over 90 days. Dashed grey ring: unknown, never checked successfully. Read the column as a pattern: one amber light in a column of green is the thing to notice. |
-| **Repo** | Owner (dim) and name. |
-| **Stage strip** | Only with a pipeline command. One small square per stage: grey for done, white for the current stage, amber for a failed stage, dotted squares for a repository your command doesn't report. |
-| **Status** | Only with a pipeline command. Your command's label for the repository (for example PASS), green or amber by the level it gives. |
-| **OPEN** | Open issues (pull requests not counted). |
-| **GFI** | Open issues labelled as good first issues (`good first issue`, `good-first-issue` or `good_first_issue`). |
-| **UNASGN** | Open issues with nobody assigned. |
-| **LAST COMMIT** | Days since the last commit, with a bar that fills over 120 days and turns amber after 30. |
-| **WATCH** | How many of this repository's issues you are watching. |
-| **DENIED** | Pull requests from outside contributors, among the latest 100 closed, that were closed without merging. Bots are not counted, and a pull request the maintainer says they merged by hand is not counted. |
+| **Light** | Green dot: active, a commit in the last 30 days. Amber ring: slowing, 31 to 90 days. Amber dot: dormant, over 90 days. Dashed ring: not checked successfully yet. |
+| **Repository** | Owner (dim) and name. |
+| **Stage strip** and **status** | Only with a pipeline command: one square per stage (grey done, white current, amber failed; dotted when the command doesn't report the repository) and the command's label. |
+| **Open** | Open issues, pull requests not counted. |
+| **Good first** | Open issues labelled good first issue (`good first issue`, `good-first-issue` or `good_first_issue`). |
+| **Unassigned** | Open issues nobody is assigned to. |
+| **Last commit** | Days since the last commit, with a bar that fills over 120 days and turns amber after 30. |
+| **Watching** | How many of this repository's issues you watch. |
+| **Turned down** | Pull requests from outside contributors, among the latest 100 closed, that were closed without merging. Bots and pull requests the maintainer says they merged by hand are not counted. |
 
-Zeros are shown dim so the numbers that matter stand out.
-
-### Open a row
-
-Click a row (or press Enter on it) to expand it. Expanded rows stay open across the automatic
-reload.
-
-- **Repository:** a link to the project on GitHub, the stage and status if you use a pipeline,
-  and the error from the last check if it failed.
-- **Watched issues:** each with its current status.
-- **Your PRs:** pull requests your GitHub account opened in this repository, with their state.
-- **Denied outside PRs, last 5 of N:** the most recent pull requests from outside contributors that
-  were closed without merging. Each shows the author's relationship to the project (`NONE` is a
-  first-time contributor), the review verdict if there was one (`CHANGES_REQUESTED` in amber is
-  the most telling), the close date, and the maintainer's last comment before closing.
-
-Those closing comments are the most useful thing on the page before you start contributing to a
-project: they tell you, in the maintainers' own words, what they turn down and why.
+Click a row to open it (it stays open across reloads): a link to the repository, its watched
+issues, your pull requests there, and the last five turned-down pull requests from outside
+contributors, each with who sent it (first-time or past contributor), the review verdict, when it
+was closed and the maintainer's last comment. Read those comments before contributing to a new
+project: they say, in the maintainers' own words, what they turn down and why.
 
 ---
 
-## Watch channel (right)
+## Watched issues
 
-Every issue you are watching, across all repositories, most urgent first: claimed, then closed,
-then still open.
+Issues you plan to work on, across all tracked repositories, most urgent first.
 
 | Status | Meaning |
 |---|---|
-| **CLAIMED** (red) | Assigned to someone, or a comment in the last 30 days such as "I'll take this", "I'm working on this", "taking this" or "I can do this". The link goes to the claiming comment when there is one. |
-| **CLOSED_FIXED** (amber) | Closed by a merged pull request or a commit. |
-| **CLOSED_WONT** (amber) | Closed without a linked fix. |
-| **STILL_OPEN** (green) | Open and unclaimed. |
-
-### Watching an issue
-
-Watch an issue before you start work on it, so HelloGitty tells you if someone else takes it:
+| **Claimed** (red) | Assigned to someone, or a comment in the last 30 days such as "I'll take this", "I'm working on this", "taking this" or "I can do this". The link goes to the claim. |
+| **Fixed** (amber) | Closed by a merged pull request or a commit. |
+| **Closed** (amber) | Closed without a linked fix. |
+| **Open** (green) | Open and unclaimed. |
 
 ```bash
 hellogitty watch owner/name 123          # watch issue 123 (several numbers allowed)
 hellogitty watch                         # list what you are watching
-hellogitty unwatch owner/name 123        # stop watching issue 123 (several numbers allowed)
+hellogitty unwatch owner/name 123        # stop watching issue 123
 ```
 
 To watch, the repository must be one you track; the new watch shows up after the next check.
-An unwatched issue leaves the dashboard on its next reload, and unwatching also works for a
-repository you no longer track. Unwatch an
-issue once it is closed or no longer interesting, so WATCH CLOSED goes dark again.
+An unwatched issue leaves the page on its next reload.
 
 ---
 
-## Your PRs
+## Merge rate
 
-Counts of pull requests your GitHub account (the one the token belongs to) opened in tracked
-repositories: **opened**, **open**, **merged**, **closed** (closed without merging) and **rate**,
-which is merged ÷ (merged + closed). Open pull requests don't affect the rate.
-
-**NO DATA** means you have not opened any yet. The panel stays on the page with zeros rather
-than disappearing. **AWAITING PR SEARCH** appears right after starting, until the first check
-finishes.
-
-With a pipeline command, the panel is titled **PIPELINE** and also shows how many repositories
-are at each stage.
+Counts of pull requests your account opened **in tracked repositories**: opened, open, merged,
+closed (without merging) and rate, which is merged ÷ (merged + closed). Open ones don't count
+toward the rate. With a pipeline command this panel is titled **Pipeline** and also shows how many
+repositories sit at each stage.
 
 ---
 
-## Poll telemetry (right)
+## Checks
 
-| Row | Meaning |
-|---|---|
-| **Last poll** | When the last check of all repositories finished (UTC). |
-| **Next poll** | When the next one starts. |
-| **Interval** | Time between checks (60 minutes by default). |
-| **Cycle time** | How long the last check took. |
-| **Calls per cycle** | GitHub API calls the last check used. |
-| **Quota resets** | When the hourly GitHub budget refills. |
-| **Snapshot** | Link to `snapshot.json`, the same data in machine-readable form. |
+When the last check of your tracked repositories finished and when the next one starts, how often
+they run (60 minutes by default), how long the last one took, how many API calls it used, when
+the hourly GitHub budget refills, and a link to `snapshot.json`, the same repository data in
+machine-readable form. Your work refreshes separately, every 5 minutes, using GitHub's GraphQL API,
+which has its own budget and doesn't count against the number in the header.
 
 ---
 
 ## Changes since your last look
 
-The page reloads itself every five minutes. A number that changed since the previous reload is
-underlined and blinks twice, so after time away you can see what moved without remembering what
-it was. With reduced motion turned on in your system settings, it is underlined without blinking.
+The page reloads itself every five minutes. A number or status that changed since the previous
+reload is underlined and blinks twice, so after time away you can see what moved. With reduced
+motion turned on in your system settings, it is underlined without blinking.
 
 ---
 
 ## The mascot
 
 The kitten at the top right is Black Bombay (baby), the mascot of the current release line. It
-plays one short, silent clip each time the page reloads, a livelier one when something on the
-page changed, and otherwise rests. It never loops, carries no data, and is hidden from screen
-readers. With reduced motion turned on, you see a still image instead.
+plays one short, silent clip each time the page reloads, a livelier one when something changed,
+and otherwise rests. It never loops, carries no data, and is hidden from screen readers. With
+reduced motion turned on, you see a still image. In the light theme it sits in a small dark window.
 
 ---
 
 ## Everyday use
 
-**Morning check.** Glance at the panel. If WATCH CLAIMED or WATCH CLOSED is lit, deal with those
-issues first. Then check for DORMANT or SLOW projects you were planning to work on.
+**Glance.** If **Your move** is lit, work down that list from the top: it's sorted by who has
+waited longest. Each row's quote usually tells you what to do without opening GitHub.
 
-**Choosing what to work on.** Look for repositories with a green light, a healthy GFI count and
-many unassigned issues. Open the row and read the denied pull requests before choosing: if the
-maintainers keep closing a kind of change, don't send that kind.
+**Maintaining.** Check **Your repositories → Needs you** for reviews and unanswered issues.
 
-**Before you start an issue.** Watch it (`hellogitty watch owner/name 123`). If someone else
-claims it while you work, WATCH CLAIMED lights.
+**Choosing new work.** In **Tracked repositories**, look for a green light, a healthy Good first
+count and many unassigned issues. Open the row and read what gets turned down first.
 
-**Tracking your own results.** The Your PRs panel keeps count; the rate tells you how often
-your merged-or-closed pull requests were accepted.
+**Before you start an issue.** Watch it. If someone else claims it while you work, the red cell
+lights.
 
 ---
 
@@ -220,12 +266,13 @@ your merged-or-closed pull requests were accepted.
 
 | You see | Likely cause | Fix |
 |---|---|---|
-| **DATA STALE** lit, POLL AGE climbing | HelloGitty stopped, or the computer slept. | Restart it. |
-| **POLL FAIL** naming one repository, error `404` | The repository was renamed, moved or made private. | Update its entry in your config. |
-| **POLL FAIL** naming every repository, error `401` | The GitHub token expired or was revoked. | Set a new `GITHUB_TOKEN` and restart. |
-| Error mentioning a rate limit | GitHub's hourly or burst limit was hit. | HelloGitty waits and retries; it clears on the next check. |
-| A repository with a very large issue list shows POLL FAIL saying exact totals are unavailable | Its issue list is longer than HelloGitty fetches page by page, and the search that gets exact totals failed. | It retries on the next check. Rather than show a partial number, the repository is marked failed. |
-| **API USED** near the limit every hour | Many large repositories, or a short interval. | Track fewer repositories or set `"interval"` longer. |
-| Numbers look different right after a restart | Counts that need a fresh check are filled in by the first check after starting. | Wait for the first check to finish (see Poll telemetry). |
-| **AWAITING PR SEARCH** stays | The pull request search keeps failing; the error is shown in the panel. | Check the token. |
-| The page is blank or won't load | HelloGitty is not running, or is on another address. | Start it; the address is the `listen` setting (default `localhost:7340`). |
+| **Data is stale** lit, Last check getting older | HelloGitty stopped, or the computer slept. | Restart it. |
+| **Check failed** naming one repository, error `404` | The repository was renamed, moved or made private. | Update its entry in your config. |
+| **Check failed** naming everything, error `401` | The GitHub token expired or was revoked. | Set a new `GITHUB_TOKEN` and restart. |
+| **Check failed** naming "your work" | The Your work refresh failed; the panel shows the error and keeps the previous list. | Usually clears on the next refresh. If it says the token lacks access, use a token that can read your repositories. |
+| Your work says it hasn't been fetched yet | HelloGitty just started. | Wait a few seconds; the page reloads on its own. |
+| Error mentioning a rate limit | GitHub's hourly or burst limit was hit. | HelloGitty waits and retries. |
+| A very large repository shows Check failed saying exact totals are unavailable | Its issue list is too long to fetch page by page and the search for exact totals failed. | It retries on the next check; rather than show a partial number, the repository is marked failed. |
+| **GitHub API** near the limit every hour | Many large repositories, or a short interval. | Track fewer repositories or set `"interval"` longer. |
+| Merge rate says "Not counted yet" | The pull request search runs after the first check finishes. | Wait for the first check. |
+| The page won't load | HelloGitty isn't running, or is on another address. | Start it; the address is the `listen` setting (default `localhost:7340`). |

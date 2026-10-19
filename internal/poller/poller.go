@@ -442,7 +442,7 @@ func findClaim(comments []github.Comment, since time.Time) *github.Comment {
 }
 
 func containsClaim(body string) bool {
-	b := strings.ToLower(strings.NewReplacer("'", "'", "’", "'").Replace(body))
+	b := strings.ToLower(strings.NewReplacer("’", "'", "‘", "'").Replace(body))
 	for _, phrase := range claimPhrases {
 		if strings.Contains(b, phrase) {
 			return true

@@ -1,14 +1,16 @@
 # HelloGitty
 
-A local dashboard for the GitHub repositories you follow. It polls GitHub every hour and shows,
-on one dark screen you can leave open all day: how active each project is, how many open and
-good-first issues it has, whether someone just claimed an issue you were planning to take, and
-what maintainers said when they closed outside pull requests.
+A local dashboard for your open source work. On one screen you can leave open all day it shows
+every pull request and issue you have out on GitHub, sorted by whose move it is, with the latest
+comment from the other side; what is waiting on you in repositories you maintain; and, for the
+projects you follow, how active each one is, how many open and good-first issues it has, whether
+someone just claimed an issue you were planning to take, and what maintainers said when they
+closed outside pull requests.
 
 It runs on your machine, serves the page on `localhost` only, and writes a `snapshot.json` that
 scripts can read instead of calling GitHub themselves.
 
-![HelloGitty dashboard tracking three public repositories](docs/screenshot.png)
+![HelloGitty dashboard: the Your work board, alerts and checks, tracking three public repositories](docs/screenshot.png)
 
 ## Install
 
@@ -46,6 +48,7 @@ Create `hellogitty.json` in the folder you run it from (copy `hellogitty.example
 | `interval` | `60m` | How often to poll. One minute at least. |
 | `database` | `hellogitty.db` | SQLite file for polled data. |
 | `snapshot` | `snapshot.json` | Where the machine-readable snapshot is written. |
+| `maintain` | | Repositories (`"owner/name"`) or organisations (`"org"`) you maintain but don't own. Their pull requests and issues from others show under Your repositories. Repositories your account owns are always included. |
 | `pipeline_command` | | Optional. See [Pipeline stages](#pipeline-stages). |
 
 Relative paths resolve against the folder the config file is in. Use `-config path/to/file.json`
@@ -59,7 +62,8 @@ hellogitty -repos junegunn/fzf,BurntSushi/ripgrep
 
 Set `GITHUB_TOKEN` to a GitHub token. Read access to public repositories is all it needs: a
 fine-grained token with no extra permissions, or a classic token with no scopes. HelloGitty only
-ever reads.
+ever reads. Your work and Your repositories cover what the token can see, so include private
+repositories in the token's access if you want them there too.
 
 ```bash
 export GITHUB_TOKEN=github_pat_...
@@ -69,7 +73,8 @@ Authenticated requests get 5,000 calls an hour. The first poll of a repository c
 it fetches review details for recently closed pull requests; after that those are cached. Measured
 on real repositories: about 25 calls per repository on the first poll, and about 110 calls per
 hourly cycle for 15 repositories after that. The dashboard shows calls used against the hourly
-budget.
+budget. Your work is one GraphQL request every 5 minutes, which counts against GitHub's separate
+GraphQL budget, not this one.
 
 ## Run
 
@@ -95,49 +100,36 @@ that, from `gh auth token`.
 
 ## Reading the dashboard
 
-The full guide, covering every column, colour and cell, what to do when one lights up, and
+The full guide, covering every panel, status and colour, what to do when something lights up, and
 troubleshooting, is in [docs/GUIDE.md](docs/GUIDE.md). The short version:
 
-**Status line.** UTC time with seconds, time since the last poll, how long the last poll took,
-and GitHub API calls used against the hourly budget.
+**Alerts.** A row of cells under the header. Each stays dark while all is well and lights up, with
+a count and names, when its condition is true: a watched issue claimed (red), **your move**
+(amber, anything waiting on you), a failed check, stale data, a watched issue closed, a dormant or
+slowing repository, the API running low. An empty watch list reads "nothing watched", never a
+reassuring 0.
 
-**Caution and warning panel.** One cell per condition. A cell stays dark while all is well and
-lights up, with a count and the repository names, when the condition is true:
+**Your work.** Every pull request and issue your account has out, anywhere on GitHub, refreshed
+every 5 minutes and sorted by whose move it is: **Your move** (changes requested, a maintainer
+replied, checks failing, a merge conflict), **Waiting on others** (no review yet, review
+requested, approved and waiting to merge, you replied last) and **Finished** in the last 30 days.
+Each row says what happened last in a sentence and quotes the latest comment from someone else.
 
-| Cell | Lights when |
-|---|---|
-| WATCH CLAIMED | A watched issue was assigned, or someone commented that they are taking it. |
-| POLL FAIL | A repository, or the pull request search, failed on the last poll. |
-| DATA STALE | The last poll is more than two hours old. |
-| WATCH CLOSED | A watched issue was closed, by a merged fix or otherwise. |
-| REPO DORMANT | No commit in over 90 days. |
-| REPO SLOW | No commit in over 30 days. |
-| API LOW | Under 10% of the hourly API budget remains. |
+**Your repositories.** Open pull requests and issues from other people in repositories you own or
+list under `maintain`, plus reviews requested from you: what needs you and what waits on a
+contributor.
 
-With no issues watched, the two WATCH cells read NONE WATCHED rather than 0, because an empty
-watch list is not the same as an all-clear.
+**Tracked repositories.** One row per repository you follow: a health light (green active, amber
+ring slowing, amber dormant, dashed not checked), open, good-first and unassigned issues, days
+since the last commit, watched issues, and pull requests turned down from outside contributors.
+Click a row for the last five of those with the maintainer's closing comment: the quickest way to
+learn what a project does not accept.
 
-**Repos.** One row per repository: a health light (green active, amber ring slow, amber dormant,
-dashed unknown), open issues, good-first issues, unassigned issues, days since the last commit,
-watched issues, and denied pull requests. Click a row to see its watched issues, your own pull
-requests there, and the last five pull requests from outside contributors that were closed
-without merging, each with the maintainer's last comment before closing and the review verdict.
-Those closing comments are the quickest way to learn what a project does not accept.
+**Watched issues, merge rate and checks** fill the right-hand column.
 
-**Watch channel.** Every watched issue, claimed ones first. An issue counts as claimed when it
-has an assignee, or when a comment from the last 30 days says something like "I'll take this",
-"I'm working on this" or "I can do this". An issue closed by a merged pull request or commit
-counts as fixed.
-
-**Your PRs.** Pull requests the token's account opened in the tracked repositories: opened, open,
-merged, closed, and merge rate, which is merged ÷ (merged + closed). It reads NO DATA until you
-have opened one.
-
-**Poll telemetry.** Last and next poll, interval, cycle time, calls per cycle, and when the
-API budget resets.
-
-The page reloads itself every five minutes. A value that changed since the previous reload is
-underlined once; otherwise only the clock moves.
+The page follows your system's light or dark setting; the Auto / Light / Dark switch in the header
+overrides it. It reloads itself every five minutes, and a value that changed since the previous
+reload is underlined once.
 
 ## snapshot.json
 

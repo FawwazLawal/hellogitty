@@ -5,7 +5,7 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
-Fixes, waiting for the owner to declare the next milestone.
+Changes waiting for the owner to declare the next milestone.
 
 - Repositories with more open issues than the fetch limit (10 pages) now show exact open,
   good-first and unassigned counts from GitHub search instead of counting only the fetched pages.
@@ -21,7 +21,19 @@ Fixes, waiting for the owner to declare the next milestone.
   line. It plays one short silent clip per page load (a livelier one when data changed) and rests
   otherwise; reduced-motion users see a still. Clips are compiled into the binary.
 - `hellogitty unwatch owner/name 123 [456 ...]` stops watching issues, so a closed watch no longer
-  keeps WATCH CLOSED lit. `watch` now checks every issue number before adding any.
+  keeps the closed-watch alert lit. `watch` now checks every issue number before adding any.
+- **Your work:** a new panel at the top of the dashboard listing every pull request and issue
+  your account has out anywhere on GitHub, sorted into Your move, Waiting on others and Finished
+  (last 30 days). Each row says in one sentence what happened last (changes requested, a reply,
+  checks failing, a merge conflict, approved, waiting for review) and quotes the latest comment
+  from someone else. Refreshed every 5 minutes with one GraphQL request.
+- **Your repositories:** pull requests and issues from others in repositories you own or list
+  under the new `maintain` setting, plus reviews requested from you, split into Needs you and
+  Waiting on contributors. A new amber **Your move** alert counts everything waiting on you.
+- Friendlier wording throughout: sentence-case labels ("Watched issue claimed", "Turned down"),
+  times in words ("3 days ago"), plain review verdicts and contributor types.
+- Light and dark themes. The page follows the system setting; an Auto / Light / Dark switch in the
+  header overrides it and is remembered.
 - A guide to reading the dashboard, [docs/GUIDE.md](docs/GUIDE.md): every column, colour and
   cell, what to do when one lights up, and troubleshooting.
 
