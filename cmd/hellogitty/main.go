@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	iofs "io/fs"
 	"log"
 	"net"
 	"net/http"
@@ -192,6 +193,11 @@ func run() int {
 		return 1
 	}
 	versionLabel, versionBaby := dashboardVersion()
+	mascotFS, err := iofs.Sub(web.Mascot, "mascot")
+	if err != nil {
+		log.Printf("mascot assets: %v", err)
+		return 1
+	}
 	srv := &http.Server{
 		Handler: &dashboard.Handler{
 			Template:     web.Index,
@@ -200,6 +206,7 @@ func run() int {
 			PollInterval: cfg.PollInterval,
 			Version:      versionLabel,
 			Baby:         versionBaby,
+			Mascot:       mascotFS,
 		},
 		ReadHeaderTimeout: 10 * time.Second,
 	}

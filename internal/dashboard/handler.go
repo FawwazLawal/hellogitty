@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -63,12 +65,15 @@ type Handler struct {
 	Version      string
 	// Baby marks a codename that has not graduated yet; the page sets it apart from the label.
 	Baby bool
-	Now  func() time.Time
+	// Mascot holds the banner clips and rest still; nil leaves the banner without a mascot.
+	Mascot fs.FS
+	Now    func() time.Time
 }
 
 type page struct {
 	Version      string
 	Baby         bool
+	Mascot       *mascot
 	HasPipeline  bool
 	PipelineErr  string
 	Labels       pipeline.Labels
@@ -92,6 +97,12 @@ type page struct {
 	Rows         []row
 	Watch        []watchRow
 	Pipeline     pipelineView
+}
+
+// mascot lists the banner clips by kind; the page picks one on load.
+type mascot struct {
+	Routine, News []string
+	Rest          string
 }
 
 type cell struct {
@@ -190,6 +201,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.URL.Path == "/":
 		h.serveDashboard(w, r)
+	case strings.HasPrefix(r.URL.Path, "/mascot/") && h.Mascot != nil:
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		http.StripPrefix("/mascot/", http.FileServer(http.FS(h.Mascot))).ServeHTTP(w, r)
 	case r.URL.Path == "/snapshot.json":
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
@@ -265,6 +279,7 @@ func (h *Handler) build() (*page, error) {
 	p := &page{
 		Version:      h.Version,
 		Baby:         h.Baby,
+		Mascot:       h.mascot(),
 		HasPipeline:  pst != nil,
 		NowUTC:       now.Format("2006-01-02 15:04:05Z"),
 		NowUnix:      now.Unix(),
@@ -499,6 +514,32 @@ const (
 	detailNamesNarrow = 1
 	detailNamesWide   = 3
 )
+
+func (h *Handler) mascot() *mascot {
+	if h.Mascot == nil {
+		return nil
+	}
+	entries, err := fs.ReadDir(h.Mascot, ".")
+	if err != nil {
+		return nil
+	}
+	m := &mascot{}
+	for _, e := range entries {
+		name := e.Name()
+		switch {
+		case strings.HasPrefix(name, "kitten-routine-") && path.Ext(name) == ".mp4":
+			m.Routine = append(m.Routine, "/mascot/"+name)
+		case strings.HasPrefix(name, "kitten-news-") && path.Ext(name) == ".mp4":
+			m.News = append(m.News, "/mascot/"+name)
+		case name == "rest.png":
+			m.Rest = "/mascot/rest.png"
+		}
+	}
+	if len(m.Routine) == 0 || m.Rest == "" {
+		return nil
+	}
+	return m
+}
 
 func counter(key, label string, n int, level string, names []string, wide bool) cell {
 	c := cell{Key: key, Label: label, Value: strconv.Itoa(n), Level: level, Lit: n > 0, Wide: wide,

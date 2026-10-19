@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"github.com/FawwazLawal/hellogitty/internal/pipeline"
@@ -250,5 +251,49 @@ func TestPipelineLabelsComeFromTheCommand(t *testing.T) {
 		if !strings.Contains(html, want) {
 			t.Errorf("missing %q", want)
 		}
+	}
+}
+
+func TestMascotLaneAndAssets(t *testing.T) {
+	now := time.Now()
+	src := fakeSource{tel: Telemetry{LastPoll: now}, reports: []store.RepoReport{{Repo: store.Repo{Owner: "o", Name: "r", LastPoll: &now}}}}
+	h := handler(src)
+	h.Mascot = fstest.MapFS{
+		"kitten-routine-01-glance.mp4": {Data: []byte("mp4-1")},
+		"kitten-routine-02-bow.mp4":    {Data: []byte("mp4-2")},
+		"kitten-news-01-alert.mp4":     {Data: []byte("mp4-n")},
+		"rest.png":                     {Data: []byte("png")},
+		"notes.txt":                    {Data: []byte("ignored")},
+	}
+	_, html := get(t, h, "/")
+	for _, want := range []string{
+		`class="status has-mascot"`,
+		`data-routine="/mascot/kitten-routine-01-glance.mp4 /mascot/kitten-routine-02-bow.mp4"`,
+		`data-news="/mascot/kitten-news-01-alert.mp4"`,
+		`poster="/mascot/rest.png"`,
+		`aria-hidden="true"`,
+		`prefers-reduced-motion: reduce`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	if strings.Contains(html, "notes.txt") {
+		t.Error("non-clip files must not be listed")
+	}
+	if code, body := get(t, h, "/mascot/kitten-routine-01-glance.mp4"); code != 200 || body != "mp4-1" {
+		t.Errorf("clip not served: %d %q", code, body)
+	}
+
+	h.Mascot = fstest.MapFS{"kitten-routine-01-glance.mp4": {Data: []byte("x")}}
+	if _, html := get(t, h, "/"); strings.Contains(html, `class="status has-mascot"`) {
+		t.Error("without a rest still there is no mascot lane")
+	}
+	h.Mascot = nil
+	if _, html := get(t, h, "/"); strings.Contains(html, `<div class="mascot"`) {
+		t.Error("no mascot FS, no mascot lane")
+	}
+	if code, _ := get(t, h, "/mascot/rest.png"); code != 404 {
+		t.Errorf("no mascot FS should 404 its assets, got %d", code)
 	}
 }
