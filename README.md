@@ -86,6 +86,7 @@ repository.
 | `hellogitty -once` | Poll once, write the snapshot, exit. Exits non-zero if any repository failed. |
 | `hellogitty watch owner/name 123 456` | Watch issues for claims and fixes. |
 | `hellogitty watch` | List watched issues. |
+| `hellogitty unwatch owner/name 123` | Stop watching issues. |
 | `hellogitty -version` | Print the version and codename, e.g. `hellogitty v0.1.0 - Black Bombay (baby)`. |
 
 On macOS, `start.sh` builds HelloGitty from a clone, starts it in the background if it is not
@@ -93,6 +94,9 @@ already running, and opens the dashboard. It takes the token from `GITHUB_TOKEN`
 that, from `gh auth token`.
 
 ## Reading the dashboard
+
+The full guide, covering every column, colour and cell, what to do when one lights up, and
+troubleshooting, is in [docs/GUIDE.md](docs/GUIDE.md). The short version:
 
 **Status line.** UTC time with seconds, time since the last poll, how long the last poll took,
 and GitHub API calls used against the hourly budget.
