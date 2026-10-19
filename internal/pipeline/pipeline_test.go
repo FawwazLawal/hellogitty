@@ -27,7 +27,7 @@ func TestParse(t *testing.T) {
 	if got := []Stage{{"triage", "TRI"}, {"build", "BLD"}, {"review", "REV"}}; !reflect.DeepEqual(st.Stages, got) {
 		t.Errorf("stages %v", st.Stages)
 	}
-	if st.Labels.Status != "CHECK" || st.Labels.Flagged != "REPO FLAGGED" || st.Labels.Notes != "NOTES" {
+	if st.Labels.Status != "CHECK" || st.Labels.Flagged != "Repo flagged" || st.Labels.Notes != "Notes" {
 		t.Errorf("labels %+v", st.Labels)
 	}
 	r, ok := st.Repo("owner", "NAME")

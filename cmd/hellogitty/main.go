@@ -25,6 +25,7 @@ import (
 	"github.com/FawwazLawal/hellogitty/internal/poller"
 	"github.com/FawwazLawal/hellogitty/internal/snapshot"
 	"github.com/FawwazLawal/hellogitty/internal/store"
+	"github.com/FawwazLawal/hellogitty/internal/work"
 	"github.com/FawwazLawal/hellogitty/web"
 )
 
@@ -155,6 +156,7 @@ func run() int {
 		return out, nil
 	}}
 	pipe := &pipeline.Provider{Command: cfg.PipelineCommand(), Dir: cfg.Dir}
+	board := &work.Tracker{GH: gh, Maintain: cfg.Maintain}
 	snapPath := cfg.Path(cfg.Snapshot)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -202,7 +204,7 @@ func run() int {
 		Handler: &dashboard.Handler{
 			Template:     web.Index,
 			SnapshotPath: snapPath,
-			Source:       source{st: st, p: pl, gh: gh, pipe: pipe},
+			Source:       source{st: st, p: pl, gh: gh, pipe: pipe, board: board},
 			PollInterval: cfg.PollInterval,
 			Version:      versionLabel,
 			Baby:         versionBaby,
@@ -215,6 +217,24 @@ func run() int {
 		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Printf("http: %v", err)
 			stop()
+		}
+	}()
+
+	// The work board is one GraphQL request, so it refreshes far more often than the repo poll.
+	go func() {
+		ticker := time.NewTicker(workRefresh)
+		defer ticker.Stop()
+		for {
+			if err := board.Refresh(ctx); err != nil {
+				log.Printf("work board: %v", err)
+			} else if b, _ := board.Snapshot(); b != nil {
+				log.Printf("work board: %d sent, %d incoming", len(b.Sent), len(b.Incoming))
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+			}
 		}
 	}()
 
@@ -273,12 +293,18 @@ func applyTotals(reports []store.RepoReport, totals map[string]poller.IssueTotal
 	}
 }
 
+// workRefresh is how often the work board is fetched. The page reloads every 5 minutes.
+const workRefresh = 5 * time.Minute
+
 type source struct {
-	st   *store.Store
-	p    *poller.Poller
-	gh   *github.Client
-	pipe *pipeline.Provider
+	st    *store.Store
+	p     *poller.Poller
+	gh    *github.Client
+	pipe  *pipeline.Provider
+	board *work.Tracker
 }
+
+func (s source) Work() (*work.Board, string) { return s.board.Snapshot() }
 
 func (s source) Reports() ([]store.RepoReport, error) { return tracked(s.st, s.p) }
 

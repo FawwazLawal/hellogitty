@@ -14,6 +14,7 @@ import (
 
 	"github.com/FawwazLawal/hellogitty/internal/pipeline"
 	"github.com/FawwazLawal/hellogitty/internal/store"
+	"github.com/FawwazLawal/hellogitty/internal/work"
 	"github.com/FawwazLawal/hellogitty/web"
 )
 
@@ -21,11 +22,14 @@ type fakeSource struct {
 	reports []store.RepoReport
 	tel     Telemetry
 	pipe    *pipeline.State
+	board   *work.Board
+	workErr string
 }
 
 func (f fakeSource) Reports() ([]store.RepoReport, error) { return f.reports, nil }
 func (f fakeSource) Telemetry() Telemetry                 { return f.tel }
 func (f fakeSource) Pipeline() (*pipeline.State, error)   { return f.pipe, nil }
+func (f fakeSource) Work() (*work.Board, string)          { return f.board, f.workErr }
 
 // pipeFixture is a pipeline with rocket two stages in and lullaby one stage in.
 func pipeFixture(t *testing.T) *pipeline.State {
@@ -89,15 +93,16 @@ func TestDashboardEmptyPipelineAndAlarms(t *testing.T) {
 		t.Fatalf("status %d\n%s", code, html)
 	}
 	for _, want := range []string{
-		`class="cell warn lit wide"`,    // WATCH CLAIMED lit
-		`data-v="cw-watch-claimed">1<`,  // with its count
-		`acme/rocket#1738`,              // named in the cell detail
-		`data-v="cw-repo-dormant">1<`,   // dormant counted
-		`<b>NO DATA</b> · 0 PRs opened`, // empty pipeline is explicit
-		`data-v="pr-merged">0<`,         // instruments present and zeroed
-		`data-v="pr-rate">—<`,           // no fake rate
-		`723/5000 /HR`,                  // API used with units
-		`78 S`, `>104<`,                 // cycle telemetry
+		`class="cell warn lit wide"`,                            // watched issue claimed, lit
+		`data-v="cw-watch-claimed">1<`,                          // with its count
+		`acme/rocket#1738`,                                      // named in the cell detail
+		`data-v="cw-repo-dormant">1<`,                           // dormant counted
+		`<b>No pull requests yet</b>`,                           // empty pipeline is explicit
+		`data-v="pr-merged">0<`,                                 // instruments present and zeroed
+		`data-v="pr-rate">—<`,                                   // no fake rate
+		`723</span> of <span class="fig">5000</span> this hour`, // API used in words
+		`1 min 18 s`, `>104<`,                                   // cycle telemetry
+		`Not fetched yet`,                          // work board before its first fetch
 		`class="light DORMANT"`, `class="gate ok"`, // health light and verdict
 		`<i class="done"></i><i class="done"></i><i class="current"></i>`, // rocket at select
 		`https://github.com/acme/rocket/pull/1756`,                        // denial links to its PR
@@ -110,12 +115,12 @@ func TestDashboardEmptyPipelineAndAlarms(t *testing.T) {
 	if strings.Contains(html, "<script>alert(1)") {
 		t.Error("PR title was not escaped")
 	}
-	if strings.Contains(html, "prefers-color-scheme") {
-		t.Error("dashboard is dark only")
+	if !strings.Contains(html, `:root[data-theme="light"]`) || !strings.Contains(html, "prefers-color-scheme: light") {
+		t.Error("the page should follow the system theme and allow a light override")
 	}
-	channel := html[strings.Index(html, `aria-label="Watch channel"`):]
-	if strings.Index(channel, "CLAIMED") > strings.Index(channel, "STILL_OPEN") {
-		t.Error("watch channel should list CLAIMED before STILL_OPEN")
+	channel := html[strings.Index(html, `id="watch-h"`):]
+	if strings.Index(channel, `st CLAIMED`) > strings.Index(channel, `st STILL_OPEN`) {
+		t.Error("watched issues should list claimed before still open")
 	}
 	if strings.Index(html, "acme/</span>rocket") > strings.Index(html, "sleepyco/</span>lullaby") {
 		t.Error("repo further along the pipeline should be listed first")
@@ -151,13 +156,13 @@ func TestNothingWatchedIsNotAnAllClear(t *testing.T) {
 		PollInterval: time.Hour,
 	}
 	_, html := get(t, h, "/")
-	for _, want := range []string{`data-v="cw-watch-claimed">NONE WATCHED<`, `data-v="cw-watch-closed">NONE WATCHED<`, `cell warn wide empty`, `NO ISSUES WATCHED`} {
+	for _, want := range []string{`data-v="cw-watch-claimed">nothing watched<`, `data-v="cw-watch-closed">nothing watched<`, `cell warn wide empty`, `<b>Nothing watched.</b>`} {
 		if !strings.Contains(html, want) {
 			t.Errorf("missing %q", want)
 		}
 	}
 	if strings.Contains(html, `data-v="cw-watch-claimed">0<`) {
-		t.Error("a bare 0 on WATCH CLAIMED reads as all clear when nothing is watched")
+		t.Error("a bare 0 on the claimed cell reads as all clear when nothing is watched")
 	}
 }
 
@@ -171,7 +176,7 @@ func TestStaleAndPollFailLight(t *testing.T) {
 		PollInterval: time.Hour,
 	}
 	_, html := get(t, h, "/")
-	for _, want := range []string{`data-v="cw-poll-fail">2<`, `data-v="cw-data-stale">180 MIN<`, `AWAITING PR SEARCH`, `last search failed`, `class="light UNKNOWN"`} {
+	for _, want := range []string{`data-v="cw-poll-fail">2<`, `data-v="cw-data-stale">3 hours ago<`, `<b>Not counted yet.</b>`, `The last search failed`, `class="light UNKNOWN"`} {
 		if !strings.Contains(html, want) {
 			t.Errorf("missing %q", want)
 		}
@@ -194,11 +199,11 @@ func TestOverflowCountRendersOutsideTheClamp(t *testing.T) {
 	}
 	_, html := get(t, h, "/")
 	if !strings.Contains(html, `<span class="det">anvil</span><span class="more">+5</span>`) {
-		i := strings.Index(html, "POLL FAIL")
-		t.Errorf("POLL FAIL should show one short name and carry +5 outside the clamped span:\n%s", html[i:i+400])
+		i := strings.Index(html, "Check failed")
+		t.Errorf("the failed-check cell should show one short name and carry +5 outside the clamped span:\n%s", html[i:i+400])
 	}
 	if strings.Contains(html, "own-rocket/rocket,") {
-		t.Error("POLL FAIL detail should use short repo names")
+		t.Error("failed-check detail should use short repo names")
 	}
 }
 
@@ -226,12 +231,12 @@ func TestNoPipelineHidesPipelinePanels(t *testing.T) {
 	if code != 200 {
 		t.Fatalf("status %d", code)
 	}
-	for _, want := range []string{`class="panel nopipe"`, `YOUR PRS`, `junegunn/</span>fzf`, `HELLOGITTY`, `V0.1.0 · BLACK BOMBAY <span class="baby">(baby)</span>`, `NO DATA`} {
+	for _, want := range []string{`class="panel nopipe"`, `Merge rate`, `junegunn/</span>fzf`, `<h1>HelloGitty</h1>`, `V0.1.0 · BLACK BOMBAY <span class="baby">(baby)</span>`, `No pull requests yet`} {
 		if !strings.Contains(html, want) {
 			t.Errorf("missing %q", want)
 		}
 	}
-	for _, unwanted := range []string{`class="phead"`, `class="phase`, `REPO FLAGGED`, `STAGE FAILED`, `repos by stage`, `In pipeline`, `class="occ"`} {
+	for _, unwanted := range []string{`class="phead"`, `class="phase`, `Repo flagged`, `Stage failed`, `repos by stage`, `in the pipeline`, `class="occ"`} {
 		if strings.Contains(html, unwanted) {
 			t.Errorf("pipeline-only element %q rendered without a pipeline", unwanted)
 		}
@@ -240,14 +245,14 @@ func TestNoPipelineHidesPipelinePanels(t *testing.T) {
 
 func TestPipelineLabelsComeFromTheCommand(t *testing.T) {
 	now := time.Now()
-	st, err := pipeline.Parse([]byte(`{"stages":["a","b"],"labels":{"flagged":"GATE ESCALATE","failed":"TASK FAILED"},
+	st, err := pipeline.Parse([]byte(`{"stages":["a","b"],"labels":{"flagged":"Gate escalated","failed":"Task failed"},
 		"repos":{"o/x":{"stage":"b","done":["a"],"failed":["b"],"level":"caution","label":"ESCALATE"}}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
 	src := fakeSource{pipe: st, tel: Telemetry{LastPoll: now}, reports: []store.RepoReport{{Repo: store.Repo{Owner: "o", Name: "x", LastPoll: &now}}}}
 	_, html := get(t, handler(src), "/")
-	for _, want := range []string{`GATE ESCALATE</span><span class="cnt" data-v="cw-repo-flagged">1<`, `TASK FAILED</span><span class="cnt" data-v="cw-stage-failed">1<`, `class="gate caution"`, `<i class="done"></i><i class="failed"></i>`} {
+	for _, want := range []string{`Gate escalated</span><span class="cnt" data-v="cw-repo-flagged">1<`, `Task failed</span><span class="cnt" data-v="cw-stage-failed">1<`, `class="gate caution"`, `<i class="done"></i><i class="failed"></i>`} {
 		if !strings.Contains(html, want) {
 			t.Errorf("missing %q", want)
 		}
@@ -295,5 +300,47 @@ func TestMascotLaneAndAssets(t *testing.T) {
 	}
 	if code, _ := get(t, h, "/mascot/rest.png"); code != 404 {
 		t.Errorf("no mascot FS should 404 its assets, got %d", code)
+	}
+}
+
+func TestWorkBoardPanels(t *testing.T) {
+	now := time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)
+	b := &work.Board{Login: "me", Scope: "repos owned by me", FetchedAt: now.Add(-2 * time.Minute),
+		Sent: []work.Item{
+			{PR: true, Repo: "up/proj", Number: 7, Title: "Fix <it>", URL: "https://github.com/up/proj/pull/7", Role: work.RoleAuthor, State: "OPEN",
+				Move: work.MoveYou, Status: "Changes requested by @lead", Level: "caution", Notes: []string{"Merge conflict"}, Since: now.Add(-50 * time.Hour),
+				Last: &work.Activity{Author: "lead", Body: "<!-- bot -->Please **add** a test.\n> quoted\n<script>x</script>", URL: "https://r"}},
+			{PR: true, Repo: "up/other", Number: 2, Title: "Docs", Role: work.RoleAuthor, State: "OPEN", Move: work.MoveThem, Status: "Waiting for a first review", Since: now.Add(-3 * time.Hour)},
+			{Repo: "up/proj", Number: 3, Title: "Old", Role: work.RoleAuthor, State: "CLOSED", Move: work.MoveDone, Status: "Closed as completed", Since: now.Add(-24 * time.Hour)},
+		},
+		Incoming: []work.Item{{Repo: "me/tool", Number: 9, Title: "Crash", Author: "user", Role: work.RoleMaintains, State: "OPEN", Move: work.MoveYou, Status: "New from @user; no reply yet", Level: "caution", Since: now.Add(-time.Hour)}},
+	}
+	src := fakeSource{board: b, tel: Telemetry{LastPoll: now}, reports: []store.RepoReport{{Repo: store.Repo{Owner: "o", Name: "r", LastPoll: &now}}}}
+	h := handler(src)
+	h.Now = func() time.Time { return now }
+	_, html := get(t, h, "/")
+	for _, want := range []string{
+		`Your move</span><span class="cnt" data-v="cw-your-move">2<`, // cell counts sent and incoming
+		`proj#7, tool#9`, // and names them
+		`data-v="work-you">1<`, `data-v="work-them">1<`, `data-v="work-inyou">1<`,
+		`Fix &lt;it&gt;`, // titles escaped
+		`<span class="say caution">Changes requested by @lead</span><span class="note caution">Merge conflict</span>`,
+		`>@lead</a>Please add a test. x</blockquote>`, // quote cleaned of markup, HTML and quoted replies
+		`2 days ago`, `3 hours ago`, `updated 2 min ago`,
+		`Open pull requests and issues from others in repos owned by me`,
+		`Closed as completed`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	if strings.Contains(html, "<script>x") {
+		t.Error("comment HTML must not reach the page")
+	}
+
+	src.workErr = "github graphql: boom"
+	_, html = get(t, handler(src), "/")
+	if !strings.Contains(html, "The last refresh failed, so this is the previous list: github graphql: boom") || !strings.Contains(html, "your work") {
+		t.Error("a failed refresh should say so and keep the previous board")
 	}
 }

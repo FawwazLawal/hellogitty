@@ -125,6 +125,23 @@ func TestWriteReadRoundTrip(t *testing.T) {
 	}
 }
 
+func TestRemoveWatch(t *testing.T) {
+	s := openTemp(t)
+	id, _ := s.UpsertRepo("o", "r", "https://github.com/o/r")
+	s.AddWatch(id, 7)
+	s.AddWatch(id, 8)
+	if removed, err := s.RemoveWatch(id, 7); err != nil || !removed {
+		t.Fatalf("remove watched issue: removed=%v err=%v", removed, err)
+	}
+	if removed, err := s.RemoveWatch(id, 7); err != nil || removed {
+		t.Errorf("second remove should report nothing removed: removed=%v err=%v", removed, err)
+	}
+	w, _ := s.WatchList(id)
+	if len(w) != 1 || w[0].IssueNumber != 8 {
+		t.Errorf("only #8 should remain: %+v", w)
+	}
+}
+
 func TestMergedByHandLeavesTheDeniedList(t *testing.T) {
 	s := openTemp(t)
 	id, _ := s.UpsertRepo("o", "r", "https://github.com/o/r")

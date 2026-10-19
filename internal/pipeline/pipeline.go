@@ -3,7 +3,7 @@
 //
 //	{
 //	  "stages": ["triage", "build", "review"],              // or [{"name": "triage", "abbr": "TRI"}]
-//	  "labels": {"status": "CHECK", "flagged": "REPO FLAGGED", "failed": "STAGE FAILED", "notes": "NOTES"},
+//	  "labels": {"status": "Check", "flagged": "Repo flagged", "failed": "Stage failed", "notes": "Notes"},
 //	  "repos": {
 //	    "owner/name": {"stage": "build", "done": ["triage"], "failed": [],
 //	                   "label": "PASS", "level": "ok", "notes": "/path/to/notes.md"}
@@ -122,8 +122,8 @@ func Parse(b []byte) (*State, error) {
 		return nil, errors.New("pipeline output lists no stages")
 	}
 	st := &State{repos: map[string]Repo{}, Labels: Labels{
-		Status: or(raw.Labels.Status, "STATUS"), Flagged: or(raw.Labels.Flagged, "REPO FLAGGED"),
-		Failed: or(raw.Labels.Failed, "STAGE FAILED"), Notes: or(raw.Labels.Notes, "NOTES"),
+		Status: or(raw.Labels.Status, "Status"), Flagged: or(raw.Labels.Flagged, "Repo flagged"),
+		Failed: or(raw.Labels.Failed, "Stage failed"), Notes: or(raw.Labels.Notes, "Notes"),
 	}}
 	for _, m := range raw.Stages {
 		var name string

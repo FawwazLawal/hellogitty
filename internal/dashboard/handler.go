@@ -16,6 +16,7 @@ import (
 
 	"github.com/FawwazLawal/hellogitty/internal/pipeline"
 	"github.com/FawwazLawal/hellogitty/internal/store"
+	"github.com/FawwazLawal/hellogitty/internal/work"
 )
 
 const (
@@ -50,11 +51,13 @@ type PR struct {
 }
 
 // Source supplies everything the page shows. Reports are already filtered to tracked repos.
-// Pipeline returns nil, nil when no pipeline command is configured.
+// Pipeline returns nil, nil when no pipeline command is configured. Work returns the last good
+// work board (nil before the first fetch) and the error from the latest fetch, if it failed.
 type Source interface {
 	Reports() ([]store.RepoReport, error)
 	Telemetry() Telemetry
 	Pipeline() (*pipeline.State, error)
+	Work() (*work.Board, string)
 }
 
 type Handler struct {
@@ -97,6 +100,7 @@ type page struct {
 	Rows         []row
 	Watch        []watchRow
 	Pipeline     pipelineView
+	Work         workView
 }
 
 // mascot lists the banner clips by kind; the page picks one on load.
@@ -180,6 +184,39 @@ var funcs = template.FuncMap{
 			return ""
 		}
 		return t.UTC().Format("2006-01-02 15:04Z")
+	},
+	"watchText": func(status string) string {
+		switch status {
+		case "CLAIMED":
+			return "Claimed"
+		case "CLOSED_FIXED":
+			return "Fixed"
+		case "CLOSED_WONT":
+			return "Closed"
+		}
+		return "Open"
+	},
+	"verdict": func(v string) string {
+		switch v {
+		case "CHANGES_REQUESTED":
+			return "Changes requested"
+		case "APPROVED":
+			return "Approved"
+		case "COMMENTED":
+			return "Reviewed"
+		}
+		return v
+	},
+	"assoc": func(a string) string {
+		switch a {
+		case "NONE", "FIRST_TIME_CONTRIBUTOR", "FIRST_TIMER":
+			return "First-time contributor"
+		case "CONTRIBUTOR":
+			return "Past contributor"
+		case "MANNEQUIN":
+			return "Imported account"
+		}
+		return a
 	},
 	"days": func(t *time.Time) string {
 		if t == nil {
@@ -313,7 +350,7 @@ func (h *Handler) build() (*page, error) {
 		p.NextPollUTC = lastPoll.Add(h.PollInterval).UTC().Format("15:04Z")
 	}
 	if tel.CycleDuration > 0 {
-		p.CycleText = strconv.Itoa(int(tel.CycleDuration.Round(time.Second)/time.Second)) + " S"
+		p.CycleText = duration(tel.CycleDuration)
 		p.CycleCalls = strconv.FormatInt(tel.CycleRequests, 10)
 	}
 	if tel.RateLimit > 0 {
@@ -323,6 +360,9 @@ func (h *Handler) build() (*page, error) {
 		p.APIPct = p.APIUsed * 100 / tel.RateLimit
 		p.APIResetUTC = tel.RateReset.UTC().Format("15:04Z")
 	}
+
+	board, workErr := h.Source.Work()
+	p.Work = buildWork(board, workErr, now)
 
 	notesURL := func(owner, name string) string {
 		if r, ok := pst.Repo(owner, name); ok && r.Notes != "" {
@@ -346,9 +386,9 @@ func (h *Handler) build() (*page, error) {
 		pl.PRs = append(pl.PRs, row)
 		pl.Opened++
 		switch row.State {
-		case "MERGED":
+		case "Merged":
 			pl.Merged++
-		case "CLOSED":
+		case "Closed":
 			pl.Closed++
 		default:
 			pl.Open++
@@ -469,41 +509,55 @@ func (h *Handler) build() (*page, error) {
 		pollFail++
 		failNames = append(failNames, "PR search")
 	}
+	if p.Work.Err != "" {
+		pollFail++
+		failNames = append(failNames, "your work")
+	}
 	staleLit := lastPoll.IsZero() || now.Sub(lastPoll) > staleAfter
 	staleShown := ""
 	if lastPoll.IsZero() {
-		staleShown = "NO POLL"
+		staleShown = "no check yet"
 	} else if staleLit {
-		staleShown = strconv.Itoa(int(now.Sub(lastPoll)/time.Minute)) + " MIN"
+		staleShown = ago(now, lastPoll)
 	}
 	apiLow := tel.RateLimit > 0 && tel.RateRemaining*10 < tel.RateLimit
 	apiValue := ""
 	if apiLow {
-		apiValue = strconv.Itoa(tel.RateRemaining) + " LEFT"
+		apiValue = strconv.Itoa(tel.RateRemaining) + " left"
 	}
-	claimedCell := counter("watch-claimed", "WATCH CLAIMED", claimed, "warn", claimedRepos, true)
-	closedCell := counter("watch-closed", "WATCH CLOSED", closed, "caution", nil, false)
+	claimedCell := counter("watch-claimed", "Watched issue claimed", claimed, "warn", claimedRepos, true)
+	closedCell := counter("watch-closed", "Watched issue closed", closed, "caution", nil, false)
 	if len(p.Watch) == 0 {
 		// A zero here must only ever mean "watched and clear".
-		claimedCell.Value, claimedCell.Empty = "NONE WATCHED", true
-		closedCell.Value, closedCell.Empty = "NONE WATCHED", true
+		claimedCell.Value, claimedCell.Empty = "nothing watched", true
+		closedCell.Value, closedCell.Empty = "nothing watched", true
+	}
+	var moveNames []string
+	for _, r := range append(append([]workRow(nil), p.Work.You...), p.Work.InYou...) {
+		moveNames = append(moveNames, shortRepo(r.Repo)+"#"+strconv.Itoa(r.Number))
+	}
+	moveCell := counter("your-move", "Your move", p.Work.YourMove(), "caution", moveNames, true)
+	moveCell.Title = "Pull requests and issues waiting on you. " + moveCell.Title
+	if !p.Work.Known {
+		moveCell.Value, moveCell.Empty = "not checked yet", true
 	}
 
 	p.Cells = []cell{
 		claimedCell,
-		counter("poll-fail", "POLL FAIL", pollFail, "warn", failNames, false),
-		{Key: "data-stale", Label: "DATA STALE", Value: staleShown, Level: "warn", Lit: staleLit,
-			Title: "Lit when the last poll is older than 2 hours."},
+		moveCell,
+		counter("poll-fail", "Check failed", pollFail, "warn", failNames, false),
+		{Key: "data-stale", Label: "Data is stale", Value: staleShown, Level: "warn", Lit: staleLit,
+			Title: "Lit when the last check of GitHub is more than 2 hours old."},
 		closedCell,
-		counter("repo-dormant", "REPO DORMANT", dormant, "caution", dormantRepos, false),
-		counter("repo-slow", "REPO SLOW", slow, "caution", slowRepos, false),
+		counter("repo-dormant", "Repo dormant", dormant, "caution", dormantRepos, false),
+		counter("repo-slow", "Repo slowing", slow, "caution", slowRepos, false),
 	}
 	if pst != nil {
 		p.Cells = append(p.Cells,
-			counter("repo-flagged", strings.ToUpper(pst.Labels.Flagged), flagged, "caution", flaggedRepos, false),
-			counter("stage-failed", strings.ToUpper(pst.Labels.Failed), failed, "caution", failedRepos, false))
+			counter("repo-flagged", pst.Labels.Flagged, flagged, "caution", flaggedRepos, false),
+			counter("stage-failed", pst.Labels.Failed, failed, "caution", failedRepos, false))
 	}
-	p.Cells = append(p.Cells, cell{Key: "api-low", Label: "API LOW", Value: apiValue, Level: "caution", Lit: apiLow,
+	p.Cells = append(p.Cells, cell{Key: "api-low", Label: "API running low", Value: apiValue, Level: "caution", Lit: apiLow,
 		Title: "Lit when under 10% of the hourly GitHub quota remains."})
 	return p, nil
 }
@@ -557,14 +611,31 @@ func counter(key, label string, n int, level string, names []string, wide bool) 
 	return c
 }
 
+func shortRepo(full string) string {
+	_, name, _ := strings.Cut(full, "/")
+	return name
+}
+
+// duration reads like "1 min 26 s" rather than "86 S".
+func duration(d time.Duration) string {
+	s := int(d.Round(time.Second) / time.Second)
+	if s < 60 {
+		return strconv.Itoa(s) + " s"
+	}
+	if s%60 == 0 {
+		return strconv.Itoa(s/60) + " min"
+	}
+	return strconv.Itoa(s/60) + " min " + strconv.Itoa(s%60) + " s"
+}
+
 func prState(pr PR) string {
 	switch {
 	case pr.Merged:
-		return "MERGED"
+		return "Merged"
 	case pr.State == "closed":
-		return "CLOSED"
+		return "Closed"
 	default:
-		return "OPEN"
+		return "Open"
 	}
 }
 
