@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -356,11 +357,7 @@ func (s *Store) Report(deniedLimit int) ([]RepoReport, error) {
 		if rr.Watch, err = s.watchReport(r.ID); err != nil {
 			return nil, err
 		}
-		if err := s.db.QueryRow(`SELECT COUNT(*) FROM pull_requests WHERE repo_id = ? AND merged = 0
-			AND state = 'closed' AND author_association IN `+outsideAssociations, r.ID).Scan(&rr.DeniedPRsTotal); err != nil {
-			return nil, err
-		}
-		if rr.DeniedPRs, err = s.deniedPRs(r.ID, deniedLimit); err != nil {
+		if rr.DeniedPRs, rr.DeniedPRsTotal, err = s.deniedPRs(r.ID, deniedLimit); err != nil {
 			return nil, err
 		}
 		out = append(out, rr)
@@ -390,27 +387,44 @@ func (s *Store) watchReport(repoID int64) ([]WatchReport, error) {
 	return out, rows.Err()
 }
 
-func (s *Store) deniedPRs(repoID int64, limit int) ([]DeniedPR, error) {
+// mergedByHand matches a maintainer saying the PR's change landed outside GitHub's merge
+// button, which leaves the PR closed and unmerged. Deliberately narrow: a real rejection must
+// never be hidden, so only explicit wording counts.
+var mergedByHand = regexp.MustCompile(`(?i)\b(merged|landed|applied)\s+(it\s+|this\s+)?(manually|by hand|locally)\b|\b(merged|landed|applied|cherry[- ]?picked)\s+(it\s+|this\s+)?(as|in|via)\s+(commit\s+)?[0-9a-f]{7,40}\b`)
+
+// MergedByHand reports whether a closing comment says the change was merged outside GitHub.
+func MergedByHand(closingComment string) bool { return mergedByHand.MatchString(closingComment) }
+
+// deniedPRs returns the most recent denied outside PRs (up to limit) and the total count,
+// leaving out PRs whose closing comment says they were merged by hand.
+func (s *Store) deniedPRs(repoID int64, limit int) ([]DeniedPR, int, error) {
 	rows, err := s.db.Query(`SELECT number, COALESCE(title, ''), COALESCE(author_association, ''),
 			COALESCE(closing_comment, ''), COALESCE(review_verdict, ''), closed_at
 		FROM pull_requests WHERE repo_id = ? AND merged = 0 AND state = 'closed'
 			AND author_association IN `+outsideAssociations+`
-		ORDER BY closed_at DESC LIMIT ?`, repoID, limit)
+		ORDER BY closed_at DESC`, repoID)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 	var out []DeniedPR
+	total := 0
 	for rows.Next() {
 		var d DeniedPR
 		var ca nullTime
 		if err := rows.Scan(&d.Number, &d.Title, &d.AuthorAssociation, &d.ClosingComment, &d.ReviewVerdict, &ca); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
-		d.ClosedAt = ca.ptr()
-		out = append(out, d)
+		if MergedByHand(d.ClosingComment) {
+			continue
+		}
+		total++
+		if len(out) < limit {
+			d.ClosedAt = ca.ptr()
+			out = append(out, d)
+		}
 	}
-	return out, rows.Err()
+	return out, total, rows.Err()
 }
 
 // HealthLabel is the uppercase health in the snapshot and dashboard. A repo never polled successfully is

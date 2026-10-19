@@ -124,3 +124,36 @@ func TestWriteReadRoundTrip(t *testing.T) {
 		t.Errorf("watch report: %+v", rr.Watch)
 	}
 }
+
+func TestMergedByHandLeavesTheDeniedList(t *testing.T) {
+	s := openTemp(t)
+	id, _ := s.UpsertRepo("o", "r", "https://github.com/o/r")
+	closed := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	for n, comment := range map[int]string{
+		1: "Merged manually due to the conflicts - thanks!",
+		2: "Cherry-picked as 9f3a2b1c, thanks.",
+		3: "Closing as a duplicate of #1742, which we are going to merge instead.",
+		4: "Thanks, but we won't take this. See commit abc1234 for the direction we chose.",
+		5: "",
+	} {
+		s.UpsertPR(PullRequest{RepoID: id, Number: n, Title: "pr", State: "closed", ClosedAt: &closed, AuthorAssociation: "NONE"})
+		s.SetPRDetail(id, n, comment, "")
+	}
+	rep, err := s.Report(10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[int]bool{}
+	for _, d := range rep[0].DeniedPRs {
+		got[d.Number] = true
+	}
+	if got[1] || got[2] {
+		t.Errorf("hand-merged PRs should not count as denied: %v", got)
+	}
+	if !got[3] || !got[4] || !got[5] {
+		t.Errorf("real rejections must stay: %v", got)
+	}
+	if rep[0].DeniedPRsTotal != 3 {
+		t.Errorf("denied total %d, want 3", rep[0].DeniedPRsTotal)
+	}
+}
