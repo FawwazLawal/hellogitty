@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -32,6 +33,7 @@ Usage:
   hellogitty [flags]                       run the poller and the dashboard
   hellogitty watch owner/name 123 [456]    watch issues for claims and fixes
   hellogitty watch                         list watched issues
+  hellogitty unwatch owner/name 123 [456]  stop watching issues
 
 Repositories come from a config file (default ./hellogitty.json) or from -repos.
 GITHUB_TOKEN must hold a GitHub token; read-only access is enough.
@@ -44,6 +46,13 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "watch" {
 		if err := runWatch(os.Args[2:]); err != nil {
 			fmt.Fprintln(os.Stderr, "hellogitty watch:", err)
+			os.Exit(1)
+		}
+		return
+	}
+	if len(os.Args) > 1 && os.Args[1] == "unwatch" {
+		if err := runUnwatch(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, "hellogitty unwatch:", err)
 			os.Exit(1)
 		}
 		return
@@ -345,19 +354,88 @@ func runWatch(args []string) error {
 	if repo == nil {
 		return fmt.Errorf("%s is not in your configured repositories, so it would never be polled", want)
 	}
+	numbers, err := issueNumbers(fs.Args()[1:])
+	if err != nil {
+		return err
+	}
 	id, err := st.UpsertRepo(repo.Owner, repo.Name, "https://github.com/"+repo.String())
 	if err != nil {
 		return err
 	}
-	for _, a := range fs.Args()[1:] {
-		n, err := strconv.Atoi(strings.TrimPrefix(a, "#"))
-		if err != nil || n <= 0 {
-			return fmt.Errorf("bad issue number %q", a)
-		}
+	for _, n := range numbers {
 		if err := st.AddWatch(id, n); err != nil {
 			return err
 		}
 		fmt.Printf("watching %s#%d (checked on the next poll)\n", repo, n)
 	}
 	return nil
+}
+
+// runUnwatch removes issues from the watch list. The repository need not still be configured,
+// so watches left behind by a repository you stopped following can be cleared too.
+func runUnwatch(args []string) error {
+	fs := flag.NewFlagSet("unwatch", flag.ContinueOnError)
+	cf := commonFlags(fs)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() < 2 {
+		return errors.New("usage: hellogitty unwatch owner/name 123 [456 ...]")
+	}
+	want, err := config.ParseRepo(fs.Arg(0))
+	if err != nil {
+		return err
+	}
+	numbers, err := issueNumbers(fs.Args()[1:])
+	if err != nil {
+		return err
+	}
+	cfg, err := cf.load(fs)
+	if err != nil {
+		return err
+	}
+	st, err := store.Open(cfg.Path(cfg.Database))
+	if err != nil {
+		return err
+	}
+	defer st.Close()
+	return unwatch(st, want, numbers, os.Stdout)
+}
+
+func unwatch(st *store.Store, want config.Repo, numbers []int, out io.Writer) error {
+	repo, err := st.RepoByName(want.Owner, want.Name)
+	if err != nil {
+		return err
+	}
+	if repo != nil {
+		want = config.Repo{Owner: repo.Owner, Name: repo.Name}
+	}
+	for _, n := range numbers {
+		removed := false
+		if repo != nil {
+			if removed, err = st.RemoveWatch(repo.ID, n); err != nil {
+				return err
+			}
+		}
+		if removed {
+			fmt.Fprintf(out, "stopped watching %s#%d\n", want, n)
+		} else {
+			fmt.Fprintf(out, "not watching %s#%d, nothing to remove\n", want, n)
+		}
+	}
+	return nil
+}
+
+// issueNumbers parses issue numbers ("123" or "#123"), rejecting the whole list on the first bad
+// one so a typo never applies half a command.
+func issueNumbers(args []string) ([]int, error) {
+	out := make([]int, 0, len(args))
+	for _, a := range args {
+		n, err := strconv.Atoi(strings.TrimPrefix(a, "#"))
+		if err != nil || n <= 0 {
+			return nil, fmt.Errorf("bad issue number %q", a)
+		}
+		out = append(out, n)
+	}
+	return out, nil
 }

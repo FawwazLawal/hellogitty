@@ -278,6 +278,16 @@ func (s *Store) AddWatch(repoID int64, issueNumber int) error {
 	return err
 }
 
+// RemoveWatch drops an issue from the watch list and reports whether it was being watched.
+func (s *Store) RemoveWatch(repoID int64, issueNumber int) (bool, error) {
+	res, err := s.db.Exec(`DELETE FROM watch_list WHERE repo_id = ? AND issue_number = ?`, repoID, issueNumber)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n > 0, err
+}
+
 func (s *Store) WatchList(repoID int64) ([]WatchItem, error) {
 	rows, err := s.db.Query(`SELECT id, repo_id, issue_number, COALESCE(status, 'open'), status_changed_at
 		FROM watch_list WHERE repo_id = ? ORDER BY issue_number`, repoID)
