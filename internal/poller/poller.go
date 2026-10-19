@@ -451,11 +451,26 @@ func containsClaim(body string) bool {
 	return false
 }
 
-// closingComment is the last maintainer comment at or before the PR was closed.
+// ciStickyMarkers open comments that CI actions post and keep updating, even from a
+// maintainer's account; they report a check, not a reason for closing.
+var ciStickyMarkers = []string{"<!-- add-pr-comment", "<!-- sticky-pull-request-comment", "<!-- codecov", "<!-- coverage"}
+
+func isCIStatus(body string) bool {
+	b := strings.ToLower(strings.TrimSpace(body))
+	for _, m := range ciStickyMarkers {
+		if strings.HasPrefix(b, m) {
+			return true
+		}
+	}
+	return false
+}
+
+// closingComment is the last maintainer comment at or before the PR was closed, skipping bots
+// and CI status comments.
 func closingComment(comments []github.Comment, pr github.PullRequest) string {
 	for i := len(comments) - 1; i >= 0; i-- {
 		c := comments[i]
-		if !maintainerAssociations[c.AuthorAssociation] || c.User.Login == pr.User.Login {
+		if !maintainerAssociations[c.AuthorAssociation] || c.User.Login == pr.User.Login || c.User.IsBot() || isCIStatus(c.Body) {
 			continue
 		}
 		if pr.ClosedAt != nil && c.CreatedAt != nil && c.CreatedAt.After(pr.ClosedAt.Add(time.Minute)) {

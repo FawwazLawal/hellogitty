@@ -255,3 +255,21 @@ func TestCappedIssueListUsesExactTotals(t *testing.T) {
 		t.Errorf("a failed totals search must surface as a poll failure: totals %v errors %v", ps.Totals, ps.Errors)
 	}
 }
+
+func TestClosingCommentSkipsBotsAndCIStatus(t *testing.T) {
+	closed := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	before := closed.Add(-time.Hour)
+	pr := github.PullRequest{User: github.User{Login: "outsider"}, ClosedAt: &closed}
+	comments := []github.Comment{
+		{Body: "This duplicates #10; closing.", AuthorAssociation: "MEMBER", User: github.User{Login: "maint"}, CreatedAt: &before},
+		{Body: "<!-- add-pr-comment:spotless -->\nFormatting check succeeded!", AuthorAssociation: "COLLABORATOR", User: github.User{Login: "maint2", Type: "User"}, CreatedAt: &before},
+		{Body: "Coverage 91%", AuthorAssociation: "MEMBER", User: github.User{Login: "codecov[bot]", Type: "Bot"}, CreatedAt: &before},
+	}
+	if got := closingComment(comments, pr); got != "This duplicates #10; closing." {
+		t.Errorf("closing comment %q", got)
+	}
+	policy := []github.Comment{{Body: "<!-- impeccable-pr-policy:v1:no-approval --> This repository requires maintainer approval.", AuthorAssociation: "OWNER", User: github.User{Login: "owner"}, CreatedAt: &before}}
+	if got := closingComment(policy, pr); got == "" {
+		t.Error("a maintainer's policy closure is a real reason and must be kept")
+	}
+}
