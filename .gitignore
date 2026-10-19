@@ -1,0 +1,21 @@
+# Runtime data
+*.db
+*.db-wal
+*.db-shm
+*.log
+snapshot.json
+.snapshot-*.json
+
+# Binaries
+/hellogitty
+
+# Your configuration (copy hellogitty.example.json to start)
+hellogitty.json
+
+# Local working files
+local/
+.impeccable/
+PRODUCT.md
+SPEC.md
+DESIGN.md
+.DS_Store

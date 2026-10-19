@@ -1,0 +1,9 @@
+{
+  "repos": [
+    "junegunn/fzf",
+    "BurntSushi/ripgrep",
+    "charmbracelet/bubbletea"
+  ],
+  "listen": "localhost:7340",
+  "interval": "60m"
+}

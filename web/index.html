@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="refresh" content="300">
+<meta name="color-scheme" content="dark">
+<title>HelloGitty</title>
+<style>
+  :root {
+    --bg: #0a0a0b; --panel: #0f0f10; --raised: #161617; --rule: #1f1f21; --rule-hi: #2e2e31;
+    --text: #dcdcdc; --dim: #969696; --track: #28282a;
+    --nom: #4fc469; --caution: #e9aa3b; --warn: #ff5244;
+    --caution-fill: #e9aa3b; --caution-ink: #160e02; --warn-fill: #c4271d; --warn-ink: #ffffff;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    --row: minmax(0, 1.6fr) 170px 64px 58px 50px 64px 112px 52px 56px;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); scrollbar-color: var(--rule-hi) var(--bg); }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.45 var(--mono);
+    font-variant-numeric: tabular-nums slashed-zero; caret-color: var(--text); }
+  ::selection { background: var(--rule-hi); color: #fff; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--rule-hi); border: 2px solid var(--bg); }
+  a { color: var(--text); text-decoration: underline; text-decoration-color: var(--rule-hi); text-underline-offset: 3px; }
+  a:hover { text-decoration-color: var(--text); }
+  :focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+  .lbl { font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--dim); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .zero { color: var(--dim); }
+
+  /* status line */
+  .status { position: sticky; top: 0; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 28px;
+    padding: 9px 20px; background: var(--panel); border-bottom: 1px solid var(--rule-hi); }
+  .status h1 { margin: 0; font-size: 17px; line-height: 1.35; font-weight: 700; letter-spacing: .06em; }
+  .status .item { display: flex; align-items: baseline; gap: 8px; }
+  .status .v { font-size: 14px; line-height: 1.35; }
+  .gauge { display: inline-block; width: 90px; height: 6px; background: var(--track); vertical-align: middle; }
+  .gauge i { display: block; height: 100%; background: var(--dim); }
+  .gauge.hot i { background: var(--caution); }
+
+  /* caution and warning panel */
+  .cw { display: grid; grid-auto-flow: column; grid-template-columns: 2fr; grid-auto-columns: minmax(0, 1fr); gap: 6px; padding: 12px 20px 0; }
+  .cell { border: 1px solid var(--rule-hi); background: var(--panel); padding: 10px 11px; min-height: 60px;
+    display: flex; flex-direction: column; gap: 5px; }
+  .cell.empty { border-style: dashed; }
+  .cell .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .cell .leg { font-size: 14px; line-height: 1.35; font-weight: 700; letter-spacing: .06em; color: var(--dim); }
+  .cell.wide .leg { font-size: 17px; }
+  .cell .cnt { font-size: 13px; color: var(--dim); white-space: nowrap; }
+  .cell.lit.warn { background: var(--warn-fill); border-color: var(--warn-fill); }
+  .cell.lit.caution { background: var(--caution-fill); border-color: var(--caution-fill); }
+  .cell.lit.warn .leg, .cell.lit.warn .cnt { color: var(--warn-ink); }
+  .cell.lit.caution .leg, .cell.lit.caution .cnt { color: var(--caution-ink); }
+  .cell.lit .cnt { font-size: 14px; font-weight: 700; }
+  .cell .det { font-size: 12px; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box;
+    -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .cell .detrow { display: flex; align-items: flex-start; gap: 6px; }
+  .cell .detrow .det { flex: 1; min-width: 0; }
+  .cell .more { font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .cell.lit.warn .more { color: var(--warn-ink); }
+  .cell.lit.caution .more { color: var(--caution-ink); }
+  .cell.lit.warn .det { color: var(--warn-ink); }
+  .cell.lit.caution .det { color: var(--caution-ink); }
+
+  /* layout */
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 12px; padding: 12px 20px 24px; align-items: start; }
+  .panel { background: var(--panel); border: 1px solid var(--rule); min-width: 0; }
+  .panel > h2 { margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+    padding: 9px 12px; border-bottom: 1px solid var(--rule); font-size: 13px; font-weight: 700; letter-spacing: .06em; }
+  .panel > h2 .lbl { font-weight: 400; letter-spacing: .06em; }
+  .rail { display: grid; gap: 12px; }
+
+  /* repo display */
+  .thead, .repo > summary { display: grid; grid-template-columns: 22px var(--row) 18px; align-items: center; column-gap: 10px; padding: 0 12px; }
+  .thead { height: 32px; padding-top: 4px; padding-bottom: 4px; border-bottom: 1px solid var(--rule); }
+  .thead .phead { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; }
+  .thead .phead span { font-size: 11px; letter-spacing: 0; text-align: center; }
+  .num { text-align: right; }
+  .repo { border-bottom: 1px solid var(--rule); }
+  .repo:last-child { border-bottom: 0; }
+  .repo > summary { min-height: 34px; cursor: pointer; list-style: none; }
+  .repo > summary::-webkit-details-marker { display: none; }
+  .repo > summary:hover { background: var(--raised); }
+  .repo[open] > summary { background: var(--raised); }
+  .chev { width: 8px; height: 8px; border-right: 1.5px solid var(--dim); border-bottom: 1.5px solid var(--dim);
+    transform: rotate(-45deg); justify-self: center; }
+  .repo[open] .chev { transform: rotate(45deg); }
+  .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .name .own { color: var(--dim); }
+  .light { width: 10px; height: 10px; border-radius: 50%; justify-self: center; border: 2px solid transparent; }
+  .light.ACTIVE { background: var(--nom); }
+  .light.SLOW { border-color: var(--caution); }
+  .light.DORMANT { background: var(--caution); }
+  .light.UNKNOWN { border: 1.5px dashed var(--dim); }
+  .phase { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; height: 10px; }
+  .phase i { border: 1px solid var(--rule-hi); }
+  .phase i.done { background: var(--dim); border-color: var(--dim); }
+  .phase i.current { background: var(--text); border-color: var(--text); }
+  .phase i.failed { background: var(--caution); border-color: var(--caution); }
+  .phase.none i { border-style: dotted; }
+  .gate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gate.ok { color: var(--nom); }
+  .gate.caution { color: var(--caution); }
+  .nopipe { --row: minmax(0, 1.6fr) 58px 50px 64px 112px 52px 56px; }
+  .status .ver { margin-left: -16px; }
+  .status .ver .baby { text-transform: none; letter-spacing: 0; }
+  .pad { padding: 10px 12px; }
+  .age { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+  .age .bar { width: 50px; height: 5px; background: var(--track); }
+  .age > span { white-space: nowrap; }
+  .age .bar i { display: block; height: 100%; background: var(--dim); }
+  .age.old .bar i { background: var(--caution); }
+  .claimed { color: var(--warn); font-weight: 700; }
+  .expand { padding: 4px 12px 14px 44px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 6px 28px; }
+  .expand h3 { margin: 10px 0 4px; font-size: 11px; font-weight: 400; letter-spacing: .07em; color: var(--dim); text-transform: uppercase; }
+  .expand p, .expand ul { margin: 0; }
+  .expand ul { list-style: none; padding: 0; }
+  .expand li { padding: 3px 0; }
+  .denial { padding: 6px 0; border-top: 1px solid var(--rule); }
+  .denial:first-of-type { border-top: 0; }
+  .denial q { display: block; margin-top: 3px; color: var(--dim); quotes: none; white-space: pre-wrap; overflow-wrap: anywhere;
+    max-height: 7.5em; overflow: auto; }
+  .tag { font-size: 11px; letter-spacing: .05em; color: var(--dim); border: 1px solid var(--rule-hi); padding: 0 5px; white-space: nowrap; }
+  .legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; justify-content: flex-end; }
+  .legend .li { white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; }
+  .legend .light { display: inline-block; }
+  .sw { display: inline-block; width: 12px; height: 9px; border: 1px solid var(--rule-hi); }
+  .sw.done { background: var(--dim); border-color: var(--dim); }
+  .sw.current { background: var(--text); border-color: var(--text); }
+  .sw.failed { background: var(--caution); border-color: var(--caution); }
+  .tag.cr { color: var(--caution); border-color: var(--caution); }
+  .err { color: var(--warn); overflow-wrap: anywhere; }
+
+  /* watch channel */
+  .wl { list-style: none; margin: 0; padding: 0; }
+  .wl li { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 4px 10px; padding: 8px 12px; border-bottom: 1px solid var(--rule); }
+  .wl li:last-child { border-bottom: 0; }
+  .st { font-size: 11px; letter-spacing: .05em; padding: 2px 6px; text-align: center; align-self: start; border: 1px solid var(--rule-hi); color: var(--nom); }
+  .st.CLAIMED { background: var(--warn-fill); border-color: var(--warn-fill); color: var(--warn-ink); }
+  .st.CLOSED_FIXED, .st.CLOSED_WONT { background: var(--caution-fill); border-color: var(--caution-fill); color: var(--caution-ink); }
+  .wl .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wl .d { grid-column: 2; font-size: 12px; color: var(--dim); overflow-wrap: anywhere; }
+  .nosig { padding: 14px 12px; }
+  .nosig .big { font-size: 14px; line-height: 1.35; letter-spacing: .08em; color: var(--dim); }
+  code { font: inherit; color: var(--text); background: var(--raised); padding: 1px 5px; }
+
+  /* pipeline and telemetry */
+  .occ { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border-bottom: 1px solid var(--rule); }
+  .occ div { padding: 8px 4px 9px; text-align: center; border-right: 1px solid var(--rule); }
+  .occ div:last-child { border-right: 0; }
+  .occ b { display: block; font-size: 18px; line-height: 1.35; font-weight: 400; }
+  .prs { display: grid; grid-template-columns: repeat(5, 1fr); border-bottom: 1px solid var(--rule); }
+  .prs div { padding: 8px 10px 9px; border-right: 1px solid var(--rule); }
+  .prs div:last-child { border-right: 0; }
+  .prs b { display: block; font-size: 18px; line-height: 1.35; font-weight: 400; }
+  .nodata { padding: 9px 12px; color: var(--dim); }
+  .nodata b { color: var(--text); font-weight: 400; letter-spacing: .08em; }
+  .prlist { list-style: none; margin: 0; padding: 4px 12px 10px; }
+  .prlist li { padding: 4px 0; display: flex; gap: 8px; align-items: baseline; }
+  .prlist .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .kv { display: grid; grid-template-columns: auto 1fr; margin: 0; padding: 6px 12px 10px; }
+  .kv dt, .kv dd { margin: 0; padding: 4px 0; border-bottom: 1px solid var(--rule); }
+  .kv dd { text-align: right; }
+  .kv dt:nth-last-of-type(1), .kv dd:last-child { border-bottom: 0; }
+  footer { padding: 0 20px 20px; color: var(--dim); font-size: 12px; }
+
+  /* a value that changed since the previous reload */
+  .chg { box-shadow: inset 0 -2px 0 var(--text); animation: chg 600ms steps(2, end) 2; }
+  @keyframes chg { 50% { background: var(--rule-hi); } }
+  @media (prefers-reduced-motion: reduce) { .chg { animation: none; } }
+
+  @media (max-width: 1180px) {
+    .grid { grid-template-columns: 1fr; }
+    .cw { grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .cell.wide { grid-column: span 2; }
+  }
+  @media (max-width: 760px) {
+    .status { padding: 8px 16px; gap: 4px 16px; }
+    .cw { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px 16px 0; }
+    .grid { padding: 10px 16px 20px; }
+    .thead { display: none; }
+    .panel > h2 { flex-wrap: wrap; }
+    .legend { width: 100%; justify-content: flex-start; }
+    .legend .li:first-child { margin-left: 0; }
+    .repo > summary { grid-template-columns: 22px minmax(0, 1fr) auto 18px; grid-template-areas: "l n g c" ". p s s" ". m m m"; row-gap: 6px; padding: 8px 12px; }
+    .repo > summary > .stg { grid-area: s; display: block; font-size: 11px; color: var(--dim); letter-spacing: .05em; }
+    .repo > summary > .light { grid-area: l; } .repo > summary > .name { grid-area: n; }
+    .repo > summary > .gate { grid-area: g; } .repo > summary > .chev { grid-area: c; }
+    .repo > summary > .phase { grid-area: p; }
+    .repo > summary > .m { grid-area: m; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 14px; }
+    .repo > summary > .m > * { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+    .repo > summary > .m .bar { display: none; }
+    .mlbl { display: inline !important; margin-right: 4px; }
+    .expand { padding-left: 12px; }
+  }
+  .m { display: contents; }
+  .stg { display: none; }
+  .mlbl { display: none; font-size: 11px; color: var(--dim); letter-spacing: .05em; }
+</style>
+</head>
+<body>
+<header class="status">
+  <h1>HELLOGITTY</h1><span class="lbl ver">{{.Version}}{{if .Baby}} <span class="baby">(baby)</span>{{end}}</span>
+  <span class="item"><span class="lbl">UTC</span><time class="v" id="clock" datetime="{{.NowUTC}}">{{.NowUTC}}</time></span>
+  <span class="item"><span class="lbl">Poll age</span>{{if .LastPollUnix}}<span class="v" id="pollage" data-since="{{.LastPollUnix}}">–</span>{{else}}<span class="v">NO POLL YET</span>{{end}}</span>
+  <span class="item"><span class="lbl">Cycle</span><span class="v">{{.CycleText}}</span></span>
+  <span class="item"><span class="lbl">API used</span>{{if .APIKnown}}<span class="v">{{.APIUsed}}/{{.APILimit}} /HR</span><span class="gauge{{if ge .APIPct 90}} hot{{end}}" role="img" aria-label="{{.APIPct}} percent of hourly quota used"><i style="width:{{.APIPct}}%"></i></span>{{else}}<span class="v zero">NO DATA</span>{{end}}</span>
+  <span class="item"><span class="lbl">Repos</span><span class="v">{{.RepoCount}}</span>{{if .HasPipeline}}<span class="lbl">In pipeline</span><span class="v">{{.TargetCount}}</span>{{end}}</span>
+</header>
+
+<section class="cw" aria-label="Caution and warning panel">
+{{range .Cells}}
+  <div class="cell {{.Level}}{{if .Lit}} lit{{end}}{{if .Wide}} wide{{end}}{{if .Empty}} empty{{end}}"{{if .Title}} title="{{.Title}}"{{end}}>
+    <div class="head"><span class="leg">{{.Label}}</span>{{if and .Value (not .Empty)}}<span class="cnt" data-v="cw-{{.Key}}">{{.Value}}</span>{{end}}</div>
+    {{if .Empty}}<span class="det" data-v="cw-{{.Key}}">{{.Value}}</span>{{end}}
+    {{if and .Lit .Detail}}<div class="detrow"><span class="det">{{.Detail}}</span>{{if .More}}<span class="more">+{{.More}}</span>{{end}}</div>{{end}}
+    <span class="sr">{{if .Lit}}lit{{else}}not lit{{end}}</span>
+  </div>
+{{end}}
+</section>
+
+<div class="grid">
+  <section class="panel{{if not .HasPipeline}} nopipe{{end}}" aria-label="Repositories">
+    <h2>REPOS <span class="lbl legend"><span class="li"><span class="light ACTIVE"></span>active</span> <span class="li"><span class="light SLOW"></span>slow</span> <span class="li"><span class="light DORMANT"></span>dormant</span> <span class="li"><span class="light UNKNOWN"></span>unknown</span>{{if .HasPipeline}} <span class="li"><span class="sw done"></span>done</span> <span class="li"><span class="sw current"></span>current</span> <span class="li"><span class="sw failed"></span>failed</span>{{end}}</span></h2>
+    <div class="thead" aria-hidden="true">
+      <span></span><span class="lbl">Repo</span>
+      {{if .HasPipeline}}<span class="phead">{{range .Stages}}<span class="lbl" title="{{.Name}}">{{.Abbr}}</span>{{end}}</span>
+      <span class="lbl">{{.Labels.Status}}</span>{{end}}<span class="lbl num">Open</span><span class="lbl num">GFI</span><span class="lbl num">Unasgn</span>
+      <span class="lbl num">Last commit</span><span class="lbl num">Watch</span><span class="lbl num">Denied</span><span></span>
+    </div>
+    {{range .Rows}}{{$repoURL := .URL}}
+    <details class="repo" data-key="repo-{{.Key}}">
+      <summary>
+        <span class="light {{.Health}}" role="img" aria-label="health {{.Health}}" title="{{.Health}}" data-v="h-{{.Key}}" data-val="{{.Health}}"></span>
+        <span class="name"><span class="own">{{.Owner}}/</span>{{.Name}}</span>
+        {{if $.HasPipeline}}{{if .InPipeline}}<span class="phase" data-v="ph-{{.Key}}" data-val="{{.Stage}}" title="stage: {{.Stage}}">{{range .Phases}}<i class="{{.State}}"></i>{{end}}<span class="sr">stage {{.Stage}}</span></span>
+        {{else}}<span class="phase none" title="not in the pipeline">{{range $.Stages}}<i></i>{{end}}<span class="sr">not in the pipeline</span></span>{{end}}
+        <span class="stg">{{if .InPipeline}}{{.StageAbbr}}{{else}}—{{end}}</span>
+        <span class="gate {{.Level}}" title="{{.Label}}">{{if .Label}}{{.Label}}{{else}}<span class="zero">—</span>{{end}}</span>{{end}}
+        <span class="m">
+          <span class="num{{if not .Open}} zero{{end}}" data-v="o-{{.Key}}"><span class="mlbl">OPEN</span>{{.Open}}</span>
+          <span class="num{{if not .GFI}} zero{{end}}" data-v="g-{{.Key}}"><span class="mlbl">GFI</span>{{.GFI}}</span>
+          <span class="num{{if not .Unassigned}} zero{{end}}" data-v="u-{{.Key}}"><span class="mlbl">UNASGN</span>{{.Unassigned}}</span>
+          <span class="age{{if .AgeWarn}} old{{end}}"><span class="mlbl">COMMIT</span>{{if .AgeKnown}}<span class="bar" aria-hidden="true"><i style="width:{{.AgePct}}%"></i></span><span>{{.AgeDays}} D</span>{{else}}<span class="zero">—</span>{{end}}</span>
+          <span class="num{{if not .Watch}} zero{{end}}"><span class="mlbl">WATCH</span>{{len .Watch}}</span>
+          <span class="num{{if not .DeniedTotal}} zero{{end}}" data-v="d-{{.Key}}"><span class="mlbl">DENIED</span>{{.DeniedTotal}}</span>
+        </span>
+        <span class="chev" aria-hidden="true"></span>
+      </summary>
+      <div class="expand">
+        <div>
+          <h3>Repository</h3>
+          <p><a href="{{.URL}}" target="_blank" rel="noopener">{{.Owner}}/{{.Name}}</a></p>
+          {{if $.HasPipeline}}<p class="zero">{{if .InPipeline}}Stage {{upper .Stage}}{{if .Label}} · {{lower $.Labels.Status}} {{.Label}}{{end}}{{else}}Not in the pipeline{{end}}{{if .NotesURL}} · <a href="{{.NotesURL}}" target="_blank">{{$.Labels.Notes}}</a>{{end}}</p>{{end}}
+          {{if .Error}}<p class="err">Last poll failed: {{.Error}}</p>{{end}}
+          <h3>Watched issues</h3>
+          {{if .Watch}}<ul>{{range .Watch}}<li><span class="st {{.Status}}">{{.Status}}</span> <a href="{{.URL}}" target="_blank" rel="noopener">#{{.Number}}</a> {{.Title}}</li>{{end}}</ul>
+          {{else}}<p class="zero">None watched.</p>{{end}}
+          <h3>Your PRs</h3>
+          {{if .PRs}}<ul>{{range .PRs}}<li><a href="{{.URL}}" target="_blank" rel="noopener">#{{.Number}}</a> {{.Title}} <span class="tag">{{.State}}</span>{{if .NotesURL}} <a href="{{.NotesURL}}" target="_blank">{{$.Labels.Notes}}</a>{{end}}</li>{{end}}</ul>
+          {{else}}<p class="zero">None opened.</p>{{end}}
+        </div>
+        <div>
+          <h3>Denied outside PRs · last {{len .Denied}} of {{.DeniedTotal}}</h3>
+          {{range .Denied}}
+          <div class="denial">
+            <a href="{{$repoURL}}/pull/{{.Number}}" target="_blank" rel="noopener">#{{.Number}}</a> {{.Title}} <span class="tag">{{.AuthorAssociation}}</span> {{if .ReviewVerdict}}<span class="tag{{if eq .ReviewVerdict "CHANGES_REQUESTED"}} cr{{end}}">{{.ReviewVerdict}}</span> {{end}}<span class="tag">{{utc .ClosedAt}}</span>
+            {{if .ClosingComment}}<q>{{.ClosingComment}}</q>{{else}}<q>No maintainer comment before close.</q>{{end}}
+          </div>
+          {{else}}<p class="zero">No denied outside PRs in the latest 100 closed.</p>{{end}}
+        </div>
+      </div>
+    </details>
+    {{end}}
+    {{if .PipelineErr}}<p class="err pad">Pipeline command failed: {{.PipelineErr}}</p>{{end}}
+  </section>
+
+  <div class="rail">
+    <section class="panel" aria-label="Watch channel">
+      <h2>WATCH CHANNEL <span class="lbl">{{len .Watch}} watched</span></h2>
+      {{if .Watch}}
+      <ul class="wl">
+      {{range .Watch}}
+        <li><span class="st {{.Status}}">{{.Status}}</span>
+          <a class="t" href="{{.URL}}" target="_blank" rel="noopener" title="{{.Title}}">{{.Repo}}#{{.Number}} {{.Title}}</a>
+          {{if or .ClaimDetail .ChangedAt}}<span class="d">{{if isURL .ClaimDetail}}<a href="{{.ClaimDetail}}" target="_blank" rel="noopener">claim comment</a>{{else}}{{.ClaimDetail}}{{end}}{{if .ChangedAt}} · changed {{utc .ChangedAt}}{{end}}</span>{{end}}
+        </li>
+      {{end}}
+      </ul>
+      {{else}}
+      <div class="nosig"><div class="big">NO ISSUES WATCHED</div><p class="zero">The alarm channel is empty, not clear. Watch an issue to learn when someone claims or fixes it: <code>hellogitty watch owner/name 123</code></p></div>
+      {{end}}
+    </section>
+
+    <section class="panel" aria-label="Pipeline">
+      <h2>{{if .HasPipeline}}PIPELINE <span class="lbl">{{.TargetCount}} repos by stage</span>{{else}}YOUR PRS <span class="lbl">opened in tracked repos</span>{{end}}</h2>
+      {{if .HasPipeline}}<div class="occ">{{range .Pipeline.Counts}}<div title="{{.Name}}"><span class="lbl">{{.Abbr}}</span><b class="{{if not .Count}}zero{{end}}" data-v="occ-{{.Name}}">{{.Count}}</b></div>{{end}}</div>{{end}}
+      <div class="prs">
+        <div><span class="lbl">Opened</span><b class="{{if not .Pipeline.Opened}}zero{{end}}" data-v="pr-opened">{{.Pipeline.Opened}}</b></div>
+        <div><span class="lbl">Open</span><b class="{{if not .Pipeline.Open}}zero{{end}}" data-v="pr-open">{{.Pipeline.Open}}</b></div>
+        <div><span class="lbl">Merged</span><b class="{{if not .Pipeline.Merged}}zero{{end}}" data-v="pr-merged">{{.Pipeline.Merged}}</b></div>
+        <div><span class="lbl">Closed</span><b class="{{if not .Pipeline.Closed}}zero{{end}}" data-v="pr-closed">{{.Pipeline.Closed}}</b></div>
+        <div><span class="lbl">Rate</span><b class="{{if not .Pipeline.Rate}}zero{{end}}" data-v="pr-rate">{{if .Pipeline.Rate}}{{.Pipeline.Rate}}{{else}}—{{end}}</b></div>
+      </div>
+      {{if not .Pipeline.Known}}
+      <p class="nodata"><b>AWAITING PR SEARCH</b>{{if .Pipeline.Err}} · last search failed: <span class="err">{{.Pipeline.Err}}</span>{{else}} · runs with the next poll{{end}}</p>
+      {{else if not .Pipeline.Opened}}
+      <p class="nodata"><b>NO DATA</b> · 0 PRs opened by this account in tracked repos. Rate = merged ÷ (merged + closed).</p>
+      {{else}}
+      <p class="nodata">Rate = merged ÷ (merged + closed){{if .Pipeline.Err}} · last search failed, showing previous: <span class="err">{{.Pipeline.Err}}</span>{{end}}</p>
+      <ul class="prlist">{{range .Pipeline.PRs}}<li><span class="tag">{{.State}}</span><a class="t" href="{{.URL}}" target="_blank" rel="noopener">{{.Repo}}#{{.Number}} {{.Title}}</a>{{if .NotesURL}}<a href="{{.NotesURL}}" target="_blank">{{$.Labels.Notes}}</a>{{end}}</li>{{end}}</ul>
+      {{end}}
+    </section>
+
+    <section class="panel" aria-label="Poll telemetry">
+      <h2>POLL TELEMETRY</h2>
+      <dl class="kv">
+        <dt class="lbl">Last poll</dt><dd>{{if .LastPollUTC}}{{.LastPollUTC}}{{else}}<span class="zero">NONE</span>{{end}}</dd>
+        <dt class="lbl">Next poll</dt><dd>{{if .NextPollUTC}}{{.NextPollUTC}}{{else}}<span class="zero">ON START</span>{{end}}</dd>
+        <dt class="lbl">Interval</dt><dd>{{.PollInterval}} MIN</dd>
+        <dt class="lbl">Cycle time</dt><dd>{{.CycleText}}</dd>
+        <dt class="lbl">Calls per cycle</dt><dd>{{.CycleCalls}}</dd>
+        <dt class="lbl">Quota resets</dt><dd>{{if .APIResetUTC}}{{.APIResetUTC}}{{else}}<span class="zero">—</span>{{end}}</dd>
+        <dt class="lbl">Snapshot</dt><dd><a href="/snapshot.json">snapshot.json</a></dd>
+      </dl>
+    </section>
+  </div>
+</div>
+<footer>Page reloads every 5 min · polls every {{.PollInterval}} min · local only</footer>
+
+<script>
+  (function () {
+    function store(get, key, val) {
+      try { return get ? JSON.parse(sessionStorage.getItem(key) || "null") : sessionStorage.setItem(key, JSON.stringify(val)); }
+      catch (e) { return null; }
+    }
+
+    // Keep expanded sections open across the 5-minute reload.
+    var openKey = "hellogitty-open", open = store(true, openKey) || [];
+    document.querySelectorAll("details[data-key]").forEach(function (d) {
+      if (open.indexOf(d.dataset.key) !== -1) d.open = true;
+      d.addEventListener("toggle", function () {
+        store(false, openKey, Array.prototype.map.call(document.querySelectorAll("details[data-key][open]"), function (x) { return x.dataset.key; }));
+      });
+    });
+
+    // Mark values that changed since the previous reload; nothing else moves.
+    var valKey = "hellogitty-values", prev = store(true, valKey), next = {};
+    document.querySelectorAll("[data-v]").forEach(function (el) {
+      var v = el.dataset.val !== undefined ? el.dataset.val : el.textContent.trim();
+      next[el.dataset.v] = v;
+      if (prev && el.dataset.v in prev && prev[el.dataset.v] !== v) el.classList.add("chg");
+    });
+    store(false, valKey, next);
+
+    function pad(n) { return n < 10 ? "0" + n : "" + n; }
+    var clock = document.getElementById("clock"), age = document.getElementById("pollage");
+    function tick() {
+      var d = new Date();
+      clock.textContent = d.getUTCFullYear() + "-" + pad(d.getUTCMonth() + 1) + "-" + pad(d.getUTCDate()) + " " +
+        pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes()) + ":" + pad(d.getUTCSeconds()) + "Z";
+      if (age) {
+        var s = Math.max(0, Math.floor(d.getTime() / 1000) - Number(age.dataset.since));
+        age.textContent = pad(Math.floor(s / 3600)) + ":" + pad(Math.floor(s / 60) % 60) + ":" + pad(s % 60);
+      }
+    }
+    tick();
+    setInterval(tick, 1000);
+  })();
+</script>
+</body>
+</html>
