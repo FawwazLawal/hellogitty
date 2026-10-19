@@ -33,6 +33,9 @@ type Config struct {
 	Snapshot  string `json:"snapshot"`
 	// Pipeline optionally names a command that prints per-repo workflow stages as JSON.
 	Pipeline []string `json:"pipeline_command"`
+	// Maintain lists repositories ("owner/name") or organisations ("org") you maintain, beyond the
+	// ones your account owns. Their open pull requests and issues show under "Waiting on you".
+	Maintain []string `json:"maintain"`
 
 	Dir          string        `json:"-"`
 	PollInterval time.Duration `json:"-"`
@@ -97,6 +100,11 @@ func (c *Config) finish() error {
 	for _, r := range c.Repos {
 		if _, err := ParseRepo(r); err != nil {
 			return err
+		}
+	}
+	for _, m := range c.Maintain {
+		if strings.ContainsAny(strings.TrimSpace(m), " :") || strings.Count(m, "/") > 1 || strings.TrimSpace(m) == "" {
+			return fmt.Errorf("maintain: want owner/name or an organisation name, got %q", m)
 		}
 	}
 	return nil

@@ -1,6 +1,7 @@
 package github
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -42,8 +43,8 @@ type Client struct {
 	mu         sync.Mutex
 	lastSearch time.Time
 	remaining  int
-	limit     int
-	reset     time.Time
+	limit      int
+	reset      time.Time
 }
 
 func New(token string) *Client {
@@ -301,6 +302,10 @@ func (e *StatusError) Error() string {
 }
 
 func (c *Client) get(ctx context.Context, rawURL string, out any) (next string, err error) {
+	return c.do(ctx, http.MethodGet, rawURL, nil, out)
+}
+
+func (c *Client) do(ctx context.Context, method, rawURL string, payload []byte, out any) (next string, err error) {
 	for attempt := 1; ; attempt++ {
 		if err := c.waitIfExhausted(ctx); err != nil {
 			return "", err
@@ -310,9 +315,16 @@ func (c *Client) get(ctx context.Context, rawURL string, out any) (next string, 
 				return "", err
 			}
 		}
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+		var reqBody io.Reader
+		if payload != nil {
+			reqBody = bytes.NewReader(payload)
+		}
+		req, err := http.NewRequestWithContext(ctx, method, rawURL, reqBody)
 		if err != nil {
 			return "", err
+		}
+		if payload != nil {
+			req.Header.Set("Content-Type", "application/json")
 		}
 		req.Header.Set("Accept", "application/vnd.github+json")
 		req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
