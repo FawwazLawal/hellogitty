@@ -14,8 +14,12 @@ hellogitty.json
 
 # Local working files
 local/
+notes/
 .impeccable/
 PRODUCT.md
 SPEC.md
 DESIGN.md
 .DS_Store
+
+# Captures made for other sites, not part of this repository
+docs/profile-capture.png

@@ -228,7 +228,7 @@ func run() int {
 			if err := board.Refresh(ctx); err != nil {
 				log.Printf("work board: %v", err)
 			} else if b, _ := board.Snapshot(); b != nil {
-				log.Printf("work board: %d sent, %d incoming", len(b.Sent), len(b.Incoming))
+				log.Printf("work board: %d sent, %d incoming, %d GraphQL points (%d left)", len(b.Sent), len(b.Incoming), b.Cost, b.Remaining)
 			}
 			select {
 			case <-ctx.Done():
