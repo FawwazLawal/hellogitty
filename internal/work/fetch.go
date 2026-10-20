@@ -10,7 +10,10 @@ import (
 	"github.com/FawwazLawal/hellogitty/internal/github"
 )
 
-// One request fetches the whole board: eight searches as aliases of a single GraphQL query.
+// One request fetches the whole board: eight searches as aliases of a single GraphQL query. Only
+// your own open pull requests carry the expensive detail (review threads, every check by name);
+// measured on a live board a refresh costs 28 points (11 without the detail) of GitHub's 5,000-point
+// GraphQL hour, so about 340 points an hour at one refresh every five minutes.
 const boardQuery = `
 fragment who on Actor { login __typename }
 fragment pr on PullRequest {
@@ -18,23 +21,35 @@ fragment pr on PullRequest {
   repository { nameWithOwner }
   author { ...who }
   mergedBy { login }
-  reviewDecision mergeable
+  reviewDecision mergeable mergeStateStatus baseRefName
+  labels(first: 10) { nodes { name } }
   reviewRequests(first: 5) { nodes { requestedReviewer { __typename ... on User { login } ... on Team { name } ... on Bot { login } ... on Mannequin { login } } } }
   latestOpinionatedReviews(first: 10) { nodes { author { ...who } state submittedAt } }
   reviews(last: 1) { nodes { author { ...who } state body submittedAt url } }
   comments(last: 3) { totalCount nodes { author { ...who } body createdAt url } }
   commits(last: 1) { nodes { commit { committedDate statusCheckRollup { state } } } }
 }
+fragment detail on PullRequest {
+  reviewThreads(first: 30) { nodes { isResolved isOutdated path
+    comments(first: 1) { nodes { author { ...who } body url createdAt } }
+    latest: comments(last: 1) { nodes { author { ...who } } } } }
+  checks: commits(last: 1) { nodes { commit {
+    checkSuites(first: 20) { nodes { app { name } conclusion workflowRun { workflow { name } } } }
+    statusCheckRollup { contexts(first: 40) { nodes { __typename
+      ... on CheckRun { name status conclusion title }
+      ... on StatusContext { context state description } } } } } } }
+}
 fragment issue on Issue {
   number title url state stateReason createdAt updatedAt closedAt
   repository { nameWithOwner }
   author { ...who }
   assignees(first: 5) { nodes { login } }
+  labels(first: 10) { nodes { name } }
   comments(last: 3) { totalCount nodes { author { ...who } body createdAt url } }
 }
 query($prsOpen: String!, $prsDone: String!, $issues: String!, $issuesDone: String!,
       $requested: String!, $reviewed: String!, $incoming: String!, $triage: String!) {
-  prsOpen:    search(type: ISSUE, query: $prsOpen, first: 50)    { nodes { __typename ...pr } }
+  prsOpen:    search(type: ISSUE, query: $prsOpen, first: 50)    { nodes { __typename ...pr ...detail } }
   prsDone:    search(type: ISSUE, query: $prsDone, first: 20)    { nodes { __typename ...pr } }
   issues:     search(type: ISSUE, query: $issues, first: 40)     { nodes { __typename ...issue } }
   issuesDone: search(type: ISSUE, query: $issuesDone, first: 10) { nodes { __typename ...issue } }
@@ -42,6 +57,7 @@ query($prsOpen: String!, $prsDone: String!, $issues: String!, $issuesDone: Strin
   reviewed:   search(type: ISSUE, query: $reviewed, first: 20)   { nodes { __typename ...pr } }
   incoming:   search(type: ISSUE, query: $incoming, first: 30)   { nodes { __typename ...pr } }
   triage:     search(type: ISSUE, query: $triage, first: 30)     { nodes { __typename ...issue } }
+  rateLimit { cost remaining }
 }`
 
 type actor struct {
@@ -87,6 +103,59 @@ type node struct {
 	MergedBy       *actor `json:"mergedBy"`
 	ReviewDecision string `json:"reviewDecision"`
 	Mergeable      string `json:"mergeable"`
+	MergeState     string `json:"mergeStateStatus"`
+	BaseRef        string `json:"baseRefName"`
+	Labels         struct {
+		Nodes []struct {
+			Name string `json:"name"`
+		} `json:"nodes"`
+	} `json:"labels"`
+	ReviewThreads struct {
+		Nodes []struct {
+			IsResolved bool   `json:"isResolved"`
+			IsOutdated bool   `json:"isOutdated"`
+			Path       string `json:"path"`
+			Comments   struct {
+				Nodes []comment `json:"nodes"`
+			} `json:"comments"`
+			Latest struct {
+				Nodes []comment `json:"nodes"`
+			} `json:"latest"`
+		} `json:"nodes"`
+	} `json:"reviewThreads"`
+	Checks struct {
+		Nodes []struct {
+			Commit struct {
+				CheckSuites struct {
+					Nodes []struct {
+						App *struct {
+							Name string `json:"name"`
+						} `json:"app"`
+						Conclusion  string `json:"conclusion"`
+						WorkflowRun *struct {
+							Workflow struct {
+								Name string `json:"name"`
+							} `json:"workflow"`
+						} `json:"workflowRun"`
+					} `json:"nodes"`
+				} `json:"checkSuites"`
+				StatusCheckRollup *struct {
+					Contexts struct {
+						Nodes []struct {
+							Typename    string `json:"__typename"`
+							Name        string `json:"name"`
+							Status      string `json:"status"`
+							Conclusion  string `json:"conclusion"`
+							Title       string `json:"title"`
+							Context     string `json:"context"`
+							State       string `json:"state"`
+							Description string `json:"description"`
+						} `json:"nodes"`
+					} `json:"contexts"`
+				} `json:"statusCheckRollup"`
+			} `json:"commit"`
+		} `json:"nodes"`
+	} `json:"checks"`
 	ReviewRequests struct {
 		Nodes []struct {
 			RequestedReviewer *struct {
@@ -135,6 +204,10 @@ type boardData struct {
 	Reviewed   search `json:"reviewed"`
 	Incoming   search `json:"incoming"`
 	Triage     search `json:"triage"`
+	RateLimit  struct {
+		Cost      int `json:"cost"`
+		Remaining int `json:"remaining"`
+	} `json:"rateLimit"`
 }
 
 func viewerLogin(ctx context.Context, gh *github.Client) (string, error) {
@@ -193,7 +266,9 @@ func fetch(ctx context.Context, gh *github.Client, login string, maintain []stri
 	if err != nil && len(data.PRsOpen.Nodes)+len(data.Issues.Nodes)+len(data.Incoming.Nodes) == 0 {
 		return nil, err
 	}
-	return assemble(&data, login, maintain, label), err
+	b := assemble(&data, login, maintain, label)
+	b.Cost, b.Remaining = data.RateLimit.Cost, data.RateLimit.Remaining
+	return b, err
 }
 
 // assemble turns the raw searches into the two lists, dropping duplicates. An item in a
@@ -263,6 +338,47 @@ func toItem(n node, role, login string) Item {
 		Draft: n.IsDraft, CreatedAt: n.CreatedAt, UpdatedAt: n.UpdatedAt, ClosedAt: n.ClosedAt,
 		ReviewDecision: n.ReviewDecision, Conflict: n.Mergeable == "CONFLICTING",
 		StateReason: n.StateReason, Comments: n.Comments.TotalCount,
+		MergeState: n.MergeState, Base: n.BaseRef,
+	}
+	for _, l := range n.Labels.Nodes {
+		it.Labels = append(it.Labels, l.Name)
+	}
+	for _, t := range n.ReviewThreads.Nodes {
+		if t.IsResolved || len(t.Comments.Nodes) == 0 {
+			continue
+		}
+		c := t.Comments.Nodes[0]
+		th := Thread{Author: c.Author.name(), Bot: c.Author.bot(), Body: strings.TrimSpace(c.Body),
+			URL: c.URL, Path: t.Path, Outdated: t.IsOutdated, At: c.CreatedAt}
+		if l := t.Latest.Nodes; len(l) > 0 {
+			th.RepliedLast = strings.EqualFold(l[0].Author.name(), login)
+		}
+		it.Threads = append(it.Threads, th)
+	}
+	if c := n.Checks.Nodes; len(c) > 0 {
+		for _, s := range c[0].Commit.CheckSuites.Nodes {
+			if s.Conclusion != "ACTION_REQUIRED" {
+				continue
+			}
+			name := "a workflow"
+			if s.WorkflowRun != nil && s.WorkflowRun.Workflow.Name != "" {
+				name = s.WorkflowRun.Workflow.Name
+			} else if s.App != nil {
+				name = s.App.Name
+			}
+			it.AwaitingApproval = append(it.AwaitingApproval, name)
+		}
+		if r := c[0].Commit.StatusCheckRollup; r != nil {
+			for _, x := range r.Contexts.Nodes {
+				ch := Check{Name: x.Name, Detail: x.Title}
+				if x.Typename == "StatusContext" {
+					ch.Name, ch.Detail, ch.State = x.Context, x.Description, statusState(x.State)
+				} else {
+					ch.State = runState(x.Status, x.Conclusion)
+				}
+				it.CheckList = append(it.CheckList, ch)
+			}
+		}
 	}
 	if n.MergedBy != nil {
 		it.MergedBy = n.MergedBy.Login
@@ -316,6 +432,32 @@ func toItem(n node, role, login string) Item {
 	}
 	sort.Strings(it.Requested)
 	return it
+}
+
+// statusState maps a commit status (SUCCESS, PENDING, FAILURE, ERROR, EXPECTED) to a check state.
+func statusState(s string) string {
+	switch s {
+	case "SUCCESS":
+		return CheckPassed
+	case "FAILURE", "ERROR":
+		return CheckFailed
+	}
+	return CheckPending
+}
+
+// runState maps a check run's status and conclusion to a check state. Skipped and neutral runs
+// count as passed: they never block a merge.
+func runState(status, conclusion string) string {
+	if status != "COMPLETED" {
+		return CheckPending
+	}
+	switch conclusion {
+	case "SUCCESS", "NEUTRAL", "SKIPPED":
+		return CheckPassed
+	case "ACTION_REQUIRED":
+		return CheckPending
+	}
+	return CheckFailed
 }
 
 // latest picks the newest comment or review written by a person. A bare approval or "changes

@@ -106,6 +106,47 @@
   .pad { padding: 10px 14px; margin: 0; }
   .err { color: var(--warn); overflow-wrap: anywhere; }
 
+  [hidden] { display: none !important; }
+
+  /* filter and organize */
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 12px 20px 0; padding: 8px 10px;
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; }
+  .toolbar .search { position: relative; display: flex; align-items: center; flex: 0 1 320px; min-width: 200px; }
+  .toolbar input[type="search"] { width: 100%; font: 14px/1.3 var(--sans); color: var(--text); background: var(--bg);
+    border: 1px solid var(--rule-hi); border-radius: 6px; padding: 6px 30px 6px 10px; }
+  .toolbar input[type="search"]::placeholder { color: var(--dim); }
+  .toolbar input[type="search"]:focus { outline: 2px solid var(--text); outline-offset: 1px; }
+  .toolbar kbd { position: absolute; right: 8px; font: 11px var(--mono); color: var(--dim); border: 1px solid var(--rule-hi);
+    border-radius: 4px; padding: 0 5px; pointer-events: none; }
+  .toolbar input:not(:placeholder-shown) + kbd { display: none; }
+  .seg { display: inline-flex; align-items: center; border: 1px solid var(--rule-hi); border-radius: 6px; overflow: hidden; }
+  .seg .seglbl { font-size: 12px; color: var(--dim); padding: 0 8px; border-right: 1px solid var(--rule-hi); align-self: stretch; display: flex; align-items: center; }
+  .seg button { font: 13px/1 var(--sans); color: var(--dim); background: transparent; border: 0; padding: 7px 10px; cursor: pointer; white-space: nowrap; }
+  .seg button + button { border-left: 1px solid var(--rule-hi); }
+  .seg button:hover { color: var(--text); background: var(--raised); }
+  .seg button[aria-pressed="true"] { color: var(--text); background: var(--raised); font-weight: 600; }
+  .pick { display: inline-flex; align-items: center; gap: 6px; }
+  .pick select { font: 13px var(--sans); color: var(--text); background: var(--bg); border: 1px solid var(--rule-hi); border-radius: 6px;
+    padding: 5px 8px; max-width: 260px; }
+  .check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+  .check input { accent-color: var(--caution); width: 15px; height: 15px; margin: 0; }
+  .fcount { font-size: 12.5px; color: var(--dim); }
+  .clear { font: 13px var(--sans); color: var(--text); background: transparent; border: 0; padding: 0; cursor: pointer;
+    text-decoration: underline; text-decoration-color: var(--rule-hi); text-underline-offset: 3px; }
+  .clear:hover { text-decoration-color: var(--text); }
+  .toolbar .fcount { margin-left: auto; }
+  .tbar { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-bottom: 1px solid var(--rule); }
+  .movetag { display: none; font-size: 12px; color: var(--dim); }
+  .movetag.you { color: var(--caution-text); font-weight: 600; }
+  .regrouped .movetag { display: inline; }
+  .regrouped .movetag::before { content: "· "; color: var(--dim); font-weight: 400; }
+  .regrouped > .mv { display: none; }
+  .rg > section { border-bottom: 1px solid var(--rule); }
+  .rg > section:last-child { border-bottom: 0; }
+  .rg h3 { margin: 0; padding: 12px 14px 4px; font-size: 13px; font-weight: 650; color: var(--dim); display: flex; align-items: baseline; gap: 8px; }
+  .rg h3 .who { color: var(--text); }
+  .fnone { margin: 0; padding: 4px 14px 14px; color: var(--dim); font-size: 13px; }
+
   /* work board */
   .group { border-bottom: 1px solid var(--rule); }
   .group:last-child { border-bottom: 0; }
@@ -135,6 +176,8 @@
   .note { font-size: 12px; color: var(--dim); border: 1px solid var(--rule-hi); border-radius: 4px; padding: 0 6px; white-space: nowrap; }
   .note.caution { color: var(--caution-text); border-color: var(--caution); }
   .note.ok { color: var(--nom); border-color: var(--rule-hi); }
+  .only { font-size: 12px; font-weight: 700; color: var(--caution-ink); background: var(--caution-fill); border-radius: 4px; padding: 0 6px; white-space: nowrap; align-self: center; }
+  .label { font-size: 11.5px; color: var(--dim); background: var(--raised); border-radius: 4px; padding: 0 6px; white-space: nowrap; }
   .wi blockquote { margin: 6px 0 0; padding: 6px 10px; background: var(--raised); border-radius: 6px; color: var(--dim);
     font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; max-width: 78ch; }
   .wi blockquote a { color: var(--text); font-weight: 600; text-decoration: none; margin-right: 4px; }
@@ -241,6 +284,11 @@
     .cell.wide { grid-column: span 2; }
   }
   @media (max-width: 760px) {
+    .toolbar { margin: 10px 16px 0; }
+    .toolbar .search { flex: 1 1 100%; }
+    .toolbar .fcount { margin-left: 0; }
+    .seg .seglbl { display: none; }
+    .seg button { padding: 7px 9px; }
     .status { padding: 8px 16px; gap: 4px 16px; }
     .status.has-mascot { padding-right: 16px; min-height: 0; position: static; }
     .mascot { position: static; order: 99; margin-left: auto; width: 177px; height: 60px; border-radius: 8px; }
@@ -273,12 +321,12 @@
   <symbol id="i-pr" viewBox="0 0 16 16"><circle cx="4" cy="3.5" r="1.75"/><circle cx="4" cy="12.5" r="1.75"/><circle cx="12" cy="12.5" r="1.75"/><path d="M4 5.25v5.5M12 10.75V6.5a2 2 0 0 0-2-2H7.5M9 3l-1.5 1.5L9 6"/></symbol>
   <symbol id="i-issue" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="1.25"/></symbol>
 </svg>
-{{define "item"}}<li class="wi" data-v="w-{{.Key}}" data-val="{{.Value}}">
+{{define "item"}}<li class="wi" data-v="w-{{.Key}}" data-val="{{.Value}}" data-kind="{{lower .Kind}}" data-repo="{{lower .Repo}}" data-name="{{.Repo}}" data-move="{{.Move}}"{{if .Personal}} data-personal{{end}} data-s="{{.Search}}">
   <span class="dot {{.Level}}" aria-hidden="true"></span>
   <div>
     <a class="title" href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a>
-    <div class="meta"><svg role="img" aria-label="{{if eq .Kind "PR"}}Pull request{{else}}Issue{{end}}"><use href="#i-{{if eq .Kind "PR"}}pr{{else}}issue{{end}}"/></svg><span>{{.Repo}}</span><span class="num">#{{.Number}}</span>{{if .Why}}<span>· {{.Why}}</span>{{end}}</div>
-    <div class="state"><span class="say{{if .Level}} {{.Level}}{{end}}">{{.Status}}</span>{{range .Notes}}<span class="note {{.Level}}">{{.Text}}</span>{{end}}</div>
+    <div class="meta"><svg role="img" aria-label="{{if eq .Kind "PR"}}Pull request{{else}}Issue{{end}}"><use href="#i-{{if eq .Kind "PR"}}pr{{else}}issue{{end}}"/></svg><span>{{.Repo}}</span><span class="num">#{{.Number}}</span>{{if .Why}}<span>· {{.Why}}</span>{{end}}<span class="movetag {{.Move}}">{{if eq .Move "you"}}Your move{{else if eq .Move "them"}}Waiting on others{{else}}Finished{{end}}</span>{{range .Labels}}<span class="label">{{.}}</span>{{end}}</div>
+    <div class="state">{{if .Personal}}<span class="only" title="Only you can do this">Only you</span>{{end}}<span class="say{{if .Level}} {{.Level}}{{end}}">{{.Status}}</span>{{range .Notes}}<span class="note {{.Level}}">{{.Text}}</span>{{end}}</div>
     {{if .Quote}}<blockquote>{{if .QuoteURL}}<a href="{{.QuoteURL}}" target="_blank" rel="noopener">{{.QuoteBy}}</a>{{else}}<b>{{.QuoteBy}}</b> {{end}}{{.Quote}}</blockquote>{{end}}
   </div>
   <time class="when" title="Since {{.AgoTitle}}">{{.Ago}}</time>
@@ -303,22 +351,32 @@
 {{end}}
 </section>
 
+<section class="toolbar" aria-label="Filter and organize">
+  <label class="search"><span class="sr">Search</span><input type="search" id="f-q" placeholder="Search titles, repos, labels, people" autocomplete="off" spellcheck="false"><kbd title="Press / to search">/</kbd></label>
+  <div class="seg" role="group" aria-label="Show pull requests, issues or both"><button type="button" data-f-kind="all">All</button><button type="button" data-f-kind="pr">PRs</button><button type="button" data-f-kind="issue">Issues</button></div>
+  <label class="pick"><span class="sr">Organization or repository</span><select id="f-scope"><option value="">All organizations and repos</option></select></label>
+  <label class="check"><input type="checkbox" id="f-mine"> Needs me only</label>
+  <div class="seg" role="group" aria-label="Group your work by"><span class="seglbl">Group by</span><button type="button" data-group="move">Whose move</button><button type="button" data-group="repo">Repository</button><button type="button" data-group="owner">Organization</button></div>
+  <span class="fcount" id="f-count" aria-live="polite"></span>
+  <button type="button" class="clear" id="f-clear" hidden>Clear filters</button>
+</section>
+
 <div class="grid">
   <div class="main">
-    <section class="panel" aria-labelledby="work-h">
+    <section class="panel" aria-labelledby="work-h" data-board>
       <h2 id="work-h">Your work <span class="lbl">{{if .Work.Known}}Pull requests and issues @{{.Work.Login}} has out, anywhere on GitHub · updated {{.Work.FetchedAgo}}{{else}}Not fetched yet{{end}}</span></h2>
       {{if not .Work.Known}}
       <p class="pad zero">{{if .Work.Err}}Couldn't load your pull requests and issues: <span class="err">{{.Work.Err}}</span>{{else}}Loading your pull requests and issues. This takes a few seconds after HelloGitty starts; the page reloads on its own.{{end}}</p>
       {{else}}
-      <div class="group">
+      <div class="group mv">
         <h3>Your move <span class="n{{if .Work.You}} hot{{end}}" data-v="work-you">{{len .Work.You}}</span></h3>
         {{if .Work.You}}<ul class="items">{{range .Work.You}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nothing is waiting on you.</p>{{end}}
       </div>
-      <div class="group">
+      <div class="group mv">
         <h3>Waiting on others <span class="n" data-v="work-them">{{len .Work.Them}}</span></h3>
         {{if .Work.Them}}<ul class="items">{{range .Work.Them}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nothing out for review or waiting on a reply.</p>{{end}}
       </div>
-      <details class="group" data-key="work-done">
+      <details class="group mv" data-key="work-done">
         <summary>Finished in the last 30 days <span class="n" data-v="work-done">{{len .Work.Done}}{{if .Work.DoneMore}}+{{end}}</span><span class="chev" aria-hidden="true"></span></summary>
         {{if .Work.Done}}<ul class="items">{{range .Work.Done}}{{template "item" .}}{{end}}</ul>{{if .Work.DoneMore}}<p class="hint">{{.Work.DoneMore}} more not shown.</p>{{end}}{{else}}<p class="none">Nothing merged or closed in the last 30 days.</p>{{end}}
       </details>
@@ -327,13 +385,13 @@
     </section>
 
     {{if .Work.Known}}
-    <section class="panel" aria-labelledby="repos-h">
+    <section class="panel" aria-labelledby="repos-h" data-board>
       <h2 id="repos-h">Your repositories <span class="lbl">Open pull requests and issues from others in {{.Work.Scope}}</span></h2>
-      <div class="group">
+      <div class="group mv">
         <h3>Needs you <span class="n{{if .Work.InYou}} hot{{end}}" data-v="work-inyou">{{len .Work.InYou}}</span></h3>
         {{if .Work.InYou}}<ul class="items">{{range .Work.InYou}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">No reviews requested and no unanswered issues.</p>{{end}}
       </div>
-      <div class="group">
+      <div class="group mv">
         <h3>Waiting on contributors <span class="n" data-v="work-inthem">{{len .Work.InThem}}</span></h3>
         {{if .Work.InThem}}<ul class="items">{{range .Work.InThem}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nothing waiting on a contributor.</p>{{end}}
       </div>
@@ -343,6 +401,10 @@
 
     <section class="panel{{if not .HasPipeline}} nopipe{{end}}" aria-labelledby="tracked-h">
       <h2 id="tracked-h">Tracked repositories <span class="lbl legend"><span class="li"><span class="light ACTIVE"></span>active</span> <span class="li"><span class="light SLOW"></span>slowing</span> <span class="li"><span class="light DORMANT"></span>dormant</span> <span class="li"><span class="light UNKNOWN"></span>not checked</span>{{if .HasPipeline}} <span class="li"><span class="sw done"></span>done</span> <span class="li"><span class="sw current"></span>current</span> <span class="li"><span class="sw failed"></span>failed</span>{{end}}</span></h2>
+      <div class="tbar"><label class="pick"><span class="lbl">Sort</span><select id="f-sort">
+        <option value="default">{{if .HasPipeline}}Furthest stage first{{else}}Name{{end}}</option><option value="name">Name</option><option value="open">Most open issues</option>
+        <option value="gfi">Most good first issues</option><option value="unasgn">Most unassigned</option><option value="commit">Most recent commit</option><option value="denied">Most turned down</option>
+      </select></label><span class="fcount" id="tracked-count"></span></div>
       <div class="thead" aria-hidden="true">
         <span></span><span class="lbl">Repository</span>
         {{if .HasPipeline}}<span class="phead">{{range .Stages}}<span class="lbl" title="{{.Name}}">{{.Abbr}}</span>{{end}}</span>
@@ -350,7 +412,7 @@
         <span class="lbl num">Last commit</span><span class="lbl num" title="Issues you are watching here">Watching</span><span class="lbl num" title="Outside contributors' pull requests closed without merging, among the latest 100 closed">Turned down</span><span></span>
       </div>
       {{range .Rows}}{{$repoURL := .URL}}
-      <details class="repo" data-key="repo-{{.Key}}">
+      <details class="repo" data-key="repo-{{.Key}}" data-repo="{{.Key}}" data-name="{{.Owner}}/{{.Name}}" data-s="{{.Search}}" data-open="{{.Open}}" data-gfi="{{.GFI}}" data-unasgn="{{.Unassigned}}" data-age="{{if .AgeKnown}}{{.AgeDays}}{{else}}100000{{end}}" data-denied="{{.DeniedTotal}}">
         <summary>
           <span class="light {{.Health}}" role="img" aria-label="{{lower .Health}}" title="{{if eq .Health "ACTIVE"}}Active: a commit in the last 30 days{{else if eq .Health "SLOW"}}Slowing: no commit for 31 to 90 days{{else if eq .Health "DORMANT"}}Dormant: no commit for over 90 days{{else}}Not checked successfully yet{{end}}" data-v="h-{{.Key}}" data-val="{{.Health}}"></span>
           <span class="name"><span class="own">{{.Owner}}/</span>{{.Name}}</span>
@@ -403,7 +465,7 @@
       {{if .Watch}}
       <ul class="wl">
       {{range .Watch}}
-        <li><span class="st {{.Status}}">{{watchText .Status}}</span>
+        <li data-repo="{{lower .Repo}}" data-name="{{.Repo}}" data-kind="issue" data-s="{{lower .Repo}} #{{.Number}} {{lower .Title}} {{lower (watchText .Status)}}"><span class="st {{.Status}}">{{watchText .Status}}</span>
           <a class="t" href="{{.URL}}" target="_blank" rel="noopener" title="{{.Title}}">{{.Repo}}#{{.Number}} {{.Title}}</a>
           {{if or .ClaimDetail .ChangedAt}}<span class="d">{{if isURL .ClaimDetail}}<a href="{{.ClaimDetail}}" target="_blank" rel="noopener">the claim</a>{{else}}{{.ClaimDetail}}{{end}}{{if .ChangedAt}} · changed {{utc .ChangedAt}}{{end}}</span>{{end}}
         </li>
@@ -443,6 +505,7 @@
         <dt>Last check took</dt><dd>{{.CycleText}}</dd>
         <dt>API calls per check</dt><dd class="fig">{{.CycleCalls}}</dd>
         <dt>API quota resets</dt><dd>{{if .APIResetUTC}}{{.APIResetUTC}} UTC{{else}}<span class="zero">—</span>{{end}}</dd>
+        <dt>Your work refresh</dt><dd>{{if .Work.Cost}}<span class="fig">{{.Work.Cost}}</span> GraphQL points · <span class="fig">{{.Work.Remaining}}</span> left{{else}}<span class="zero">—</span>{{end}}</dd>
         <dt>Data file</dt><dd><a href="/snapshot.json">snapshot.json</a></dd>
       </dl>
     </section>
@@ -514,6 +577,163 @@
         if (playing && playing.catch) playing.catch(function () {});
       }
     }
+
+    // Filter and organize. Runs after the change markers, so markers always compare the full
+    // server-rendered numbers. Alerts are never filtered: an alarm must not hide behind a search.
+    // The view is remembered in this browser so the 5-minute reload keeps it.
+    (function () {
+      var viewKey = "hellogitty-view";
+      var view = { q: "", kind: "all", scope: "", mine: false, group: "move", sort: "default" };
+      try { var saved = JSON.parse(localStorage.getItem(viewKey) || "null"); if (saved) for (var k in view) if (k in saved) view[k] = saved[k]; } catch (e) {}
+      function save() { try { localStorage.setItem(viewKey, JSON.stringify(view)); } catch (e) {} }
+
+      var q = document.getElementById("f-q"), scope = document.getElementById("f-scope"), mine = document.getElementById("f-mine");
+      var sortSel = document.getElementById("f-sort"), count = document.getElementById("f-count"), clear = document.getElementById("f-clear");
+      if (!q) return;
+      var items = Array.prototype.slice.call(document.querySelectorAll(".wi"));
+      var watched = Array.prototype.slice.call(document.querySelectorAll(".wl li[data-repo]"));
+      var repos = Array.prototype.slice.call(document.querySelectorAll("details.repo[data-repo]"));
+      var boards = Array.prototype.slice.call(document.querySelectorAll("[data-board]"));
+      items.forEach(function (li, i) { li._home = li.parentNode; li._order = i; });
+      repos.forEach(function (d, i) { d._order = i; });
+
+      // Owner and repository choices come from what is on the page.
+      var owners = {}, label = {};
+      document.querySelectorAll("[data-repo]").forEach(function (el) {
+        var r = el.dataset.repo, o = r.split("/")[0], name = el.dataset.name || r;
+        (owners[o] = owners[o] || {})[r] = true;
+        label[r] = label[r] || name; label[o] = label[o] || name.split("/")[0];
+      });
+      Object.keys(owners).sort().forEach(function (o) {
+        var g = document.createElement("optgroup"); g.label = label[o];
+        var all = document.createElement("option"); all.value = "o:" + o; all.textContent = label[o] + " (everything)"; g.appendChild(all);
+        Object.keys(owners[o]).sort().forEach(function (r) {
+          var opt = document.createElement("option"); opt.value = "r:" + r; opt.textContent = label[r]; g.appendChild(opt);
+        });
+        scope.appendChild(g);
+      });
+      if (view.scope && !scope.querySelector('option[value="' + view.scope.replace(/"/g, "") + '"]')) view.scope = "";
+
+      function inScope(repo) {
+        if (!view.scope) return true;
+        var v = view.scope.slice(2);
+        return view.scope[0] === "o" ? repo.indexOf(v + "/") === 0 : repo === v;
+      }
+      function textMatch(el) {
+        var words = view.q.toLowerCase().split(/\s+/).filter(Boolean), hay = el.dataset.s || "";
+        return words.every(function (w) { return hay.indexOf(w) !== -1; });
+      }
+      function workMatch(li) {
+        if (view.kind !== "all" && li.dataset.kind !== view.kind) return false;
+        if (view.mine && li.dataset.move !== "you") return false;
+        return inScope(li.dataset.repo) && textMatch(li);
+      }
+      function active() { return view.q || view.kind !== "all" || view.scope || view.mine; }
+
+      function regroup() {
+        boards.forEach(function (board) {
+          var old = board.querySelector(".rg");
+          if (old) old.remove();
+          var own = items.filter(function (li) { return board.contains(li._home); });
+          own.sort(function (a, b) { return a._order - b._order; }).forEach(function (li) { li._home.appendChild(li); });
+          board.classList.toggle("regrouped", view.group !== "move");
+          if (view.group === "move" || !own.length) return;
+          var groups = {}, keys = [], names = {};
+          own.forEach(function (li) {
+            var key = view.group === "owner" ? li.dataset.repo.split("/")[0] : li.dataset.repo;
+            var name = li.dataset.name || li.dataset.repo;
+            if (!groups[key]) { groups[key] = []; keys.push(key); names[key] = view.group === "owner" ? name.split("/")[0] : name; }
+            groups[key].push(li);
+          });
+          // Groups holding something that is your move come first, then by name.
+          keys.sort(function (a, b) {
+            var ya = groups[a].some(function (li) { return li.dataset.move === "you"; });
+            var yb = groups[b].some(function (li) { return li.dataset.move === "you"; });
+            return ya !== yb ? (ya ? -1 : 1) : (a < b ? -1 : a > b ? 1 : 0);
+          });
+          var box = document.createElement("div"); box.className = "rg";
+          keys.forEach(function (key) {
+            var sec = document.createElement("section"), h = document.createElement("h3"), ul = document.createElement("ul");
+            var who = document.createElement("span"); who.className = "who"; who.textContent = names[key];
+            var n = document.createElement("span"); n.className = "n";
+            h.appendChild(who); h.appendChild(n); ul.className = "items";
+            groups[key].forEach(function (li) { ul.appendChild(li); });
+            sec.appendChild(h); sec.appendChild(ul); box.appendChild(sec);
+          });
+          var tail = board.querySelector(".hint, .pad.err");
+          board.insertBefore(box, tail && tail.parentNode === board ? tail : null);
+        });
+      }
+
+      // Show visible / total on each list heading, and say so when filters empty a list.
+      function counts(container, list) {
+        var n = container.querySelector(":scope > h3 .n, :scope > summary .n");
+        var shown = list.filter(function (li) { return !li.hidden; }).length;
+        if (n) {
+          if (n._total === undefined) n._total = n.textContent;
+          n.textContent = active() && list.length ? shown + " of " + list.length : (container.closest(".rg") ? String(list.length) : n._total);
+        }
+        var none = container.querySelector(":scope > .fnone");
+        if (list.length && !shown) {
+          if (!none) { none = document.createElement("p"); none.className = "fnone"; none.textContent = "Nothing here matches the filters."; container.appendChild(none); }
+        } else if (none) none.remove();
+        if (container.tagName === "SECTION" && container.parentNode.classList.contains("rg")) container.hidden = active() && !shown;
+      }
+
+      function sortRepos() {
+        var key = view.sort, by = {
+          name: function (d) { return d.dataset.repo; },
+          open: function (d) { return -Number(d.dataset.open); }, gfi: function (d) { return -Number(d.dataset.gfi); },
+          unasgn: function (d) { return -Number(d.dataset.unasgn); }, commit: function (d) { return Number(d.dataset.age); },
+          denied: function (d) { return -Number(d.dataset.denied); }
+        }[key];
+        var parent = repos.length ? repos[0].parentNode : null, after = parent ? repos[repos.length - 1].nextSibling : null;
+        repos.slice().sort(function (a, b) {
+          if (!by) return a._order - b._order;
+          var x = by(a), y = by(b);
+          return x < y ? -1 : x > y ? 1 : a._order - b._order;
+        }).forEach(function (d) { parent.insertBefore(d, after); });
+      }
+
+      function apply() {
+        q.value = view.q; scope.value = view.scope; mine.checked = view.mine; if (sortSel) sortSel.value = view.sort;
+        document.querySelectorAll("[data-f-kind]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.fKind === view.kind ? "true" : "false"); });
+        document.querySelectorAll("[data-group]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.group === view.group ? "true" : "false"); });
+        regroup();
+        var shown = 0;
+        items.forEach(function (li) { li.hidden = !workMatch(li); if (!li.hidden) shown++; });
+        watched.forEach(function (li) { li.hidden = !(inScope(li.dataset.repo) && textMatch(li) && (view.kind !== "pr")); });
+        var repoShown = 0;
+        repos.forEach(function (d) { d.hidden = !(inScope(d.dataset.repo) && textMatch(d)); if (!d.hidden) repoShown++; });
+        document.querySelectorAll(".mv, .rg > section").forEach(function (c) {
+          counts(c, Array.prototype.slice.call(c.querySelectorAll(".wi")));
+        });
+        sortRepos();
+        count.textContent = active() ? "Showing " + shown + " of " + items.length + " items" : "";
+        var tc = document.getElementById("tracked-count");
+        if (tc) tc.textContent = repoShown !== repos.length ? repoShown + " of " + repos.length + " repositories" : "";
+        clear.hidden = !active();
+        // A filter that leaves the folded Finished list with matches opens it, so results aren't hidden.
+        var done = document.querySelector('details.mv[data-key="work-done"]');
+        if (done && active() && done.querySelector(".wi:not([hidden])")) done.open = true;
+        save();
+      }
+
+      var typing;
+      q.addEventListener("input", function () { clearTimeout(typing); typing = setTimeout(function () { view.q = q.value.trim(); apply(); }, 120); });
+      q.addEventListener("keydown", function (e) { if (e.key === "Escape") { view.q = ""; apply(); q.blur(); } });
+      scope.addEventListener("change", function () { view.scope = scope.value; apply(); });
+      mine.addEventListener("change", function () { view.mine = mine.checked; apply(); });
+      if (sortSel) sortSel.addEventListener("change", function () { view.sort = sortSel.value; apply(); });
+      document.querySelectorAll("[data-f-kind]").forEach(function (b) { b.addEventListener("click", function () { view.kind = b.dataset.fKind; apply(); }); });
+      document.querySelectorAll("[data-group]").forEach(function (b) { b.addEventListener("click", function () { view.group = b.dataset.group; apply(); }); });
+      clear.addEventListener("click", function () { view.q = ""; view.kind = "all"; view.scope = ""; view.mine = false; apply(); });
+      document.addEventListener("keydown", function (e) {
+        var t = e.target.tagName;
+        if (e.key === "/" && t !== "INPUT" && t !== "SELECT" && t !== "TEXTAREA" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); q.focus(); }
+      });
+      apply();
+    })();
 
     // "Last check" reads as words and keeps itself current between reloads.
     var age = document.getElementById("pollage");

@@ -344,3 +344,58 @@ func TestWorkBoardPanels(t *testing.T) {
 		t.Error("a failed refresh should say so and keep the previous board")
 	}
 }
+
+func TestWorkRowShowsPersonalActionLabelsAndThreadQuote(t *testing.T) {
+	now := time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)
+	b := &work.Board{Login: "me", Scope: "repos owned by me", FetchedAt: now, Cost: 28, Remaining: 4912,
+		Sent: []work.Item{{PR: true, Repo: "o/r", Number: 5, Title: "T", Role: work.RoleAuthor, State: "OPEN", Move: work.MoveYou,
+			Status: "Sign the CLA (filigran/cla: CLA signature required)", Level: "caution", Personal: "Sign the CLA",
+			Labels: []string{"needs-triage"}, Notes: []string{"1 unresolved thread", "Waiting on: filigran/cla"}, Since: now,
+			Quote: &work.Activity{Author: "greptile-apps", Body: "Advice is reversed", URL: "https://t"},
+			Last:  &work.Activity{Author: "someone", Body: "older chatter"}}}}
+	src := fakeSource{board: b, tel: Telemetry{LastPoll: now}, reports: []store.RepoReport{{Repo: store.Repo{Owner: "o", Name: "r", LastPoll: &now}}}}
+	h := handler(src)
+	h.Now = func() time.Time { return now }
+	_, html := get(t, h, "/")
+	for _, want := range []string{
+		`<span class="only" title="Only you can do this">Only you</span><span class="say caution">Sign the CLA`,
+		`<span class="label">needs-triage</span>`,
+		`<span class="note caution">1 unresolved thread</span>`, `<span class="note ">Waiting on: filigran/cla</span>`,
+		`>@greptile-apps</a>Advice is reversed`, // the thread is quoted, not the older chatter
+		`<span class="fig">28</span> GraphQL points`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	if strings.Contains(html, "older chatter") {
+		t.Error("the status's own comment should be quoted instead of the latest one")
+	}
+}
+
+func TestToolbarAndFilterHooks(t *testing.T) {
+	now := time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)
+	b := &work.Board{Login: "me", FetchedAt: now, Sent: []work.Item{
+		{PR: true, Repo: "Acme/Rocket", Number: 7, Title: "Fix Launch", Author: "me", Role: work.RoleAuthor, State: "OPEN", Move: work.MoveYou,
+			Status: "Changes requested by @lead", Personal: "Sign the CLA", Labels: []string{"needs-triage"}, Since: now},
+	}}
+	src := fakeSource{board: b, tel: Telemetry{LastPoll: now}, reports: []store.RepoReport{
+		{Repo: store.Repo{Owner: "Acme", Name: "Rocket", Status: "active", LastPoll: &now, LastCommit: &now}, OpenIssuesTotal: 12, OpenIssuesGFI: 3},
+	}}
+	h := handler(src)
+	h.Now = func() time.Time { return now }
+	_, html := get(t, h, "/")
+	for _, want := range []string{
+		`id="f-q"`, `data-f-kind="pr"`, `id="f-scope"`, `id="f-mine"`, `data-group="owner"`, `id="f-sort"`, // the controls
+		`data-kind="pr" data-repo="acme/rocket" data-name="Acme/Rocket" data-move="you" data-personal`, // a work row's hooks
+		`data-s="fix launch acme/rocket #7 pr changes requested by @lead`,                              // its search text, lowercase
+		`needs-triage`,
+		`data-repo="acme/rocket" data-name="Acme/Rocket" data-s="acme/rocket active" data-open="12" data-gfi="3"`, // a tracked row's hooks
+		`<span class="movetag you">Your move</span>`,
+		`hellogitty-view`, // the view survives the reload
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+}

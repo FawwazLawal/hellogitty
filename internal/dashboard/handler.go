@@ -142,6 +142,7 @@ type row struct {
 	Denied                []store.DeniedPR
 	Error                 string
 	PRs                   []prRow
+	Search                string // lowercase text the page's search box matches against
 }
 
 type watchRow struct {
@@ -429,6 +430,7 @@ func (h *Handler) build() (*page, error) {
 			rw.AgePct = min(rw.AgeDays, ageScaleDays) * 100 / ageScaleDays
 			rw.AgeWarn = rw.AgeDays > 30
 		}
+		rw.Search = strings.ToLower(full + " " + rw.Health)
 		if pr, ok := pst.Repo(r.Owner, r.Name); ok && pr.Stage != "" {
 			rw.InPipeline, rw.Stage, rw.Label, rw.Level = true, pr.Stage, pr.Label, pr.Level
 			rw.StageAbbr = pst.Stages[stageIdx(pr.Stage)].Abbr
@@ -469,6 +471,9 @@ func (h *Handler) build() (*page, error) {
 			}
 			rw.Watch = append(rw.Watch, w)
 			p.Watch = append(p.Watch, w)
+		}
+		if rw.InPipeline {
+			rw.Search += " " + strings.ToLower(rw.Stage+" "+rw.Label)
 		}
 		p.Rows = append(p.Rows, rw)
 	}

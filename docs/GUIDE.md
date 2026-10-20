@@ -31,6 +31,8 @@ news. Nothing else on the page uses those colours.
 │ HelloGitty  version  Last check · GitHub API · repos   [Auto|Light|Dark] [cat]│  header
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ [Watched issue claimed] [Your move] [Check failed] [Data is stale] ...        │  alerts
+├──────────────────────────────────────────────────────────────────────────────┤
+│ [Search…] [All|PRs|Issues] [Org / repo ▾] [ ] Needs me only  Group by [...]  │  toolbar
 ├──────────────────────────────────────────────┬───────────────────────────────┤
 │ Your work                                     │ Watched issues                │
 │   Your move · Waiting on others · Finished    │ Merge rate                    │
@@ -84,6 +86,26 @@ repositories it marks as needing attention, one for a stage it reports as failed
 
 ---
 
+## Filtering and organizing
+
+The toolbar under the alerts narrows and rearranges the lists. It never touches the alert cells:
+an alarm always counts everything, whatever you have filtered.
+
+| Control | What it does |
+|---|---|
+| **Search** | Matches titles, repositories, numbers (`#123`), labels, status text and people (`@name`). Several words must all match. Press `/` anywhere to jump to it and `Esc` to clear it. |
+| **All / PRs / Issues** | Shows only pull requests or only issues in Your work and Your repositories. |
+| **Organization or repo** | Narrows every list, including Tracked repositories and Watched issues, to one owner or one repository. The menu lists only owners and repositories on the page. |
+| **Needs me only** | Hides everything that isn't your move. |
+| **Group by** | *Whose move* is the normal view. *Repository* and *Organization* regroup Your work and Your repositories under each repository or owner, with groups holding something that's your move listed first. Each row then shows a small tag saying whose move it is. |
+| **Sort** (Tracked repositories) | Furthest stage first (or name), name, most open issues, most good first issues, most unassigned, most recent commit, or most turned down. |
+
+While a filter is on, list headings read "2 of 15", the toolbar says how many items are showing,
+and **Clear filters** appears. A filter that matches something in the folded Finished list opens
+it. Your choices are remembered in this browser, so the 5-minute reload keeps them.
+
+---
+
 ## Your work
 
 Every pull request and issue your GitHub account has out, **anywhere on GitHub**, not only in
@@ -108,14 +130,21 @@ tracked repositories. It refreshes every 5 minutes. Items fall into three groups
 
 - **Dot:** amber means it's your move; green means good news (approved, merged); a hollow ring
   means it's neutral.
+- **Only you:** a solid amber tag in front of the status when the next step can't be done by
+  anyone else with the branch: signing a CLA, signing off commits for a DCO check, or answering a
+  human reviewer in your own words. These rows sort to the top of Your move.
 - **Title:** opens the pull request or issue on GitHub.
-- **Second line:** a pull request or issue icon, the repository and number, and why it's on your
-  board (you opened it, it's assigned to you, or you joined the thread).
+- **Second line:** a pull request or issue icon, the repository and number, why it's on your
+  board (you opened it, it's assigned to you, or you joined the thread), and the item's labels.
+  Labels often say what a project expects next (`cla: pending`, `needs-triage`).
 - **Status:** one sentence saying what happened last and whose turn it is.
-- **Chips:** extra facts worth a glance: *Checks failing* or *Merge conflict* (amber), *Checks
-  passed* (green), *Checks running*.
-- **Quote:** when someone else spoke last, their words, so you know what's being asked before you
-  click. Formatting, code blocks and quoted replies are stripped.
+- **Chips:** extra facts worth a glance. Amber: *Failing:* and the check names, *Merge conflict*,
+  *Behind main* (the branch needs updating), *N unresolved threads*. Neutral: *Waiting on:* and the
+  checks still pending, *CI awaiting maintainer approval*. Green: *Checks passed*, shown only when
+  every check ran and passed.
+- **Quote:** the comment worth reading before you act: the unresolved review comment the status
+  is about, or else the latest word from someone else. Formatting, code blocks and quoted replies
+  are stripped.
 - **Time:** how long the item has been in its current state. Hover for the exact time.
 
 ### What each status means
@@ -124,24 +153,35 @@ tracked repositories. It refreshes every 5 minutes. Items fall into three groups
 
 | Status | Whose move | Meaning |
 |---|---|---|
+| Sign the CLA (check: description) | yours, only you | A CLA check is pending or failing, or a label says the CLA is missing. |
+| Sign off your commits for the DCO check | yours, only you | The DCO check isn't passing. |
+| @name is waiting for your reply on a review comment | yours, only you | A person left a review comment that is unresolved and you haven't answered. |
 | Changes requested by @name | yours | A reviewer asked for changes and you haven't pushed since. |
+| N unresolved review comments from @name; merging is blocked… | yours | Review threads (often from review bots) are open and unanswered. GitHub can block the merge on them even when every check is green and no one has requested changes. |
 | @name commented / left a review | yours | Someone spoke after your last push or comment. |
-| Checks are failing | yours | CI failed on your latest commit. |
+| Failing: check names | yours | Those checks failed on your latest commit. |
 | Merge conflict to resolve | yours | The branch no longer merges cleanly. |
+| Branch is behind main; update it | yours | The base branch moved on and the project requires branches to be up to date before merging. |
+| Labelled "waiting on author": the maintainers are waiting on you | yours | A label says the project is waiting for you. |
 | Draft: mark it ready… | yours | It's still a draft. |
 | You pushed changes; waiting for @name to look again | theirs | You answered a change request with new commits. |
 | Approved by @name; waiting to be merged | theirs | Approved; a maintainer needs to merge it. |
 | Review requested from @name | theirs | A reviewer is assigned and hasn't reviewed yet. |
 | You replied; waiting for a response | theirs | You spoke last. |
 | Waiting for a first review | theirs | Nobody has looked yet. |
+| …; CI is waiting for a maintainer to approve it | theirs | Many projects don't run CI for a first-time contributor until a maintainer approves it. Nothing is broken; it just hasn't run. |
 | Merged by @name / Closed without merging | finished | The quote shows the last thing a maintainer said. |
 
 A push after someone's comment counts as your answer, so the item moves to Waiting on others.
+A review thread you replied to last counts as answered; resolving it is the reviewer's job.
+Threads, check names and labels are fetched for your own open pull requests; other rows use the
+combined check state.
 
 **Your issues** (opened, assigned, or a thread you joined)
 
 | Status | Whose move |
 |---|---|
+| Labelled "needs info" (or similar): the maintainers are waiting on you | yours (issues you opened) |
 | @name replied / commented after you | yours |
 | Assigned to you | yours |
 | No replies yet | theirs |
@@ -224,9 +264,10 @@ repositories sit at each stage.
 
 When the last check of your tracked repositories finished and when the next one starts, how often
 they run (60 minutes by default), how long the last one took, how many API calls it used, when
-the hourly GitHub budget refills, and a link to `snapshot.json`, the same repository data in
-machine-readable form. Your work refreshes separately, every 5 minutes, using GitHub's GraphQL API,
-which has its own budget and doesn't count against the number in the header.
+the hourly GitHub budget refills, what the last Your work refresh cost, and a link to
+`snapshot.json`, the same repository data in machine-readable form. Your work refreshes separately,
+every 5 minutes, using GitHub's GraphQL API, which has its own 5,000-point hourly budget and
+doesn't count against the number in the header. A refresh usually costs around 30 points.
 
 ---
 

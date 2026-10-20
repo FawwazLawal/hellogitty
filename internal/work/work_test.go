@@ -201,3 +201,94 @@ func TestScope(t *testing.T) {
 		t.Errorf("scope %q %q", q, label)
 	}
 }
+
+// The cases from the task, as they looked on live pull requests.
+func TestMyPRBlockersTheReviewDecisionMisses(t *testing.T) {
+	passed := []Check{{Name: "Greptile Review", State: CheckPassed}, {Name: "Cursor Bugbot", State: CheckPassed}}
+	cases := []struct {
+		name             string
+		it               Item
+		move, want, pers string
+	}{
+		{"bot thread blocks despite green checks and no decision (impeccable#1084)",
+			Item{CheckList: passed, MergeState: "BLOCKED", Requested: []string{"pbakaus"},
+				Threads: []Thread{{Author: "greptile-apps", Bot: true, Body: "Yeh/Kaf search advice is reversed", At: *ts(3)}}},
+			MoveYou, "1 unresolved review comment from @greptile-apps", ""},
+		{"thread you already answered is the reviewer's to resolve",
+			Item{CheckList: passed, Requested: []string{"r"}, Threads: []Thread{{Author: "coderabbitai", Bot: true, RepliedLast: true}}},
+			MoveThem, "Review requested from @r", ""},
+		{"branch behind its base (coraza#1785)", Item{MergeState: "BEHIND", Base: "main", Requested: []string{"r"}},
+			MoveYou, "Branch is behind main; update it", ""},
+		{"pending CLA check (opencti#19108)",
+			Item{CheckList: []Check{{Name: "filigran/cla", State: CheckPending, Detail: "CLA signature required"}}},
+			MoveYou, "Sign the CLA (filigran/cla: CLA signature required)", "Sign the CLA"},
+		{"CLA label", Item{Labels: []string{"cla:pending"}}, MoveYou, "Sign the CLA", "Sign the CLA"},
+		{"a signed CLA is not an action", Item{CheckList: []Check{{Name: "filigran/cla", State: CheckPassed, Detail: "CLA has been signed"}}},
+			MoveThem, "Waiting for a first review", ""},
+		{"human reviewer waits on your words",
+			Item{Threads: []Thread{{Author: "maintainer", Body: "Why this approach?", At: *ts(2)}}},
+			MoveYou, "@maintainer is waiting for your reply", "Reply to @maintainer"},
+		{"workflow awaiting maintainer approval is their move, said plainly",
+			Item{CheckList: passed, AwaitingApproval: []string{"CI"}, Requested: []string{"pbakaus"}},
+			MoveThem, "Review requested from @pbakaus; CI is waiting for a maintainer to approve it", ""},
+		{"named failing check", Item{CheckList: []Check{{Name: "lint", State: CheckFailed}, {Name: "test", State: CheckPassed}}},
+			MoveYou, "Failing: lint", ""},
+		{"waiting-on-author label", Item{Labels: []string{"status: waiting on author"}}, MoveYou, "the maintainers are waiting on you", ""},
+	}
+	for _, c := range cases {
+		it := c.it
+		it.PR, it.State = true, "OPEN"
+		classifyMyPR(&it, "me")
+		if it.Move != c.move || !strings.Contains(it.Status, c.want) || it.Personal != c.pers {
+			t.Errorf("%s:\n got  %s %q personal=%q notes=%v\n want %s containing %q personal=%q", c.name, it.Move, it.Status, it.Personal, it.Notes, c.move, c.want, c.pers)
+		}
+	}
+}
+
+func TestChecksPassedNeverHidesUnrunCI(t *testing.T) {
+	it := Item{PR: true, State: "OPEN", Checks: "SUCCESS", CheckList: []Check{{Name: "a", State: CheckPassed}}, AwaitingApproval: []string{"CI"}}
+	prFacts(&it)
+	for _, n := range it.Notes {
+		if n == "Checks passed" {
+			t.Errorf("CI that never ran must not read as passed: %v", it.Notes)
+		}
+	}
+}
+
+func TestPersonalActionsSortFirst(t *testing.T) {
+	b := &Board{Login: "me", Sent: []Item{
+		{PR: true, State: "OPEN", Title: "old failing", Checks: "FAILURE", UpdatedAt: *ts(100)},
+		{PR: true, State: "OPEN", Title: "cla", Labels: []string{"cla: no"}, UpdatedAt: *ts(1)},
+	}}
+	Classify(b, now)
+	if b.Sent[0].Title != "cla" {
+		t.Errorf("a step only you can take should lead Your move: %v, %v", b.Sent[0].Title, b.Sent[1].Title)
+	}
+}
+
+func TestDecodeDetail(t *testing.T) {
+	var n node
+	err := json.Unmarshal([]byte(`{"__typename":"PullRequest","number":1,"url":"u","state":"OPEN","repository":{"nameWithOwner":"o/r"},
+	 "author":{"login":"me"},"mergeStateStatus":"BLOCKED","baseRefName":"main","labels":{"nodes":[{"name":"docs"}]},
+	 "reviewThreads":{"nodes":[
+	   {"isResolved":false,"isOutdated":true,"path":"a.go","comments":{"nodes":[{"author":{"login":"coderabbitai","__typename":"Bot"},"body":"Fix the reason","url":"t1","createdAt":"2026-10-19T01:00:00Z"}]},"latest":{"nodes":[{"author":{"login":"me"}}]}},
+	   {"isResolved":true,"comments":{"nodes":[{"author":{"login":"x"},"body":"done"}]}}]},
+	 "checks":{"nodes":[{"commit":{"checkSuites":{"nodes":[{"app":{"name":"GitHub Actions"},"conclusion":"ACTION_REQUIRED","workflowRun":{"workflow":{"name":"CI"}}},{"app":{"name":"Greptile"},"conclusion":"SUCCESS"}]},
+	   "statusCheckRollup":{"contexts":{"nodes":[{"__typename":"StatusContext","context":"filigran/cla","state":"PENDING","description":"CLA signature required"},{"__typename":"CheckRun","name":"Impeccable","status":"COMPLETED","conclusion":"SKIPPED"}]}}}}]}}`), &n)
+	if err != nil {
+		t.Fatal(err)
+	}
+	it := toItem(n, RoleAuthor, "me")
+	if it.MergeState != "BLOCKED" || it.Base != "main" || strings.Join(it.Labels, ",") != "docs" {
+		t.Errorf("fields %+v", it)
+	}
+	if len(it.Threads) != 1 || !it.Threads[0].Bot || !it.Threads[0].RepliedLast || !it.Threads[0].Outdated {
+		t.Errorf("threads %+v", it.Threads)
+	}
+	if strings.Join(it.AwaitingApproval, ",") != "CI" {
+		t.Errorf("awaiting approval %v", it.AwaitingApproval)
+	}
+	if len(it.CheckList) != 2 || it.CheckList[0].State != CheckPending || it.CheckList[0].Detail != "CLA signature required" || it.CheckList[1].State != CheckPassed {
+		t.Errorf("checks %+v", it.CheckList)
+	}
+}

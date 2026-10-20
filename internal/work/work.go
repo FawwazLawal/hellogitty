@@ -27,6 +27,34 @@ const (
 	RoleMaintains = "maintains" // it is in a repository you maintain
 )
 
+// Check states.
+const (
+	CheckPassed  = "passed"
+	CheckFailed  = "failed"
+	CheckPending = "pending"
+)
+
+// Check is one named status check on a pull request's latest commit.
+type Check struct {
+	Name   string
+	State  string // CheckPassed, CheckFailed or CheckPending
+	Detail string // the check's own one-line description, e.g. "CLA signature required"
+}
+
+// Thread is an unresolved review thread: an inline comment someone expects answered before merge.
+type Thread struct {
+	Author   string
+	Bot      bool
+	Body     string
+	URL      string
+	Path     string
+	At       time.Time
+	Outdated bool // the code it points at has changed since
+	// RepliedLast is set when the newest comment in the thread is yours: you answered and the
+	// reviewer has yet to resolve it.
+	RepliedLast bool
+}
+
 // Activity is the most recent comment or review on an item from a person (bots are skipped).
 type Activity struct {
 	Author string
@@ -65,6 +93,14 @@ type Item struct {
 	LastCommitAt   *time.Time
 	MergedBy       string
 	StateReason    string // issues: COMPLETED, NOT_PLANNED, DUPLICATE
+	MergeState     string // BEHIND, BLOCKED, CLEAN, DIRTY, DRAFT, HAS_HOOKS, UNKNOWN, UNSTABLE
+	Base           string // the branch it merges into
+	Labels         []string
+
+	// Detail fetched for your own open pull requests only.
+	Threads          []Thread // unresolved review threads
+	CheckList        []Check
+	AwaitingApproval []string // workflows a maintainer must approve before they run
 
 	Assignees []string
 	Comments  int
@@ -76,6 +112,11 @@ type Item struct {
 	Notes  []string // extra facts worth a glance: "Checks failing", "Merge conflict"
 	Level  string   // "caution" or "ok" for a coloured marker; "" for neutral
 	Since  time.Time
+	// Personal is set when the next step is one only you can take (sign a CLA, answer a reviewer
+	// in your own words), as opposed to a fix anyone with the branch could make.
+	Personal string
+	// Quote, when set, is the comment most worth reading before acting, if it is not Last.
+	Quote *Activity
 }
 
 // Board is everything the dashboard shows about your own work.
@@ -88,6 +129,8 @@ type Board struct {
 	FetchedAt time.Time
 	// Scope describes the repositories counted as yours, e.g. "repos owned by alice + org/name".
 	Scope string
+	// Cost and Remaining are the GraphQL points the last refresh used and the points left this hour.
+	Cost, Remaining int
 }
 
 // Tracker refreshes the board and keeps the last good one when a refresh fails.

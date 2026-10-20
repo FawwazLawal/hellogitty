@@ -26,9 +26,13 @@ type workRow struct {
 	Status   string
 	Notes    []note
 	Level    string // "caution", "ok" or ""
+	Personal string // a step only you can take, e.g. "Sign the CLA"
+	Labels   []string
 	Ago      string // "3 days"
 	AgoTitle string // exact UTC time
 	Value    string // what the change marker compares between reloads
+	Move     string // work.MoveYou, MoveThem or MoveDone, for grouping and filtering in the page
+	Search   string // lowercase text the page's search box matches against
 	Quote    string
 	QuoteBy  string
 	QuoteURL string
@@ -42,6 +46,8 @@ type workView struct {
 	Login      string
 	Scope      string
 	FetchedAgo string
+	Cost       int
+	Remaining  int
 	You        []workRow
 	Them       []workRow
 	Done       []workRow
@@ -60,6 +66,7 @@ func buildWork(b *work.Board, errText string, now time.Time) workView {
 	}
 	v.Known, v.Login, v.Scope = true, b.Login, b.Scope
 	v.FetchedAgo = ago(now, b.FetchedAt)
+	v.Cost, v.Remaining = b.Cost, b.Remaining
 	for _, it := range b.Sent {
 		r := toRow(it, b.Login, now)
 		switch it.Move {
@@ -91,22 +98,34 @@ func toRow(it work.Item, login string, now time.Time) workRow {
 	r := workRow{
 		Key:  strings.ToLower(it.Repo) + "-" + strconv.Itoa(it.Number),
 		Kind: "Issue", Repo: it.Repo, Number: it.Number, Title: it.Title, URL: it.URL,
-		Why: why(it), Status: it.Status, Level: it.Level,
+		Why: why(it), Status: it.Status, Level: it.Level, Personal: it.Personal, Labels: it.Labels,
 		Ago: ago(now, it.Since), AgoTitle: it.Since.UTC().Format("2006-01-02 15:04Z"),
-		Value: it.Move + "|" + it.Status,
+		Value: it.Move + "|" + it.Status + "|" + it.Personal,
 	}
 	if it.PR {
 		r.Kind = "PR"
 	}
+	r.Move = it.Move
 	for _, n := range it.Notes {
 		r.Notes = append(r.Notes, note{Text: n, Level: noteLevel(n)})
 	}
-	// Quote the latest word from someone else: it is usually the thing to read before acting.
-	if l := it.Last; l != nil && !strings.EqualFold(l.Author, login) {
+	// Quote the comment most worth reading before acting: the one the status points at (an
+	// unresolved review comment, say), else the latest word from someone else.
+	l := it.Quote
+	if l == nil {
+		l = it.Last
+	}
+	if l != nil && !strings.EqualFold(l.Author, login) {
 		if q := excerpt(l.Body); q != "" {
 			r.Quote, r.QuoteBy, r.QuoteURL = q, "@"+l.Author, l.URL
 		}
 	}
+	words := []string{r.Title, r.Repo, "#" + strconv.Itoa(r.Number), r.Kind, r.Status, r.Why, r.Personal, r.QuoteBy, r.Quote, "@" + it.Author}
+	words = append(words, r.Labels...)
+	for _, n := range r.Notes {
+		words = append(words, n.Text)
+	}
+	r.Search = strings.ToLower(strings.Join(words, " "))
 	return r
 }
 
@@ -127,10 +146,11 @@ func why(it work.Item) string {
 }
 
 func noteLevel(n string) string {
-	switch n {
-	case "Checks failing", "Merge conflict":
+	switch {
+	case n == "Checks failing", n == "Merge conflict", strings.HasPrefix(n, "Failing: "),
+		strings.HasPrefix(n, "Behind "), strings.Contains(n, "unresolved thread"):
 		return "caution"
-	case "Checks passed":
+	case n == "Checks passed":
 		return "ok"
 	}
 	return ""

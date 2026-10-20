@@ -34,6 +34,10 @@ Changes waiting for the owner to declare the next milestone.
   times in words ("3 days ago"), plain review verdicts and contributor types.
 - Light and dark themes. The page follows the system setting; an Auto / Light / Dark switch in the
   header overrides it and is remembered.
+- A toolbar to filter and organize the dashboard: search (press `/`), pull requests or issues
+  only, one organization or repository, "Needs me only", and group Your work by whose move,
+  repository or organization. Tracked repositories can be sorted. Choices are remembered across
+  reloads; the alert cells are never filtered.
 - A guide to reading the dashboard, [docs/GUIDE.md](docs/GUIDE.md): every column, colour and
   cell, what to do when one lights up, and troubleshooting.
 
