@@ -12,6 +12,57 @@ scripts can read instead of calling GitHub themselves.
 
 ![HelloGitty dashboard: the Your work board, alerts and checks, tracking three public repositories](docs/screenshot.png)
 
+## Quick start
+
+Five minutes from nothing to a running dashboard. Each step links to the full details below.
+
+**1. Install** (needs Go 1.26 or newer). The binary lands in `$(go env GOPATH)/bin`, so make sure
+that folder is on your `PATH`.
+
+```bash
+go install github.com/FawwazLawal/hellogitty/cmd/hellogitty@latest
+```
+
+**2. Give it a GitHub token.** Read-only is enough. If you use the GitHub CLI, reuse its login:
+
+```bash
+export GITHUB_TOKEN=$(gh auth token)
+```
+
+Otherwise create a fine-grained token with no extra permissions and export that instead
+([details](#github-token)).
+
+**3. List the projects you follow.** In a folder of your choice, create `hellogitty.json`:
+
+```json
+{ "repos": ["junegunn/fzf", "BurntSushi/ripgrep"] }
+```
+
+Add `"maintain": ["your-org"]` if you maintain repositories you don't own
+([all settings](#configure)).
+
+**4. Run it** and open <http://localhost:7340>.
+
+```bash
+hellogitty
+```
+
+Your work fills in within a few seconds; each followed project takes a few seconds more.
+
+**5. First things to do on the dashboard:**
+
+- Read **Your move** at the top of Your work: pull requests and issues waiting on you, longest
+  waiting first, each with the latest comment so you know what's being asked.
+- Glance at the row of alert cells under the header. If nothing is lit, nothing needs you.
+- Open a row in **Tracked repositories** and read the last pull requests the project turned down
+  before you contribute there.
+- Before starting on an issue, watch it so you hear if someone else claims it:
+  `hellogitty watch owner/name 123`.
+- Try the toolbar: press `/` to search, or group your work by organization.
+
+Leave the page open; it reloads itself every five minutes. [docs/GUIDE.md](docs/GUIDE.md) explains
+every panel, status and colour.
+
 ## Install
 
 HelloGitty needs Go 1.26 or newer.
