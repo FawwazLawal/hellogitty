@@ -167,6 +167,32 @@
   .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; border: 1.5px solid var(--dim); }
   .dot.caution { background: var(--caution); border-color: var(--caution); }
   .dot.ok { background: var(--nom); border-color: var(--nom); }
+  /* The dot is attention: green = something new you haven't read, amber = read and your move,
+     hollow = read and nothing asked. GitHub's read state drives it; see /attention.json. */
+  .dot.new { background: var(--nom); border-color: var(--nom); }
+  .newchip { font-size: 12px; line-height: 16px; font-weight: 650; color: var(--nom); border: 1px solid var(--nom); border-radius: 4px;
+    padding: 1px 7px; white-space: nowrap; align-self: center; }
+  .newcount { color: var(--nom); font-weight: 650; }
+
+  /* Hover help (ADR-001): a dotted underline marks a word the page can explain; hover, focus or tap
+     it. Row titles and repository names open a peek with what the row has no room for. */
+  .term { text-decoration: underline dotted; text-decoration-color: var(--dim); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  [data-term] { cursor: help; }
+  [data-term]:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; border-radius: 2px; }
+  .tip { position: fixed; inset: auto; margin: 0; z-index: 1000; width: max-content; max-width: min(320px, calc(100vw - 16px));
+    padding: 10px 12px; background: var(--raised); color: var(--text); border: 1px solid var(--rule-hi); border-radius: 6px;
+    font: 13px/1.45 var(--sans); pointer-events: none; overflow: visible; }
+  .tip .tip-t { display: block; font-weight: 650; margin-bottom: 2px; }
+  .tip .tip-x { margin-top: 4px; }
+  .tip .tip-do { margin-top: 6px; color: var(--dim); }
+  .tip.peekmode { max-width: min(360px, calc(100vw - 16px)); }
+  .pk-h { display: block; font-weight: 650; margin-bottom: 6px; }
+  .pk dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 3px 12px; margin: 0; }
+  .pk dt { color: var(--dim); font-size: 12px; line-height: 19px; }
+  .pk dd { margin: 0; overflow-wrap: anywhere; }
+  .pk dd.caution { color: var(--caution-text); } .pk dd.warn { color: var(--warn); } .pk dd.ok { color: var(--nom); }
+  @media (prefers-reduced-motion: no-preference) { .tip { animation: tipin .12s ease-out; } }
+  @keyframes tipin { from { opacity: 0; transform: translateY(-2px); } }
   .wi .title { font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
   .wi .title:hover { text-decoration: underline; text-decoration-color: var(--text); }
   .wi .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; font-size: 12.5px; color: var(--dim); margin-top: 1px; }
@@ -189,10 +215,10 @@
   /* The repository trailer: a pale lemon pill closing each row, readable at a glance. Paler and
      greener than the amber that means "your move", so it never reads as a state. */
   .wi .end { display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; gap: 8px; min-width: 0; }
-  .trail { display: inline-flex; gap: 5px; min-width: 0; font: 600 12px/20px var(--sans); color: var(--tag-ink); background: var(--tag-fill);
-    border: 1px solid var(--tag-rule); border-radius: 999px; padding: 0 10px; white-space: nowrap; max-width: 280px; }
+  .trail { display: inline-flex; align-items: baseline; gap: 5px; min-width: 0; font: 600 12px/16px var(--sans); color: var(--tag-ink);
+    background: var(--tag-fill); border: 1px solid var(--tag-rule); border-radius: 999px; padding: 3px 11px; white-space: nowrap; max-width: 280px; }
   .trail .rp { min-width: 0; overflow: hidden; text-overflow: ellipsis; } /* a long name shortens; the number stays */
-  .trail .num { flex: none; font: 500 11.5px/20px var(--mono); }
+  .trail .num { flex: none; font: 500 11.5px/16px var(--mono); }
   .none { margin: 0; padding: 4px 14px 14px; color: var(--dim); }
   .hint { margin: 0; padding: 0 14px 14px; color: var(--dim); font-size: 12.5px; }
 
@@ -200,7 +226,7 @@
   .thead, .repo > summary { display: grid; grid-template-columns: 22px var(--row) 18px; align-items: center; column-gap: 8px; padding: 0 14px; }
   .thead { min-height: 34px; padding-top: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
   .thead .phead { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; }
-  .thead .phead span { font: 10px var(--mono); text-align: center; letter-spacing: -0.02em; }
+  .thead .phead span { font: 11px var(--mono); text-align: center; letter-spacing: -0.04em; }
   .thead .lbl { line-height: 1.25; }
   .num { text-align: right; }
   .repo { border-bottom: 1px solid var(--rule); }
@@ -332,23 +358,37 @@
   <symbol id="i-pr" viewBox="0 0 16 16"><circle cx="4" cy="3.5" r="1.75"/><circle cx="4" cy="12.5" r="1.75"/><circle cx="12" cy="12.5" r="1.75"/><path d="M4 5.25v5.5M12 10.75V6.5a2 2 0 0 0-2-2H7.5M9 3l-1.5 1.5L9 6"/></symbol>
   <symbol id="i-issue" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="1.25"/></symbol>
 </svg>
-{{define "item"}}<li class="wi" data-v="w-{{.Key}}" data-val="{{.Value}}" data-kind="{{lower .Kind}}" data-repo="{{lower .Repo}}" data-name="{{.Repo}}" data-move="{{.Move}}"{{if .Personal}} data-personal{{end}} data-s="{{.Search}}">
-  <span class="dot {{.Level}}" aria-hidden="true"></span>
+{{define "peek"}}{{if .Lines}}<template class="peek"><div class="pk"><b class="pk-h">{{.Head}}</b><dl>{{range .Lines}}<dt>{{.Label}}</dt><dd{{if .Level}} class="{{.Level}}"{{end}}>{{range $i, $x := .Items}}{{if $i}}<br>{{end}}{{$x}}{{end}}</dd>{{end}}</dl></div></template>{{end}}{{end}}
+{{define "item"}}<li class="wi" data-k="{{.K}}" data-new="{{.New}}" data-v="w-{{.Key}}" data-val="{{.Value}}" data-kind="{{lower .Kind}}" data-repo="{{lower .Repo}}" data-name="{{.Repo}}" data-move="{{.Move}}"{{if .Personal}} data-personal{{end}} data-s="{{.Search}}">
+  <span class="dot {{.Attn}}" aria-hidden="true" data-term="dot"></span>
   <div>
-    <a class="title" href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a>
+    <a class="title" href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a>{{template "peek" .Peek}}
     <div class="meta"><svg role="img" aria-label="{{if eq .Kind "PR"}}Pull request{{else}}Issue{{end}}"><use href="#i-{{if eq .Kind "PR"}}pr{{else}}issue{{end}}"/></svg><span>{{.Repo}}</span><span class="num">#{{.Number}}</span>{{if .Why}}<span>· {{.Why}}</span>{{end}}<span class="movetag {{.Move}}">{{if eq .Move "you"}}Your move{{else if eq .Move "them"}}Waiting on others{{else}}Finished{{end}}</span>{{range .Labels}}<span class="label">{{.}}</span>{{end}}</div>
-    <div class="state">{{if .Personal}}<span class="only" title="Only you can do this">Only you</span>{{end}}<span class="say{{if .Level}} {{.Level}}{{end}}">{{.Status}}</span>{{range .Notes}}<span class="note {{.Level}}">{{.Text}}</span>{{end}}</div>
+    <div class="state"><span class="newchip" data-term="new" tabindex="0"{{if not .New}} hidden{{end}}>New{{if .NewWhat}} · {{.NewWhat}}{{end}}</span>{{if .Personal}}<span class="only" data-term="only-you" tabindex="0">Only you</span>{{end}}<span class="say{{if .Level}} {{.Level}}{{end}}">{{.Status}}</span>{{range .Notes}}<span class="note {{.Level}}"{{if .Term}} data-term="{{.Term}}" tabindex="0"{{end}}>{{.Text}}</span>{{end}}</div>
     {{if .Quote}}<blockquote>{{if .QuoteURL}}<a href="{{.QuoteURL}}" target="_blank" rel="noopener">{{.QuoteBy}}</a>{{else}}<b>{{.QuoteBy}}</b> {{end}}{{.Quote}}</blockquote>{{end}}
   </div>
   <div class="end">
     <time class="when" title="Since {{.AgoTitle}}">{{.Ago}}</time>
-    <span class="trail" title="{{.Repo}} #{{.Number}}"><span class="rp">{{.Repo}}</span><span class="num">#{{.Number}}</span></span>
+    <span class="trail" data-term="pill" data-extra="{{.Repo}} #{{.Number}}"><span class="rp">{{.Repo}}</span><span class="num">#{{.Number}}</span></span>
   </div>
 </li>{{end}}
+{{define "other"}}<li class="wi" data-k="{{.Key}}" data-new="{{.New}}" data-kind="other" data-repo="{{lower .Repo}}" data-name="{{.Repo}}" data-move="{{.Move}}" data-s="{{lower .Title}} {{lower .Repo}} {{lower .Words}}">
+  <span class="dot {{.Attn}}" aria-hidden="true"></span>
+  <div>
+    <a class="title" href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a>
+    <div class="meta"><span>{{.Repo}}</span>{{if .Number}}<span class="num">#{{.Number}}</span>{{end}}<span>· GitHub notification</span></div>
+    <div class="state"><span class="newchip"{{if not .New}} hidden{{end}}>New</span><span class="say">{{.Words}}</span></div>
+  </div>
+  <div class="end">
+    <time class="when" title="{{.AgoTitle}}">{{.Ago}}</time>
+    <span class="trail" title="{{.Repo}}{{if .Number}} #{{.Number}}{{end}}"><span class="rp">{{.Repo}}</span>{{if .Number}}<span class="num">#{{.Number}}</span>{{end}}</span>
+  </div>
+</li>{{end}}
+<script type="application/json" id="glossary">{{.GlossaryJSON}}</script>
 <header class="status {{if .Mascot}}has-mascot{{end}}">
   <div class="brand"><h1>HelloGitty</h1><span class="lbl ver">{{.Version}}{{if .Baby}} <span class="baby">(baby)</span>{{end}}</span></div>
   <span class="item"><span class="lbl">Last check</span>{{if .LastPollUnix}}<span class="v" id="pollage" data-since="{{.LastPollUnix}}" title="{{.LastPollUTC}} UTC">{{.LastPollUTC}} UTC</span>{{else}}<span class="v zero">not yet</span>{{end}}</span>
-  <span class="item"><span class="lbl">GitHub API</span>{{if .APIKnown}}<span class="v"><span class="fig">{{.APIUsed}}</span> of <span class="fig">{{.APILimit}}</span> this hour</span><span class="gauge{{if ge .APIPct 90}} hot{{end}}" role="img" aria-label="{{.APIPct}} percent of the hourly quota used"><i style="width:{{.APIPct}}%"></i></span>{{else}}<span class="v zero">no data yet</span>{{end}}</span>
+  <span class="item"><span class="lbl term" data-term="api" tabindex="0">GitHub API</span>{{if .APIKnown}}<span class="v"><span class="fig">{{.APIUsed}}</span> of <span class="fig">{{.APILimit}}</span> this hour</span><span class="gauge{{if ge .APIPct 90}} hot{{end}}" role="img" aria-label="{{.APIPct}} percent of the hourly quota used"><i style="width:{{.APIPct}}%"></i></span>{{else}}<span class="v zero">no data yet</span>{{end}}</span>
   <span class="item"><span class="v"><span class="fig">{{.RepoCount}}</span> repos{{if .HasPipeline}} · <span class="fig">{{.TargetCount}}</span> in the pipeline{{end}}</span></span>
   <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
   {{if .Mascot}}<div class="mascot" aria-hidden="true" data-routine="{{range $i, $c := .Mascot.Routine}}{{if $i}} {{end}}{{$c}}{{end}}" data-news="{{range $i, $c := .Mascot.News}}{{if $i}} {{end}}{{$c}}{{end}}"><video muted playsinline preload="none" poster="{{.Mascot.Rest}}" tabindex="-1"></video></div>{{end}}
@@ -356,7 +396,7 @@
 
 <section class="cw" aria-label="Alerts">
 {{range .Cells}}
-  <div class="cell {{.Level}}{{if .Lit}} lit{{end}}{{if .Wide}} wide{{end}}{{if .Empty}} empty{{end}}"{{if .Title}} title="{{.Title}}"{{end}}>
+  <div class="cell {{.Level}}{{if .Lit}} lit{{end}}{{if .Wide}} wide{{end}}{{if .Empty}} empty{{end}}" tabindex="0" data-term="{{if $.HasTerm (print "p:" .Label)}}p:{{.Label}}{{else}}cell-{{.Key}}{{end}}"{{if .Title}} data-extra="{{.Title}}"{{end}}>
     <div class="head"><span class="leg">{{.Label}}</span>{{if and .Value (not .Empty)}}<span class="cnt" data-v="cw-{{.Key}}">{{.Value}}</span>{{end}}</div>
     {{if .Empty}}<span class="det" data-v="cw-{{.Key}}">{{.Value}}</span>{{end}}
     {{if and .Lit .Detail}}<div class="detrow"><span class="det">{{.Detail}}</span>{{if .More}}<span class="more">+{{.More}}</span>{{end}}</div>{{end}}
@@ -378,20 +418,25 @@
 <div class="grid">
   <div class="main">
     <section class="panel" aria-labelledby="work-h" data-board>
-      <h2 id="work-h">Your work <span class="lbl">{{if .Work.Known}}Pull requests and issues @{{.Work.Login}} has out, anywhere on GitHub · updated {{.Work.FetchedAgo}}{{else}}Not fetched yet{{end}}</span></h2>
+      <h2 id="work-h">Your work <span class="lbl">{{if .Work.Known}}Pull requests and issues @{{.Work.Login}} has out, anywhere on GitHub · updated {{.Work.FetchedAgo}}{{else}}Not fetched yet{{end}}<span class="newcount" id="newcount" hidden></span></span></h2>
       {{if not .Work.Known}}
       <p class="pad zero">{{if .Work.Err}}Couldn't load your pull requests and issues: <span class="err">{{.Work.Err}}</span>{{else}}Loading your pull requests and issues. This takes a few seconds after HelloGitty starts; the page reloads on its own.{{end}}</p>
       {{else}}
       <div class="group mv">
-        <h3>Your move <span class="n{{if .Work.You}} hot{{end}}" data-v="work-you">{{len .Work.You}}</span></h3>
+        <h3><span class="term" data-term="group-you" tabindex="0">Your move</span> <span class="n{{if .Work.You}} hot{{end}}" data-v="work-you">{{len .Work.You}}</span></h3>
         {{if .Work.You}}<ul class="items">{{range .Work.You}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nothing is waiting on you.</p>{{end}}
       </div>
       <div class="group mv">
-        <h3>Waiting on others <span class="n" data-v="work-them">{{len .Work.Them}}</span></h3>
+        <h3><span class="term" data-term="group-them" tabindex="0">Waiting on others</span> <span class="n" data-v="work-them">{{len .Work.Them}}</span></h3>
         {{if .Work.Them}}<ul class="items">{{range .Work.Them}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nothing out for review or waiting on a reply.</p>{{end}}
       </div>
+      {{if .Work.Other}}<div class="group mv">
+        <h3><span class="term" data-term="group-other" tabindex="0">Other notifications</span> <span class="n">{{len .Work.Other}}</span></h3>
+        <ul class="items">{{range .Work.Other}}{{template "other" .}}{{end}}</ul>
+      </div>{{end}}
+      {{if eq .Work.NotifyState "off"}}<p class="pad hint">New-activity dots are off: {{.Work.NotifyNote}}.</p>{{end}}
       <details class="group mv" data-key="work-done">
-        <summary>Finished in the last 30 days <span class="n" data-v="work-done">{{len .Work.Done}}{{if .Work.DoneMore}}+{{end}}</span><span class="chev" aria-hidden="true"></span></summary>
+        <summary><span class="term" data-term="group-done">Finished</span> in the last 30 days <span class="n" data-v="work-done">{{len .Work.Done}}{{if .Work.DoneMore}}+{{end}}</span><span class="chev" aria-hidden="true"></span></summary>
         {{if .Work.Done}}<ul class="items">{{range .Work.Done}}{{template "item" .}}{{end}}</ul>{{if .Work.DoneMore}}<p class="hint">{{.Work.DoneMore}} more not shown.</p>{{end}}{{else}}<p class="none">Nothing merged or closed in the last 30 days.</p>{{end}}
       </details>
       {{if .Work.Err}}<p class="pad err">The last refresh failed, so this is the previous list: {{.Work.Err}}</p>{{end}}
@@ -402,11 +447,11 @@
     <section class="panel" aria-labelledby="repos-h" data-board>
       <h2 id="repos-h">Your repositories <span class="lbl">Open pull requests and issues from others in {{.Work.Scope}}</span></h2>
       <div class="group mv">
-        <h3>Needs you <span class="n{{if .Work.InYou}} hot{{end}}" data-v="work-inyou">{{len .Work.InYou}}</span></h3>
+        <h3><span class="term" data-term="group-inyou" tabindex="0">Needs you</span> <span class="n{{if .Work.InYou}} hot{{end}}" data-v="work-inyou">{{len .Work.InYou}}</span></h3>
         {{if .Work.InYou}}<ul class="items">{{range .Work.InYou}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">No reviews requested and no unanswered issues.</p>{{end}}
       </div>
       <div class="group mv">
-        <h3>Waiting on contributors <span class="n" data-v="work-inthem">{{len .Work.InThem}}</span></h3>
+        <h3><span class="term" data-term="group-inthem" tabindex="0">Waiting on contributors</span> <span class="n" data-v="work-inthem">{{len .Work.InThem}}</span></h3>
         {{if .Work.InThem}}<ul class="items">{{range .Work.InThem}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nothing waiting on a contributor.</p>{{end}}
       </div>
       <p class="hint">Maintain repositories you don't own? List them under <code>"maintain"</code> in hellogitty.json.</p>
@@ -414,26 +459,26 @@
     {{end}}
 
     <section class="panel{{if not .HasPipeline}} nopipe{{end}}" aria-labelledby="tracked-h">
-      <h2 id="tracked-h">Tracked repositories <span class="lbl legend"><span class="li"><span class="light ACTIVE"></span>active</span> <span class="li"><span class="light SLOW"></span>slowing</span> <span class="li"><span class="light DORMANT"></span>dormant</span> <span class="li"><span class="light UNKNOWN"></span>not checked</span>{{if .HasPipeline}} <span class="li"><span class="sw done"></span>done</span> <span class="li"><span class="sw current"></span>current</span> <span class="li"><span class="sw failed"></span>failed</span>{{end}}</span></h2>
+      <h2 id="tracked-h">Tracked repositories <span class="lbl legend"><span class="li" data-term="health-ACTIVE"><span class="light ACTIVE"></span>active</span> <span class="li" data-term="health-SLOW"><span class="light SLOW"></span>slowing</span> <span class="li" data-term="health-DORMANT"><span class="light DORMANT"></span>dormant</span> <span class="li" data-term="health-UNKNOWN"><span class="light UNKNOWN"></span>not checked</span>{{if .HasPipeline}} <span class="li" data-term="stage-done"><span class="sw done"></span>done</span> <span class="li" data-term="stage-current"><span class="sw current"></span>current</span> <span class="li" data-term="stage-failed"><span class="sw failed"></span>failed</span>{{end}}</span></h2>
       <div class="tbar"><label class="pick"><span class="lbl">Sort</span><select id="f-sort">
         <option value="default">{{if .HasPipeline}}Furthest stage first{{else}}Name{{end}}</option><option value="name">Name</option><option value="open">Most open issues</option>
         <option value="gfi">Most good first issues</option><option value="unasgn">Most unassigned</option><option value="commit">Most recent commit</option><option value="denied">Most turned down</option>
       </select></label><span class="fcount" id="tracked-count"></span></div>
-      <div class="thead" aria-hidden="true">
+      <div class="thead">
         <span></span><span class="lbl">Repository</span>
-        {{if .HasPipeline}}<span class="phead">{{range .Stages}}<span class="lbl" title="{{.Name}}">{{.Abbr}}</span>{{end}}</span>
-        <span class="lbl">{{.Labels.Status}}</span>{{end}}<span class="lbl num" title="Open issues, pull requests not counted">Open</span><span class="lbl num" title="Open issues labelled good first issue">Good first</span><span class="lbl num" title="Open issues nobody is assigned to">Unassigned</span>
-        <span class="lbl num">Last commit</span><span class="lbl num" title="Issues you are watching here">Watching</span><span class="lbl num" title="Outside contributors' pull requests closed without merging, among the latest 100 closed">Turned down</span><span></span>
+        {{if .HasPipeline}}<span class="phead">{{range .Stages}}<span {{if $.HasTerm (print "p:" .Abbr)}}class="lbl term" data-term="p:{{.Abbr}}" tabindex="0" data-extra="{{.Name}}"{{else}}class="lbl" title="{{.Name}}"{{end}}>{{.Abbr}}</span>{{end}}</span>
+        <span {{if $.HasTerm (print "p:" .Labels.Status)}}class="lbl term" data-term="p:{{.Labels.Status}}" tabindex="0"{{else}}class="lbl"{{end}}>{{.Labels.Status}}</span>{{end}}<span class="lbl num term" data-term="col-open" tabindex="0">Open</span><span class="lbl num term" data-term="col-gfi" tabindex="0">Good first</span><span class="lbl num term" data-term="col-unassigned" tabindex="0">Unassigned</span>
+        <span class="lbl num term" data-term="col-commit" tabindex="0">Last commit</span><span class="lbl num term" data-term="col-watching" tabindex="0">Watching</span><span class="lbl num term" data-term="col-denied" tabindex="0">Turned down</span><span></span>
       </div>
       {{range .Rows}}{{$repoURL := .URL}}
       <details class="repo" data-key="repo-{{.Key}}" data-repo="{{.Key}}" data-name="{{.Owner}}/{{.Name}}" data-s="{{.Search}}" data-open="{{.Open}}" data-gfi="{{.GFI}}" data-unasgn="{{.Unassigned}}" data-age="{{if .AgeKnown}}{{.AgeDays}}{{else}}100000{{end}}" data-denied="{{.DeniedTotal}}">
         <summary>
-          <span class="light {{.Health}}" role="img" aria-label="{{lower .Health}}" title="{{if eq .Health "ACTIVE"}}Active: a commit in the last 30 days{{else if eq .Health "SLOW"}}Slowing: no commit for 31 to 90 days{{else if eq .Health "DORMANT"}}Dormant: no commit for over 90 days{{else}}Not checked successfully yet{{end}}" data-v="h-{{.Key}}" data-val="{{.Health}}"></span>
+          <span class="light {{.Health}}" role="img" aria-label="{{lower .Health}}" data-term="health-{{.Health}}" data-v="h-{{.Key}}" data-val="{{.Health}}"></span>
           <span class="name"><span class="own">{{.Owner}}/</span>{{.Name}}</span>
           {{if $.HasPipeline}}{{if .InPipeline}}<span class="phase" data-v="ph-{{.Key}}" data-val="{{.Stage}}" title="Stage: {{.Stage}}">{{range .Phases}}<i class="{{.State}}"></i>{{end}}<span class="sr">stage {{.Stage}}</span></span>
           {{else}}<span class="phase none" title="Not in the pipeline">{{range $.Stages}}<i></i>{{end}}<span class="sr">not in the pipeline</span></span>{{end}}
           <span class="stg">{{if .InPipeline}}{{.StageAbbr}}{{else}}—{{end}}</span>
-          <span class="gate {{.Level}}" title="{{.Label}}">{{if .Label}}{{.Label}}{{else}}<span class="zero">—</span>{{end}}</span>{{end}}
+          <span class="gate {{.Level}}"{{if $.HasTerm (print "p:" .Label)}} data-term="p:{{.Label}}"{{else}} title="{{.Label}}"{{end}}>{{if .Label}}{{.Label}}{{else}}<span class="zero">—</span>{{end}}</span>{{end}}
           <span class="m">
             <span class="num{{if not .Open}} zero{{end}}" data-v="o-{{.Key}}"><span class="mlbl">Open</span>{{.Open}}</span>
             <span class="num{{if not .GFI}} zero{{end}}" data-v="g-{{.Key}}"><span class="mlbl">Good first</span>{{.GFI}}</span>
@@ -444,6 +489,7 @@
           </span>
           <span class="chev" aria-hidden="true"></span>
         </summary>
+        {{template "peek" .Peek}}
         <div class="expand">
           <div>
             <h3>Repository</h3>
@@ -451,7 +497,7 @@
             {{if $.HasPipeline}}<p class="zero">{{if .InPipeline}}Stage: {{.Stage}}{{if .Label}} · {{$.Labels.Status}}: {{.Label}}{{end}}{{else}}Not in the pipeline{{end}}{{if .NotesURL}} · <a href="{{.NotesURL}}" target="_blank">{{$.Labels.Notes}}</a>{{end}}</p>{{end}}
             {{if .Error}}<p class="err">The last check failed: {{.Error}}</p>{{end}}
             <h3>Watched issues</h3>
-            {{if .Watch}}<ul>{{range .Watch}}<li><span class="st {{.Status}}">{{watchText .Status}}</span> <a href="{{.URL}}" target="_blank" rel="noopener">#{{.Number}}</a> {{.Title}}</li>{{end}}</ul>
+            {{if .Watch}}<ul>{{range .Watch}}<li><span class="st {{.Status}}" data-term="watch-{{.Status}}">{{watchText .Status}}</span> <a href="{{.URL}}" target="_blank" rel="noopener">#{{.Number}}</a> {{.Title}}</li>{{end}}</ul>
             {{else}}<p class="zero">None watched.</p>{{end}}
             <h3>Your pull requests here</h3>
             {{if .PRs}}<ul>{{range .PRs}}<li><a href="{{.URL}}" target="_blank" rel="noopener">#{{.Number}}</a> {{.Title}} <span class="tag">{{.State}}</span>{{if .NotesURL}} <a href="{{.NotesURL}}" target="_blank">{{$.Labels.Notes}}</a>{{end}}</li>{{end}}</ul>
@@ -479,7 +525,7 @@
       {{if .Watch}}
       <ul class="wl">
       {{range .Watch}}
-        <li data-repo="{{lower .Repo}}" data-name="{{.Repo}}" data-kind="issue" data-s="{{lower .Repo}} #{{.Number}} {{lower .Title}} {{lower (watchText .Status)}}"><span class="st {{.Status}}">{{watchText .Status}}</span>
+        <li data-repo="{{lower .Repo}}" data-name="{{.Repo}}" data-kind="issue" data-s="{{lower .Repo}} #{{.Number}} {{lower .Title}} {{lower (watchText .Status)}}"><span class="st {{.Status}}" data-term="watch-{{.Status}}">{{watchText .Status}}</span>
           <a class="t" href="{{.URL}}" target="_blank" rel="noopener" title="{{.Title}}">{{.Repo}}#{{.Number}} {{.Title}}</a>
           {{if or .ClaimDetail .ChangedAt}}<span class="d">{{if isURL .ClaimDetail}}<a href="{{.ClaimDetail}}" target="_blank" rel="noopener">the claim</a>{{else}}{{.ClaimDetail}}{{end}}{{if .ChangedAt}} · changed {{utc .ChangedAt}}{{end}}</span>{{end}}
         </li>
@@ -492,13 +538,13 @@
 
     <section class="panel" aria-labelledby="pl-h">
       <h2 id="pl-h">{{if .HasPipeline}}Pipeline <span class="lbl">{{.TargetCount}} repos by stage</span>{{else}}Merge rate <span class="lbl">Your pull requests in tracked repos</span>{{end}}</h2>
-      {{if .HasPipeline}}<div class="occ">{{range .Pipeline.Counts}}<div title="{{.Name}}"><span class="lbl">{{.Abbr}}</span><b class="{{if not .Count}}zero{{end}}" data-v="occ-{{.Name}}">{{.Count}}</b></div>{{end}}</div>{{end}}
+      {{if .HasPipeline}}<div class="occ">{{range .Pipeline.Counts}}<div {{if $.HasTerm (print "p:" .Abbr)}}data-term="p:{{.Abbr}}"{{else}}title="{{.Name}}"{{end}}><span class="lbl">{{.Abbr}}</span><b class="{{if not .Count}}zero{{end}}" data-v="occ-{{.Name}}">{{.Count}}</b></div>{{end}}</div>{{end}}
       <div class="prs">
         <div><span class="lbl">Opened</span><b class="{{if not .Pipeline.Opened}}zero{{end}}" data-v="pr-opened">{{.Pipeline.Opened}}</b></div>
         <div><span class="lbl">Open</span><b class="{{if not .Pipeline.Open}}zero{{end}}" data-v="pr-open">{{.Pipeline.Open}}</b></div>
         <div><span class="lbl">Merged</span><b class="{{if not .Pipeline.Merged}}zero{{end}}" data-v="pr-merged">{{.Pipeline.Merged}}</b></div>
         <div><span class="lbl">Closed</span><b class="{{if not .Pipeline.Closed}}zero{{end}}" data-v="pr-closed">{{.Pipeline.Closed}}</b></div>
-        <div><span class="lbl">Rate</span><b class="{{if not .Pipeline.Rate}}zero{{end}}" data-v="pr-rate">{{if .Pipeline.Rate}}{{.Pipeline.Rate}}{{else}}—{{end}}</b></div>
+        <div><span class="lbl term" data-term="rate" tabindex="0">Rate</span><b class="{{if not .Pipeline.Rate}}zero{{end}}" data-v="pr-rate">{{if .Pipeline.Rate}}{{.Pipeline.Rate}}{{else}}—{{end}}</b></div>
       </div>
       {{if not .Pipeline.Known}}
       <p class="nodata"><b>Not counted yet.</b> {{if .Pipeline.Err}}The last search failed: <span class="err">{{.Pipeline.Err}}</span>{{else}}Counted with the next check.{{end}}</p>
@@ -519,7 +565,7 @@
         <dt>Last check took</dt><dd>{{.CycleText}}</dd>
         <dt>API calls per check</dt><dd class="fig">{{.CycleCalls}}</dd>
         <dt>API quota resets</dt><dd>{{if .APIResetUTC}}{{.APIResetUTC}} UTC{{else}}<span class="zero">—</span>{{end}}</dd>
-        <dt>Your work refresh</dt><dd>{{if .Work.Cost}}<span class="fig">{{.Work.Cost}}</span> GraphQL points · <span class="fig">{{.Work.Remaining}}</span> left{{else}}<span class="zero">—</span>{{end}}</dd>
+        <dt><span class="term" data-term="graphql" tabindex="0">Your work refresh</span></dt><dd>{{if .Work.Cost}}<span class="fig">{{.Work.Cost}}</span> GraphQL points · <span class="fig">{{.Work.Remaining}}</span> left{{else}}<span class="zero">—</span>{{end}}</dd>
         <dt>Data file</dt><dd><a href="/snapshot.json">snapshot.json</a></dd>
       </dl>
     </section>
@@ -594,6 +640,149 @@
 
     // Filter and organize. Runs after the change markers, so markers always compare the full
     // server-rendered numbers. Alerts are never filtered: an alarm must not hide behind a search.
+    // New activity. A row's dot stays green until its newest notification is read: on GitHub
+    // (opening the pull request there marks it read) or by opening it from here. Checked once a
+    // minute, so a dot changes without waiting for the reload.
+    (function () {
+      var seenKey = "hellogitty-seen", seen = {};
+      try { seen = JSON.parse(localStorage.getItem(seenKey) || "{}") || {}; } catch (e) {}
+      var cut = Date.now() / 1000 - 30 * 86400;
+      for (var k in seen) if (seen[k] < cut) delete seen[k];
+      function keep() { try { localStorage.setItem(seenKey, JSON.stringify(seen)); } catch (e) {} }
+      var rows = Array.prototype.slice.call(document.querySelectorAll(".wi[data-k]"));
+      var counter = document.getElementById("newcount");
+      function paint() {
+        var fresh = 0;
+        rows.forEach(function (li) {
+          var t = Number(li.dataset.new || 0), isNew = t > 0 && t > (seen[li.dataset.k] || 0);
+          var dot = li.querySelector(".dot"), chip = li.querySelector(".newchip");
+          dot.classList.toggle("new", isNew);
+          dot.classList.toggle("caution", !isNew && li.dataset.move === "you");
+          if (chip) chip.hidden = !isNew;
+          if (isNew) fresh++;
+        });
+        if (counter) { counter.hidden = !fresh; counter.textContent = " · " + fresh + " new"; }
+      }
+      rows.forEach(function (li) {
+        var a = li.querySelector("a.title");
+        if (a) a.addEventListener("click", function () {
+          if (Number(li.dataset.new)) { seen[li.dataset.k] = Number(li.dataset.new); keep(); paint(); }
+        });
+      });
+      function check() {
+        fetch("/attention.json", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) {
+          if (d.state !== "ok") return;
+          rows.forEach(function (li) {
+            var other = li.dataset.k.indexOf("n:") === 0, n = (other ? d.other : d.rows)[li.dataset.k];
+            li.dataset.new = n ? n.new : 0;
+            var chip = li.querySelector(".newchip");
+            if (n && n.what && chip && !other) chip.textContent = "New · " + n.what;
+          });
+          paint();
+        }).catch(function () {});
+      }
+      paint();
+      setInterval(check, 60000);
+    })();
+
+    // Hover help (ADR-001). A [data-term] explains itself from the glossary; a row title or
+    // repository name shows its peek (template.peek). Hover waits a moment, keyboard focus shows at
+    // once, a tap toggles a term on touch screens, Esc closes. The card never takes the pointer.
+    (function () {
+      var words = {};
+      try { words = JSON.parse(document.getElementById("glossary").textContent) || {}; } catch (e) {}
+      var tip = document.createElement("div");
+      tip.id = "tip"; tip.className = "tip"; tip.setAttribute("role", "tooltip");
+      var topLayer = typeof tip.showPopover === "function";
+      if (topLayer) tip.setAttribute("popover", "manual"); else tip.hidden = true;
+      document.body.appendChild(tip);
+      var owner = null, timer = 0, leaving = 0, touch = false;
+
+      function line(cls, text) { var d = document.createElement("div"); if (cls) d.className = cls; d.textContent = text; tip.appendChild(d); }
+      function fill(el) {
+        tip.textContent = "";
+        if (el.dataset.term) {
+          var t = words[el.dataset.term];
+          if (!t) return false;
+          tip.classList.remove("peekmode");
+          var h = document.createElement("b"); h.className = "tip-t"; h.textContent = t.label; tip.appendChild(h);
+          line("", t.means);
+          if (el.dataset.extra) line("tip-x", el.dataset.extra);
+          if (t.do) line("tip-do", t.do);
+          return true;
+        }
+        if (!el._peek) return false;
+        tip.classList.add("peekmode");
+        tip.appendChild(el._peek.content.cloneNode(true));
+        return true;
+      }
+      function place(el) {
+        var r = el.getBoundingClientRect(), gap = 8, w = tip.offsetWidth, h = tip.offsetHeight;
+        var y = r.bottom + gap;
+        if (y + h > innerHeight - gap && r.top - gap - h > gap) y = r.top - gap - h;
+        tip.style.left = Math.max(gap, Math.min(r.left, innerWidth - w - gap)) + "px";
+        tip.style.top = Math.max(gap, y) + "px";
+      }
+      function show(el) {
+        clearTimeout(leaving);
+        if (owner === el) return;
+        hide(true);
+        if (!fill(el)) return;
+        owner = el;
+        if (topLayer) { try { tip.showPopover(); } catch (e) {} } else tip.hidden = false;
+        place(el);
+        el.setAttribute("aria-describedby", "tip");
+      }
+      function hide(now) {
+        clearTimeout(timer);
+        function go() {
+          if (!owner) return;
+          owner.removeAttribute("aria-describedby"); owner = null;
+          if (topLayer) { try { tip.hidePopover(); } catch (e) {} } else tip.hidden = true;
+        }
+        if (now === true) go(); else leaving = setTimeout(go, 100);
+      }
+      function target(node) {
+        var el = node && node.closest ? node.closest("[data-term], .wi a.title, details.repo > summary .name, details.repo > summary") : null;
+        if (!el) return null;
+        if (el.dataset.term) return words[el.dataset.term] ? el : null;
+        var row = el.closest(".wi, details.repo"), tpl = row && row.querySelector(":scope > template.peek, :scope > div > template.peek");
+        if (!tpl) return null;
+        el._peek = tpl;
+        return el;
+      }
+      document.addEventListener("pointerdown", function (e) { touch = e.pointerType === "touch"; }, true);
+      document.addEventListener("mouseover", function (e) {
+        if (touch) return;
+        var el = target(e.target);
+        if (!el || el.matches("details.repo > summary")) return; // a repository peeks from its name
+        if (el === owner) { clearTimeout(leaving); return; }
+        clearTimeout(timer);
+        timer = setTimeout(function () { show(el); }, el.dataset.term ? 350 : 500);
+      });
+      document.addEventListener("mouseout", function (e) {
+        var el = target(e.target);
+        if (!el || (e.relatedTarget && el.contains(e.relatedTarget))) return;
+        clearTimeout(timer);
+        if (el === owner) hide();
+      });
+      document.addEventListener("focusin", function (e) {
+        var el = target(e.target);
+        if (el && e.target === el && el.matches(":focus-visible")) show(el);
+      });
+      document.addEventListener("focusout", function (e) { if (owner && e.target === owner) hide(true); });
+      document.addEventListener("keydown", function (e) { if (e.key === "Escape" && owner) hide(true); });
+      // On a touch screen a tap explains a term; links and rows still open as before.
+      document.addEventListener("click", function (e) {
+        if (!touch) return;
+        var el = e.target.closest && e.target.closest("[data-term]");
+        if (!el || !words[el.dataset.term] || el.closest("a, summary, button")) return;
+        if (owner === el) hide(true); else show(el);
+      });
+      addEventListener("scroll", function () { if (owner) hide(true); }, { passive: true });
+      addEventListener("resize", function () { if (owner) hide(true); });
+    })();
+
     // The view is remembered in this browser so the 5-minute reload keeps it.
     (function () {
       var viewKey = "hellogitty-view";

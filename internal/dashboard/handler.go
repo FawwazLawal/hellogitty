@@ -101,6 +101,14 @@ type page struct {
 	Watch        []watchRow
 	Pipeline     pipelineView
 	Work         workView
+	Glossary     map[string]Term
+	GlossaryJSON template.JS
+}
+
+// HasTerm reports whether the hover help explains id, so the page only marks what it can explain.
+func (p *page) HasTerm(id string) bool {
+	_, ok := p.Glossary[id]
+	return ok
 }
 
 // mascot lists the banner clips by kind; the page picks one on load.
@@ -143,6 +151,7 @@ type row struct {
 	Error                 string
 	PRs                   []prRow
 	Search                string // lowercase text the page's search box matches against
+	Peek                  peek
 }
 
 type watchRow struct {
@@ -242,6 +251,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case strings.HasPrefix(r.URL.Path, "/mascot/") && h.Mascot != nil:
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		http.StripPrefix("/mascot/", http.FileServer(http.FS(h.Mascot))).ServeHTTP(w, r)
+	case r.URL.Path == "/attention.json":
+		h.serveAttention(w, r)
 	case r.URL.Path == "/snapshot.json":
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
@@ -362,8 +373,20 @@ func (h *Handler) build() (*page, error) {
 		p.APIResetUTC = tel.RateReset.UTC().Format("15:04Z")
 	}
 
+	p.Glossary = terms(pst)
+	p.GlossaryJSON = glossaryJSON(p.Glossary)
+	var overlaps []store.Overlap
+	if src, ok := h.Source.(OverlapSource); ok {
+		overlaps = src.OverlapReports()
+	}
+
 	board, workErr := h.Source.Work()
 	p.Work = buildWork(board, workErr, now)
+	addOverlapPeeks(&p.Work, overlapsByIssue(overlaps))
+	if ns, ok := h.Source.(NotificationSource); ok {
+		nv := ns.Notifications()
+		applyAttention(&p.Work, nv, matchNotifications(board, nv.Items, now))
+	}
 
 	notesURL := func(owner, name string) string {
 		if r, ok := pst.Repo(owner, name); ok && r.Notes != "" {
@@ -475,6 +498,7 @@ func (h *Handler) build() (*page, error) {
 		if rw.InPipeline {
 			rw.Search += " " + strings.ToLower(rw.Stage+" "+rw.Label)
 		}
+		rw.Peek = repoPeek(rw, now, overlaps)
 		p.Rows = append(p.Rows, rw)
 	}
 	if pst != nil {

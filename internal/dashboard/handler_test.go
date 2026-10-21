@@ -324,7 +324,7 @@ func TestWorkBoardPanels(t *testing.T) {
 		`proj#7, tool#9`, // and names them
 		`data-v="work-you">1<`, `data-v="work-them">1<`, `data-v="work-inyou">1<`,
 		`Fix &lt;it&gt;`, // titles escaped
-		`<span class="say caution">Changes requested by @lead</span><span class="note caution">Merge conflict</span>`,
+		`<span class="say caution">Changes requested by @lead</span><span class="note caution" data-term="merge-conflict" tabindex="0">Merge conflict</span>`,
 		`>@lead</a>Please add a test. x</blockquote>`, // quote cleaned of markup, HTML and quoted replies
 		`2 days ago`, `3 hours ago`, `updated 2 min ago`,
 		`Open pull requests and issues from others in repos owned by me`,
@@ -358,9 +358,9 @@ func TestWorkRowShowsPersonalActionLabelsAndThreadQuote(t *testing.T) {
 	h.Now = func() time.Time { return now }
 	_, html := get(t, h, "/")
 	for _, want := range []string{
-		`<span class="only" title="Only you can do this">Only you</span><span class="say caution">Sign the CLA`,
+		`<span class="only" data-term="only-you" tabindex="0">Only you</span><span class="say caution">Sign the CLA`,
 		`<span class="label">needs-triage</span>`,
-		`<span class="note caution">1 unresolved thread</span>`, `<span class="note ">Waiting on: filigran/cla</span>`,
+		`<span class="note caution" data-term="threads" tabindex="0">1 unresolved thread</span>`, `<span class="note " data-term="checks-running" tabindex="0">Waiting on: filigran/cla</span>`,
 		`>@greptile-apps</a>Advice is reversed`, // the thread is quoted, not the older chatter
 		`<span class="fig">28</span> GraphQL points`,
 	} {

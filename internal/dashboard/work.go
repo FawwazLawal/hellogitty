@@ -1,12 +1,11 @@
 package dashboard
 
 import (
-	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/FawwazLawal/hellogitty/internal/help"
 	"github.com/FawwazLawal/hellogitty/internal/work"
 )
 
@@ -36,9 +35,14 @@ type workRow struct {
 	Quote    string
 	QuoteBy  string
 	QuoteURL string
+	K        string // "owner/name#123", matching notifications and the page's read marks
+	Attn     string // the dot: "new" (unread activity), "caution" (your move) or ""
+	New      int64  // when the newest unread notification on it arrived, unix seconds
+	NewWhat  string // what it says: "New comment", "CI failed: lint"
+	Peek     peek   // the hover card
 }
 
-type note struct{ Text, Level string }
+type note struct{ Text, Level, Term string }
 
 type workView struct {
 	Known      bool
@@ -54,6 +58,10 @@ type workView struct {
 	DoneMore   int
 	InYou      []workRow
 	InThem     []workRow
+
+	NotifyState string // "ok", "off" or "" (not configured or not fetched yet)
+	NotifyNote  string
+	Other       []otherRow
 }
 
 // YourMove counts everything waiting on you, sent and incoming.
@@ -106,8 +114,13 @@ func toRow(it work.Item, login string, now time.Time) workRow {
 		r.Kind = "PR"
 	}
 	r.Move = it.Move
+	r.K = rowKey(it.Repo, it.Number)
+	r.Peek = workPeek(it, login, now, nil)
+	if it.Move == work.MoveYou {
+		r.Attn = "caution"
+	}
 	for _, n := range it.Notes {
-		r.Notes = append(r.Notes, note{Text: n, Level: noteLevel(n)})
+		r.Notes = append(r.Notes, note{Text: n, Level: noteLevel(n), Term: noteTerm(n)})
 	}
 	// Quote the comment most worth reading before acting: the one the status points at (an
 	// unresolved review comment, say), else the latest word from someone else.
@@ -156,66 +169,8 @@ func noteLevel(n string) string {
 	return ""
 }
 
-var (
-	htmlComment = regexp.MustCompile(`(?s)<!--.*?-->`)
-	htmlTag     = regexp.MustCompile(`(?s)<[^>]*>`)
-	mdImage     = regexp.MustCompile(`!\[[^\]]*\]\([^)]*\)`)
-	mdLink      = regexp.MustCompile(`\[([^\]]*)\]\([^)]*\)`)
-	quoted      = regexp.MustCompile(`(?m)^>.*$`)
-	codeFence   = regexp.MustCompile("(?s)```.*?```")
-	spaces      = regexp.MustCompile(`\s+`)
-)
-
-// excerpt turns a GitHub comment into one readable line: no HTML, quoted replies, code blocks or
-// image markup, cut at a word boundary.
-func excerpt(body string) string {
-	s := htmlComment.ReplaceAllString(body, " ")
-	s = codeFence.ReplaceAllString(s, " [code] ")
-	s = quoted.ReplaceAllString(s, " ")
-	s = mdImage.ReplaceAllString(s, " ")
-	s = mdLink.ReplaceAllString(s, "$1")
-	s = htmlTag.ReplaceAllString(s, " ")
-	s = strings.NewReplacer("**", "", "__", "", "`", "", "&nbsp;", " ", "&amp;", "&").Replace(s)
-	s = strings.TrimSpace(spaces.ReplaceAllString(s, " "))
-	if len([]rune(s)) <= quoteChars {
-		return s
-	}
-	cut := string([]rune(s)[:quoteChars])
-	if i := strings.LastIndexByte(cut, ' '); i > quoteChars/2 {
-		cut = cut[:i]
-	}
-	return strings.TrimRight(cut, " ,.;:") + "…"
-}
-
-// ago says how long ago t was in words a person reads at a glance: "3 days ago".
-func ago(now, t time.Time) string {
-	if t.IsZero() {
-		return "—"
-	}
-	d := now.Sub(t)
-	switch {
-	case d < time.Minute:
-		return "just now"
-	case d < time.Hour:
-		return plural(int(d/time.Minute), "min") + " ago"
-	case d < 24*time.Hour:
-		return plural(int(d/time.Hour), "hour") + " ago"
-	case d < 14*24*time.Hour:
-		return plural(int(d/(24*time.Hour)), "day") + " ago"
-	case d < 60*24*time.Hour:
-		return plural(int(d/(7*24*time.Hour)), "week") + " ago"
-	case d < 365*24*time.Hour:
-		return plural(int(d/(30*24*time.Hour)), "month") + " ago"
-	}
-	return plural(int(d/(365*24*time.Hour)), "year") + " ago"
-}
-
-func plural(n int, unit string) string {
-	if n == 1 {
-		return "1 " + unit
-	}
-	if unit == "min" {
-		return fmt.Sprintf("%d min", n)
-	}
-	return fmt.Sprintf("%d %ss", n, unit)
-}
+// excerpt, ago and plural live in internal/help, shared with the extension.
+func excerpt(body string) string           { return help.Excerpt(body, quoteChars) }
+func excerptN(body string, max int) string { return help.Excerpt(body, max) }
+func ago(now, t time.Time) string          { return help.Ago(now, t) }
+func plural(n int, unit string) string     { return help.Plural(n, unit) }
