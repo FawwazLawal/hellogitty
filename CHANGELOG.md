@@ -5,7 +5,40 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
-Changes waiting for the owner to declare the next milestone.
+Changes in the next publish.
+
+- A live activity feed at the top of the right-hand column: new issues in tracked repositories,
+  comments, reviews and state changes on your work, someone else's work on issues you plan to take,
+  repositories going quiet, and GitHub notifications, newest first. Click a line to jump to it on
+  the dashboard. **Ack** marks it seen; when a GitHub notification is behind it, that is marked read
+  on GitHub too, and reading it on GitHub settles the line. `/feed` shows it on a page of its own.
+  This is HelloGitty's first write to GitHub, made only when you press Ack.
+- The inbox file has a new kind, `new_issue`: one entry per repository where you plan work, listing
+  its new unassigned issues from the last day.
+- Help: press ? or click Help in the header for the user guide, a searchable glossary of every
+  term on the page, keyboard shortcuts, common questions, privacy notes, troubleshooting, and the
+  details of your install (version, files in use, whether notifications can be read, where to
+  report a problem). The guide is compiled in, so it always matches the version you run.
+- The version shows under the HelloGitty name. A release reads "v0.2.0 (4) · Black Bombay (baby)":
+  its version and, in brackets, how many updates it has had since that version began. A build from
+  source between releases reads "dev build · after v0.2.0 (3)". See [VERSIONING.md](VERSIONING.md).
+- Every publish is now a release, with a page and downloadable builds for macOS, Linux and Windows.
+- The screenshot in the README and the guide shows the current dashboard.
+
+## v0.2.0 (3) · Black Bombay (baby) · 2026-10-21
+
+Tag `v0.2.3`.
+
+- Layouts: a Layout button opens a sheet to show, hide, fold and reorder panels and move them
+  between the main and side columns, with five presets (Everything, Contributor, Maintainer,
+  Program, Focus). Saved in the browser.
+- The inbox file now says who closed your pull request without merging and what they said, or
+  "with no comment", and reports labels added to your pull requests (new kind `pr_label`) unless
+  they are known to be harmless. Both carry a new `"priority": "high"` field.
+
+## v0.2.0 (2) · Black Bombay (baby) · 2026-10-21
+
+Tag `v0.2.2`.
 
 - Your move is quieter. Comments from machines (bots, automation accounts such as gopherbot, and
   comments that open with a hidden `<!-- -->` marker, like policy checks posted from a
@@ -18,16 +51,10 @@ Changes waiting for the owner to declare the next milestone.
   within a minute. Threads that match no row, such as a CI run on a branch without an open pull
   request, show under Other notifications. HelloGitty only reads notifications; it never marks
   them read.
-- Layouts: a Layout button opens a sheet to show, hide, fold and reorder panels and move them
-  between the main and side columns, with five presets (Everything, Contributor, Maintainer,
-  Program, Focus). Saved in the browser.
 - Hover help: words with a dotted underline explain themselves on hover, keyboard focus or a
   tap, and hovering a row's title or a repository's name shows a peek with checks, reviews, recent
   comments, the branch and more. Everything comes from data already on hand. A pipeline command
   can explain its own words with a new `glossary` field.
-- The inbox file now says who closed your pull request without merging and what they said, or
-  "with no comment", and reports labels added to your pull requests (new kind `pr_label`) unless
-  they are known to be harmless. Both carry a new `"priority": "high"` field.
 - The inbox file has a new kind, `pr_bot`: what bots still ask to be fixed on your open pull
   requests, one entry per pull request. It is replaced when the bot reviews again and goes once
   the findings are resolved. A bot's inline comments no longer appear one by one.
@@ -35,12 +62,22 @@ Changes waiting for the owner to declare the next milestone.
   their own row, found through your notifications.
 - The inbox file has a new kind, `issue_comment`: a reply that made an issue your move. It goes
   when you answer.
+
+## v0.2.0 (1) · Black Bombay (baby) · 2026-10-21
+
+Tag `v0.2.1`.
+
 - HelloGitty now checks the issues you plan to work on, and the issues your open pull requests fix,
   for someone else's work every 15 minutes: another pull request citing the issue, an assignee, a
   claim in a comment, the issue closing, or an open pull request whose title covers the same
   subject. Each issue gets one report in the inbox file (`issue_overlap`, or `issue_similar` for a
   title match), recorded so it is never repeated. The pipeline command can list issues to watch
   under `watch`. `-once` now also writes the inbox file.
+
+## v0.2.0 · Black Bombay (baby) · 2026-10-21
+
+Tag `v0.2.0`.
+
 - Repositories with more open issues than the fetch limit (10 pages) now show exact open,
   good-first and unassigned counts from GitHub search instead of counting only the fetched pages.
   If those counts cannot be fetched, the repository is reported under POLL FAIL rather than shown
