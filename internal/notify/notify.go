@@ -1,7 +1,7 @@
 // Package notify keeps the latest copy of the user's GitHub notifications, so the dashboard can mark
 // what is new since they last looked. GitHub's own read state is the source of truth: reading a
 // thread on GitHub (opening the pull request, say) marks it read, and the dashboard follows on the
-// next poll. HelloGitty only reads; it never marks anything read.
+// next poll. The only write is MarkRead's caller acknowledging a feed row; see internal/feed.
 package notify
 
 import (
@@ -119,6 +119,18 @@ func (f *Feed) Snapshot() View {
 	v := f.view
 	v.Items = append([]Item(nil), f.view.Items...)
 	return v
+}
+
+// MarkRead records at once that a thread was marked read, so the page doesn't wait for the next
+// poll to show it.
+func (f *Feed) MarkRead(id string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for i := range f.view.Items {
+		if f.view.Items[i].ID == id {
+			f.view.Items[i].Unread = false
+		}
+	}
 }
 
 // Refresh fetches what changed. An unchanged inbox costs nothing.
