@@ -37,18 +37,18 @@ func TestDashboardVersionCarriesBabySeparately(t *testing.T) {
 	defer func() { version = old }()
 
 	version = "v0.1.0"
-	if label, baby := dashboardVersion(); label != "V0.1.0 · BLACK BOMBAY" || !baby {
+	if label, baby := dashboardVersion(); label != "v0.1.0 · Black Bombay" || !baby {
 		t.Errorf("v0.1.0: %q baby=%v", label, baby)
 	}
 	if line := versionLine(); line != "hellogitty v0.1.0 - Black Bombay (baby)" {
 		t.Errorf("-version: %q", line)
 	}
 	version = "v1.0.0"
-	if label, baby := dashboardVersion(); label != "V1.0.0 · BLACK BOMBAY" || baby {
+	if label, baby := dashboardVersion(); label != "v1.0.0 · Black Bombay" || baby {
 		t.Errorf("v1.0.0: %q baby=%v", label, baby)
 	}
 	version = "dev"
-	if label, baby := dashboardVersion(); label != "DEV BUILD" || baby {
+	if label, baby := dashboardVersion(); label != "dev build" || baby {
 		t.Errorf("dev: %q baby=%v", label, baby)
 	}
 }

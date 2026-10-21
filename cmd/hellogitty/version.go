@@ -101,14 +101,14 @@ func (b buildInfo) title() string {
 func versionLine() string { return "hellogitty " + currentBuild().title() }
 
 // dashboardVersion is the header label; the baby marker is returned separately so the page can
-// set it in its own quieter case.
+// set it apart.
 func dashboardVersion() (label string, baby bool) {
 	b := currentBuild()
 	if b.Version == "dev" {
-		return "DEV BUILD", false
+		return "dev build", false
 	}
 	if b.Codename == "" {
-		return strings.ToUpper(b.Version), false
+		return b.Version, false
 	}
-	return strings.ToUpper(b.Version + " · " + b.Codename), b.Baby
+	return b.Version + " · " + b.Codename, b.Baby
 }
