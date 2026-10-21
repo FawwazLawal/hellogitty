@@ -138,7 +138,8 @@ tracked repositories. It refreshes every 5 minutes. Items fall into three groups
 
   "Read" is GitHub's own read state, from your notifications inbox. Opening the pull request on
   GitHub, or clicking its title here, marks it read, and the dot changes within a minute. The
-  heading of Your work counts what's new. HelloGitty never marks anything read on GitHub.
+  heading of Your work counts what's new. Clicking a title here doesn't mark anything read on GitHub;
+  acknowledging a line in the [live feed](#live-feed) does.
 - **Other notifications:** threads in your GitHub inbox that match no row: a CI run failing on a
   branch with no open pull request, a review request somewhere else, a release. Shown while unread,
   and afterwards only if they still ask something of you (a review request, an assignment, a
@@ -312,6 +313,37 @@ reduced motion turned on, you see a still image. In the light theme it sits in a
 
 ---
 
+## Live feed
+
+**Live**, at the top of the right-hand column, is a running list of what just happened, newest
+first, one line each:
+
+- **New issue:** opened in a repository you track.
+- **Your PR / Your issue:** a comment, review, label, merge or close on your own work, or a bot's
+  finding that needs fixing.
+- **Someone else / Worth a look:** someone else's work on an issue you plan to take.
+- **Watched:** a watched issue claimed or closed.
+- **Health:** a tracked repository went slow or dormant.
+- **GitHub:** a notification about anything else.
+
+The list re-reads itself every 30 seconds, and new lines flash once. Click a line to jump to that
+row on the dashboard; if it has no row there, the link opens it on GitHub.
+
+**Ack** marks a line seen, and it leaves the list (tick **Show acknowledged** to see those too).
+When a GitHub notification is behind the line, acknowledging it also marks that notification read
+on GitHub, and the dashboard's dot for it stops being green. It works the other way too: reading
+the thread on GitHub settles the line here within a minute. Lines with no GitHub notification
+behind them, such as a repository going dormant, are acknowledged in HelloGitty only; the button
+says so when you point at it. **Acknowledge all** clears the list.
+
+**Open in a window** shows the feed on a page of its own (`/feed`), small enough to keep beside
+your editor.
+
+New issues arrive with each check of your repositories (hourly by default). Everything about your
+own work and your notifications arrives within a few minutes.
+
+---
+
 ## Layouts
 
 **Layout** in the header opens a sheet where you set what the page shows:
@@ -395,8 +427,10 @@ lights.
 
 HelloGitty runs only on your computer. The dashboard listens on your own machine and refuses any
 address other people could reach. The only thing it talks to over the network is GitHub's API,
-using your token, and it only ever reads. It never comments, labels, marks notifications as read or
-changes anything on GitHub. There is no telemetry, account or cloud service.
+using your token. It reads, with one exception you control: pressing **Ack** on a live-feed line
+with a GitHub notification behind it marks that notification read. It never comments, labels or
+changes anything else on GitHub, and other websites can't make it acknowledge anything. There is no
+telemetry, account or cloud service.
 
 What it keeps, and where:
 
@@ -421,11 +455,14 @@ and automated checks never put a row there.
 **Why did a row leave Your move?** You answered, pushed, or the other side acted. Rows that wait
 on others move to **Waiting on others**; merged and closed ones fold into **Finished**.
 
-**Does HelloGitty change anything on GitHub?** No. It only reads.
+**Does HelloGitty change anything on GitHub?** Only one thing, and only when you ask: pressing
+**Ack** on a live-feed line marks the GitHub notification behind it as read. Everything else is
+read-only.
 
-**Can I use a fine-grained token?** Yes, for everything except the new-activity dots. GitHub
-doesn't let fine-grained tokens read notifications, so the dots fall back to amber and hollow, and
-a line under Your work says so.
+**Can I use a fine-grained token?** Yes, for everything except what comes from GitHub
+notifications: the green new-activity dots, the GitHub lines in the live feed, and marking
+notifications read when you acknowledge. GitHub doesn't let fine-grained tokens read notifications,
+so the dots fall back to amber and hollow, and a line under Your work says so.
 
 **How much of my GitHub quota does it use?** Your work is one request every five minutes on
 GitHub's separate GraphQL budget. Tracked repositories cost about 25 calls each on the first check
@@ -473,7 +510,7 @@ github.com/FawwazLawal/hellogitty/cmd/hellogitty@latest`), then restart HelloGit
 | **GitHub API** near the limit every hour | Many large repositories, or a short interval. | Track fewer repositories or set `"interval"` longer. |
 | Merge rate says "Not counted yet" | The pull request search runs after the first check finishes. | Wait for the first check. |
 | The page won't load | HelloGitty isn't running, or is on another address. | Start it; the address is the `listen` setting (default `localhost:7340`). |
-| No green dots ever, and a line under Your work says they're off | The token can't read notifications (fine-grained tokens never can). | Use a classic token; public repositories need no scopes, private ones need `repo` or `notifications`. |
+| No green dots ever, and a line under Your work says they're off | The token can't read notifications (fine-grained tokens never can). | Use a classic token with the `notifications` (or `repo`) scope. |
 | A dot stays green after you read the thread | GitHub hasn't marked it read yet, or you read it somewhere that doesn't mark it. | Open it from the row's title, or on GitHub. The dot checks once a minute. |
 | A pull request of yours is missing from Your work | GitHub's search hasn't indexed it yet, or leaves it out. | It appears within a few minutes once it shows up in your notifications. |
 | A panel has disappeared | It was hidden or folded in **Layout**. | Open **Layout** and turn it back on, or click **Reset to everything**. |
