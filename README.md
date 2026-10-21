@@ -60,6 +60,8 @@ Your work fills in within a few seconds; each followed project takes a few secon
   `hellogitty watch owner/name 123`.
 - Try the toolbar: press `/` to search, or group your work by organization.
 
+Hover any word with a dotted underline, or a row's title, for more about it.
+
 Leave the page open; it reloads itself every five minutes. [docs/GUIDE.md](docs/GUIDE.md) explains
 every panel, status and colour.
 
@@ -126,7 +128,10 @@ it fetches review details for recently closed pull requests; after that those ar
 on real repositories: about 25 calls per repository on the first poll, and about 110 calls per
 hourly cycle for 15 repositories after that. The dashboard shows calls used against the hourly
 budget. Your work is one GraphQL request every 5 minutes, which counts against GitHub's separate
-GraphQL budget, not this one.
+GraphQL budget, not this one. The new-activity dots read your GitHub notifications about once a
+minute; an unchanged inbox answers "not modified", which costs nothing. Notifications need a
+classic token (no scopes for public repositories, or `repo` / `notifications`); with a fine-grained
+token the dashboard works without the dots.
 
 ## Run
 
@@ -242,8 +247,13 @@ script can act on it without calling GitHub:
 }
 ```
 
-`kind` is `pr_comment`, `pr_review`, `pr_state`, `watched_issue`, `issue_overlap` or `issue_similar`
-(see [someone else's work](#someone-elses-work)). The file is replaced whole on
+`kind` is `pr_comment`, `pr_review`, `pr_state`, `pr_bot`, `issue_comment` (a reply that made an
+issue your move), `watched_issue`, `issue_overlap` or `issue_similar`
+(see [someone else's work](#someone-elses-work)). `pr_bot` is one entry per pull request of yours
+for what bots still ask to be fixed: an unresolved review comment from a bot on current code, a
+bot's standing "changes requested", or a review saying "Actionable comments posted: N" with no
+commit since. Bot summaries, coverage reports and approvals never count. The entry is replaced
+when the bot reviews again, and disappears when nothing is left open. The file is replaced whole on
 each write (a temporary file, then a rename), so a reader never sees half of one. Entries stay
 while they are current; to tell new ones from ones you've handled, keep the `id`s you've seen. An
 `id` is built from GitHub's own ids and never changes for the same event. `occurred_at` is GitHub's
@@ -299,7 +309,8 @@ one stands. Set `pipeline_command` to a program that prints JSON like this:
     "junegunn/fzf": {"stage": "build", "done": ["triage"], "label": "OK", "level": "ok",
                      "notes": "/home/me/notes/fzf.md"}
   },
-  "watch": [{"repo": "junegunn/fzf", "number": 4012, "title": "Preview window flickers"}]
+  "watch": [{"repo": "junegunn/fzf", "number": 4012, "title": "Preview window flickers"}],
+  "glossary": {"OK": "Ready to contribute."}
 }
 ```
 
@@ -311,7 +322,9 @@ The dashboard then adds a phase strip and a status column to each row, a count o
 per stage, and two more cells: one for repositories whose `level` is `caution`, one for a stage
 listed in `failed`. `labels` renames those to your own words. `notes`, when given, is a local text
 file served read-only at `/notes/owner/name`; no other file can be reached. Stages can be given as
-names or as `{"name": ..., "abbr": ...}`. `watch`, optional, lists issues you plan to work on;
+names or as `{"name": ..., "abbr": ...}`. `glossary`, optional, maps your
+command's own words (stage codes, verdicts) to a sentence the page shows when you hover them.
+`watch`, optional, lists issues you plan to work on;
 the command runs again before each check, so the list follows whatever your program reads it from
 (see [someone else's work](#someone-elses-work)). The command runs from the config folder with a 15 second
 timeout, at most once a minute. Without `pipeline_command` none of this appears.
