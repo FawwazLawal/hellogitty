@@ -26,6 +26,7 @@ const (
 	KindReview  = "pr_review"
 	KindState   = "pr_state"
 	KindWatched = "watched_issue"
+	KindLabel   = "pr_label"      // a label someone added to a pull request you opened, unless it is a known-benign one
 	KindBot     = "pr_bot"        // a bot's open findings on a pull request you opened: one entry per pull request
 	KindIssue   = "issue_comment" // a reply on an issue that is your move: one you opened or were assigned, or one that mentions you
 	KindOverlap = "issue_overlap" // someone else is on an issue you plan to take: a PR, an assignee, a claim, a close
@@ -41,6 +42,9 @@ type Entry struct {
 	Actor      string    `json:"actor"`
 	OccurredAt time.Time `json:"occurred_at"`
 	Summary    string    `json:"summary"`
+	// Priority is "high" for what must never wait: your pull request closed without merging, or a
+	// label nobody has said is harmless. Absent otherwise.
+	Priority string `json:"priority,omitempty"`
 }
 
 type File struct {
@@ -63,7 +67,8 @@ func Build(b *work.Board, reports []store.RepoReport, seen FirstSeen) []Entry {
 	if b != nil {
 		for _, it := range b.Sent {
 			if it.PR && it.Role == work.RoleAuthor {
-				out = append(out, prEntries(it, seen)...)
+				out = append(out, prEntries(it, b.Login, seen)...)
+				out = append(out, labelEntries(it, seen)...)
 				if e, ok := botEntry(it); ok {
 					out = append(out, e)
 				}
@@ -142,7 +147,7 @@ func sortEntries(out []Entry) {
 	})
 }
 
-func prEntries(it work.Item, seen FirstSeen) []Entry {
+func prEntries(it work.Item, login string, seen FirstSeen) []Entry {
 	base := "hg-" + slug(it.Repo) + "-" + strconv.Itoa(it.Number) + "-"
 	entry := func(id, kind, url, actor string, at time.Time, summary string) Entry {
 		if url == "" {
@@ -167,11 +172,12 @@ func prEntries(it work.Item, seen FirstSeen) []Entry {
 		if it.ClosedAt != nil {
 			at = *it.ClosedAt
 		}
-		summary := "Closed without merging"
-		if it.Last != nil && it.Last.Body != "" {
-			summary += ": @" + it.Last.Author + ": " + oneLine(it.Last.Body, 120)
+		if it.ClosedBy != "" && strings.EqualFold(it.ClosedBy, login) {
+			return append(out, entry("closed", KindState, "", it.ClosedBy, at, "You closed it without merging"))
 		}
-		return append(out, entry("closed", KindState, "", "", at, summary))
+		e := entry("closed", KindState, "", it.ClosedBy, at, closedSummary(it))
+		e.Priority = "high"
+		return append(out, e)
 	}
 
 	for _, a := range it.Recent {
@@ -313,6 +319,81 @@ func sortedKeys(m map[string]bool) []string {
 		out = append(out, k)
 	}
 	sort.Strings(out)
+	return out
+}
+
+// closedSummary says who closed a pull request of yours without merging it and what they said.
+// A close with no comment says so in words: a silent close is a stronger signal, not a weaker one.
+func closedSummary(it work.Item) string {
+	s := "Closed without merging"
+	if it.ClosedBy != "" {
+		s += " by @" + it.ClosedBy
+	}
+	said := it.Last != nil && it.Last.Body != "" && (it.ClosedBy == "" || strings.EqualFold(it.Last.Author, it.ClosedBy))
+	switch {
+	case said && it.ClosedBy != "":
+		s += ": \u201c" + oneLine(it.Last.Body, 120) + "\u201d"
+	case said:
+		s += ": @" + it.Last.Author + ": " + oneLine(it.Last.Body, 120)
+	case it.ClosedBy != "":
+		s += ", with no comment"
+	}
+	var odd []string
+	for _, l := range it.Labels {
+		if !benign(l) {
+			odd = append(odd, "\u201c"+l+"\u201d")
+		}
+	}
+	if len(odd) > 0 {
+		s += "; labelled " + strings.Join(odd, ", ")
+	}
+	return s
+}
+
+// benignNames are labels known to say nothing about how a pull request is received. Anything else,
+// above all a label never seen before, is reported: a keyword list would have missed
+// "suspicious automation".
+var nonWord = regexp.MustCompile(`[^a-z0-9]+`)
+
+var benignNames = map[string]bool{"community": true, "documentation": true, "docs": true, "enhancement": true,
+	"bug": true, "feature": true, "dependencies": true, "tests": true}
+
+// benign reports whether a label is known to be harmless: a named one, or a size or area tag.
+func benign(label string) bool {
+	l := strings.ToLower(strings.TrimSpace(label))
+	for _, p := range []string{"size/", "size:", "area/", "area:"} {
+		if strings.HasPrefix(l, p) {
+			return true
+		}
+	}
+	return benignNames[l]
+}
+
+// labelEntries reports each label on a pull request of yours that isn't known to be benign, one
+// entry per label, for as long as the label stays.
+func labelEntries(it work.Item, seen FirstSeen) []Entry {
+	var out []Entry
+	base := "hg-" + slug(it.Repo) + "-" + strconv.Itoa(it.Number) + "-label-"
+	for _, l := range it.Labels {
+		if benign(l) {
+			continue
+		}
+		id := base + strings.Trim(nonWord.ReplaceAllString(strings.ToLower(l), "-"), "-")
+		ev, known := it.LabeledBy[l]
+		when := ev.At
+		if !known || when.IsZero() {
+			when = seen(id)
+		}
+		summary := "Labelled \u201c" + l + "\u201d"
+		if ev.Actor != "" {
+			summary += " by @" + ev.Actor
+		}
+		if it.State == "CLOSED" {
+			summary += " (now closed without merging)"
+		}
+		out = append(out, Entry{ID: id, Kind: KindLabel, Repo: it.Repo, Number: it.Number, URL: it.URL, Actor: ev.Actor,
+			OccurredAt: when.UTC(), Summary: summary, Priority: "high"})
+	}
 	return out
 }
 

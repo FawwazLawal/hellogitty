@@ -342,3 +342,55 @@ func TestBotFindings(t *testing.T) {
 		t.Error("never a bot on someone else's pull request")
 	}
 }
+
+// lakehq/sail#2821 as GitHub has it: labelled "suspicious automation" by linhr at 07:30:42Z and
+// closed by him at 07:34:06Z with no comment and no review; only bots had written on it.
+func TestOurPRClosedOrLabelledIsShouted(t *testing.T) {
+	labelled := time.Date(2026, 10, 21, 7, 30, 42, 0, time.UTC)
+	closed := time.Date(2026, 10, 21, 7, 34, 6, 0, time.UTC)
+	b := &work.Board{Login: "me", Sent: []work.Item{
+		{PR: true, Role: work.RoleAuthor, Repo: "lakehq/sail", Number: 2821, State: "CLOSED", ClosedAt: &closed, ClosedBy: "linhr",
+			URL: "https://github.com/lakehq/sail/pull/2821", Labels: []string{"suspicious automation", "size/S"},
+			LabeledBy: map[string]work.LabelEvent{"suspicious automation": {Actor: "linhr", At: labelled}}},
+		{PR: true, Role: work.RoleAuthor, Repo: "o/r", Number: 5, State: "OPEN", URL: "https://github.com/o/r/pull/5",
+			Labels: []string{"community", "Area: docs", "policy: needs maintainer decision"}},
+		{PR: true, Role: work.RoleAuthor, Repo: "o/r", Number: 6, State: "CLOSED", ClosedAt: &closed, ClosedBy: "maint", URL: "u6",
+			Last: &work.Activity{Author: "maint", Body: "Thanks, but we went another way in #7."}},
+		{PR: true, Role: work.RoleAuthor, Repo: "o/r", Number: 8, State: "MERGED", MergedBy: "maint", ClosedAt: &closed, URL: "u8"},
+		{PR: true, Role: work.RoleAuthor, Repo: "o/r", Number: 10, State: "CLOSED", ClosedAt: &closed, ClosedBy: "Me", URL: "u10",
+			Last: &work.Activity{Author: "me", Body: "Closing in favour of #11."}},
+		{PR: true, Role: work.RoleInvolved, Repo: "x/y", Number: 9, State: "OPEN", Labels: []string{"spam"}},
+	}}
+	got := Build(b, nil, seenAt(map[string]time.Time{}, closed.Add(time.Hour)))
+	byID := map[string]Entry{}
+	for _, e := range got {
+		byID[e.ID] = e
+	}
+	c := byID["hg-lakehq-sail-2821-closed"]
+	if c.Summary != "Closed without merging by @linhr, with no comment; labelled “suspicious automation”" ||
+		c.Actor != "linhr" || !c.OccurredAt.Equal(closed) || c.Priority != "high" || c.Kind != KindState {
+		t.Errorf("silent close: %+v", c)
+	}
+	l := byID["hg-lakehq-sail-2821-label-suspicious-automation"]
+	if l.Kind != KindLabel || l.Summary != "Labelled “suspicious automation” by @linhr (now closed without merging)" ||
+		!l.OccurredAt.Equal(labelled) || l.Priority != "high" {
+		t.Errorf("unknown label: %+v", l)
+	}
+	if p := byID["hg-o-r-5-label-policy-needs-maintainer-decision"]; p.Summary != "Labelled “policy: needs maintainer decision”" || !p.OccurredAt.Equal(closed.Add(time.Hour)) {
+		t.Errorf("a label with no event in sight keeps its first-seen time: %+v", p)
+	}
+	for _, id := range []string{"hg-lakehq-sail-2821-label-size-s", "hg-o-r-5-label-community", "hg-o-r-5-label-area-docs", "hg-x-y-9-label-spam"} {
+		if _, ok := byID[id]; ok {
+			t.Errorf("%s: benign labels and other people's pull requests are not reported", id)
+		}
+	}
+	if c := byID["hg-o-r-6-closed"]; c.Summary != "Closed without merging by @maint: “Thanks, but we went another way in #7.”" {
+		t.Errorf("a close with the closer's words: %q", c.Summary)
+	}
+	if c := byID["hg-o-r-10-closed"]; c.Summary != "You closed it without merging" || c.Priority != "" {
+		t.Errorf("your own close is not an alarm: %+v", c)
+	}
+	if m := byID["hg-o-r-8-merged"]; m.Summary != "Merged by @maint" {
+		t.Errorf("the first merge must not arrive silently: %+v", m)
+	}
+}
