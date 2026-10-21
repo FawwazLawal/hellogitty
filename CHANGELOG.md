@@ -7,6 +7,10 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 Changes in the next publish.
 
+## v0.2.0 (4) · Black Bombay (baby) · 2026-10-21
+
+Tag `v0.2.4`.
+
 - A live activity feed at the top of the right-hand column: new issues in tracked repositories,
   comments, reviews and state changes on your work, someone else's work on issues you plan to take,
   repositories going quiet, and GitHub notifications, newest first. Click a line to jump to it on
