@@ -22,7 +22,7 @@ fragment pr on PullRequest {
   repository { nameWithOwner }
   author { ...who }
   mergedBy { login }
-  reviewDecision mergeable mergeStateStatus baseRefName
+  reviewDecision mergeable mergeStateStatus baseRefName headRefName
   labels(first: 10) { nodes { name } }
   reviewRequests(first: 5) { nodes { requestedReviewer { __typename ... on User { login } ... on Team { name } ... on Bot { login } ... on Mannequin { login } } } }
   latestOpinionatedReviews(first: 10) { nodes { author { ...who } state submittedAt } }
@@ -31,6 +31,7 @@ fragment pr on PullRequest {
   commits(last: 1) { nodes { commit { oid committedDate statusCheckRollup { state } } } }
 }
 fragment detail on PullRequest {
+  botReviews: reviews(last: 10) { nodes { author { ...who } state body submittedAt url } }
   closingIssuesReferences(first: 5) { nodes { number repository { nameWithOwner } } }
   reviewThreads(first: 30) { nodes { isResolved isOutdated path
     comments(first: 1) { nodes { author { ...who } body url createdAt } }
@@ -118,6 +119,7 @@ type node struct {
 	Mergeable      string `json:"mergeable"`
 	MergeState     string `json:"mergeStateStatus"`
 	BaseRef        string `json:"baseRefName"`
+	HeadRef        string `json:"headRefName"`
 	Labels         struct {
 		Nodes []struct {
 			Name string `json:"name"`
@@ -205,6 +207,9 @@ type node struct {
 			Login string `json:"login"`
 		} `json:"nodes"`
 	} `json:"assignees"`
+	BotReviews struct {
+		Nodes []comment `json:"nodes"`
+	} `json:"botReviews"`
 	ClosingIssuesReferences struct {
 		Nodes []struct {
 			Number     int `json:"number"`
@@ -362,7 +367,7 @@ func toItem(n node, role, login string) Item {
 		Draft: n.IsDraft, CreatedAt: n.CreatedAt, UpdatedAt: n.UpdatedAt, ClosedAt: n.ClosedAt,
 		ReviewDecision: n.ReviewDecision, Conflict: n.Mergeable == "CONFLICTING",
 		StateReason: n.StateReason, Comments: n.Comments.TotalCount,
-		MergeState: n.MergeState, Base: n.BaseRef,
+		MergeState: n.MergeState, Base: n.BaseRef, Head: n.HeadRef,
 	}
 	for _, l := range n.Labels.Nodes {
 		it.Labels = append(it.Labels, l.Name)
@@ -419,8 +424,17 @@ func toItem(n node, role, login string) Item {
 			it.Requested = append(it.Requested, name)
 		}
 	}
+	for _, r := range n.BotReviews.Nodes {
+		if r.Author.bot() && r.Submitted != nil {
+			it.BotReviews = append(it.BotReviews, Activity{Author: r.Author.name(), Body: strings.TrimSpace(r.Body),
+				URL: r.URL, At: *r.Submitted, Review: r.State, Bot: true})
+		}
+	}
 	for _, r := range n.LatestOpinionatedReviews.Nodes {
 		if r.Author.bot() {
+			if r.State == "CHANGES_REQUESTED" {
+				it.BotChanges = append(it.BotChanges, r.Author.name())
+			}
 			continue
 		}
 		switch r.State {

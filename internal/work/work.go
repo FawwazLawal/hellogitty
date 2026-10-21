@@ -100,6 +100,7 @@ type Item struct {
 	StateReason    string // issues: COMPLETED, NOT_PLANNED, DUPLICATE
 	MergeState     string // BEHIND, BLOCKED, CLEAN, DIRTY, DRAFT, HAS_HOOKS, UNKNOWN, UNSTABLE
 	Base           string // the branch it merges into
+	Head           string // the branch it comes from
 	Labels         []string
 
 	// Detail fetched for your own open pull requests only.
@@ -109,6 +110,8 @@ type Item struct {
 	CheckList        []Check
 	AwaitingApproval []string   // workflows a maintainer must approve before they run
 	Fixes            []IssueRef // issues this pull request closes when merged
+	BotReviews       []Activity // the latest reviews by bots, oldest first, for their findings
+	BotChanges       []string   // bots whose standing review requests changes
 
 	Assignees []string
 	Comments  int
@@ -156,8 +159,12 @@ type Tracker struct {
 	// FinishedWindow is how far back merged and closed work is shown.
 	FinishedWindow time.Duration
 	Now            func() time.Time
+	// Extra names pull requests you opened that GitHub's search may have missed (it can lag, or
+	// leave some out); each one it returns that the board lacks is fetched on its own.
+	Extra func() []IssueRef
 
 	mu      sync.Mutex
+	notMine map[string]bool // pull requests Extra named that turned out not to be yours
 	login   string
 	board   *Board
 	err     string
@@ -203,6 +210,14 @@ func (t *Tracker) Refresh(ctx context.Context) error {
 		window = 30 * 24 * time.Hour
 	}
 	b, err := fetch(ctx, t.GH, login, t.Maintain, now.Add(-window))
+	if b != nil && t.Extra != nil {
+		if t.notMine == nil {
+			t.notMine = map[string]bool{} // only Refresh touches it, and Refresh runs one at a time
+		}
+		if xerr := addMissing(ctx, t.GH, b, login, t.Extra(), now.Add(-window), t.notMine); xerr != nil && err == nil {
+			err = xerr
+		}
+	}
 	if b != nil {
 		b.FetchedAt = now
 		Classify(b, now)
