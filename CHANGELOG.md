@@ -7,6 +7,8 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 Changes waiting for the owner to declare the next milestone.
 
+## v0.2.0 · Black Bombay (baby) · 2026-10-21
+
 - Repositories with more open issues than the fetch limit (10 pages) now show exact open,
   good-first and unassigned counts from GitHub search instead of counting only the fetched pages.
   If those counts cannot be fetched, the repository is reported under POLL FAIL rather than shown
