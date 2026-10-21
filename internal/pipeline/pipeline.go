@@ -8,7 +8,8 @@
 //	    "owner/name": {"stage": "build", "done": ["triage"], "failed": [],
 //	                   "label": "PASS", "level": "ok", "notes": "/path/to/notes.md"}
 //	  },
-//	  "watch": [{"repo": "owner/name", "number": 123, "title": "..."}]
+//	  "watch": [{"repo": "owner/name", "number": 123, "title": "..."}],
+//	  "glossary": {"PASS": "what PASS means, shown when you hover it"}
 //	}
 //
 // level is "ok" or "caution"; a caution repo lights the flagged cell. notes, when set, is a
@@ -66,7 +67,9 @@ type State struct {
 	Stages []Stage
 	Labels Labels
 	Watch  []WatchIssue
-	repos  map[string]Repo
+	// Glossary explains the command's own words (its stages and verdicts) in the page's hover help.
+	Glossary map[string]string
+	repos    map[string]Repo
 }
 
 // Repo returns the entry for owner/name, matched without regard to case.
@@ -123,8 +126,9 @@ func Parse(b []byte) (*State, error) {
 			Failed  string `json:"failed"`
 			Notes   string `json:"notes"`
 		} `json:"labels"`
-		Repos map[string]Repo `json:"repos"`
-		Watch []WatchIssue    `json:"watch"`
+		Repos    map[string]Repo   `json:"repos"`
+		Watch    []WatchIssue      `json:"watch"`
+		Glossary map[string]string `json:"glossary"`
 	}
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return nil, fmt.Errorf("pipeline output: %w", err)
@@ -132,7 +136,7 @@ func Parse(b []byte) (*State, error) {
 	if len(raw.Stages) == 0 {
 		return nil, errors.New("pipeline output lists no stages")
 	}
-	st := &State{repos: map[string]Repo{}, Labels: Labels{
+	st := &State{repos: map[string]Repo{}, Glossary: raw.Glossary, Labels: Labels{
 		Status: or(raw.Labels.Status, "Status"), Flagged: or(raw.Labels.Flagged, "Repo flagged"),
 		Failed: or(raw.Labels.Failed, "Stage failed"), Notes: or(raw.Labels.Notes, "Notes"),
 	}}
