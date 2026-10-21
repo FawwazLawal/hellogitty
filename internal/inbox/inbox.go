@@ -26,6 +26,8 @@ const (
 	KindReview  = "pr_review"
 	KindState   = "pr_state"
 	KindWatched = "watched_issue"
+	KindBot     = "pr_bot"        // a bot's open findings on a pull request you opened: one entry per pull request
+	KindIssue   = "issue_comment" // a reply on an issue that is your move: one you opened or were assigned, or one that mentions you
 	KindOverlap = "issue_overlap" // someone else is on an issue you plan to take: a PR, an assignee, a claim, a close
 	KindSimilar = "issue_similar" // another PR's title shares the subject; only worth a look
 )
@@ -54,14 +56,20 @@ type FirstSeen func(id string) time.Time
 var fragment = regexp.MustCompile(`#(issuecomment|pullrequestreview|discussion_r)-?(\d+)$`)
 
 // Build lists what is pertinent now: comments, reviews and state changes on pull requests you
-// opened, and watched issues someone claimed or closed. Nothing else: no new issues, repo health or
-// other people's pull requests.
+// opened, replies that made an issue your move, and watched issues someone claimed or closed.
+// Nothing else: no new issues, repo health or other people's pull requests.
 func Build(b *work.Board, reports []store.RepoReport, seen FirstSeen) []Entry {
 	var out []Entry
 	if b != nil {
 		for _, it := range b.Sent {
 			if it.PR && it.Role == work.RoleAuthor {
 				out = append(out, prEntries(it, seen)...)
+				if e, ok := botEntry(it); ok {
+					out = append(out, e)
+				}
+			}
+			if e, ok := issueEntry(it, b.Login); ok {
+				out = append(out, e)
 			}
 		}
 	}
@@ -167,11 +175,14 @@ func prEntries(it work.Item, seen FirstSeen) []Entry {
 	}
 
 	for _, a := range it.Recent {
+		if a.Bot {
+			continue // a bot's findings are one pr_bot entry for the whole pull request, not one per comment
+		}
 		kind, summary := KindComment, oneLine(a.Body, 160)
 		if a.Review != "" {
 			kind = KindReview
 			summary = a.Review
-			if threads := len(it.Threads); threads > 0 && a.Review == "CHANGES_REQUESTED" {
+			if threads := humanThreads(it.Threads); threads > 0 && a.Review == "CHANGES_REQUESTED" {
 				summary += ", " + plural(threads, "unresolved inline comment")
 			}
 			if a.Body != "" {
@@ -213,6 +224,114 @@ func prEntries(it work.Item, seen FirstSeen) []Entry {
 		out = append(out, entry(id, KindState, "", "", seen(base+id), "Merge conflict with "+branch(it.Base)))
 	}
 	return out
+}
+
+var (
+	actionableCount = regexp.MustCompile(`(?i)actionable comments posted:\s*(\d+)`)
+	badgeLine       = regexp.MustCompile(`^\s*\*\*[^\n]*\|[^\n]*\n+`) // "**🎯 Correctness** | **🟡 Minor**"
+)
+
+// finding is one thing a bot asks to be fixed.
+type finding struct {
+	bot, id, what string
+	at            time.Time
+}
+
+// botEntry reports what bots still ask to be fixed on an open pull request you opened, as one entry
+// for the whole pull request. Only findings count, never chatter:
+//   - a bot's review comment on the code that is still unresolved and on current code;
+//   - a bot's standing "changes requested" review;
+//   - a bot review saying "Actionable comments posted: N" with N above zero, when no commit has
+//     come since (after a push the review threads above are the truth: bots resolve their own
+//     threads when a commit addresses them).
+//
+// Summaries, coverage reports, "LGTM" and canned prompts never match any of these. Failing checks,
+// including a CLA check, already have their own ci-red entry. The id carries the newest finding, so
+// a re-review replaces the entry instead of adding one, and the entry goes when nothing is left.
+func botEntry(it work.Item) (Entry, bool) {
+	if !it.PR || it.Role != work.RoleAuthor || it.State != "OPEN" {
+		return Entry{}, false
+	}
+	var fs []finding
+	threads := map[string]int{}
+	for _, t := range it.Threads {
+		if !t.Bot || t.Outdated {
+			continue
+		}
+		threads[t.Author]++
+		what := oneLine(badgeLine.ReplaceAllString(t.Body, ""), 120)
+		if t.Path != "" {
+			what = "Inline on " + filepath.Base(t.Path) + ": " + what
+		}
+		fs = append(fs, finding{t.Author, eventID(t.URL), what, t.At})
+	}
+	for _, b := range it.BotChanges {
+		fs = append(fs, finding{b, "changes-" + strings.ToLower(b), "@" + b + " requested changes", time.Time{}})
+	}
+	latest := map[string]work.Activity{}
+	for _, r := range it.BotReviews {
+		latest[r.Author] = r // oldest first, so the last one wins
+	}
+	for bot, r := range latest {
+		m := actionableCount.FindStringSubmatch(r.Body)
+		if m == nil || m[1] == "0" || threads[bot] > 0 || (it.LastCommitAt != nil && it.LastCommitAt.After(r.At)) {
+			continue
+		}
+		fs = append(fs, finding{bot, eventID(r.URL), "@" + bot + ": " + m[1] + " actionable comments posted", r.At})
+	}
+	if len(fs) == 0 {
+		return Entry{}, false
+	}
+	sort.SliceStable(fs, func(i, j int) bool { return fs[i].at.After(fs[j].at) })
+	newest := fs[0]
+	bots := map[string]bool{}
+	for _, f := range fs {
+		bots[f.bot] = true
+	}
+	summary := plural(len(fs), "open finding") + " from " + at(sortedKeys(bots)) + ". Newest: " + newest.what
+	when := newest.at
+	if when.IsZero() {
+		when = it.UpdatedAt
+	}
+	return Entry{ID: "hg-" + slug(it.Repo) + "-" + strconv.Itoa(it.Number) + "-bot-" + newest.id, Kind: KindBot, Repo: it.Repo,
+		Number: it.Number, URL: it.URL, Actor: newest.bot, OccurredAt: when.UTC(), Summary: summary}, true
+}
+
+func humanThreads(ts []work.Thread) int {
+	n := 0
+	for _, t := range ts {
+		if !t.Bot {
+			n++
+		}
+	}
+	return n
+}
+
+func sortedKeys(m map[string]bool) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// issueEntry reports the reply that made an issue your move. It goes when you answer, because the
+// issue stops being your move.
+func issueEntry(it work.Item, login string) (Entry, bool) {
+	if it.PR || it.Move != work.MoveYou || it.Last == nil || strings.EqualFold(it.Last.Author, login) {
+		return Entry{}, false
+	}
+	summary := it.Status
+	if body := oneLine(it.Last.Body, 140); body != "" {
+		summary += ": " + body
+	}
+	url := it.Last.URL
+	if url == "" {
+		url = it.URL
+	}
+	return Entry{ID: "hg-" + slug(it.Repo) + "-" + strconv.Itoa(it.Number) + "-" + eventID(it.Last.URL), Kind: KindIssue,
+		Repo: it.Repo, Number: it.Number, URL: url, Actor: it.Last.Author, OccurredAt: it.Last.At.UTC(), Summary: summary}, true
 }
 
 func watchEntry(r store.RepoReport, w store.WatchReport, seen FirstSeen) (Entry, bool) {

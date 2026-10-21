@@ -24,7 +24,9 @@ func board() *work.Board {
 		{PR: true, Role: work.RoleAuthor, Repo: "OpenCTI-Platform/opencti", Number: 19110, State: "OPEN",
 			URL: "https://github.com/OpenCTI-Platform/opencti/pull/19110", HeadOID: "abcdef0123456789", Base: "master",
 			ReviewDecision: "CHANGES_REQUESTED", ChangesBy: []string{"Archidoit"}, ChangesAt: tp(t0), Conflict: true,
-			Threads:   []work.Thread{{Author: "Archidoit"}, {Author: "Archidoit"}},
+			Threads: []work.Thread{{Author: "Archidoit"}, {Author: "Archidoit"},
+				{Author: "coderabbitai", Bot: true, Path: "src/a.ts", Body: "Rename this", At: t0.Add(2 * time.Minute),
+					URL: "https://github.com/OpenCTI-Platform/opencti/pull/19110#discussion_r777"}},
 			CheckList: []work.Check{{Name: "lint", State: work.CheckFailed, At: tp(t0.Add(time.Hour))}, {Name: "test", State: work.CheckPassed}},
 			Recent: []work.Activity{
 				{Author: "Archidoit", Review: "CHANGES_REQUESTED", Body: "Use the EMPTY_VALUE constant", At: t0,
@@ -69,7 +71,7 @@ func TestBuildKeepsOnlyPertinentEvents(t *testing.T) {
 	want := map[string]string{
 		"hg-opencti-platform-opencti-19110-review-1761234567": KindReview,
 		"hg-opencti-platform-opencti-19110-comment-555":       KindComment,
-		"hg-opencti-platform-opencti-19110-inline-777":        KindComment,
+		"hg-opencti-platform-opencti-19110-bot-inline-777":    KindBot,
 		"hg-opencti-platform-opencti-19110-ci-red-abcdef0":    KindState,
 		"hg-opencti-platform-opencti-19110-conflict-abcdef0":  KindState,
 		"hg-pbakaus-impeccable-1084-merged":                   KindState,
@@ -91,8 +93,8 @@ func TestBuildKeepsOnlyPertinentEvents(t *testing.T) {
 	if r.Actor != "Archidoit" || !r.OccurredAt.Equal(t0) || r.Summary != "CHANGES_REQUESTED, 2 unresolved inline comments: Use the EMPTY_VALUE constant" {
 		t.Errorf("review entry %+v", r)
 	}
-	if c := byID["hg-opencti-platform-opencti-19110-inline-777"]; c.Summary != "Inline on a.ts: Rename this" {
-		t.Errorf("inline summary should name the file, not the whole path: %q", c.Summary)
+	if c := byID["hg-opencti-platform-opencti-19110-bot-inline-777"]; c.Summary != "1 open finding from @coderabbitai. Newest: Inline on a.ts: Rename this" {
+		t.Errorf("a bot's finding is one entry per PR, naming the file, not the whole path: %q", c.Summary)
 	}
 	if c := byID["hg-opencti-platform-opencti-19110-comment-555"]; c.Summary != "Also here" {
 		t.Errorf("comment summary should be one clean line: %q", c.Summary)
@@ -263,5 +265,80 @@ func TestOverlapsSayOneThingPerWatchedIssue(t *testing.T) {
 	}
 	if again := WithOverlaps(nil, rows, watching); !reflect.DeepEqual(again[0].ID, got[0].ID) {
 		t.Error("ids are stable")
+	}
+}
+
+func TestIssueRepliesThatNeedYou(t *testing.T) {
+	b := &work.Board{Login: "me", Sent: []work.Item{
+		{Repo: "o/r", Number: 5, Move: work.MoveYou, Status: "@maint replied",
+			Last: &work.Activity{Author: "maint", Body: "Can you share the **stack trace**?", URL: "https://github.com/o/r/issues/5#issuecomment-42", At: t0}},
+		{Repo: "o/r", Number: 6, Move: work.MoveThem, Status: "@x commented after you; nothing asked of you",
+			Last: &work.Activity{Author: "x", Body: "fyi", URL: "u#issuecomment-43", At: t0}},
+	}}
+	got := Build(b, nil, seenAt(map[string]time.Time{}, t0))
+	if len(got) != 1 || got[0].ID != "hg-o-r-5-comment-42" || got[0].Kind != KindIssue || got[0].Summary != "@maint replied: Can you share the stack trace?" {
+		t.Errorf("only the reply that needs you: %+v", got)
+	}
+	b.Sent[0].Move = work.MoveThem // you answered
+	if got := Build(b, nil, seenAt(map[string]time.Time{}, t0)); len(got) != 0 {
+		t.Errorf("the entry goes once you reply: %+v", got)
+	}
+}
+
+// coraza#1785 as it stood on 2026-10-21: CodeRabbit's review said "Actionable comments posted: 1"
+// at 19:38Z, a commit at 21:53Z addressed it, and CodeRabbit resolved its own thread.
+func TestBotFindings(t *testing.T) {
+	review := t0.Add(-time.Hour)
+	pr := func() work.Item {
+		return work.Item{PR: true, Role: work.RoleAuthor, State: "OPEN", Repo: "corazawaf/coraza", Number: 1785,
+			URL: "https://github.com/corazawaf/coraza/pull/1785", LastCommitAt: tp(review.Add(2 * time.Hour)),
+			BotReviews: []work.Activity{
+				{Author: "codecov", Bot: true, Body: "Coverage is 81.2% (+0.1%)", At: review.Add(-time.Minute)},
+				{Author: "coderabbitai", Bot: true, Review: "COMMENTED", Body: "**Actionable comments posted: 1**\n\n<details>prompt</details>", At: review,
+					URL: "https://github.com/corazawaf/coraza/pull/1785#pullrequestreview-900"},
+			}}
+	}
+	if _, ok := botEntry(pr()); ok {
+		t.Error("a finding a later commit addressed (its thread resolved) is not reported")
+	}
+
+	unanswered := pr()
+	unanswered.LastCommitAt = tp(review.Add(-time.Hour))
+	e, ok := botEntry(unanswered)
+	if !ok || e.ID != "hg-corazawaf-coraza-1785-bot-review-900" || e.Kind != KindBot || e.Actor != "coderabbitai" ||
+		e.Summary != "1 open finding from @coderabbitai. Newest: @coderabbitai: 1 actionable comments posted" {
+		t.Errorf("an actionable review with no commit since: %+v %v", e, ok)
+	}
+
+	open := pr()
+	open.Threads = []work.Thread{
+		{Author: "coderabbitai", Bot: true, Path: "internal/corazawaf/rule_multiphase.go", At: review,
+			Body: "**🎯 Functional Correctness** | **🟡 Minor**\n\n**Correct the reason for the second `allow` skip.**",
+			URL:  "https://github.com/corazawaf/coraza/pull/1785#discussion_r4318032150"},
+		{Author: "coderabbitai", Bot: true, Outdated: true, Body: "old", URL: "u#discussion_r1"},
+		{Author: "fzipi", Body: "human thread", URL: "u#discussion_r2"},
+	}
+	e, ok = botEntry(open)
+	if !ok || e.ID != "hg-corazawaf-coraza-1785-bot-inline-4318032150" ||
+		e.Summary != "1 open finding from @coderabbitai. Newest: Inline on rule_multiphase.go: Correct the reason for the second allow skip." {
+		t.Errorf("an open bot thread, badge line dropped, outdated and human threads left out: %+v %v", e, ok)
+	}
+
+	again := open
+	again.Threads = append([]work.Thread{{Author: "coderabbitai", Bot: true, At: review.Add(3 * time.Hour), Body: "New finding", URL: "u#discussion_r5"}}, open.Threads...)
+	if e2, _ := botEntry(again); e2.ID == e.ID || !strings.HasPrefix(e2.Summary, "2 open findings") {
+		t.Errorf("a re-review replaces the entry under a new id: %+v", e2)
+	}
+
+	blocked := pr()
+	blocked.BotChanges = []string{"policy-bot"}
+	if e, ok := botEntry(blocked); !ok || !strings.Contains(e.Summary, "@policy-bot requested changes") {
+		t.Errorf("a bot's standing changes-requested review: %+v", e)
+	}
+
+	theirs := open
+	theirs.Role = work.RoleInvolved
+	if _, ok := botEntry(theirs); ok {
+		t.Error("never a bot on someone else's pull request")
 	}
 }
