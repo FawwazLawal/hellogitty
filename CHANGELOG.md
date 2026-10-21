@@ -18,10 +18,16 @@ Changes waiting for the owner to declare the next milestone.
   within a minute. Threads that match no row, such as a CI run on a branch without an open pull
   request, show under Other notifications. HelloGitty only reads notifications; it never marks
   them read.
+- Layouts: a Layout button opens a sheet to show, hide, fold and reorder panels and move them
+  between the main and side columns, with five presets (Everything, Contributor, Maintainer,
+  Program, Focus). Saved in the browser.
 - Hover help: words with a dotted underline explain themselves on hover, keyboard focus or a
   tap, and hovering a row's title or a repository's name shows a peek with checks, reviews, recent
   comments, the branch and more. Everything comes from data already on hand. A pipeline command
   can explain its own words with a new `glossary` field.
+- The inbox file now says who closed your pull request without merging and what they said, or
+  "with no comment", and reports labels added to your pull requests (new kind `pr_label`) unless
+  they are known to be harmless. Both carry a new `"priority": "high"` field.
 - The inbox file has a new kind, `pr_bot`: what bots still ask to be fixed on your open pull
   requests, one entry per pull request. It is replaced when the bot reviews again and goes once
   the findings are resolved. A bot's inline comments no longer appear one by one.
