@@ -23,6 +23,7 @@ import (
 	"github.com/FawwazLawal/hellogitty/internal/dashboard"
 	"github.com/FawwazLawal/hellogitty/internal/github"
 	"github.com/FawwazLawal/hellogitty/internal/inbox"
+	"github.com/FawwazLawal/hellogitty/internal/notify"
 	"github.com/FawwazLawal/hellogitty/internal/overlap"
 	"github.com/FawwazLawal/hellogitty/internal/pipeline"
 	"github.com/FawwazLawal/hellogitty/internal/poller"
@@ -160,6 +161,19 @@ func run() int {
 	}}
 	pipe := &pipeline.Provider{Command: cfg.PipelineCommand(), Dir: cfg.Dir}
 	board := &work.Tracker{GH: gh, Maintain: cfg.Maintain}
+	feed := &notify.Feed{GH: gh}
+	// Pull requests you opened appear in your notifications even when GitHub's search misses them.
+	// Any pull request thread is a candidate (a mention on your own closed pull request, say); the
+	// lookup keeps only yours and remembers the rest.
+	board.Extra = func() []work.IssueRef {
+		var refs []work.IssueRef
+		for _, n := range feed.Snapshot().Items {
+			if n.Kind == "PullRequest" && n.Number > 0 {
+				refs = append(refs, work.IssueRef{Repo: n.Repo, Number: n.Number})
+			}
+		}
+		return refs
+	}
 	ov := &overlap.Watcher{GH: gh, Store: st}
 	checkOverlap := overlapChecker(ov, st, pl, pipe, board)
 	writeInbox := inboxWriter(cfg.Path(cfg.Inbox), st, pl, board, ov)
@@ -219,7 +233,7 @@ func run() int {
 		Handler: &dashboard.Handler{
 			Template:     web.Index,
 			SnapshotPath: snapPath,
-			Source:       source{st: st, p: pl, gh: gh, pipe: pipe, board: board},
+			Source:       source{st: st, p: pl, gh: gh, pipe: pipe, board: board, feed: feed, ov: ov},
 			PollInterval: cfg.PollInterval,
 			Version:      versionLabel,
 			Baby:         versionBaby,
@@ -232,6 +246,25 @@ func run() int {
 		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Printf("http: %v", err)
 			stop()
+		}
+	}()
+
+	// GitHub notifications, for the new-activity dots: about once a minute, as GitHub asks. An
+	// unchanged inbox answers 304, which costs no quota.
+	// The first fetch happens before the work board's, so its missed-PR lookup has something to use.
+	if err := feed.Refresh(ctx); err != nil {
+		log.Printf("notifications: %v", err)
+	}
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(feed.Interval()):
+			}
+			if err := feed.Refresh(ctx); err != nil {
+				log.Printf("notifications: %v", err)
+			}
 		}
 	}()
 
@@ -448,7 +481,30 @@ type source struct {
 	gh    *github.Client
 	pipe  *pipeline.Provider
 	board *work.Tracker
+	feed  *notify.Feed
+	ov    *overlap.Watcher
 }
+
+// OverlapReports returns the overlap reports for issues still being watched, for the row peeks.
+func (s source) OverlapReports() []store.Overlap {
+	watching, ready := s.ov.Watching()
+	if !ready {
+		return nil
+	}
+	rows, err := s.st.Overlaps()
+	if err != nil {
+		return nil
+	}
+	var out []store.Overlap
+	for _, o := range rows {
+		if watching[overlap.Key(o.Repo, o.Number)] {
+			out = append(out, o)
+		}
+	}
+	return out
+}
+
+func (s source) Notifications() notify.View { return s.feed.Snapshot() }
 
 func (s source) Work() (*work.Board, string) { return s.board.Snapshot() }
 
