@@ -182,7 +182,9 @@ combined check state.
 | Status | Whose move |
 |---|---|
 | Labelled "needs info" (or similar): the maintainers are waiting on you | yours (issues you opened) |
-| @name replied / commented after you | yours |
+| @name replied (issues you opened or are assigned) | yours |
+| @name mentioned you (a thread you joined) | yours |
+| @name commented after you; nothing asked of you (a thread you joined, no mention of you) | theirs |
 | Assigned to you | yours |
 | No replies yet | theirs |
 | You replied; waiting for a response | theirs |
@@ -289,6 +291,13 @@ reduced motion turned on, you see a still image. In the light theme it sits in a
 ---
 
 ## Everyday use
+
+Comments written by machines never put a row in Your move: bots, accounts that run automation
+(names ending in "bot" or "robot", such as gopherbot), and comments that open with a hidden
+`<!-- ... -->` marker, which policy checks and review tools post even from a maintainer's account.
+
+Each row ends with a pale yellow pill naming its repository and number, so you can tell rows apart
+without reading the small line under the title.
 
 **Glance.** If **Your move** is lit, work down that list from the top: it's sorted by who has
 waited longest. Each row's quote usually tells you what to do without opening GitHub.

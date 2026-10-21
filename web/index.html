@@ -17,6 +17,7 @@
     --text: #e2e2e0; --dim: #9a9a96; --track: #2a2a2d;
     --nom: #4fc469; --caution: #e9aa3b; --caution-text: #e9aa3b; --warn: #ff5244;
     --caution-fill: #e9aa3b; --caution-ink: #160e02; --warn-fill: #c4271d; --warn-ink: #ffffff;
+    --tag-fill: #2b2610; --tag-ink: #f3d36b; --tag-rule: #4a3f17;
     --mascot-bg: #101011;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
@@ -28,6 +29,7 @@
       --bg: #f3f3f1; --panel: #ffffff; --raised: #f1f1ee; --rule: #e2e2de; --rule-hi: #c9c9c4;
       --text: #1c1c1d; --dim: #62625d; --track: #e3e3df;
       --nom: #18803a; --caution: #d08a12; --caution-text: #8a5600; --warn: #c3271c;
+      --tag-fill: #fbf0c4; --tag-ink: #6a5200; --tag-rule: #ecd88a;
     }
   }
   :root[data-theme="light"] {
@@ -35,6 +37,7 @@
     --bg: #f3f3f1; --panel: #ffffff; --raised: #f1f1ee; --rule: #e2e2de; --rule-hi: #c9c9c4;
     --text: #1c1c1d; --dim: #62625d; --track: #e3e3df;
     --nom: #18803a; --caution: #d08a12; --caution-text: #8a5600; --warn: #c3271c;
+    --tag-fill: #fbf0c4; --tag-ink: #6a5200; --tag-rule: #ecd88a;
   }
   * { box-sizing: border-box; }
   html { background: var(--bg); scrollbar-color: var(--rule-hi) var(--bg); }
@@ -183,6 +186,13 @@
   .wi blockquote a { color: var(--text); font-weight: 600; text-decoration: none; margin-right: 4px; }
   .wi blockquote a:hover { text-decoration: underline; }
   .when { font-size: 12.5px; color: var(--dim); white-space: nowrap; padding-top: 2px; }
+  /* The repository trailer: a pale lemon pill closing each row, readable at a glance. Paler and
+     greener than the amber that means "your move", so it never reads as a state. */
+  .wi .end { display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; gap: 8px; min-width: 0; }
+  .trail { display: inline-flex; gap: 5px; min-width: 0; font: 600 12px/20px var(--sans); color: var(--tag-ink); background: var(--tag-fill);
+    border: 1px solid var(--tag-rule); border-radius: 999px; padding: 0 10px; white-space: nowrap; max-width: 280px; }
+  .trail .rp { min-width: 0; overflow: hidden; text-overflow: ellipsis; } /* a long name shortens; the number stays */
+  .trail .num { flex: none; font: 500 11.5px/20px var(--mono); }
   .none { margin: 0; padding: 4px 14px 14px; color: var(--dim); }
   .hint { margin: 0; padding: 0 14px 14px; color: var(--dim); font-size: 12.5px; }
 
@@ -296,7 +306,8 @@
     .cw { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px 16px 0; }
     .grid { padding: 10px 16px 20px; }
     .wi { grid-template-columns: 12px minmax(0, 1fr); }
-    .wi .when { grid-column: 2; padding-top: 4px; }
+    .wi .end { grid-column: 2; flex-direction: row; align-items: center; margin-top: 6px; }
+    .trail { max-width: 75%; }
     .thead { display: none; }
     .legend { width: 100%; justify-content: flex-start; }
     .legend .li:first-child { margin-left: 0; }
@@ -329,7 +340,10 @@
     <div class="state">{{if .Personal}}<span class="only" title="Only you can do this">Only you</span>{{end}}<span class="say{{if .Level}} {{.Level}}{{end}}">{{.Status}}</span>{{range .Notes}}<span class="note {{.Level}}">{{.Text}}</span>{{end}}</div>
     {{if .Quote}}<blockquote>{{if .QuoteURL}}<a href="{{.QuoteURL}}" target="_blank" rel="noopener">{{.QuoteBy}}</a>{{else}}<b>{{.QuoteBy}}</b> {{end}}{{.Quote}}</blockquote>{{end}}
   </div>
-  <time class="when" title="Since {{.AgoTitle}}">{{.Ago}}</time>
+  <div class="end">
+    <time class="when" title="Since {{.AgoTitle}}">{{.Ago}}</time>
+    <span class="trail" title="{{.Repo}} #{{.Number}}"><span class="rp">{{.Repo}}</span><span class="num">#{{.Number}}</span></span>
+  </div>
 </li>{{end}}
 <header class="status {{if .Mascot}}has-mascot{{end}}">
   <div class="brand"><h1>HelloGitty</h1><span class="lbl ver">{{.Version}}{{if .Baby}} <span class="baby">(baby)</span>{{end}}</span></div>

@@ -100,6 +100,7 @@ Create `hellogitty.json` in the folder you run it from (copy `hellogitty.example
 | `database` | `hellogitty.db` | SQLite file for polled data. |
 | `snapshot` | `snapshot.json` | Where the machine-readable snapshot is written. |
 | `maintain` | | Repositories (`"owner/name"`) or organisations (`"org"`) you maintain but don't own. Their pull requests and issues from others show under Your repositories. Repositories your account owns are always included. |
+| `inbox` | | Optional. A JSON file rewritten after every refresh with recent events on your own open pull requests (new comments, reviews, inline comments, merged or closed, changes requested, CI failing, merge conflicts), on watched issues someone claimed or closed, and on issues where someone else may be doing the work you planned. See [inbox file](#inbox-file). |
 | `pipeline_command` | | Optional. See [Pipeline stages](#pipeline-stages). |
 
 Relative paths resolve against the folder the config file is in. Use `-config path/to/file.json`
@@ -139,7 +140,7 @@ repository.
 | Command | Does |
 |---|---|
 | `hellogitty` | Poll on the interval and serve the dashboard. |
-| `hellogitty -once` | Poll once, write the snapshot, exit. Exits non-zero if any repository failed. |
+| `hellogitty -once` | Poll once, write the snapshot (and the inbox, if set), exit. Exits non-zero if any repository failed. |
 | `hellogitty watch owner/name 123 456` | Watch issues for claims and fixes. |
 | `hellogitty watch` | List watched issues. |
 | `hellogitty unwatch owner/name 123` | Stop watching issues. |
@@ -216,6 +217,75 @@ After every poll HelloGitty writes `snapshot.json` (also served at `/snapshot.js
 recent pull requests from outside contributors that were closed without merging; bots are left
 out. The file is replaced atomically, so a reader never sees half of it.
 
+## Inbox file
+
+Set `"inbox": "path/to/inbox.json"` and HelloGitty rewrites that file every 5 minutes, and after
+each check, with what currently needs a look on your own pull requests and watched issues, so a
+script can act on it without calling GitHub:
+
+```json
+{
+  "generated_at": "2026-10-20T12:22:00Z",
+  "poll_interval_minutes": 5,
+  "entries": [
+    {
+      "id": "hg-octo-tool-42-review-1761234567",
+      "kind": "pr_review",
+      "repo": "octo/tool",
+      "number": 42,
+      "url": "https://github.com/octo/tool/pull/42#pullrequestreview-1761234567",
+      "actor": "maintainer",
+      "occurred_at": "2026-10-20T07:40:01Z",
+      "summary": "CHANGES_REQUESTED, 2 unresolved inline comments: Use the existing constant"
+    }
+  ]
+}
+```
+
+`kind` is `pr_comment`, `pr_review`, `pr_state`, `watched_issue`, `issue_overlap` or `issue_similar`
+(see [someone else's work](#someone-elses-work)). The file is replaced whole on
+each write (a temporary file, then a rename), so a reader never sees half of one. Entries stay
+while they are current; to tell new ones from ones you've handled, keep the `id`s you've seen. An
+`id` is built from GitHub's own ids and never changes for the same event. `occurred_at` is GitHub's
+time for the event; for a merge conflict, which GitHub doesn't timestamp, it's when HelloGitty first
+saw it. Everything comes from data HelloGitty already fetches, so the file costs no extra API calls.
+
+## Someone else's work
+
+Before you start on an issue, and while your pull request for it is open, HelloGitty checks every
+15 minutes whether someone else got there first. It watches the issues on your watch list, the
+issues your open pull requests fix, and any listed under `watch` in the
+[pipeline output](#pipeline-stages), and reports into the inbox file when:
+
+- another pull request cites the issue (links it, mentions `#123` in its title or body, or puts
+  `[123]` at the start of its title), or one citing it was merged;
+- the issue gains an assignee other than you;
+- somebody claims it in a comment in the last 30 days ("I'll take this", "working on it", "can I
+  work on this?");
+- the issue closes, unless your own pull request closed it;
+- another open pull request from the last 90 days has a title on the same subject. This is
+  `issue_similar` and only says what to look at: "Worth a look: #8600 shares the title words
+  response, compression". A pull request that cited the issue and was closed without merging is
+  reported the same way.
+
+It is built to stay quiet, because a watcher that reports everything gets ignored:
+
+- **One report per issue.** The first sign of someone else's work is reported (`issue_overlap`) and
+  nothing more is said about that issue. Before that, at most one `issue_similar`. Each issue has
+  one entry in the file at a time; it replaces the issue's `watched_issue` entry.
+- **Never the same pull request twice** against the same issue, even if it goes from a similar
+  title to citing the issue.
+- **Reports are recorded** in the database, so a restart repeats nothing, and an entry keeps its
+  `id`, time and wording.
+- **The entry goes when the issue stops being watched**: you unwatch it, your pull request
+  closes, or it leaves the `watch` list.
+- **Same subject means real overlap.** Title words are compared after dropping tags and scopes
+  (`[Feature]`, `fix(ui):`, `cmd/go:`) and common words. Another title must share two of them, or
+  half when the issue's title has more than four. Your own pull requests and bots never count,
+  nor do mentions from repositories outside the issue's organisation.
+
+A check of about 50 issues costs about 6 points of GitHub's 5,000-point GraphQL hour.
+
 ## Pipeline stages
 
 If you track your own work on these repositories somewhere else, HelloGitty can show where each
@@ -228,7 +298,8 @@ one stands. Set `pipeline_command` to a program that prints JSON like this:
   "repos": {
     "junegunn/fzf": {"stage": "build", "done": ["triage"], "label": "OK", "level": "ok",
                      "notes": "/home/me/notes/fzf.md"}
-  }
+  },
+  "watch": [{"repo": "junegunn/fzf", "number": 4012, "title": "Preview window flickers"}]
 }
 ```
 
@@ -240,7 +311,9 @@ The dashboard then adds a phase strip and a status column to each row, a count o
 per stage, and two more cells: one for repositories whose `level` is `caution`, one for a stage
 listed in `failed`. `labels` renames those to your own words. `notes`, when given, is a local text
 file served read-only at `/notes/owner/name`; no other file can be reached. Stages can be given as
-names or as `{"name": ..., "abbr": ...}`. The command runs from the config folder with a 15 second
+names or as `{"name": ..., "abbr": ...}`. `watch`, optional, lists issues you plan to work on;
+the command runs again before each check, so the list follows whatever your program reads it from
+(see [someone else's work](#someone-elses-work)). The command runs from the config folder with a 15 second
 timeout, at most once a minute. Without `pipeline_command` none of this appears.
 
 ## Local only

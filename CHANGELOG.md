@@ -7,8 +7,18 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 Changes waiting for the owner to declare the next milestone.
 
-## v0.2.0 · Black Bombay (baby) · 2026-10-21
-
+- Your move is quieter. Comments from machines (bots, automation accounts such as gopherbot, and
+  comments that open with a hidden `<!-- -->` marker, like policy checks posted from a
+  maintainer's account) no longer count as someone replying. On an issue you only joined, a later
+  comment is your move only when it mentions you; otherwise the row waits on others and says
+  "nothing asked of you".
+- Each Your work row ends with a pale yellow pill naming its repository and number.
+- HelloGitty now checks the issues you plan to work on, and the issues your open pull requests fix,
+  for someone else's work every 15 minutes: another pull request citing the issue, an assignee, a
+  claim in a comment, the issue closing, or an open pull request whose title covers the same
+  subject. Each issue gets one report in the inbox file (`issue_overlap`, or `issue_similar` for a
+  title match), recorded so it is never repeated. The pipeline command can list issues to watch
+  under `watch`. `-once` now also writes the inbox file.
 - Repositories with more open issues than the fetch limit (10 pages) now show exact open,
   good-first and unassigned counts from GitHub search instead of counting only the fetched pages.
   If those counts cannot be fetched, the repository is reported under POLL FAIL rather than shown
