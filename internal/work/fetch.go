@@ -42,6 +42,11 @@ fragment detail on PullRequest {
       ... on CheckRun { name status conclusion title completedAt }
       ... on StatusContext { context state description createdAt } } } } } } }
 }
+fragment mine on PullRequest {
+  events: timelineItems(last: 10, itemTypes: [CLOSED_EVENT, LABELED_EVENT]) { nodes { __typename
+    ... on ClosedEvent { createdAt actor { login } }
+    ... on LabeledEvent { createdAt actor { login } label { name } } } }
+}
 fragment issue on Issue {
   number title url state stateReason createdAt updatedAt closedAt
   repository { nameWithOwner }
@@ -52,8 +57,8 @@ fragment issue on Issue {
 }
 query($prsOpen: String!, $prsDone: String!, $issues: String!, $issuesDone: String!,
       $requested: String!, $reviewed: String!, $incoming: String!, $triage: String!) {
-  prsOpen:    search(type: ISSUE, query: $prsOpen, first: 50)    { nodes { __typename ...pr ...detail } }
-  prsDone:    search(type: ISSUE, query: $prsDone, first: 20)    { nodes { __typename ...pr } }
+  prsOpen:    search(type: ISSUE, query: $prsOpen, first: 50)    { nodes { __typename ...pr ...detail ...mine } }
+  prsDone:    search(type: ISSUE, query: $prsDone, first: 20)    { nodes { __typename ...pr ...mine } }
   issues:     search(type: ISSUE, query: $issues, first: 40)     { nodes { __typename ...issue } }
   issuesDone: search(type: ISSUE, query: $issuesDone, first: 10) { nodes { __typename ...issue } }
   requested:  search(type: ISSUE, query: $requested, first: 20)  { nodes { __typename ...pr } }
@@ -210,6 +215,16 @@ type node struct {
 	BotReviews struct {
 		Nodes []comment `json:"nodes"`
 	} `json:"botReviews"`
+	Events struct {
+		Nodes []struct {
+			Typename  string    `json:"__typename"`
+			CreatedAt time.Time `json:"createdAt"`
+			Actor     *actor    `json:"actor"`
+			Label     *struct {
+				Name string `json:"name"`
+			} `json:"label"`
+		} `json:"nodes"`
+	} `json:"events"`
 	ClosingIssuesReferences struct {
 		Nodes []struct {
 			Number     int `json:"number"`
@@ -422,6 +437,19 @@ func toItem(n node, role, login string) Item {
 		}
 		if name != "" {
 			it.Requested = append(it.Requested, name)
+		}
+	}
+	for _, e := range n.Events.Nodes {
+		switch e.Typename {
+		case "ClosedEvent":
+			it.ClosedBy = e.Actor.name()
+		case "LabeledEvent":
+			if e.Label != nil {
+				if it.LabeledBy == nil {
+					it.LabeledBy = map[string]LabelEvent{}
+				}
+				it.LabeledBy[e.Label.Name] = LabelEvent{Actor: e.Actor.name(), At: e.CreatedAt}
+			}
 		}
 	}
 	for _, r := range n.BotReviews.Nodes {

@@ -113,6 +113,10 @@ type Item struct {
 	BotReviews       []Activity // the latest reviews by bots, oldest first, for their findings
 	BotChanges       []string   // bots whose standing review requests changes
 
+	// Fetched for your own pull requests: who closed it, and who added each label and when.
+	ClosedBy  string
+	LabeledBy map[string]LabelEvent
+
 	Assignees []string
 	Comments  int
 	Last      *Activity
@@ -128,6 +132,12 @@ type Item struct {
 	Personal string
 	// Quote, when set, is the comment most worth reading before acting, if it is not Last.
 	Quote *Activity
+}
+
+// LabelEvent is who added a label, and when.
+type LabelEvent struct {
+	Actor string
+	At    time.Time
 }
 
 // IssueRef names an issue anywhere on GitHub.

@@ -44,7 +44,7 @@ func addMissing(ctx context.Context, gh *github.Client, b *Board, login string, 
 	q.WriteString(prFragments + "query {\n  rateLimit { cost remaining }\n")
 	for i, r := range want {
 		owner, name, _ := strings.Cut(r.Repo, "/")
-		fmt.Fprintf(&q, "  x%d: repository(owner: %q, name: %q) { pullRequest(number: %d) { __typename ...pr ...detail } }\n", i, owner, name, r.Number)
+		fmt.Fprintf(&q, "  x%d: repository(owner: %q, name: %q) { pullRequest(number: %d) { __typename ...pr ...detail ...mine } }\n", i, owner, name, r.Number)
 	}
 	q.WriteString("}\n")
 	var data map[string]json.RawMessage
