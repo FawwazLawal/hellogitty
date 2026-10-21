@@ -52,6 +52,14 @@ func names(list []string) string {
 
 func same(a, b string) bool { return strings.EqualFold(a, b) }
 
+// mentions reports whether body @-mentions login.
+func mentions(body, login string) bool {
+	if login == "" {
+		return false
+	}
+	return regexp.MustCompile(`(?i)(^|[^\w-])@` + regexp.QuoteMeta(login) + `\b`).MatchString(body)
+}
+
 // otherSpoke reports whether someone other than login wrote the newest activity, after t.
 func otherSpoke(it *Item, login string, after *time.Time) bool {
 	if it.Last == nil || same(it.Last.Author, login) {
@@ -339,8 +347,11 @@ func classifyMyIssue(it *Item, login string) {
 		it.Move, it.Level, it.Status = MoveYou, "caution", "Labelled "+quote(waitingOnYouLabel(it))+": the maintainers are waiting on you"
 	case otherSpoke(it, login, nil) && it.Role != RoleInvolved:
 		it.Move, it.Level, it.Status = MoveYou, "caution", at(it.Last.Author)+" replied"
+	case otherSpoke(it, login, nil) && mentions(it.Last.Body, login):
+		it.Move, it.Level, it.Status = MoveYou, "caution", at(it.Last.Author)+" mentioned you"
 	case otherSpoke(it, login, nil):
-		it.Move, it.Level, it.Status = MoveYou, "caution", at(it.Last.Author)+" commented after you"
+		// A thread you only joined moves on without you; that is news, not a task.
+		it.Move, it.Status = MoveThem, at(it.Last.Author)+" commented after you; nothing asked of you"
 	case it.Role == RoleAssigned:
 		it.Move, it.Status = MoveYou, "Assigned to you"
 	case it.Comments == 0:

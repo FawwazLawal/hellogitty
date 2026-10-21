@@ -3,6 +3,7 @@ package work
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -27,17 +28,18 @@ fragment pr on PullRequest {
   latestOpinionatedReviews(first: 10) { nodes { author { ...who } state submittedAt } }
   reviews(last: 1) { nodes { author { ...who } state body submittedAt url } }
   comments(last: 3) { totalCount nodes { author { ...who } body createdAt url } }
-  commits(last: 1) { nodes { commit { committedDate statusCheckRollup { state } } } }
+  commits(last: 1) { nodes { commit { oid committedDate statusCheckRollup { state } } } }
 }
 fragment detail on PullRequest {
+  closingIssuesReferences(first: 5) { nodes { number repository { nameWithOwner } } }
   reviewThreads(first: 30) { nodes { isResolved isOutdated path
     comments(first: 1) { nodes { author { ...who } body url createdAt } }
     latest: comments(last: 1) { nodes { author { ...who } } } } }
   checks: commits(last: 1) { nodes { commit {
     checkSuites(first: 20) { nodes { app { name } conclusion workflowRun { workflow { name } } } }
     statusCheckRollup { contexts(first: 40) { nodes { __typename
-      ... on CheckRun { name status conclusion title }
-      ... on StatusContext { context state description } } } } } } }
+      ... on CheckRun { name status conclusion title completedAt }
+      ... on StatusContext { context state description createdAt } } } } } } }
 }
 fragment issue on Issue {
   number title url state stateReason createdAt updatedAt closedAt
@@ -72,8 +74,19 @@ func (a *actor) name() string {
 	return a.Login
 }
 
+// botName catches automation that runs from an ordinary user account, such as gopherbot or
+// k8s-ci-robot, which GitHub reports as a User.
+var botName = regexp.MustCompile(`(?i)(bot|robot)$`)
+
 func (a *actor) bot() bool {
-	return a != nil && (a.Typename == "Bot" || strings.HasSuffix(a.Login, "[bot]"))
+	return a != nil && (a.Typename == "Bot" || strings.HasSuffix(a.Login, "[bot]") || botName.MatchString(a.Login))
+}
+
+// automated reports a comment written by a machine: a bot, or a body that opens with a hidden
+// marker such as "<!-- impeccable-pr-policy:v1 -->", which policy checks and review tools post
+// from a maintainer's own account. People do not start a comment that way.
+func automated(c comment) bool {
+	return c.Author.bot() || strings.HasPrefix(strings.TrimSpace(c.Body), "<!--")
 }
 
 type comment struct {
@@ -142,14 +155,16 @@ type node struct {
 				StatusCheckRollup *struct {
 					Contexts struct {
 						Nodes []struct {
-							Typename    string `json:"__typename"`
-							Name        string `json:"name"`
-							Status      string `json:"status"`
-							Conclusion  string `json:"conclusion"`
-							Title       string `json:"title"`
-							Context     string `json:"context"`
-							State       string `json:"state"`
-							Description string `json:"description"`
+							Typename    string     `json:"__typename"`
+							Name        string     `json:"name"`
+							Status      string     `json:"status"`
+							Conclusion  string     `json:"conclusion"`
+							Title       string     `json:"title"`
+							Context     string     `json:"context"`
+							State       string     `json:"state"`
+							Description string     `json:"description"`
+							CompletedAt *time.Time `json:"completedAt"`
+							CreatedAt   *time.Time `json:"createdAt"`
 						} `json:"nodes"`
 					} `json:"contexts"`
 				} `json:"statusCheckRollup"`
@@ -177,6 +192,7 @@ type node struct {
 	Commits struct {
 		Nodes []struct {
 			Commit struct {
+				OID               string     `json:"oid"`
 				CommittedDate     *time.Time `json:"committedDate"`
 				StatusCheckRollup *struct {
 					State string `json:"state"`
@@ -189,6 +205,14 @@ type node struct {
 			Login string `json:"login"`
 		} `json:"nodes"`
 	} `json:"assignees"`
+	ClosingIssuesReferences struct {
+		Nodes []struct {
+			Number     int `json:"number"`
+			Repository struct {
+				NameWithOwner string `json:"nameWithOwner"`
+			} `json:"repository"`
+		} `json:"nodes"`
+	} `json:"closingIssuesReferences"`
 }
 
 type search struct {
@@ -370,9 +394,9 @@ func toItem(n node, role, login string) Item {
 		}
 		if r := c[0].Commit.StatusCheckRollup; r != nil {
 			for _, x := range r.Contexts.Nodes {
-				ch := Check{Name: x.Name, Detail: x.Title}
+				ch := Check{Name: x.Name, Detail: x.Title, At: x.CompletedAt}
 				if x.Typename == "StatusContext" {
-					ch.Name, ch.Detail, ch.State = x.Context, x.Description, statusState(x.State)
+					ch.Name, ch.Detail, ch.State, ch.At = x.Context, x.Description, statusState(x.State), x.CreatedAt
 				} else {
 					ch.State = runState(x.Status, x.Conclusion)
 				}
@@ -415,7 +439,7 @@ func toItem(n node, role, login string) Item {
 		}
 	}
 	if c := n.Commits.Nodes; len(c) > 0 {
-		it.LastCommitAt = c[0].Commit.CommittedDate
+		it.LastCommitAt, it.HeadOID = c[0].Commit.CommittedDate, c[0].Commit.OID
 		if c[0].Commit.StatusCheckRollup != nil {
 			it.Checks = c[0].Commit.StatusCheckRollup.State
 		}
@@ -423,7 +447,11 @@ func toItem(n node, role, login string) Item {
 	for _, a := range n.Assignees.Nodes {
 		it.Assignees = append(it.Assignees, a.Login)
 	}
+	for _, r := range n.ClosingIssuesReferences.Nodes {
+		it.Fixes = append(it.Fixes, IssueRef{Repo: r.Repository.NameWithOwner, Number: r.Number})
+	}
 	it.Last = latest(n)
+	it.Recent = recent(n, it.Threads, login)
 	if it.Last != nil && it.Last.Review != "" && strings.EqualFold(it.Last.Author, login) {
 		t := it.Last.At
 		if it.ReviewedByMeAt == nil || t.After(*it.ReviewedByMeAt) {
@@ -460,12 +488,38 @@ func runState(status, conclusion string) string {
 	return CheckFailed
 }
 
+// recent lists every comment and review from someone else that the board fetched: the last three
+// comments, the latest review, and the opening comment of each unresolved review thread. Your own
+// words and bot comments on the conversation are left out. It feeds the inbox file, so nothing here costs another request.
+func recent(n node, threads []Thread, login string) []Activity {
+	var out []Activity
+	mine := func(a *actor) bool { return a.bot() || strings.EqualFold(a.name(), login) }
+	for _, c := range n.Comments.Nodes {
+		if !mine(c.Author) && !automated(c) {
+			out = append(out, Activity{Author: c.Author.name(), Body: strings.TrimSpace(c.Body), URL: c.URL, At: c.CreatedAt})
+		}
+	}
+	for _, c := range n.Reviews.Nodes {
+		if mine(c.Author) || c.Submitted == nil || c.State == "PENDING" || (c.State == "COMMENTED" && strings.TrimSpace(c.Body) == "") {
+			continue
+		}
+		out = append(out, Activity{Author: c.Author.name(), Body: strings.TrimSpace(c.Body), URL: c.URL, At: *c.Submitted, Review: c.State})
+	}
+	// Review bots count here: their inline comments block a merge as surely as a person's.
+	for _, t := range threads {
+		if !strings.EqualFold(t.Author, login) {
+			out = append(out, Activity{Author: t.Author, Body: t.Body, URL: t.URL, At: t.At, Path: t.Path, Bot: t.Bot})
+		}
+	}
+	return out
+}
+
 // latest picks the newest comment or review written by a person. A bare approval or "changes
 // requested" with no text still counts; an empty plain comment-review does not.
 func latest(n node) *Activity {
 	var best *Activity
 	consider := func(c comment, review bool) {
-		if c.Author.bot() {
+		if automated(c) {
 			return
 		}
 		at := c.CreatedAt

@@ -71,7 +71,9 @@ func TestIssuesWhoseMove(t *testing.T) {
 		{"reply on my issue", Item{Role: RoleAuthor, Comments: 2, Last: act("maint", 1)}, false, MoveYou, "@maint replied"},
 		{"no replies", Item{Role: RoleAuthor, CreatedAt: *ts(30)}, false, MoveThem, "No replies yet"},
 		{"assigned", Item{Role: RoleAssigned, Comments: 1, Last: act("me", 4)}, false, MoveYou, "Assigned to you"},
-		{"thread moved on", Item{Role: RoleInvolved, Comments: 3, Last: act("x", 1)}, false, MoveYou, "commented after you"},
+		{"thread moved on", Item{Role: RoleInvolved, Comments: 3, Last: act("x", 1)}, false, MoveThem, "commented after you; nothing asked of you"},
+		{"joined thread mentions me", Item{Role: RoleInvolved, Comments: 3, Last: &Activity{Author: "x", Body: "thanks @Me, can you check?", At: *ts(1)}}, false, MoveYou, "@x mentioned you"},
+		{"mention of someone else", Item{Role: RoleInvolved, Comments: 3, Last: &Activity{Author: "x", Body: "cc @meshery-bot @mel", At: *ts(1)}}, false, MoveThem, "nothing asked of you"},
 		{"I spoke last", Item{Role: RoleInvolved, Comments: 3, Last: act("me", 1)}, false, MoveThem, "You replied"},
 		{"closed completed", Item{State: "CLOSED", StateReason: "COMPLETED", ClosedAt: ts(1)}, false, MoveDone, "Closed as completed"},
 		{"new in my repo", Item{Role: RoleMaintains, Author: "newbie", CreatedAt: *ts(5)}, true, MoveYou, "New from @newbie; no reply yet"},
@@ -180,6 +182,13 @@ func TestAssembleFromGraphQL(t *testing.T) {
 	}
 	if pr.Last == nil || pr.Last.Author != "lead" || pr.Last.Review != "CHANGES_REQUESTED" || pr.Last.Body != "Please add a test." {
 		t.Errorf("latest human activity should be the review, skipping the newer bot comment: %+v", pr.Last)
+	}
+	var who []string
+	for _, a := range pr.Recent {
+		who = append(who, a.Author+":"+a.Review)
+	}
+	if strings.Join(who, ",") != "lead:,lead:CHANGES_REQUESTED" || pr.HeadOID != "" {
+		t.Errorf("recent should hold the human comment and review, not the bot's: %v", who)
 	}
 	if b.Sent[1].Role != RoleAssigned {
 		t.Errorf("issue assigned to me: role %q", b.Sent[1].Role)
@@ -290,5 +299,23 @@ func TestDecodeDetail(t *testing.T) {
 	}
 	if len(it.CheckList) != 2 || it.CheckList[0].State != CheckPending || it.CheckList[0].Detail != "CLA signature required" || it.CheckList[1].State != CheckPassed {
 		t.Errorf("checks %+v", it.CheckList)
+	}
+}
+
+func TestAutomatedCommentsAreNotReplies(t *testing.T) {
+	at := time.Date(2026, 10, 20, 3, 2, 20, 0, time.UTC)
+	n := node{}
+	n.Comments.Nodes = []comment{
+		{Author: &actor{Login: "me"}, Body: "Here is the fix.", CreatedAt: at.Add(-time.Hour)},
+		// pbakaus/impeccable#1084: a policy check posting from the maintainer's own account.
+		{Author: &actor{Login: "pbakaus", Typename: "User"}, Body: "<!-- impeccable-pr-policy:v1:needs-decision -->\nThe automated policy check found...", CreatedAt: at},
+		// golang/go: Gerrit import notices come from gopherbot, a User account.
+		{Author: &actor{Login: "gopherbot", Typename: "User"}, Body: "This PR has been imported to Gerrit for code review.", CreatedAt: at.Add(time.Hour)},
+	}
+	if l := latest(n); l == nil || l.Author != "me" {
+		t.Errorf("the newest human comment is mine: %+v", l)
+	}
+	if r := recent(n, nil, "me"); len(r) != 0 {
+		t.Errorf("automated comments are not activity to answer: %+v", r)
 	}
 }

@@ -39,6 +39,7 @@ type Check struct {
 	Name   string
 	State  string // CheckPassed, CheckFailed or CheckPending
 	Detail string // the check's own one-line description, e.g. "CLA signature required"
+	At     *time.Time
 }
 
 // Thread is an unresolved review thread: an inline comment someone expects answered before merge.
@@ -64,6 +65,10 @@ type Activity struct {
 	// Review holds the review state (APPROVED, CHANGES_REQUESTED, COMMENTED) when the activity
 	// was a review rather than a comment.
 	Review string
+	// Path is set for an inline review comment: the file it is on.
+	Path string
+	// Bot marks an inline comment from a review bot; such threads still block a merge.
+	Bot bool
 }
 
 // Item is one pull request or issue, with a plain-language status.
@@ -98,9 +103,12 @@ type Item struct {
 	Labels         []string
 
 	// Detail fetched for your own open pull requests only.
+	HeadOID          string // the latest commit
+	Recent           []Activity
 	Threads          []Thread // unresolved review threads
 	CheckList        []Check
-	AwaitingApproval []string // workflows a maintainer must approve before they run
+	AwaitingApproval []string   // workflows a maintainer must approve before they run
+	Fixes            []IssueRef // issues this pull request closes when merged
 
 	Assignees []string
 	Comments  int
@@ -117,6 +125,12 @@ type Item struct {
 	Personal string
 	// Quote, when set, is the comment most worth reading before acting, if it is not Last.
 	Quote *Activity
+}
+
+// IssueRef names an issue anywhere on GitHub.
+type IssueRef struct {
+	Repo   string
+	Number int
 }
 
 // Board is everything the dashboard shows about your own work.
