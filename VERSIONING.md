@@ -1,10 +1,43 @@
 # Versioning
 
-Changes land on the default branch continuously. Every so often the owner declares a build a
-milestone, and that milestone gets a semantic version tag and a codename.
+Every publish to the default branch is a release. It gets the next patch tag and a release page
+with downloadable builds. Every so often the owner declares a new version (the minor or major
+number), and the count starts again from there.
 
-**Only the owner declares a milestone, graduates a codename, or starts a new one.** Nobody drops
-"(baby)", bumps a major version, or invents a name on their own initiative.
+**Only the owner declares a new version, graduates a codename, or starts a new one.** Nobody drops
+"(baby)", bumps a minor or major version, or invents a name on their own initiative. The patch
+number moves on its own, one per publish.
+
+## The number in brackets
+
+People read a release as its version and, in brackets, how many updates it has had since that
+version began. The bracket number is the tag's patch number.
+
+```
+tag        shown as                     what it is
+v0.2.0     v0.2.0                       the publish that started 0.2.0
+v0.2.1     v0.2.0 (1)                   the first update after it
+v0.2.3     v0.2.0 (3)                   the third
+v0.3.0     v0.3.0                       the owner declared 0.3.0; the count starts again
+```
+
+The tag itself stays plain semantic versioning (`v0.2.3`), because that is what Go and GitHub
+read: Go ignores tags with brackets in them, and treats `v0.2.0-3` as older than `v0.2.0`. The
+dashboard header, `hellogitty -version` and release page titles all show the bracket form. A
+build from source between releases reads, for example, "dev build · after v0.2.0 (3)".
+
+**Publishing a release:**
+1. Update `cmd/hellogitty/release.txt` to the new tag.
+2. Rename `## Unreleased` in CHANGELOG.md to the new release.
+3. Commit, then tag that commit with an annotated tag ("v0.2.4 - Black Bombay (baby)").
+4. Push the commit and the tag.
+
+The release workflow (`.github/workflows/release.yml`) tests, builds for macOS, Linux and Windows,
+and creates the page titled "v0.2.0 (4) - Black Bombay (baby)". For a tag on a commit older than
+the workflow, run it by hand from main with that tag (Actions, release, Run workflow).
+
+A version number is never reused or removed. Go's public mirror keeps every tag that was ever
+fetched, so the same number with different code would break installs with a checksum error.
 
 ## Tags and codenames
 
