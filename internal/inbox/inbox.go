@@ -22,15 +22,16 @@ import (
 
 // Entry kinds.
 const (
-	KindComment = "pr_comment"
-	KindReview  = "pr_review"
-	KindState   = "pr_state"
-	KindWatched = "watched_issue"
-	KindLabel   = "pr_label"      // a label someone added to a pull request you opened, unless it is a known-benign one
-	KindBot     = "pr_bot"        // a bot's open findings on a pull request you opened: one entry per pull request
-	KindIssue   = "issue_comment" // a reply on an issue that is your move: one you opened or were assigned, or one that mentions you
-	KindOverlap = "issue_overlap" // someone else is on an issue you plan to take: a PR, an assignee, a claim, a close
-	KindSimilar = "issue_similar" // another PR's title shares the subject; only worth a look
+	KindComment  = "pr_comment"
+	KindReview   = "pr_review"
+	KindState    = "pr_state"
+	KindWatched  = "watched_issue"
+	KindLabel    = "pr_label"      // a label someone added to a pull request you opened, unless it is a known-benign one
+	KindBot      = "pr_bot"        // a bot's open findings on a pull request you opened: one entry per pull request
+	KindNewIssue = "new_issue"     // a new issue plausibly yours to take, in a repository where you plan work
+	KindIssue    = "issue_comment" // a reply on an issue that is your move: one you opened or were assigned, or one that mentions you
+	KindOverlap  = "issue_overlap" // someone else is on an issue you plan to take: a PR, an assignee, a claim, a close
+	KindSimilar  = "issue_similar" // another PR's title shares the subject; only worth a look
 )
 
 type Entry struct {
@@ -395,6 +396,67 @@ func labelEntries(it work.Item, seen FirstSeen) []Entry {
 			OccurredAt: when.UTC(), Summary: summary, Priority: "high"})
 	}
 	return out
+}
+
+// NewIssueWindow is how long a new issue stays news.
+const NewIssueWindow = 24 * time.Hour
+
+// notTasks are labels that mark an issue as something other than work to pick up.
+var notTasks = map[string]bool{"duplicate": true, "invalid": true, "question": true, "wontfix": true, "won't fix": true,
+	"spam": true, "discussion": true}
+
+// NewIssues reports new issues that are plausibly yours to take, as ONE entry per repository: in a
+// repository where you are planning work (planning holds "owner/name" in lower case), opened in the
+// last day, nobody assigned, nobody claiming it in a comment, and not labelled as a non-task. Busy
+// projects open dozens a day (golang/go opened 59 in two days), so one entry per issue would bury
+// everything else; the activity feed lists each one. The entry names the newest few and how many
+// there are. Its id carries the newest issue, so a new arrival replaces the entry rather than adding
+// one, and it goes when none are left.
+func NewIssues(issues []store.RecentIssue, planning map[string]bool, now time.Time) []Entry {
+	byRepo := map[string][]store.RecentIssue{}
+	var order []string
+	for _, i := range issues {
+		if !planning[strings.ToLower(i.Repo)] || len(i.Assignees) > 0 || i.ClaimSignal != "" || now.Sub(i.CreatedAt) > NewIssueWindow {
+			continue
+		}
+		skip := false
+		for _, l := range i.Labels {
+			if notTasks[strings.ToLower(l)] {
+				skip = true
+			}
+		}
+		if skip {
+			continue
+		}
+		if _, ok := byRepo[i.Repo]; !ok {
+			order = append(order, i.Repo)
+		}
+		byRepo[i.Repo] = append(byRepo[i.Repo], i)
+	}
+	var out []Entry
+	for _, repo := range order {
+		list := byRepo[repo]
+		sort.SliceStable(list, func(a, b int) bool { return list[a].CreatedAt.After(list[b].CreatedAt) })
+		newest := list[0]
+		var names []string
+		for _, i := range list[:min(3, len(list))] {
+			names = append(names, "#"+strconv.Itoa(i.Number)+" "+oneLine(i.Title, 70))
+		}
+		summary := plural(len(list), "new unassigned issue") + " in the last day: " + strings.Join(names, "; ")
+		if len(list) > 3 {
+			summary += "; and " + strconv.Itoa(len(list)-3) + " more"
+		}
+		out = append(out, Entry{ID: "hg-" + slug(repo) + "-new-issues-" + strconv.Itoa(newest.Number), Kind: KindNewIssue,
+			Repo: repo, Number: newest.Number, URL: "https://github.com/" + repo + "/issues?q=is%3Aissue+is%3Aopen+no%3Aassignee+sort%3Acreated-desc",
+			OccurredAt: newest.CreatedAt.UTC(), Summary: summary})
+	}
+	return out
+}
+
+// Sorted returns entries oldest first, the order the file keeps.
+func Sorted(entries []Entry) []Entry {
+	sortEntries(entries)
+	return entries
 }
 
 // issueEntry reports the reply that made an issue your move. It goes when you answer, because the

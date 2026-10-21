@@ -394,3 +394,35 @@ func TestOurPRClosedOrLabelledIsShouted(t *testing.T) {
 		t.Errorf("the first merge must not arrive silently: %+v", m)
 	}
 }
+
+func TestNewIssuesOneEntryPerRepository(t *testing.T) {
+	now := time.Date(2026, 10, 21, 21, 0, 0, 0, time.UTC)
+	issues := []store.RecentIssue{
+		{Repo: "pbakaus/impeccable", Number: 1101, Title: "[Bug] Stop deep pass is silent", Labels: []string{"needs triage"}, CreatedAt: now.Add(-4 * time.Hour)},
+		{Repo: "wazuh/wazuh", Number: 40575, Assignees: []string{"nbertoldo"}, CreatedAt: now.Add(-4 * time.Hour)},
+		{Repo: "golang/go", Number: 82403, Title: "cmd/go: failures", CreatedAt: now.Add(-1 * time.Hour)},
+		{Repo: "golang/go", Number: 82402, Title: "Proposal: crypto/tls", CreatedAt: now.Add(-2 * time.Hour)},
+		{Repo: "golang/go", Number: 82401, Title: "x/build: freebsd", CreatedAt: now.Add(-3 * time.Hour)},
+		{Repo: "golang/go", Number: 82400, Title: "x/build: openbsd", CreatedAt: now.Add(-4 * time.Hour)},
+		{Repo: "golang/go", Number: 82399, ClaimSignal: "comment", CreatedAt: now.Add(-time.Hour)},
+		{Repo: "golang/go", Number: 82398, Labels: []string{"Question"}, CreatedAt: now.Add(-time.Hour)},
+		{Repo: "golang/go", Number: 82300, CreatedAt: now.Add(-30 * time.Hour)},
+		{Repo: "shadcn-ui/ui", Number: 12408, CreatedAt: now.Add(-time.Hour)},
+	}
+	planning := map[string]bool{"pbakaus/impeccable": true, "wazuh/wazuh": true, "golang/go": true}
+	got := NewIssues(issues, planning, now)
+	byID := map[string]Entry{}
+	for _, e := range got {
+		byID[e.ID] = e
+	}
+	if len(got) != 2 {
+		t.Fatalf("one entry per repository with something new: %+v", got)
+	}
+	if e := byID["hg-pbakaus-impeccable-new-issues-1101"]; e.Kind != KindNewIssue || e.Number != 1101 ||
+		e.Summary != "1 new unassigned issue in the last day: #1101 [Bug] Stop deep pass is silent" {
+		t.Errorf("impeccable: %+v", e)
+	}
+	if e := byID["hg-golang-go-new-issues-82403"]; e.Summary != "4 new unassigned issues in the last day: #82403 cmd/go: failures; #82402 Proposal: crypto/tls; #82401 x/build: freebsd; and 1 more" {
+		t.Errorf("golang: %q", e.Summary)
+	}
+}
