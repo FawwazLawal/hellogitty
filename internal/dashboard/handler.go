@@ -71,6 +71,14 @@ type Handler struct {
 	// Mascot holds the banner clips and rest still; nil leaves the banner without a mascot.
 	Mascot fs.FS
 	Now    func() time.Time
+
+	// Help page: its template (parsed with Template, whose base styles it shares), the guide in
+	// Markdown, the guide's screenshot, and facts about this install set at startup (files in use).
+	HelpTemplate string
+	FeedTemplate string // the feed on its own page, parsed with Template like Help
+	Guide        string
+	Screenshot   []byte
+	About        []AboutItem
 }
 
 type page struct {
@@ -103,6 +111,8 @@ type page struct {
 	Work         workView
 	Glossary     map[string]Term
 	GlossaryJSON template.JS
+	Feed         feedView
+	Token        string // sent back with acknowledgements; see Handler.token
 }
 
 // HasTerm reports whether the hover help explains id, so the page only marks what it can explain.
@@ -251,6 +261,18 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case strings.HasPrefix(r.URL.Path, "/mascot/") && h.Mascot != nil:
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		http.StripPrefix("/mascot/", http.FileServer(http.FS(h.Mascot))).ServeHTTP(w, r)
+	case r.URL.Path == "/feed":
+		h.serveFeedPage(w, r)
+	case r.URL.Path == "/feed.json":
+		h.serveFeedJSON(w, r)
+	case r.URL.Path == "/feed/ack":
+		h.serveFeedAck(w, r)
+	case r.URL.Path == "/help":
+		h.serveHelp(w, r)
+	case r.URL.Path == "/help/screenshot.png" && len(h.Screenshot) > 0:
+		w.Header().Set("Content-Type", "image/png")
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		w.Write(h.Screenshot)
 	case r.URL.Path == "/attention.json":
 		h.serveAttention(w, r)
 	case r.URL.Path == "/snapshot.json":
@@ -378,6 +400,11 @@ func (h *Handler) build() (*page, error) {
 	var overlaps []store.Overlap
 	if src, ok := h.Source.(OverlapSource); ok {
 		overlaps = src.OverlapReports()
+	}
+
+	p.Token = h.token()
+	if fs, ok := h.Source.(FeedSource); ok {
+		p.Feed = buildFeed(fs.Feed(), now)
 	}
 
 	board, workErr := h.Source.Work()

@@ -6,55 +6,9 @@
 <meta http-equiv="refresh" content="300">
 <meta name="color-scheme" content="light dark">
 <title>HelloGitty</title>
-<script>
-  // Apply a saved theme before first paint; with none saved the page follows the system setting.
-  try { var t = localStorage.getItem("hellogitty-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
-</script>
+{{template "theme-head"}}
 <style>
-  :root {
-    color-scheme: dark;
-    --bg: #0a0a0b; --panel: #101011; --raised: #18181a; --rule: #222225; --rule-hi: #323236;
-    --text: #e2e2e0; --dim: #9a9a96; --track: #2a2a2d;
-    --nom: #4fc469; --caution: #e9aa3b; --caution-text: #e9aa3b; --warn: #ff5244;
-    --caution-fill: #e9aa3b; --caution-ink: #160e02; --warn-fill: #c4271d; --warn-ink: #ffffff;
-    --tag-fill: #2b2610; --tag-ink: #f3d36b; --tag-rule: #4a3f17;
-    --mascot-bg: #101011;
-    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
-    --row: minmax(0, 1.6fr) 168px 76px 52px 64px 82px 104px 66px 80px;
-  }
-  @media (prefers-color-scheme: light) {
-    :root:not([data-theme="dark"]) {
-      color-scheme: light;
-      --bg: #f3f3f1; --panel: #ffffff; --raised: #f1f1ee; --rule: #e2e2de; --rule-hi: #c9c9c4;
-      --text: #1c1c1d; --dim: #62625d; --track: #e3e3df;
-      --nom: #18803a; --caution: #d08a12; --caution-text: #8a5600; --warn: #c3271c;
-      --tag-fill: #fbf0c4; --tag-ink: #6a5200; --tag-rule: #ecd88a;
-    }
-  }
-  :root[data-theme="light"] {
-    color-scheme: light;
-    --bg: #f3f3f1; --panel: #ffffff; --raised: #f1f1ee; --rule: #e2e2de; --rule-hi: #c9c9c4;
-    --text: #1c1c1d; --dim: #62625d; --track: #e3e3df;
-    --nom: #18803a; --caution: #d08a12; --caution-text: #8a5600; --warn: #c3271c;
-    --tag-fill: #fbf0c4; --tag-ink: #6a5200; --tag-rule: #ecd88a;
-  }
-  * { box-sizing: border-box; }
-  html { background: var(--bg); scrollbar-color: var(--rule-hi) var(--bg); }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--sans); caret-color: var(--text);
-    -webkit-font-smoothing: antialiased; }
-  ::selection { background: var(--rule-hi); color: var(--text); }
-  ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--rule-hi); border: 2px solid var(--bg); border-radius: 6px; }
-  a { color: var(--text); text-decoration: underline; text-decoration-color: var(--rule-hi); text-underline-offset: 3px; }
-  a:hover { text-decoration-color: var(--text); }
-  :focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
-  .lbl { font-size: 12px; color: var(--dim); }
-  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .zero { color: var(--dim); }
-  .num, .fig { font-family: var(--mono); font-variant-numeric: tabular-nums slashed-zero; font-size: 13px; }
-  code { font: 12.5px var(--mono); color: var(--text); background: var(--raised); padding: 1px 5px; border-radius: 4px; }
+{{template "base-css"}}
 
   /* status line */
   .status { position: sticky; top: 0; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 22px;
@@ -63,7 +17,8 @@
   .mascot { position: absolute; right: 16px; bottom: 0; width: 236px; height: 80px; pointer-events: none;
     background: var(--mascot-bg); border-radius: 8px 8px 0 0; overflow: hidden; }
   .mascot video { display: block; width: 100%; height: 100%; object-fit: contain; mix-blend-mode: lighten; }
-  .brand { display: flex; align-items: baseline; gap: 8px; }
+  .brand { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+  .brand .ver { line-height: 1.2; white-space: nowrap; }
   .status h1 { margin: 0; font-size: 19px; line-height: 1.3; font-weight: 700; letter-spacing: -0.01em; }
   .ver .baby { font-style: italic; }
   .status .item { display: flex; align-items: baseline; gap: 7px; }
@@ -72,11 +27,14 @@
   .gauge i { display: block; height: 100%; background: var(--dim); }
   .gauge.hot i { background: var(--caution); }
   /* Layout (ADR-002): the header button, the sheet, folded and hidden modules. */
+{{template "feed-css"}}
   .layoutbtn { margin-left: auto; font: 12px/1 var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
     border-radius: 6px; padding: 6px 10px; cursor: pointer; }
   .layoutbtn:hover { color: var(--text); background: var(--raised); }
   .status.has-mascot .layoutbtn { margin-left: 0; }
   .layoutbtn + .theme { margin-left: 0 !important; }
+  .helpbtn { text-decoration: none; }
+  .helpbtn + .layoutbtn { margin-left: 0; }
   .mod-hidden { display: none !important; }
   .panel.folded > :not(h2) { display: none; }
   .panel.folded > h2 { border-bottom: 0; }
@@ -105,12 +63,7 @@
   .sheet-foot { display: flex; justify-content: flex-end; padding: 12px 16px 16px; }
   .sheet .done { font: 600 13px var(--sans); color: var(--text); background: var(--raised); border: 1px solid var(--rule-hi); border-radius: 6px;
     padding: 7px 14px; cursor: pointer; }
-  .theme { display: inline-flex; border: 1px solid var(--rule-hi); border-radius: 6px; overflow: hidden; margin-left: auto; }
   .status.has-mascot .theme { margin-left: 0; }
-  .theme button { font: 12px/1 var(--sans); color: var(--dim); background: transparent; border: 0; padding: 6px 10px; cursor: pointer; }
-  .theme button + button { border-left: 1px solid var(--rule-hi); }
-  .theme button:hover { color: var(--text); background: var(--raised); }
-  .theme button[aria-pressed="true"] { color: var(--text); background: var(--raised); font-weight: 600; }
 
   /* alert panel */
   .cw { display: grid; grid-auto-flow: column; grid-template-columns: 2fr 2fr; grid-auto-columns: minmax(0, 1fr); gap: 6px; padding: 12px 20px 0; }
@@ -392,6 +345,207 @@
   <symbol id="i-pr" viewBox="0 0 16 16"><circle cx="4" cy="3.5" r="1.75"/><circle cx="4" cy="12.5" r="1.75"/><circle cx="12" cy="12.5" r="1.75"/><path d="M4 5.25v5.5M12 10.75V6.5a2 2 0 0 0-2-2H7.5M9 3l-1.5 1.5L9 6"/></symbol>
   <symbol id="i-issue" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="1.25"/></symbol>
 </svg>
+{{define "theme-head"}}<script>
+  // Apply a saved theme before first paint; with none saved the page follows the system setting.
+  try { var t = localStorage.getItem("hellogitty-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+</script>{{end}}
+{{define "base-css"}}
+  :root {
+    color-scheme: dark;
+    --bg: #0a0a0b; --panel: #101011; --raised: #18181a; --rule: #222225; --rule-hi: #323236;
+    --text: #e2e2e0; --dim: #9a9a96; --track: #2a2a2d;
+    --nom: #4fc469; --caution: #e9aa3b; --caution-text: #e9aa3b; --warn: #ff5244;
+    --caution-fill: #e9aa3b; --caution-ink: #160e02; --warn-fill: #c4271d; --warn-ink: #ffffff;
+    --tag-fill: #2b2610; --tag-ink: #f3d36b; --tag-rule: #4a3f17;
+    --mascot-bg: #101011;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    --row: minmax(0, 1.6fr) 168px 76px 52px 64px 82px 104px 66px 80px;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      color-scheme: light;
+      --bg: #f3f3f1; --panel: #ffffff; --raised: #f1f1ee; --rule: #e2e2de; --rule-hi: #c9c9c4;
+      --text: #1c1c1d; --dim: #62625d; --track: #e3e3df;
+      --nom: #18803a; --caution: #d08a12; --caution-text: #8a5600; --warn: #c3271c;
+      --tag-fill: #fbf0c4; --tag-ink: #6a5200; --tag-rule: #ecd88a;
+    }
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f3f3f1; --panel: #ffffff; --raised: #f1f1ee; --rule: #e2e2de; --rule-hi: #c9c9c4;
+    --text: #1c1c1d; --dim: #62625d; --track: #e3e3df;
+    --nom: #18803a; --caution: #d08a12; --caution-text: #8a5600; --warn: #c3271c;
+    --tag-fill: #fbf0c4; --tag-ink: #6a5200; --tag-rule: #ecd88a;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); scrollbar-color: var(--rule-hi) var(--bg); }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--sans); caret-color: var(--text);
+    -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--rule-hi); color: var(--text); }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--rule-hi); border: 2px solid var(--bg); border-radius: 6px; }
+  a { color: var(--text); text-decoration: underline; text-decoration-color: var(--rule-hi); text-underline-offset: 3px; }
+  a:hover { text-decoration-color: var(--text); }
+  :focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+  .lbl { font-size: 12px; color: var(--dim); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .zero { color: var(--dim); }
+  .num, .fig { font-family: var(--mono); font-variant-numeric: tabular-nums slashed-zero; font-size: 13px; }
+  code { font: 12.5px var(--mono); color: var(--text); background: var(--raised); padding: 1px 5px; border-radius: 4px; }
+  .theme { display: inline-flex; border: 1px solid var(--rule-hi); border-radius: 6px; overflow: hidden; margin-left: auto; }
+  .theme button { font: 12px/1 var(--sans); color: var(--dim); background: transparent; border: 0; padding: 6px 10px; cursor: pointer; }
+  .theme button + button { border-left: 1px solid var(--rule-hi); }
+  .theme button:hover { color: var(--text); background: var(--raised); }
+  .theme button[aria-pressed="true"] { color: var(--text); background: var(--raised); font-weight: 600; }
+{{end}}
+{{define "theme-js"}}
+    // Theme: Auto follows the system; Light and Dark override it and are remembered.
+    var root = document.documentElement, buttons = document.querySelectorAll("[data-theme-set]");
+    function showTheme() {
+      var cur = root.dataset.theme || "auto";
+      buttons.forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.themeSet === cur ? "true" : "false"); });
+    }
+    buttons.forEach(function (b) {
+      b.addEventListener("click", function () {
+        var t = b.dataset.themeSet;
+        if (t === "auto") delete root.dataset.theme; else root.dataset.theme = t;
+        try { if (t === "auto") localStorage.removeItem("hellogitty-theme"); else localStorage.setItem("hellogitty-theme", t); } catch (e) {}
+        showTheme();
+      });
+    });
+    showTheme();
+{{end}}
+{{define "feed-css"}}
+  /* Live feed: a running list of what just happened, newest first, with an Acknowledge per row. */
+  .feed { list-style: none; margin: 0; padding: 0; max-height: 460px; overflow-y: auto; overscroll-behavior: contain; }
+  .feed.tall { max-height: none; }
+  .fr { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; column-gap: 10px; align-items: start; padding: 8px 14px; border-top: 1px solid var(--rule); }
+  .fr:first-child { border-top: 0; }
+  .feed:not(.showall) .fr.acked { display: none; }
+  .fr .fdot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; background: var(--nom); }
+  .fr.acked .fdot { background: transparent; border: 1.5px solid var(--rule-hi); }
+  .fr.acked .ftext, .fr.acked .ftag { color: var(--dim); }
+  .fline { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+  .ftag { flex: none; font-size: 11.5px; font-weight: 650; color: var(--dim); }
+  .ftag.overlap, .ftag.pr { color: var(--caution-text); }
+  .ftag.new-issue { color: var(--nom); }
+  .ftext { font-size: 13.5px; text-decoration: none; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+  .ftext:hover { text-decoration: underline; }
+  .fmeta { display: flex; flex-wrap: wrap; gap: 0 8px; font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .fack { font: 12px var(--sans); color: var(--text); background: transparent; border: 1px solid var(--rule-hi); border-radius: 4px; padding: 3px 8px; cursor: pointer; white-space: nowrap; }
+  .fack:hover { background: var(--raised); }
+  .fr.acked .fack { color: var(--dim); border-color: transparent; cursor: default; }
+  .fr.fresh { animation: fresh 2.4s ease-out; }
+  @keyframes fresh { from { background: var(--raised); } to { background: transparent; } }
+  @media (prefers-reduced-motion: reduce) { .fr.fresh { animation: none; } }
+  .ffoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 8px 14px 10px; border-top: 1px solid var(--rule); font-size: 12.5px; color: var(--dim); }
+  .fnone { padding: 12px 14px; color: var(--dim); font-size: 13px; }
+  .wi.flash { animation: fresh 2.4s ease-out; }
+{{end}}
+{{define "feed-rows"}}{{range .Rows}}<li class="fr{{if .Acked}} acked{{end}}" data-id="{{.ID}}" data-k="{{.Key}}" data-thread="{{if .Thread}}1{{end}}">
+  <span class="fdot" aria-hidden="true"></span>
+  <div><div class="fline"><span class="ftag {{.Kind}}">{{.Label}}</span><a class="ftext" href="{{.URL}}" target="_blank" rel="noopener">{{.Text}}</a></div>
+  <div class="fmeta"><span>{{.Repo}}{{if .Number}} #{{.Number}}{{end}}</span>{{if .Actor}}<span>@{{.Actor}}</span>{{end}}<time datetime="{{.AgoTitle}}" title="{{.AgoTitle}}">{{.Ago}}</time></div></div>
+  <button type="button" class="fack" title="{{if .Thread}}Acknowledge; also marks it read on GitHub{{else}}Acknowledge; kept in HelloGitty only{{end}}"{{if .Acked}} disabled{{end}}>{{if .Acked}}Seen{{else}}Ack{{end}}</button>
+</li>{{end}}{{end}}
+{{define "feed-js"}}
+    // Live feed: re-read every 30 seconds; new rows flash once. Ack marks a row seen here, and on
+    // GitHub too when a notification is behind it; reading it on GitHub settles the row here.
+    (function () {
+      var list = document.getElementById("feed-list");
+      if (!list) return;
+      var token = list.dataset.token, open = document.getElementById("feed-open"), msg = document.getElementById("feed-msg");
+      var show = document.getElementById("feed-show"), all = document.getElementById("feed-all");
+      var known = {};
+      Array.prototype.forEach.call(list.children, function (li) { known[li.dataset.id] = true; });
+      try { if (localStorage.getItem("hellogitty-feed-all") === "1") { list.classList.add("showall"); if (show) show.checked = true; } } catch (e) {}
+      function ago(t) {
+        var s = Math.max(0, Date.now() / 1000 - t), n;
+        if (s < 60) return "just now";
+        if (s < 3600) return Math.floor(s / 60) + " min ago";
+        if (s < 86400) { n = Math.floor(s / 3600); return n + (n === 1 ? " hour ago" : " hours ago"); }
+        n = Math.floor(s / 86400); return n + (n === 1 ? " day ago" : " days ago");
+      }
+      function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+      function row(r) {
+        var li = el("li", "fr" + (r.acked ? " acked" : "") + (known[r.id] ? "" : " fresh"));
+        li.dataset.id = r.id; li.dataset.k = r.key || ""; li.dataset.thread = r.thread ? "1" : "";
+        li.appendChild(el("span", "fdot")).setAttribute("aria-hidden", "true");
+        var body = el("div"), line = el("div", "fline"), a = el("a", "ftext", r.text);
+        line.appendChild(el("span", "ftag " + r.kind, r.label));
+        a.href = r.url; a.target = "_blank"; a.rel = "noopener"; line.appendChild(a); body.appendChild(line);
+        var meta = el("div", "fmeta"), at = Date.parse(r.at) / 1000, t = el("time", "", ago(at));
+        meta.appendChild(el("span", "", r.repo + (r.number ? " #" + r.number : "")));
+        if (r.actor) meta.appendChild(el("span", "", "@" + r.actor));
+        t.dateTime = r.at; t.title = r.at; meta.appendChild(t); body.appendChild(meta); li.appendChild(body);
+        var b = el("button", "fack", r.acked ? "Seen" : "Ack"); b.type = "button"; b.disabled = !!r.acked;
+        b.title = r.thread ? "Acknowledge; also marks it read on GitHub" : "Acknowledge; kept in HelloGitty only";
+        li.appendChild(b);
+        return li;
+      }
+      function count() {
+        var n = list.querySelectorAll(".fr:not(.acked)").length;
+        if (open) open.textContent = n;
+        var none = document.getElementById("feed-none");
+        if (none) none.hidden = list.querySelectorAll(list.classList.contains("showall") ? ".fr" : ".fr:not(.acked)").length > 0;
+      }
+      function refresh() {
+        fetch("/feed.json", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) {
+          var frag = document.createDocumentFragment();
+          (d.rows || []).forEach(function (r) { frag.appendChild(row(r)); known[r.id] = true; });
+          list.textContent = ""; list.appendChild(frag); count();
+        }).catch(function () {});
+      }
+      function say(text) { if (msg) msg.textContent = text; }
+      function ack(ids, lis) {
+        lis.forEach(function (li) {
+          li.classList.add("acked"); var b = li.querySelector(".fack"); b.textContent = "Seen"; b.disabled = true;
+          // The same pull request or issue on the dashboard counts as read too.
+          if (li.dataset.k) window.dispatchEvent(new CustomEvent("hg-seen", { detail: { k: li.dataset.k } }));
+        });
+        count();
+        fetch("/feed/ack", { method: "POST", headers: { "Content-Type": "application/json", "X-HelloGitty-Token": token }, body: JSON.stringify({ ids: ids }) })
+          .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+          .then(function (d) {
+            var res = d.results || [], marked = res.filter(function (x) { return x.github === "marked"; }).length;
+            var failed = res.filter(function (x) { return x.github.indexOf("failed") === 0; }).length;
+            var local = res.length - marked - failed;
+            var parts = [];
+            if (marked) parts.push(marked + " also marked read on GitHub");
+            if (local) parts.push(local + " kept here only (no GitHub notification behind " + (local === 1 ? "it" : "them") + ")");
+            if (failed) parts.push(failed + " couldn't be marked read on GitHub; acknowledged here");
+            say("Acknowledged: " + parts.join("; ") + ".");
+          })
+          .catch(function () { say("Couldn't save that acknowledgement; it will show again on the next refresh."); });
+      }
+      list.addEventListener("click", function (e) {
+        var b = e.target.closest(".fack"), li = e.target.closest(".fr");
+        if (b && li && !b.disabled) { ack([li.dataset.id], [li]); return; }
+        var a = e.target.closest(".ftext");
+        if (!a || !li || !li.dataset.k || e.metaKey || e.ctrlKey || e.shiftKey) return;
+        // On the dashboard, jump to the row it's about instead of leaving for GitHub.
+        var target = document.querySelector('.wi[data-k="' + li.dataset.k + '"]');
+        if (!target) return;
+        e.preventDefault();
+        target.scrollIntoView({ block: "center" });
+        target.classList.remove("flash"); void target.offsetWidth; target.classList.add("flash");
+        var t = target.querySelector("a.title"); if (t) t.focus({ preventScroll: true });
+      });
+      if (all) all.addEventListener("click", function () {
+        var lis = Array.prototype.slice.call(list.querySelectorAll(".fr:not(.acked)"));
+        if (lis.length) ack(lis.map(function (li) { return li.dataset.id; }), lis);
+      });
+      if (show) show.addEventListener("change", function () {
+        list.classList.toggle("showall", show.checked);
+        try { localStorage.setItem("hellogitty-feed-all", show.checked ? "1" : "0"); } catch (e) {}
+        count();
+      });
+      count();
+      setInterval(refresh, 30000);
+    })();
+{{end}}
 {{define "peek"}}{{if .Lines}}<template class="peek"><div class="pk"><b class="pk-h">{{.Head}}</b><dl>{{range .Lines}}<dt>{{.Label}}</dt><dd{{if .Level}} class="{{.Level}}"{{end}}>{{range $i, $x := .Items}}{{if $i}}<br>{{end}}{{$x}}{{end}}</dd>{{end}}</dl></div></template>{{end}}{{end}}
 {{define "item"}}<li class="wi" data-k="{{.K}}" data-new="{{.New}}" data-v="w-{{.Key}}" data-val="{{.Value}}" data-kind="{{lower .Kind}}" data-repo="{{lower .Repo}}" data-name="{{.Repo}}" data-move="{{.Move}}"{{if .Personal}} data-personal{{end}} data-s="{{.Search}}">
   <span class="dot {{.Attn}}" aria-hidden="true" data-term="dot"></span>
@@ -424,6 +578,7 @@
   <span class="item"><span class="lbl">Last check</span>{{if .LastPollUnix}}<span class="v" id="pollage" data-since="{{.LastPollUnix}}" title="{{.LastPollUTC}} UTC">{{.LastPollUTC}} UTC</span>{{else}}<span class="v zero">not yet</span>{{end}}</span>
   <span class="item"><span class="lbl term" data-term="api" tabindex="0">GitHub API</span>{{if .APIKnown}}<span class="v"><span class="fig">{{.APIUsed}}</span> of <span class="fig">{{.APILimit}}</span> this hour</span><span class="gauge{{if ge .APIPct 90}} hot{{end}}" role="img" aria-label="{{.APIPct}} percent of the hourly quota used"><i style="width:{{.APIPct}}%"></i></span>{{else}}<span class="v zero">no data yet</span>{{end}}</span>
   <span class="item"><span class="v"><span class="fig">{{.RepoCount}}</span> repos{{if .HasPipeline}} · <span class="fig">{{.TargetCount}}</span> in the pipeline{{end}}</span></span>
+  <a class="layoutbtn helpbtn" href="/help" title="Help (press ?)">Help</a>
   <button type="button" class="layoutbtn" id="layout-open" aria-haspopup="dialog">Layout</button>
   <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
   {{if .Mascot}}<div class="mascot" aria-hidden="true" data-routine="{{range $i, $c := .Mascot.Routine}}{{if $i}} {{end}}{{$c}}{{end}}" data-news="{{range $i, $c := .Mascot.News}}{{if $i}} {{end}}{{$c}}{{end}}"><video muted playsinline preload="none" poster="{{.Mascot.Rest}}" tabindex="-1"></video></div>{{end}}
@@ -555,6 +710,12 @@
   </div>
 
   <div class="rail">
+    <section class="panel" aria-labelledby="feed-h" data-module="feed">
+      <h2 id="feed-h"><span class="term" data-term="live" tabindex="0">Live</span> <span class="lbl"><span id="feed-open">{{.Feed.Open}}</span> new · <a href="/feed" target="_blank" rel="noopener">Open in a window</a></span></h2>
+      <ol class="feed" id="feed-list" data-token="{{.Token}}" aria-live="polite">{{template "feed-rows" .Feed}}</ol>
+      <p class="fnone" id="feed-none"{{if .Feed.Open}} hidden{{end}}>{{if .Feed.Known}}Nothing new. New issues, comments, reviews and notifications appear here as they happen.{{else}}The live feed appears once HelloGitty has checked GitHub.{{end}}</p>
+      <div class="ffoot"><label class="check"><input type="checkbox" id="feed-show"> Show acknowledged</label><button type="button" class="clear" id="feed-all">Acknowledge all</button><span id="feed-msg" class="sr" role="status"></span></div>
+    </section>
     <section class="panel" aria-labelledby="watch-h" data-module="watched">
       <h2 id="watch-h">Watched issues <span class="lbl">{{len .Watch}} watched</span></h2>
       {{if .Watch}}
@@ -622,21 +783,7 @@
       catch (e) { return null; }
     }
 
-    // Theme: Auto follows the system; Light and Dark override it and are remembered.
-    var root = document.documentElement, buttons = document.querySelectorAll("[data-theme-set]");
-    function showTheme() {
-      var cur = root.dataset.theme || "auto";
-      buttons.forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.themeSet === cur ? "true" : "false"); });
-    }
-    buttons.forEach(function (b) {
-      b.addEventListener("click", function () {
-        var t = b.dataset.themeSet;
-        if (t === "auto") delete root.dataset.theme; else root.dataset.theme = t;
-        try { if (t === "auto") localStorage.removeItem("hellogitty-theme"); else localStorage.setItem("hellogitty-theme", t); } catch (e) {}
-        showTheme();
-      });
-    });
-    showTheme();
+    {{template "theme-js"}}
 
     // Keep expanded sections open across the 5-minute reload.
     var openKey = "hellogitty-open", open = store(true, openKey) || [];
@@ -723,6 +870,12 @@
           paint();
         }).catch(function () {});
       }
+      // Acknowledging a row in the live feed counts as reading the same item here.
+      window.addEventListener("hg-seen", function (e) {
+        var li = document.querySelector('.wi[data-k="' + e.detail.k + '"]');
+        seen[e.detail.k] = Math.max(Number(li && li.dataset.new) || 0, Math.floor(Date.now() / 1000));
+        keep(); paint();
+      });
       paint();
       setInterval(check, 60000);
     })();
@@ -825,6 +978,8 @@
       addEventListener("resize", function () { if (owner) hide(true); });
     })();
 
+{{template "feed-js"}}
+
     // Layout (ADR-002). Every panel is a module you can show, hide, fold and move between the main
     // column and the side; presets set all of it at once. The server always renders the whole page,
     // so without a saved layout (or with storage blocked) you see everything. Saved per browser.
@@ -843,12 +998,12 @@
         return h ? h.firstChild.textContent.trim() : id;
       }
       var PRESETS = {
-        everything: { main: ["your-work", "your-repos", "tracked"], rail: ["watched", "pipeline", "checks"], hidden: [], folded: [] },
-        contributor: { main: ["your-work", "tracked", "your-repos"], rail: ["watched", "pipeline", "checks"], hidden: ["your-repos", "pipeline", "checks"], folded: ["tracked"] },
-        maintainer: { main: ["your-repos", "your-work", "tracked"], rail: ["watched", "pipeline", "checks"], hidden: [], folded: [] },
-        program: { main: ["tracked", "your-work", "your-repos"], rail: ["pipeline", "watched", "checks"], hidden: ["your-repos"], folded: ["your-work"] },
-        focus: { main: ["your-work", "your-repos", "tracked"], rail: ["watched", "pipeline", "checks"],
-          hidden: ["toolbar", "your-repos", "tracked", "watched", "pipeline", "checks", "work-them", "work-other", "work-done"], folded: [] }
+        everything: { main: ["your-work", "your-repos", "tracked"], rail: ["feed", "watched", "pipeline", "checks"], hidden: [], folded: [] },
+        contributor: { main: ["your-work", "tracked", "your-repos"], rail: ["feed", "watched", "pipeline", "checks"], hidden: ["your-repos", "pipeline", "checks"], folded: ["tracked"] },
+        maintainer: { main: ["your-repos", "your-work", "tracked"], rail: ["feed", "watched", "pipeline", "checks"], hidden: [], folded: [] },
+        program: { main: ["tracked", "your-work", "your-repos"], rail: ["pipeline", "feed", "watched", "checks"], hidden: ["your-repos"], folded: ["your-work"] },
+        focus: { main: ["your-work", "your-repos", "tracked"], rail: ["feed", "watched", "pipeline", "checks"],
+          hidden: ["toolbar", "feed", "your-repos", "tracked", "watched", "pipeline", "checks", "work-them", "work-other", "work-done"], folded: [] }
       };
       function copy(p, preset) { return { preset: preset, main: p.main.slice(), rail: p.rail.slice(), hidden: p.hidden.slice(), folded: p.folded.slice() }; }
       // Keep only modules on this page, and give any new panel a place in its usual column.
@@ -1111,7 +1266,8 @@
       clear.addEventListener("click", function () { view.q = ""; view.kind = "all"; view.scope = ""; view.mine = false; apply(); });
       document.addEventListener("keydown", function (e) {
         var t = e.target.tagName;
-        if (e.key === "/" && t !== "INPUT" && t !== "SELECT" && t !== "TEXTAREA" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); q.focus(); }
+        if (e.key === "/" && !e.shiftKey && t !== "INPUT" && t !== "SELECT" && t !== "TEXTAREA" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); q.focus(); }
+        if ((e.key === "?" || (e.key === "/" && e.shiftKey)) && t !== "INPUT" && t !== "SELECT" && t !== "TEXTAREA" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); location.href = "/help"; }
       });
       apply();
     })();

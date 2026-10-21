@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>HelloGitty help</title>
+{{template "theme-head"}}
+<style>
+{{template "base-css"}}
+  /* Help page: the guide, the glossary and details of this install, in the dashboard's own look. */
+  .hbar { position: sticky; top: 0; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 20px;
+    background: var(--panel); border-bottom: 1px solid var(--rule); }
+  .hbar h1 { margin: 0; font-size: 17px; font-weight: 650; }
+  .back { font-size: 13px; color: var(--dim); }
+  .hsearch { position: relative; display: flex; align-items: center; flex: 0 1 320px; min-width: 200px; margin-left: auto; }
+  .hsearch input { width: 100%; font: 14px/1.3 var(--sans); color: var(--text); background: var(--bg); border: 1px solid var(--rule-hi);
+    border-radius: 6px; padding: 6px 30px 6px 10px; }
+  .hsearch input::placeholder { color: var(--dim); }
+  .hsearch kbd { position: absolute; right: 8px; font: 11px var(--mono); color: var(--dim); border: 1px solid var(--rule-hi); border-radius: 4px; padding: 0 5px; pointer-events: none; }
+  .hsearch input:not(:placeholder-shown) + kbd { display: none; }
+  .hsearch + .theme { margin-left: 0; }
+  .hgrid { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 28px; max-width: 1180px; margin: 0 auto; padding: 20px 20px 48px; }
+  .toc { position: sticky; top: 70px; align-self: start; max-height: calc(100vh - 90px); overflow: auto; font-size: 13px; }
+  .toc h2 { margin: 0 0 8px; font-size: 12px; font-weight: 650; color: var(--dim); }
+  .toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .toc a { display: block; padding: 4px 8px; border-radius: 4px; color: var(--dim); text-decoration: none; }
+  .toc a:hover, .toc a[aria-current="true"] { color: var(--text); background: var(--raised); }
+  .toc .sep { border-top: 1px solid var(--rule); margin: 6px 0; }
+  main.doc { min-width: 0; max-width: 76ch; }
+  .doc h2 { margin: 0 0 10px; font-size: 20px; font-weight: 650; scroll-margin-top: 70px; }
+  .doc h3 { margin: 22px 0 8px; font-size: 15px; font-weight: 650; scroll-margin-top: 70px; }
+  .doc p, .doc li { line-height: 1.6; }
+  .doc ul, .doc ol { padding-left: 22px; }
+  .doc li + li { margin-top: 4px; }
+  .doc hr { display: none; }
+  .doc img { max-width: 100%; height: auto; border: 1px solid var(--rule); border-radius: 6px; }
+  .doc pre { overflow-x: auto; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; }
+  .doc pre code { background: none; padding: 0; font-size: 12px; line-height: 1.35; }
+  .doc blockquote { margin: 12px 0; padding: 2px 14px; border-left: 3px solid var(--rule-hi); color: var(--dim); }
+  .tw { overflow-x: auto; margin: 12px 0; border: 1px solid var(--rule); border-radius: 6px; }
+  .doc table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  .doc th, .doc td { text-align: left; vertical-align: top; padding: 8px 12px; border-top: 1px solid var(--rule); }
+  .doc thead th { border-top: 0; background: var(--panel); font-weight: 650; }
+  .hs { padding: 26px 0; border-top: 1px solid var(--rule); }
+  .hs:first-of-type { border-top: 0; }
+  .intro { padding-bottom: 8px; }
+  .intro h2 { font-size: 24px; }
+  .gl { margin: 0; display: grid; gap: 0; }
+  .gi { display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr); gap: 4px 16px; padding: 10px 0; border-top: 1px solid var(--rule); scroll-margin-top: 70px; }
+  .gi dt { font-weight: 650; }
+  .gi dd { margin: 0; }
+  .gi .kind { display: block; font-size: 11.5px; font-weight: 400; color: var(--dim); }
+  .gi .do { display: block; margin-top: 3px; color: var(--dim); }
+  .kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 18px; margin: 0; }
+  .kv dt { color: var(--dim); }
+  .kv dd { margin: 0; overflow-wrap: anywhere; }
+  .nomatch { color: var(--dim); }
+  @media (max-width: 900px) {
+    .hgrid { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 12px 16px 40px; }
+    .toc { position: static; max-height: none; }
+    .toc ol { display: flex; flex-wrap: wrap; gap: 4px; }
+    .toc .sep { display: none; }
+    .toc a { border: 1px solid var(--rule); }
+    .hbar { padding: 10px 16px; }
+    .hsearch { flex: 1 1 100%; margin-left: 0; order: 9; }
+    .gi { grid-template-columns: minmax(0, 1fr); }
+    .kv { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+    .kv dd { margin-bottom: 8px; }
+  }
+</style>
+</head>
+<body>
+<header class="hbar">
+  <a class="back" href="/">&larr; Dashboard</a>
+  <h1>Help</h1>
+  <span class="lbl">{{.Version}}</span>
+  <label class="hsearch"><span class="sr">Search help</span><input type="search" id="h-q" placeholder="Search the guide and glossary" autocomplete="off" spellcheck="false"><kbd>/</kbd></label>
+  <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
+</header>
+<div class="hgrid">
+  <nav class="toc" aria-labelledby="toc-h">
+    <h2 id="toc-h">Contents</h2>
+    <ol>
+      {{range .Sections}}<li><a href="#{{.ID}}">{{.Title}}</a></li>{{end}}
+      <li class="sep" aria-hidden="true"></li>
+      <li><a href="#glossary">Glossary</a></li>
+      <li><a href="#about">About this install</a></li>
+    </ol>
+  </nav>
+  <main class="doc">
+    <section class="hs intro" data-s="{{.IntroText}}"><h2>{{.Title}}</h2>{{.Intro}}</section>
+    {{range .Sections}}<section class="hs" id="{{.ID}}" data-s="{{.Text}}"><h2>{{.Title}}</h2>{{.HTML}}</section>
+    {{end}}
+    <section class="hs" id="glossary" data-s="glossary">
+      <h2>Glossary</h2>
+      <p class="lbl">Every word and mark the dashboard explains when you hover it, in one place.</p>
+      <dl class="gl">{{range .Glossary}}
+        <div class="gi" id="term-{{.ID}}" data-s="{{.Search}}"><dt>{{.Label}}<span class="kind">{{.Kind}}</span></dt><dd>{{.Means}}{{if .Do}}<span class="do">{{.Do}}</span>{{end}}</dd></div>{{end}}
+      </dl>
+    </section>
+    <section class="hs" id="about" data-s="about this install version files token notifications support">
+      <h2>About this install</h2>
+      <dl class="kv">{{range .About}}<dt>{{.Key}}</dt><dd>{{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener">{{.Value}}</a>{{else}}{{.Value}}{{end}}</dd>{{end}}</dl>
+    </section>
+    <p class="nomatch" id="h-none" hidden>Nothing in Help matches. Try fewer words.</p>
+  </main>
+</div>
+<script>
+  (function () {
+    {{template "theme-js"}}
+
+    // Search: hide the sections and glossary entries that don't contain every word typed.
+    var q = document.getElementById("h-q"), none = document.getElementById("h-none");
+    var sections = Array.prototype.slice.call(document.querySelectorAll("main.doc > .hs"));
+    var terms = Array.prototype.slice.call(document.querySelectorAll(".gi"));
+    function apply() {
+      var words = q.value.toLowerCase().split(/\s+/).filter(Boolean), shown = 0;
+      function match(el) { var hay = el.dataset.s || ""; return words.every(function (w) { return hay.indexOf(w) !== -1; }); }
+      terms.forEach(function (t) { t.hidden = words.length > 0 && !match(t); });
+      sections.forEach(function (s) {
+        var keep = !words.length || match(s) || (s.id === "glossary" && terms.some(function (t) { return !t.hidden; }));
+        s.hidden = !keep;
+        if (keep) shown++;
+      });
+      none.hidden = shown > 0;
+    }
+    q.addEventListener("input", apply);
+    q.addEventListener("keydown", function (e) { if (e.key === "Escape") { q.value = ""; apply(); q.blur(); } });
+    document.addEventListener("keydown", function (e) {
+      var t = (e.target && e.target.tagName) || "";
+      if (e.key === "/" && t !== "INPUT" && t !== "TEXTAREA" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); q.focus(); }
+    });
+
+    // The contents list marks the section being read.
+    var links = {};
+    document.querySelectorAll(".toc a").forEach(function (a) { links[a.getAttribute("href").slice(1)] = a; });
+    if ("IntersectionObserver" in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (!en.isIntersecting || !links[en.target.id]) return;
+          Object.keys(links).forEach(function (k) { links[k].removeAttribute("aria-current"); });
+          links[en.target.id].setAttribute("aria-current", "true");
+        });
+      }, { rootMargin: "-80px 0px -70% 0px" });
+      sections.forEach(function (s) { if (s.id) io.observe(s); });
+    }
+  })();
+</script>
+</body>
+</html>
