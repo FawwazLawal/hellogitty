@@ -82,3 +82,13 @@ func TestProviderRunsCachesAndKeepsLastGood(t *testing.T) {
 		t.Errorf("stderr should be in the error: %v", err)
 	}
 }
+
+func TestParseWatchList(t *testing.T) {
+	st, err := Parse([]byte(`{"stages": ["a"], "watch": [{"repo": "o/r", "number": 7, "title": "T"}]}`))
+	if err != nil || len(st.Watch) != 1 || st.Watch[0] != (WatchIssue{Repo: "o/r", Number: 7, Title: "T"}) {
+		t.Fatalf("watch %+v %v", st, err)
+	}
+	if _, err := Parse([]byte(`{"stages": ["a"], "watch": [{"repo": "o", "number": 7}]}`)); err == nil {
+		t.Error("a watch entry without owner/name is refused")
+	}
+}

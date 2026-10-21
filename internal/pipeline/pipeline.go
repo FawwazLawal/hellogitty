@@ -7,11 +7,13 @@
 //	  "repos": {
 //	    "owner/name": {"stage": "build", "done": ["triage"], "failed": [],
 //	                   "label": "PASS", "level": "ok", "notes": "/path/to/notes.md"}
-//	  }
+//	  },
+//	  "watch": [{"repo": "owner/name", "number": 123, "title": "..."}]
 //	}
 //
 // level is "ok" or "caution"; a caution repo lights the flagged cell. notes, when set, is a
-// local text file served read-only at /notes/owner/name.
+// local text file served read-only at /notes/owner/name. watch, optional, lists issues you plan to
+// work on, which HelloGitty checks for someone else getting there first.
 package pipeline
 
 import (
@@ -53,9 +55,17 @@ type Repo struct {
 	Notes  string   `json:"notes"`
 }
 
+// WatchIssue is an issue the user plans to work on.
+type WatchIssue struct {
+	Repo   string `json:"repo"`
+	Number int    `json:"number"`
+	Title  string `json:"title"`
+}
+
 type State struct {
 	Stages []Stage
 	Labels Labels
+	Watch  []WatchIssue
 	repos  map[string]Repo
 }
 
@@ -114,6 +124,7 @@ func Parse(b []byte) (*State, error) {
 			Notes   string `json:"notes"`
 		} `json:"labels"`
 		Repos map[string]Repo `json:"repos"`
+		Watch []WatchIssue    `json:"watch"`
 	}
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return nil, fmt.Errorf("pipeline output: %w", err)
@@ -148,6 +159,12 @@ func Parse(b []byte) (*State, error) {
 			return nil, fmt.Errorf("pipeline output: %s is in unknown stage %q", k, r.Stage)
 		}
 		st.repos[strings.ToLower(k)] = r
+	}
+	for _, w := range raw.Watch {
+		if w.Number <= 0 || strings.Count(w.Repo, "/") != 1 {
+			return nil, fmt.Errorf("pipeline output: bad watch entry %s#%d", w.Repo, w.Number)
+		}
+		st.Watch = append(st.Watch, w)
 	}
 	return st, nil
 }
