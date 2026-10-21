@@ -65,9 +65,29 @@ CREATE TABLE IF NOT EXISTS watch_list (
     status_changed_at   DATETIME,
     UNIQUE(repo_id, issue_number)
 );
+
+CREATE TABLE IF NOT EXISTS first_seen (
+    event_id    TEXT PRIMARY KEY,
+    seen_at     DATETIME NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS overlap (
+    repo        TEXT NOT NULL COLLATE NOCASE,
+    number      INTEGER NOT NULL,
+    signal      TEXT NOT NULL,
+    hard        INTEGER NOT NULL,
+    actor       TEXT,
+    url         TEXT,
+    summary     TEXT,
+    occurred_at DATETIME,
+    reported_at DATETIME NOT NULL,
+    PRIMARY KEY (repo, number, signal)
+);
 `
 
-const schemaVersion = 1
+// schemaVersion goes up whenever schema gains a table, so an existing database runs the schema
+// again; every statement in it is CREATE ... IF NOT EXISTS. 2 added first_seen and overlap.
+const schemaVersion = 2
 
 type Store struct {
 	db *sql.DB
@@ -276,6 +296,62 @@ func (s *Store) SetPRDetail(repoID int64, number int, closingComment, reviewVerd
 func (s *Store) AddWatch(repoID int64, issueNumber int) error {
 	_, err := s.db.Exec(`INSERT OR IGNORE INTO watch_list (repo_id, issue_number) VALUES (?, ?)`, repoID, issueNumber)
 	return err
+}
+
+// FirstSeen returns when an event was first recorded, recording now if it is new. It gives a
+// stable time to events GitHub does not timestamp, such as a merge conflict appearing.
+func (s *Store) FirstSeen(eventID string, now time.Time) (time.Time, error) {
+	if _, err := s.db.Exec(`INSERT OR IGNORE INTO first_seen (event_id, seen_at) VALUES (?, ?)`, eventID, ts(&now)); err != nil {
+		return time.Time{}, err
+	}
+	var at nullTime
+	if err := s.db.QueryRow(`SELECT seen_at FROM first_seen WHERE event_id = ?`, eventID).Scan(&at); err != nil {
+		return time.Time{}, err
+	}
+	return at.t, nil
+}
+
+// Overlap is a sign that someone else is working on an issue you plan to take, recorded the one
+// time it was reported. Rows are never updated, so a report keeps its id, time and wording.
+type Overlap struct {
+	Repo       string
+	Number     int
+	Signal     string // "pr-8521", "assigned-octocat", "claim-123", "closed", "similar-pr-8521"
+	Hard       bool   // false for a shared-title-words match, which is only worth a look
+	Actor      string
+	URL        string
+	Summary    string
+	OccurredAt time.Time
+	ReportedAt time.Time
+}
+
+// AddOverlap records a report. Recording the same issue and signal again changes nothing.
+func (s *Store) AddOverlap(o Overlap) error {
+	_, err := s.db.Exec(`INSERT OR IGNORE INTO overlap (repo, number, signal, hard, actor, url, summary, occurred_at, reported_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, o.Repo, o.Number, o.Signal, o.Hard, nullStr(o.Actor), nullStr(o.URL),
+		nullStr(o.Summary), ts(&o.OccurredAt), ts(&o.ReportedAt))
+	return err
+}
+
+// Overlaps returns every recorded report, oldest first.
+func (s *Store) Overlaps() ([]Overlap, error) {
+	rows, err := s.db.Query(`SELECT repo, number, signal, hard, COALESCE(actor, ''), COALESCE(url, ''), COALESCE(summary, ''),
+		occurred_at, reported_at FROM overlap ORDER BY reported_at, repo, number, signal`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Overlap
+	for rows.Next() {
+		var o Overlap
+		var occurred, reported nullTime
+		if err := rows.Scan(&o.Repo, &o.Number, &o.Signal, &o.Hard, &o.Actor, &o.URL, &o.Summary, &occurred, &reported); err != nil {
+			return nil, err
+		}
+		o.OccurredAt, o.ReportedAt = occurred.t, reported.t
+		out = append(out, o)
+	}
+	return out, rows.Err()
 }
 
 // RemoveWatch drops an issue from the watch list and reports whether it was being watched.

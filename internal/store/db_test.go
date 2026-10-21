@@ -174,3 +174,57 @@ func TestMergedByHandLeavesTheDeniedList(t *testing.T) {
 		t.Errorf("denied total %d, want 3", rep[0].DeniedPRsTotal)
 	}
 }
+
+func TestFirstSeenKeepsTheFirstTime(t *testing.T) {
+	s := openTemp(t)
+	first := time.Date(2026, 10, 20, 7, 0, 0, 0, time.UTC)
+	got, err := s.FirstSeen("hg-o-r-1-conflict-abc", first)
+	if err != nil || !got.Equal(first) {
+		t.Fatalf("first sighting: %v %v", got, err)
+	}
+	if got, _ := s.FirstSeen("hg-o-r-1-conflict-abc", first.Add(time.Hour)); !got.Equal(first) {
+		t.Errorf("a later sighting must not move the time: %v", got)
+	}
+}
+
+func TestOverlapIsRecordedOnce(t *testing.T) {
+	s := openTemp(t)
+	at := time.Date(2026, 10, 19, 8, 28, 25, 0, time.UTC)
+	o := Overlap{Repo: "hapifhir/hapi-fhir", Number: 8504, Signal: "pr-8521", Hard: true, Actor: "rasmus0201", Summary: "first wording", OccurredAt: at, ReportedAt: at.Add(time.Hour)}
+	if err := s.AddOverlap(o); err != nil {
+		t.Fatal(err)
+	}
+	o.Repo, o.Summary = "HAPIFHIR/hapi-fhir", "second wording"
+	if err := s.AddOverlap(o); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.Overlaps()
+	if err != nil || len(got) != 1 || got[0].Summary != "first wording" || !got[0].Hard || !got[0].OccurredAt.Equal(at) {
+		t.Errorf("a report is kept as first written: %+v %v", got, err)
+	}
+}
+
+func TestAnOlderDatabaseGainsTheNewTables(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "v1.db")
+	s, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// What a database made before first_seen and overlap existed looks like.
+	s.db.Exec(`DROP TABLE first_seen`)
+	s.db.Exec(`DROP TABLE overlap`)
+	s.db.Exec(`PRAGMA user_version = 1`)
+	s.Close()
+
+	s, err = Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	if _, err := s.FirstSeen("x", time.Now()); err != nil {
+		t.Errorf("first_seen missing after upgrade: %v", err)
+	}
+	if _, err := s.Overlaps(); err != nil {
+		t.Errorf("overlap missing after upgrade: %v", err)
+	}
+}
