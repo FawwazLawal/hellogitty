@@ -1,0 +1,267 @@
+package inbox
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"reflect"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/FawwazLawal/hellogitty/internal/store"
+	"github.com/FawwazLawal/hellogitty/internal/work"
+)
+
+var t0 = time.Date(2026, 10, 20, 7, 40, 1, 0, time.UTC)
+
+func tp(t time.Time) *time.Time { return &t }
+
+// board is one open pull request carrying every kind of event, plus things that must stay out.
+func board() *work.Board {
+	return &work.Board{Login: "me", Sent: []work.Item{
+		{PR: true, Role: work.RoleAuthor, Repo: "OpenCTI-Platform/opencti", Number: 19110, State: "OPEN",
+			URL: "https://github.com/OpenCTI-Platform/opencti/pull/19110", HeadOID: "abcdef0123456789", Base: "master",
+			ReviewDecision: "CHANGES_REQUESTED", ChangesBy: []string{"Archidoit"}, ChangesAt: tp(t0), Conflict: true,
+			Threads:   []work.Thread{{Author: "Archidoit"}, {Author: "Archidoit"}},
+			CheckList: []work.Check{{Name: "lint", State: work.CheckFailed, At: tp(t0.Add(time.Hour))}, {Name: "test", State: work.CheckPassed}},
+			Recent: []work.Activity{
+				{Author: "Archidoit", Review: "CHANGES_REQUESTED", Body: "Use the EMPTY_VALUE constant", At: t0,
+					URL: "https://github.com/OpenCTI-Platform/opencti/pull/19110#pullrequestreview-1761234567"},
+				{Author: "Archidoit", Body: "<!-- x -->Also **here**", At: t0.Add(time.Minute),
+					URL: "https://github.com/OpenCTI-Platform/opencti/pull/19110#issuecomment-555"},
+				{Author: "coderabbitai", Bot: true, Path: "src/a.ts", Body: "Rename this", At: t0.Add(2 * time.Minute),
+					URL: "https://github.com/OpenCTI-Platform/opencti/pull/19110#discussion_r777"},
+			}},
+		{PR: true, Role: work.RoleAuthor, Repo: "pbakaus/impeccable", Number: 1084, State: "MERGED", MergedBy: "pbakaus", ClosedAt: tp(t0.Add(3 * time.Hour)),
+			URL: "https://github.com/pbakaus/impeccable/pull/1084"},
+		{PR: false, Role: work.RoleAuthor, Repo: "x/issue", Number: 1, State: "OPEN", Recent: []work.Activity{{Author: "a", Body: "issue reply", URL: "u#issuecomment-1"}}},
+		{PR: true, Role: work.RoleInvolved, Repo: "x/other", Number: 2, State: "OPEN", Recent: []work.Activity{{Author: "a", Body: "not ours", URL: "u#issuecomment-2"}}},
+	}, Incoming: []work.Item{{PR: true, Role: work.RoleMaintains, Repo: "me/tool", Number: 3, State: "OPEN",
+		Recent: []work.Activity{{Author: "a", Body: "incoming", URL: "u#issuecomment-3"}}}}}
+}
+
+func reports() []store.RepoReport {
+	return []store.RepoReport{{Repo: store.Repo{Owner: "corazawaf", Name: "coraza"}, Watch: []store.WatchReport{
+		{Number: 804, Title: "Document skip", Status: "claimed", ClaimDetail: "https://github.com/corazawaf/coraza/issues/804#issuecomment-9", StatusChangedAt: tp(t0)},
+		{Number: 805, Title: "Still open", Status: "open"},
+	}}}
+}
+
+// seenAt records first sightings like the store does: the first call for an id fixes its time.
+func seenAt(table map[string]time.Time, now time.Time) FirstSeen {
+	return func(id string) time.Time {
+		if t, ok := table[id]; ok {
+			return t
+		}
+		table[id] = now
+		return now
+	}
+}
+
+func TestBuildKeepsOnlyPertinentEvents(t *testing.T) {
+	got := Build(board(), reports(), seenAt(map[string]time.Time{}, t0.Add(10*time.Hour)))
+	byID := map[string]Entry{}
+	for _, e := range got {
+		byID[e.ID] = e
+	}
+	want := map[string]string{
+		"hg-opencti-platform-opencti-19110-review-1761234567": KindReview,
+		"hg-opencti-platform-opencti-19110-comment-555":       KindComment,
+		"hg-opencti-platform-opencti-19110-inline-777":        KindComment,
+		"hg-opencti-platform-opencti-19110-ci-red-abcdef0":    KindState,
+		"hg-opencti-platform-opencti-19110-conflict-abcdef0":  KindState,
+		"hg-pbakaus-impeccable-1084-merged":                   KindState,
+		"hg-corazawaf-coraza-804-watch-claimed":               KindWatched,
+	}
+	if len(got) != len(want) {
+		var ids []string
+		for _, e := range got {
+			ids = append(ids, e.ID)
+		}
+		t.Fatalf("got %d entries %v, want %d", len(got), ids, len(want))
+	}
+	for id, kind := range want {
+		if e, ok := byID[id]; !ok || e.Kind != kind {
+			t.Errorf("missing or wrong kind for %s: %+v", id, e)
+		}
+	}
+	r := byID["hg-opencti-platform-opencti-19110-review-1761234567"]
+	if r.Actor != "Archidoit" || !r.OccurredAt.Equal(t0) || r.Summary != "CHANGES_REQUESTED, 2 unresolved inline comments: Use the EMPTY_VALUE constant" {
+		t.Errorf("review entry %+v", r)
+	}
+	if c := byID["hg-opencti-platform-opencti-19110-inline-777"]; c.Summary != "Inline on a.ts: Rename this" {
+		t.Errorf("inline summary should name the file, not the whole path: %q", c.Summary)
+	}
+	if c := byID["hg-opencti-platform-opencti-19110-comment-555"]; c.Summary != "Also here" {
+		t.Errorf("comment summary should be one clean line: %q", c.Summary)
+	}
+	if ci := byID["hg-opencti-platform-opencti-19110-ci-red-abcdef0"]; !ci.OccurredAt.Equal(t0.Add(time.Hour)) || ci.Summary != "CI failing: lint" {
+		t.Errorf("CI entry should carry the failing check's own time and name: %+v", ci)
+	}
+	if w := byID["hg-corazawaf-coraza-804-watch-claimed"]; w.URL != "https://github.com/corazawaf/coraza/issues/804#issuecomment-9" {
+		t.Errorf("watched entry should link the claim: %+v", w)
+	}
+	for i := 1; i < len(got); i++ {
+		if got[i].OccurredAt.Before(got[i-1].OccurredAt) {
+			t.Error("entries should be oldest first")
+		}
+	}
+}
+
+func TestIDsAndTimesStableAcrossPolls(t *testing.T) {
+	table := map[string]time.Time{}
+	first := Build(board(), reports(), seenAt(table, t0.Add(10*time.Hour)))
+	second := Build(board(), reports(), seenAt(table, t0.Add(11*time.Hour))) // an hour later
+	if !reflect.DeepEqual(first, second) {
+		t.Errorf("the same events must keep the same ids and times across polls\nfirst  %+v\nsecond %+v", first, second)
+	}
+	for _, e := range first {
+		if strings.Contains(e.ID, "conflict") && !e.OccurredAt.Equal(t0.Add(10*time.Hour)) {
+			t.Errorf("an event GitHub doesn't timestamp keeps its first-seen time: %+v", e)
+		}
+	}
+}
+
+func TestEventIDFromGitHubIDs(t *testing.T) {
+	for url, want := range map[string]string{
+		"https://github.com/o/r/pull/1#issuecomment-123":      "comment-123",
+		"https://github.com/o/r/pull/1#pullrequestreview-456": "review-456",
+		"https://github.com/o/r/pull/1#discussion_r789":       "inline-789",
+	} {
+		if got := eventID(url); got != want {
+			t.Errorf("%s: got %s want %s", url, got, want)
+		}
+	}
+	if a, b := eventID("https://example/x"), eventID("https://example/x"); a != b || !strings.HasPrefix(a, "event-") {
+		t.Errorf("fallback id must be stable: %s %s", a, b)
+	}
+}
+
+func TestWriteReplacesAtomicallyAndLeavesNoTempFiles(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "inbox.json")
+	for i := 0; i < 2; i++ {
+		f := File{GeneratedAt: t0.Add(time.Duration(i) * time.Minute), PollIntervalMinutes: 5, Entries: Build(board(), reports(), seenAt(map[string]time.Time{}, t0))}
+		if err := Write(path, f); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var got File
+	b, _ := os.ReadFile(path)
+	if err := json.Unmarshal(b, &got); err != nil || len(got.Entries) != 7 || !got.GeneratedAt.Equal(t0.Add(time.Minute)) {
+		t.Fatalf("second write should be the whole file: err=%v entries=%d at=%v", err, len(got.Entries), got.GeneratedAt)
+	}
+	names, _ := os.ReadDir(dir)
+	if len(names) != 1 {
+		t.Errorf("temporary files left behind: %v", names)
+	}
+	if fi, _ := os.Stat(path); fi.Mode().Perm() != 0o644 {
+		t.Errorf("mode %v", fi.Mode().Perm())
+	}
+	if err := Write(path, File{}); err != nil {
+		t.Fatal(err)
+	}
+	b, _ = os.ReadFile(path)
+	if !strings.Contains(string(b), `"entries": []`) {
+		t.Errorf("an empty inbox is an empty list, not null: %s", b)
+	}
+}
+
+func TestFailedWriteKeepsThePreviousFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "inbox.json")
+	if err := Write(path, File{PollIntervalMinutes: 5}); err != nil {
+		t.Fatal(err)
+	}
+	before, _ := os.ReadFile(path)
+	os.Chmod(dir, 0o555) // no new files allowed, so the temporary file cannot be created
+	defer os.Chmod(dir, 0o755)
+	if err := Write(path, File{PollIntervalMinutes: 60}); err == nil {
+		t.Skip("directory permissions not enforced here (running as root?)")
+	}
+	after, _ := os.ReadFile(path)
+	if string(before) != string(after) {
+		t.Error("a failed write must leave the previous inbox untouched")
+	}
+}
+
+func TestReaderNeverSeesAHalfWrittenFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "inbox.json")
+	big := Build(board(), reports(), seenAt(map[string]time.Time{}, t0))
+	for len(big) < 2000 {
+		big = append(big, big...)
+	}
+	if err := Write(path, File{Entries: big}); err != nil {
+		t.Fatal(err)
+	}
+	var wg sync.WaitGroup
+	stop := make(chan struct{})
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 40; i++ {
+			Write(path, File{PollIntervalMinutes: i, Entries: big})
+		}
+		close(stop)
+	}()
+	reads := 0
+	for done := false; !done; {
+		select {
+		case <-stop:
+			done = true
+		default:
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var f File
+		if err := json.Unmarshal(b, &f); err != nil {
+			t.Fatalf("read a partial inbox (%d bytes): %v", len(b), err)
+		}
+		reads++
+	}
+	wg.Wait()
+	if reads == 0 {
+		t.Error("no reads happened during the writes")
+	}
+}
+
+func TestOverlapsSayOneThingPerWatchedIssue(t *testing.T) {
+	rows := []store.Overlap{
+		{Repo: "hapifhir/hapi-fhir", Number: 8504, Signal: "similar-pr-8600", Actor: "z", URL: "u1", Summary: "Worth a look", OccurredAt: t0, ReportedAt: t0},
+		{Repo: "hapifhir/hapi-fhir", Number: 8504, Signal: "pr-8521", Hard: true, Actor: "rasmus0201", URL: "https://github.com/hapifhir/hapi-fhir/pull/8521",
+			Summary: "Another pull request cites this issue: #8521", OccurredAt: t0.Add(-time.Hour), ReportedAt: t0},
+		{Repo: "o/soft", Number: 2, Signal: "similar-pr-3", URL: "u3", Summary: "Worth a look: #3", OccurredAt: t0, ReportedAt: t0},
+		{Repo: "o/gone", Number: 4, Signal: "closed", Hard: true, Summary: "Closed", OccurredAt: t0, ReportedAt: t0},
+		{Repo: "corazawaf/coraza", Number: 804, Signal: "assigned-x", Hard: true, Summary: "Assigned to @x", OccurredAt: t0, ReportedAt: t0},
+	}
+	watching := map[string]bool{"hapifhir/hapi-fhir#8504": true, "o/soft#2": true, "corazawaf/coraza#804": true} // o/gone left the board
+	got := WithOverlaps(Build(nil, reports(), seenAt(map[string]time.Time{}, t0)), rows, watching)
+	byID := map[string]Entry{}
+	for _, e := range got {
+		byID[e.ID] = e
+	}
+	if len(got) != 3 {
+		t.Fatalf("one entry per watched issue, got %+v", got)
+	}
+	hard := byID["hg-hapifhir-hapi-fhir-8504-overlap-pr-8521"]
+	if hard.Kind != KindOverlap || hard.Actor != "rasmus0201" || !hard.OccurredAt.Equal(t0.Add(-time.Hour)) {
+		t.Errorf("what happened outranks the soft match: %+v", got)
+	}
+	if e := byID["hg-o-soft-2-similar-pr-3"]; e.Kind != KindSimilar {
+		t.Errorf("soft entry %+v", e)
+	}
+	if _, ok := byID["hg-corazawaf-coraza-804-watch-claimed"]; ok {
+		t.Error("the watched-issue entry for the same issue is dropped")
+	}
+	if _, ok := byID["hg-corazawaf-coraza-804-overlap-assigned-x"]; !ok {
+		t.Error("the overlap entry replaces it")
+	}
+	if again := WithOverlaps(nil, rows, watching); !reflect.DeepEqual(again[0].ID, got[0].ID) {
+		t.Error("ids are stable")
+	}
+}
