@@ -19,6 +19,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/FawwazLawal/hellogitty/docs"
 	"github.com/FawwazLawal/hellogitty/internal/config"
 	"github.com/FawwazLawal/hellogitty/internal/dashboard"
 	"github.com/FawwazLawal/hellogitty/internal/github"
@@ -176,7 +177,8 @@ func run() int {
 	}
 	ov := &overlap.Watcher{GH: gh, Store: st}
 	checkOverlap := overlapChecker(ov, st, pl, pipe, board)
-	writeInbox := inboxWriter(cfg.Path(cfg.Inbox), st, pl, board, ov)
+	src := source{st: st, p: pl, gh: gh, pipe: pipe, board: board, feed: feed, ov: ov}
+	writeInbox := inboxWriter(cfg.Path(cfg.Inbox), src)
 	snapPath := cfg.Path(cfg.Snapshot)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -233,11 +235,16 @@ func run() int {
 		Handler: &dashboard.Handler{
 			Template:     web.Index,
 			SnapshotPath: snapPath,
-			Source:       source{st: st, p: pl, gh: gh, pipe: pipe, board: board, feed: feed, ov: ov},
+			Source:       src,
 			PollInterval: cfg.PollInterval,
 			Version:      versionLabel,
 			Baby:         versionBaby,
 			Mascot:       mascotFS,
+			HelpTemplate: web.Help,
+			FeedTemplate: web.Feed,
+			Guide:        docs.Guide,
+			Screenshot:   docs.Screenshot,
+			About:        aboutInstall(cfg),
 		},
 		ReadHeaderTimeout: 10 * time.Second,
 	}
@@ -348,11 +355,12 @@ func applyTotals(reports []store.RepoReport, totals map[string]poller.IssueTotal
 	}
 }
 
-// inboxWriter returns a function that rewrites the inbox file from the latest work board and watch
-// list, or does nothing when no inbox is configured. Both loops call it; the mutex keeps one write
-// at a time, and the file itself is replaced atomically. Nothing is written before the first board,
-// so a fresh start never replaces a full inbox with an empty one.
-func inboxWriter(path string, st *store.Store, pl *poller.Poller, board *work.Tracker, ov *overlap.Watcher) func() {
+// inboxWriter returns a function that rewrites the inbox file from the latest work board, watch
+// list, overlap reports and new issues, or does nothing when no inbox is configured. Both loops call
+// it; the mutex keeps one write at a time, and the file itself is replaced atomically. Nothing is
+// written before the first board and the first overlap check, so a fresh start never replaces a full
+// inbox with a partial one.
+func inboxWriter(path string, src source) func() {
 	if path == "" {
 		return func() {}
 	}
@@ -360,34 +368,10 @@ func inboxWriter(path string, st *store.Store, pl *poller.Poller, board *work.Tr
 	return func() {
 		mu.Lock()
 		defer mu.Unlock()
-		b, _ := board.Snapshot()
-		if b == nil {
-			return
-		}
-		reports, err := tracked(st, pl)
-		if err != nil {
-			log.Printf("inbox: %v", err)
-			return
-		}
 		now := time.Now().UTC()
-		seen := func(id string) time.Time {
-			t, err := st.FirstSeen(id, now)
-			if err != nil {
-				return now
-			}
-			return t
-		}
-		entries := inbox.Build(b, reports, seen)
-		// Until the overlap watcher has run once it does not know what it watches; writing now would
-		// drop its entries and bring them back a few minutes later.
-		watching, ready := ov.Watching()
-		if !ready {
+		entries, ok := src.entries(now)
+		if !ok {
 			return
-		}
-		if rows, err := st.Overlaps(); err != nil {
-			log.Printf("inbox: overlap reports left out: %v", err) // the rest of the inbox still matters
-		} else {
-			entries = inbox.WithOverlaps(entries, rows, watching)
 		}
 		f := inbox.File{GeneratedAt: now, PollIntervalMinutes: int(workRefresh / time.Minute), Entries: entries}
 		if err := inbox.Write(path, f); err != nil {
@@ -395,6 +379,34 @@ func inboxWriter(path string, st *store.Store, pl *poller.Poller, board *work.Tr
 			return
 		}
 		log.Printf("inbox: %d entries written to %s", len(entries), path)
+	}
+}
+
+// aboutInstall lists the files and settings in use, for Help → About this install.
+func aboutInstall(cfg *config.Config) []dashboard.AboutItem {
+	optional := func(path string) string {
+		if path == "" {
+			return "not set"
+		}
+		return cfg.Path(path)
+	}
+	repos := strconv.Itoa(len(cfg.Repos)) + " listed in the config"
+	if cfg.ReposFile != "" {
+		repos += ", plus " + cfg.Path(cfg.ReposFile) + " (re-read every check)"
+	}
+	pipe := "not set"
+	if len(cfg.Pipeline) > 0 {
+		pipe = "set"
+	}
+	return []dashboard.AboutItem{
+		{Key: "Config folder", Value: cfg.Dir},
+		{Key: "Dashboard address", Value: "http://" + cfg.Listen},
+		{Key: "Checks repositories every", Value: strconv.Itoa(int(cfg.PollInterval/time.Minute)) + " minutes"},
+		{Key: "Tracked repositories", Value: repos},
+		{Key: "Database", Value: cfg.Path(cfg.Database)},
+		{Key: "Snapshot file", Value: cfg.Path(cfg.Snapshot)},
+		{Key: "Inbox file", Value: optional(cfg.Inbox)},
+		{Key: "Pipeline command", Value: pipe},
 	}
 }
 

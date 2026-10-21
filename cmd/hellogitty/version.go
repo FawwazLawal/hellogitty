@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"regexp"
 	"runtime/debug"
 	"strconv"
@@ -17,6 +18,35 @@ var (
 	codename = ""
 )
 
+// releaseRecord is release.txt: the latest published tag, such as "v0.2.3". The publisher updates
+// it with every publish, so a dev build can say which release it follows.
+//
+//go:embed release.txt
+var releaseRecord string
+
+// lastRelease reads releaseRecord, or "" when it holds no version.
+func lastRelease() string {
+	f := strings.Fields(releaseRecord)
+	if len(f) != 1 {
+		return ""
+	}
+	if _, _, _, _, ok := parseSemver(f[0]); !ok {
+		return ""
+	}
+	return f[0]
+}
+
+// shown is how a version reads to people. Every publish gets the next patch number, and the patch
+// number is shown in brackets after its version: tag v0.2.3 reads "v0.2.0 (3)", the third update
+// since v0.2.0. The publish that starts a version has no brackets.
+func shown(v string) string {
+	major, minor, patch, pre, ok := parseSemver(v)
+	if !ok || patch == 0 || pre != "" {
+		return v
+	}
+	return "v" + strconv.Itoa(major) + "." + strconv.Itoa(minor) + ".0 (" + strconv.Itoa(patch) + ")"
+}
+
 // codenames maps each major version line to its codename. A codename owns one major line:
 // it is a baby until the owner graduates it at X.0.0. Black Bombay alone also owns the 0.x
 // line, its baby phase. Only the owner adds an entry here.
@@ -32,6 +62,7 @@ type buildInfo struct {
 	Version  string // "dev", or a semver tag such as v0.1.0
 	Codename string // "" when unknown
 	Baby     bool
+	After    string // for a dev build: the release it follows
 }
 
 func currentBuild() buildInfo {
@@ -41,7 +72,22 @@ func currentBuild() buildInfo {
 			v = info.Main.Version
 		}
 	}
-	return describe(v, codename)
+	b := describe(v, codename)
+	if b.Version == "dev" {
+		b.After = lastRelease()
+	}
+	return b
+}
+
+// number is the version as people read it: "v0.2.0 (3)".
+func (b buildInfo) number() string { return shown(b.Version) }
+
+// after says which release a dev build follows: "after v0.2.0 (3)", or "".
+func (b buildInfo) after() string {
+	if b.After == "" {
+		return ""
+	}
+	return "after " + shown(b.After)
 }
 
 // describe applies the naming scheme to a version string.
@@ -85,12 +131,15 @@ func parseSemver(v string) (major, minor, patch int, pre string, ok bool) {
 // "v0.1.0 - Black Bombay (baby)".
 func (b buildInfo) title() string {
 	if b.Version == "dev" {
+		if a := b.after(); a != "" {
+			return "dev (unreleased build, " + a + ")"
+		}
 		return "dev (unreleased build)"
 	}
 	if b.Codename == "" {
-		return b.Version
+		return b.number()
 	}
-	t := b.Version + " - " + b.Codename
+	t := b.number() + " - " + b.Codename
 	if b.Baby {
 		t += " (baby)"
 	}
@@ -105,10 +154,13 @@ func versionLine() string { return "hellogitty " + currentBuild().title() }
 func dashboardVersion() (label string, baby bool) {
 	b := currentBuild()
 	if b.Version == "dev" {
+		if a := b.after(); a != "" {
+			return "dev build · " + a, false
+		}
 		return "dev build", false
 	}
 	if b.Codename == "" {
-		return b.Version, false
+		return b.number(), false
 	}
-	return b.Version + " · " + b.Codename, b.Baby
+	return b.number() + " · " + b.Codename, b.Baby
 }
