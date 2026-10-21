@@ -370,6 +370,9 @@ func (c *Client) send(ctx context.Context, method, rawURL string, payload []byte
 		case resp.StatusCode == http.StatusNotModified:
 			return "", resp.Header, true, nil
 
+		case resp.StatusCode == http.StatusNoContent || resp.StatusCode == http.StatusResetContent:
+			return "", resp.Header, false, nil // done, and nothing to decode
+
 		case isRateLimited(resp) || isSecondaryLimit(resp.StatusCode, body):
 			wait := c.rateWait(resp.Header)
 			if wait > maxRateWait || attempt >= maxAttempts {

@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -36,7 +37,6 @@ type NotificationPage struct {
 
 // Notifications lists notification threads updated since the given time, read and unread. With
 // lastModified from the previous call, an unchanged inbox answers 304 at no cost to the quota.
-// It only reads: HelloGitty never marks a notification read.
 func (c *Client) Notifications(ctx context.Context, since time.Time, lastModified string) (NotificationPage, error) {
 	q := url.Values{"all": {"true"}, "per_page": {"50"}, "since": {since.UTC().Format(time.RFC3339)}}
 	var page NotificationPage
@@ -70,4 +70,16 @@ func (c *Client) Notifications(ctx context.Context, since time.Time, lastModifie
 		next, extra = n, nil
 	}
 	return page, nil
+}
+
+// MarkThreadRead marks one notification thread read. It is HelloGitty's only write to GitHub, made
+// when you acknowledge a feed row that has a notification behind it.
+func (c *Client) MarkThreadRead(ctx context.Context, id string) error {
+	for _, r := range id {
+		if r < '0' || r > '9' {
+			return fmt.Errorf("github: not a notification thread id: %q", id)
+		}
+	}
+	_, _, _, err := c.send(ctx, http.MethodPatch, c.url("/notifications/threads/"+id, nil), nil, nil, nil)
+	return err
 }
