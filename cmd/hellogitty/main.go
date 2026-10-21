@@ -15,12 +15,15 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/FawwazLawal/hellogitty/internal/config"
 	"github.com/FawwazLawal/hellogitty/internal/dashboard"
 	"github.com/FawwazLawal/hellogitty/internal/github"
+	"github.com/FawwazLawal/hellogitty/internal/inbox"
+	"github.com/FawwazLawal/hellogitty/internal/overlap"
 	"github.com/FawwazLawal/hellogitty/internal/pipeline"
 	"github.com/FawwazLawal/hellogitty/internal/poller"
 	"github.com/FawwazLawal/hellogitty/internal/snapshot"
@@ -109,7 +112,7 @@ func run() int {
 	cf := commonFlags(fs)
 	listen := fs.String("listen", "", "dashboard address, loopback only (default from config, else "+config.DefaultListen+")")
 	interval := fs.Duration("interval", 0, "poll interval (default from config, else 60m)")
-	once := fs.Bool("once", false, "poll once, write the snapshot, and exit")
+	once := fs.Bool("once", false, "poll once, write the snapshot and the inbox, and exit")
 	showVersion := fs.Bool("version", false, "print the version and exit")
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		return 2
@@ -157,6 +160,9 @@ func run() int {
 	}}
 	pipe := &pipeline.Provider{Command: cfg.PipelineCommand(), Dir: cfg.Dir}
 	board := &work.Tracker{GH: gh, Maintain: cfg.Maintain}
+	ov := &overlap.Watcher{GH: gh, Store: st}
+	checkOverlap := overlapChecker(ov, st, pl, pipe, board)
+	writeInbox := inboxWriter(cfg.Path(cfg.Inbox), st, pl, board, ov)
 	snapPath := cfg.Path(cfg.Snapshot)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -179,7 +185,16 @@ func run() int {
 	}
 
 	if *once {
-		if cycle() > 0 {
+		failed := cycle()
+		if cfg.Inbox != "" {
+			if err := board.Refresh(ctx); err != nil {
+				log.Printf("work board: %v", err)
+				failed++
+			}
+			checkOverlap(ctx)
+			writeInbox()
+		}
+		if failed > 0 {
 			return 1
 		}
 		return 0
@@ -224,12 +239,18 @@ func run() int {
 	go func() {
 		ticker := time.NewTicker(workRefresh)
 		defer ticker.Stop()
+		var checked time.Time
 		for {
 			if err := board.Refresh(ctx); err != nil {
 				log.Printf("work board: %v", err)
 			} else if b, _ := board.Snapshot(); b != nil {
 				log.Printf("work board: %d sent, %d incoming, %d GraphQL points (%d left)", len(b.Sent), len(b.Incoming), b.Cost, b.Remaining)
 			}
+			if time.Since(checked) >= overlapRefresh-time.Minute {
+				checked = time.Now()
+				checkOverlap(ctx)
+			}
+			writeInbox()
 			select {
 			case <-ctx.Done():
 				return
@@ -243,6 +264,7 @@ func run() int {
 		defer ticker.Stop()
 		for {
 			cycle()
+			writeInbox()
 			select {
 			case <-ctx.Done():
 				return
@@ -292,6 +314,130 @@ func applyTotals(reports []store.RepoReport, totals map[string]poller.IssueTotal
 		}
 	}
 }
+
+// inboxWriter returns a function that rewrites the inbox file from the latest work board and watch
+// list, or does nothing when no inbox is configured. Both loops call it; the mutex keeps one write
+// at a time, and the file itself is replaced atomically. Nothing is written before the first board,
+// so a fresh start never replaces a full inbox with an empty one.
+func inboxWriter(path string, st *store.Store, pl *poller.Poller, board *work.Tracker, ov *overlap.Watcher) func() {
+	if path == "" {
+		return func() {}
+	}
+	var mu sync.Mutex
+	return func() {
+		mu.Lock()
+		defer mu.Unlock()
+		b, _ := board.Snapshot()
+		if b == nil {
+			return
+		}
+		reports, err := tracked(st, pl)
+		if err != nil {
+			log.Printf("inbox: %v", err)
+			return
+		}
+		now := time.Now().UTC()
+		seen := func(id string) time.Time {
+			t, err := st.FirstSeen(id, now)
+			if err != nil {
+				return now
+			}
+			return t
+		}
+		entries := inbox.Build(b, reports, seen)
+		// Until the overlap watcher has run once it does not know what it watches; writing now would
+		// drop its entries and bring them back a few minutes later.
+		watching, ready := ov.Watching()
+		if !ready {
+			return
+		}
+		if rows, err := st.Overlaps(); err != nil {
+			log.Printf("inbox: overlap reports left out: %v", err) // the rest of the inbox still matters
+		} else {
+			entries = inbox.WithOverlaps(entries, rows, watching)
+		}
+		f := inbox.File{GeneratedAt: now, PollIntervalMinutes: int(workRefresh / time.Minute), Entries: entries}
+		if err := inbox.Write(path, f); err != nil {
+			log.Printf("inbox: %v", err)
+			return
+		}
+		log.Printf("inbox: %d entries written to %s", len(entries), path)
+	}
+}
+
+// overlapChecker returns a function that checks the issues you plan to work on, and the issues
+// your open pull requests fix, for someone else's work. It waits for the first work board, which
+// says who you are and which issues your pull requests fix.
+func overlapChecker(ov *overlap.Watcher, st *store.Store, pl *poller.Poller, pipe *pipeline.Provider, board *work.Tracker) func(context.Context) {
+	return func(ctx context.Context) {
+		b, _ := board.Snapshot()
+		if b == nil {
+			return
+		}
+		ps, err := pipe.Get(ctx)
+		if err != nil {
+			log.Printf("overlap: %v", err) // ps is the last good answer, if there was one
+		}
+		reports, err := tracked(st, pl)
+		if err != nil {
+			log.Printf("overlap: %v", err)
+		}
+		targets := overlapTargets(ps, reports, b)
+		res, err := ov.Run(ctx, b.Login, targets)
+		if err != nil {
+			log.Printf("overlap: %v", err)
+		}
+		if len(res.Skipped) > 0 {
+			log.Printf("overlap: GitHub has no issue %s", strings.Join(res.Skipped, ", "))
+		}
+		for _, o := range res.Reported {
+			log.Printf("overlap: reported %s#%d %s: %s", o.Repo, o.Number, o.Signal, o.Summary)
+		}
+		log.Printf("overlap: %d of %d issues checked, %d new reports, %d GraphQL points (%d left)",
+			res.Checked, len(targets), len(res.Reported), res.Cost, res.Remaining)
+	}
+}
+
+// overlapTargets merges the pipeline's watch list, the open issues on the watch list, and the
+// issues your open pull requests fix, one target per issue.
+func overlapTargets(ps *pipeline.State, reports []store.RepoReport, b *work.Board) []overlap.Target {
+	var out []overlap.Target
+	at := map[string]int{}
+	add := func(repo string, n int, title string) *overlap.Target {
+		k := overlap.Key(repo, n)
+		if i, ok := at[k]; ok {
+			return &out[i]
+		}
+		at[k] = len(out)
+		out = append(out, overlap.Target{Repo: repo, Number: n, Title: title})
+		return &out[len(out)-1]
+	}
+	if ps != nil {
+		for _, w := range ps.Watch {
+			add(w.Repo, w.Number, w.Title)
+		}
+	}
+	for _, r := range reports {
+		for _, w := range r.Watch {
+			if store.WatchLabel(w.Status) == "STILL_OPEN" {
+				add(r.Owner+"/"+r.Name, w.Number, w.Title)
+			}
+		}
+	}
+	for _, it := range b.Sent {
+		if !it.PR || it.Role != work.RoleAuthor || it.State != "OPEN" {
+			continue
+		}
+		for _, f := range it.Fixes {
+			t := add(f.Repo, f.Number, "")
+			t.OurPRs = append(t.OurPRs, it.Number)
+		}
+	}
+	return out
+}
+
+// overlapRefresh is how often the overlap check runs, on the work board's schedule.
+const overlapRefresh = 15 * time.Minute
 
 // workRefresh is how often the work board is fetched. The page reloads every 5 minutes.
 const workRefresh = 5 * time.Minute

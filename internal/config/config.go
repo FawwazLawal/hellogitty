@@ -36,6 +36,9 @@ type Config struct {
 	// Maintain lists repositories ("owner/name") or organisations ("org") you maintain, beyond the
 	// ones your account owns. Their open pull requests and issues show under "Waiting on you".
 	Maintain []string `json:"maintain"`
+	// Inbox optionally names a JSON file rewritten after every refresh with recent events on your
+	// own pull requests and watched issues, for scripts to pick up.
+	Inbox string `json:"inbox"`
 
 	Dir          string        `json:"-"`
 	PollInterval time.Duration `json:"-"`
