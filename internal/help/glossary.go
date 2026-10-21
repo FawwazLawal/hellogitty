@@ -32,6 +32,7 @@ var glossary = map[string]Term{
 	"dot":          {"Dot", "Green: something new you haven't read. Amber: read, and it's your move. Hollow: read, and nothing is asked of you.", "Opening it on GitHub or from here marks it read."},
 	"new":          {"New", "Activity you haven't read in your GitHub notifications; the tag says what happened.", "Open the title to read it; the dot changes within a minute."},
 	"only-you":     {"Only you", "A step nobody else with the branch can take: signing a CLA, signing off commits, or answering a reviewer in your own words.", "Do these first; they sort to the top of Your move."},
+	"live":         {"Live", "A running list of what just happened, newest first: new issues in tracked repositories, comments, reviews and state changes on your work, someone else's work on issues you plan to take, repositories going quiet, and GitHub notifications.", "Click a line to jump to it on the dashboard. Ack marks it seen; when a GitHub notification is behind it, that is marked read on GitHub too."},
 	"pill":         {"Repository pill", "Which repository and number this row is.", ""},
 
 	// Note chips on a row
