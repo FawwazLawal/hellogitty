@@ -64,8 +64,10 @@ Your work fills in within a few seconds; each followed project takes a few secon
 
 Hover any word with a dotted underline, or a row's title, for more about it.
 
-Leave the page open; it reloads itself every five minutes. [docs/GUIDE.md](docs/GUIDE.md) explains
-every panel, status and colour.
+Leave the page open; it reloads itself every five minutes. Press **?** (or click **Help** in the
+header) for the user guide, a glossary of every term on the page, keyboard shortcuts, answers to
+common questions and the details of your install. The same guide is in
+[docs/GUIDE.md](docs/GUIDE.md).
 
 ## Install
 
@@ -117,8 +119,8 @@ hellogitty -repos junegunn/fzf,BurntSushi/ripgrep
 ### GitHub token
 
 Set `GITHUB_TOKEN` to a GitHub token. Read access to public repositories is all it needs: a
-fine-grained token with no extra permissions, or a classic token with no scopes. HelloGitty only
-ever reads. Your work and Your repositories cover what the token can see, so include private
+fine-grained token with no extra permissions, or a classic token with no scopes. HelloGitty reads;
+its one write is marking a GitHub notification read when you acknowledge it in the live feed. Your work and Your repositories cover what the token can see, so include private
 repositories in the token's access if you want them there too.
 
 ```bash
@@ -132,7 +134,7 @@ hourly cycle for 15 repositories after that. The dashboard shows calls used agai
 budget. Your work is one GraphQL request every 5 minutes, which counts against GitHub's separate
 GraphQL budget, not this one. The new-activity dots read your GitHub notifications about once a
 minute; an unchanged inbox answers "not modified", which costs nothing. Notifications need a
-classic token (no scopes for public repositories, or `repo` / `notifications`); with a fine-grained
+classic token with the `notifications` (or `repo`) scope; with a fine-grained
 token the dashboard works without the dots.
 
 ## Run
@@ -249,14 +251,17 @@ script can act on it without calling GitHub:
 }
 ```
 
-`kind` is `pr_comment`, `pr_review`, `pr_state`, `pr_label`, `pr_bot`, `issue_comment` (a reply that made an
+`kind` is `pr_comment`, `pr_review`, `pr_state`, `pr_label`, `pr_bot`, `new_issue`, `issue_comment` (a reply that made an
 issue your move), `watched_issue`, `issue_overlap` or `issue_similar`
 (see [someone else's work](#someone-elses-work)). A pull request of yours closed without merging is a `pr_state` entry that names who closed it and
 quotes what they said, or says "with no comment" when they said nothing. `pr_label` is one entry
 per label added to a pull request of yours, unless the label is known to be harmless (size and area
 tags, `community`, `documentation`, `docs`, `enhancement`, `bug`, `feature`, `dependencies`,
 `tests`). A label HelloGitty has never seen is reported, not ignored. Both carry `"priority":
-"high"`; other entries have no `priority`. `pr_bot` is one entry per pull request of yours
+"high"`; other entries have no `priority`. `new_issue` is one entry per repository where you are planning work (one with an issue on your
+watch list or the pipeline's): how many unassigned, unclaimed issues it opened in the last day,
+naming the newest few. It is replaced when a newer one arrives and goes when there are none. The
+live feed on the dashboard lists every new issue. `pr_bot` is one entry per pull request of yours
 for what bots still ask to be fixed: an unresolved review comment from a bot on current code, a
 bot's standing "changes requested", or a review saying "Actionable comments posted: N" with no
 commit since. Bot summaries, coverage reports and approvals never count. The entry is replaced
@@ -343,6 +348,8 @@ calls to the GitHub API.
 
 ## Versioning
 
+Every publish is a release with downloadable builds. A release reads as its version and, in
+brackets, how many updates it has had since that version began: "v0.2.0 (3)" is tag `v0.2.3`.
 Releases carry a semantic version and a codename: a coat colour and a cat breed. The current line
 is **Black Bombay (baby)**, the `0.x` releases; it grows up at `v1.0.0`. Later codenames start as
 prereleases of their own major version, and `go install ...@latest` skips prereleases, so `@latest`
