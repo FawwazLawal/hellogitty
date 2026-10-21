@@ -306,13 +306,20 @@ func (c *Client) get(ctx context.Context, rawURL string, out any) (next string, 
 }
 
 func (c *Client) do(ctx context.Context, method, rawURL string, payload []byte, out any) (next string, err error) {
+	next, _, _, err = c.send(ctx, method, rawURL, payload, nil, out)
+	return next, err
+}
+
+// send is do with extra request headers, returning the response headers, and reporting a 304 Not
+// Modified as notModified (out is left alone) rather than as an error.
+func (c *Client) send(ctx context.Context, method, rawURL string, payload []byte, extra map[string]string, out any) (string, http.Header, bool, error) {
 	for attempt := 1; ; attempt++ {
 		if err := c.waitIfExhausted(ctx); err != nil {
-			return "", err
+			return "", nil, false, err
 		}
 		if strings.Contains(rawURL, "/search/") {
 			if err := c.spaceSearch(ctx); err != nil {
-				return "", err
+				return "", nil, false, err
 			}
 		}
 		var reqBody io.Reader
@@ -321,7 +328,7 @@ func (c *Client) do(ctx context.Context, method, rawURL string, payload []byte, 
 		}
 		req, err := http.NewRequestWithContext(ctx, method, rawURL, reqBody)
 		if err != nil {
-			return "", err
+			return "", nil, false, err
 		}
 		if payload != nil {
 			req.Header.Set("Content-Type", "application/json")
@@ -332,44 +339,50 @@ func (c *Client) do(ctx context.Context, method, rawURL string, payload []byte, 
 		if c.token != "" {
 			req.Header.Set("Authorization", "Bearer "+c.token)
 		}
+		for k, v := range extra {
+			req.Header.Set(k, v)
+		}
 		c.requests.Add(1)
 		resp, err := c.HTTP.Do(req)
 		if err != nil {
 			if attempt < maxAttempts && ctx.Err() == nil {
 				if err := c.sleep(ctx, backoff(attempt)); err != nil {
-					return "", err
+					return "", nil, false, err
 				}
 				continue
 			}
-			return "", err
+			return "", nil, false, err
 		}
 		c.recordRate(resp.Header)
 		body, readErr := io.ReadAll(io.LimitReader(resp.Body, 32<<20))
 		resp.Body.Close()
 		if readErr != nil {
-			return "", readErr
+			return "", nil, false, readErr
 		}
 
 		switch {
 		case resp.StatusCode == http.StatusOK:
 			if err := json.Unmarshal(body, out); err != nil {
-				return "", fmt.Errorf("github: decode %s: %w", rawURL, err)
+				return "", nil, false, fmt.Errorf("github: decode %s: %w", rawURL, err)
 			}
-			return nextLink(resp.Header.Get("Link")), nil
+			return nextLink(resp.Header.Get("Link")), resp.Header, false, nil
+
+		case resp.StatusCode == http.StatusNotModified:
+			return "", resp.Header, true, nil
 
 		case isRateLimited(resp) || isSecondaryLimit(resp.StatusCode, body):
 			wait := c.rateWait(resp.Header)
 			if wait > maxRateWait || attempt >= maxAttempts {
-				return "", fmt.Errorf("%w (wait %s, %s)", ErrRateLimited, wait.Round(time.Second), rawURL)
+				return "", nil, false, fmt.Errorf("%w (wait %s, %s)", ErrRateLimited, wait.Round(time.Second), rawURL)
 			}
 			log.Printf("github: rate limited, waiting %s", wait.Round(time.Second))
 			if err := c.sleep(ctx, wait); err != nil {
-				return "", err
+				return "", nil, false, err
 			}
 
 		case resp.StatusCode >= 500 && attempt < maxAttempts:
 			if err := c.sleep(ctx, backoff(attempt)); err != nil {
-				return "", err
+				return "", nil, false, err
 			}
 
 		default:
@@ -377,7 +390,7 @@ func (c *Client) do(ctx context.Context, method, rawURL string, payload []byte, 
 			if len(msg) > 300 {
 				msg = msg[:300]
 			}
-			return "", &StatusError{Code: resp.StatusCode, URL: rawURL, Body: msg}
+			return "", nil, false, &StatusError{Code: resp.StatusCode, URL: rawURL, Body: msg}
 		}
 	}
 }
