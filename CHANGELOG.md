@@ -13,6 +13,22 @@ Changes waiting for the owner to declare the next milestone.
   comment is your move only when it mentions you; otherwise the row waits on others and says
   "nothing asked of you".
 - Each Your work row ends with a pale yellow pill naming its repository and number.
+- New-activity dots from your GitHub notifications: green for something you haven't read, amber
+  once read if it's your move, hollow once read with nothing asked. They follow GitHub's read state
+  within a minute. Threads that match no row, such as a CI run on a branch without an open pull
+  request, show under Other notifications. HelloGitty only reads notifications; it never marks
+  them read.
+- Hover help: words with a dotted underline explain themselves on hover, keyboard focus or a
+  tap, and hovering a row's title or a repository's name shows a peek with checks, reviews, recent
+  comments, the branch and more. Everything comes from data already on hand. A pipeline command
+  can explain its own words with a new `glossary` field.
+- The inbox file has a new kind, `pr_bot`: what bots still ask to be fixed on your open pull
+  requests, one entry per pull request. It is replaced when the bot reviews again and goes once
+  the findings are resolved. A bot's inline comments no longer appear one by one.
+- Pull requests that GitHub's search misses (a brand-new one, or one search leaves out) now get
+  their own row, found through your notifications.
+- The inbox file has a new kind, `issue_comment`: a reply that made an issue your move. It goes
+  when you answer.
 - HelloGitty now checks the issues you plan to work on, and the issues your open pull requests fix,
   for someone else's work every 15 minutes: another pull request citing the issue, an assignee, a
   claim in a comment, the issue closing, or an open pull request whose title covers the same
