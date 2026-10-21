@@ -81,8 +81,9 @@ One cell per condition. Each cell has three looks:
 | **Repo slowing** | amber | No commit for more than 30 days. | Expect slower reviews. |
 | **API running low** | amber | Less than 10% of the hourly GitHub budget is left. | Wait for the reset (see Checks). |
 
-With a pipeline command configured, two more cells appear, named by your command: one for
-repositories it marks as needing attention, one for a stage it reports as failed.
+With a pipeline command configured, two more cells appear, named by your command (by default
+**Repo flagged** and **Stage failed**): one for repositories it marks as needing attention, one for
+a stage it reports as failed.
 
 ---
 
@@ -128,8 +129,26 @@ tracked repositories. It refreshes every 5 minutes. Items fall into three groups
    └──────────────────────────────────────────────────────┘
 ```
 
-- **Dot:** amber means it's your move; green means good news (approved, merged); a hollow ring
-  means it's neutral.
+- **Dot:** what needs your eyes.
+  - **Green:** something new happened that you haven't read yet. A **New** tag next to the status
+    says what: "New comment", "CI failed: lint", "Review requested".
+  - **Amber:** you've read it, and it's your move.
+  - **Hollow:** you've read it, and nothing is asked of you.
+
+  "Read" is GitHub's own read state, from your notifications inbox. Opening the pull request on
+  GitHub, or clicking its title here, marks it read, and the dot changes within a minute. The
+  heading of Your work counts what's new. HelloGitty never marks anything read on GitHub.
+- **Other notifications:** threads in your GitHub inbox that match no row: a CI run failing on a
+  branch with no open pull request, a review request somewhere else, a release. Shown while unread,
+  and afterwards only if they still ask something of you (a review request, an assignment, a
+  security alert, a failing CI run). The same workflow failing again on the same branch shows
+  once.
+- **Missing rows filled in:** GitHub's search sometimes misses a pull request, a new one for a
+  few minutes or an older one entirely. Any pull request you opened that shows up in your
+  notifications gets its row anyway.
+- **Turned off?** A fine-grained GitHub token can't read notifications. The dots then show only
+  amber and hollow, and a line under Your work says why. A classic token with the `notifications`
+  or `repo` scope turns them on.
 - **Only you:** a solid amber tag in front of the status when the next step can't be done by
   anyone else with the branch: signing a CLA, signing off commits for a DCO check, or answering a
   human reviewer in your own words. These rows sort to the top of Your move.
@@ -138,10 +157,12 @@ tracked repositories. It refreshes every 5 minutes. Items fall into three groups
   board (you opened it, it's assigned to you, or you joined the thread), and the item's labels.
   Labels often say what a project expects next (`cla: pending`, `needs-triage`).
 - **Status:** one sentence saying what happened last and whose turn it is.
-- **Chips:** extra facts worth a glance. Amber: *Failing:* and the check names, *Merge conflict*,
-  *Behind main* (the branch needs updating), *N unresolved threads*. Neutral: *Waiting on:* and the
-  checks still pending, *CI awaiting maintainer approval*. Green: *Checks passed*, shown only when
-  every check ran and passed.
+- **Chips:** extra facts worth a glance. Amber: *Failing:* and the check names (*Checks failing*
+  when GitHub gives no names), *Merge conflict*, *Behind main* (the branch needs updating),
+  *N unresolved threads*. Neutral: *Waiting on:* and the checks still pending (*Checks running*),
+  *CI awaiting maintainer approval*. Green: *Checks passed*, shown only when every check ran and
+  passed.
+- **Repository pill:** the pale yellow pill closing the row names its repository and number.
 - **Quote:** the comment worth reading before you act: the unresolved review comment the status
   is about, or else the latest word from someone else. Formatting, code blocks and quoted replies
   are stripped.
@@ -287,6 +308,26 @@ The kitten at the top right is Black Bombay (baby), the mascot of the current re
 plays one short, silent clip each time the page reloads, a livelier one when something changed,
 and otherwise rests. It never loops, carries no data, and is hidden from screen readers. With
 reduced motion turned on, you see a still image. In the light theme it sits in a small dark window.
+
+---
+
+## Hover help
+
+A word with a dotted underline can explain itself: hover over it, or move to it with Tab, and a
+small card says what it means and what to do about it. Alert cells, health lights, the legend,
+note chips and watch statuses explain themselves the same way. On a phone or tablet, tap the word;
+tap again to close it. Esc closes it anywhere.
+
+Hover a pull request or issue title, or a repository name, for half a second (or Tab to it) and a
+peek shows what the row has no room for:
+- **Pull requests and issues:** opened and updated, checks by name, reviews, assignees, the
+  branch, the issues it fixes, the latest few comments.
+- **Repositories:** health, issue counts, your pull requests there, and the last pull request
+  the project turned down, with its reason.
+
+The cards only show what HelloGitty already knows, so hovering costs no GitHub calls. A pipeline
+command can explain its own words (its stages and verdicts) through its `glossary` field; a word
+it doesn't explain is left unmarked.
 
 ---
 
