@@ -1,7 +1,8 @@
 # Reading HelloGitty
 
 A guide to every part of the dashboard and what to do with it. For installing and configuring,
-see the [README](../README.md).
+see the [README](../README.md). Inside HelloGitty, press **?** or click **Help** in the header to
+read this guide, the glossary and details of your install.
 
 HelloGitty is built to be left open all day and glanced at. It answers two questions without you
 opening a single GitHub tab: **what is waiting on me?** and **how are the projects I care about
@@ -311,6 +312,31 @@ reduced motion turned on, you see a still image. In the light theme it sits in a
 
 ---
 
+## Layouts
+
+**Layout** in the header opens a sheet where you set what the page shows:
+- turn any panel or section on or off;
+- fold a panel down to its heading (an **Unfold** button brings it back);
+- move panels up and down;
+- put a panel in the main column or the side column.
+
+Changes apply at once and are saved in this browser.
+
+Presets set everything at once:
+- **Everything:** the full page, the default.
+- **Contributor:** Your work and watched issues, with tracked repositories folded.
+- **Maintainer:** Your repositories first.
+- **Program:** pipeline and tracked repositories first, with Your work folded.
+- **Focus:** one column with the alerts and Your move, nothing else.
+
+**Reset to everything** undoes it all.
+
+Hidden panels still count in the alert cells, so a lit cell can point at something you've hidden.
+The filter toolbar stays visible while a filter is active, so rows never disappear without a way
+to see why. On a narrow screen the page is one column, and moving a panel only changes its order.
+
+---
+
 ## Hover help
 
 A word with a dotted underline can explain itself: hover over it, or move to it with Tab, and a
@@ -353,6 +379,86 @@ lights.
 
 ---
 
+## Keyboard shortcuts
+
+| Key | Does |
+|---|---|
+| **/** | Jump to the search box. |
+| **Esc** | In the search box: clear it. Anywhere else: close a hover card, or the Layout sheet. |
+| **?** | Open Help. |
+| **Tab** | Move through rows, underlined words, chips and controls. A word with a dotted underline explains itself when it gets focus. |
+| **Enter** or **Space** | Open a row's title, press a button, open or close a tracked repository's details. |
+
+---
+
+## Your data and privacy
+
+HelloGitty runs only on your computer. The dashboard listens on your own machine and refuses any
+address other people could reach. The only thing it talks to over the network is GitHub's API,
+using your token, and it only ever reads. It never comments, labels, marks notifications as read or
+changes anything on GitHub. There is no telemetry, account or cloud service.
+
+What it keeps, and where:
+
+| What | Where | Safe to delete? |
+|---|---|---|
+| Repository data, the watch list and records of reports it has made | The database file (`database` in your config, `hellogitty.db` by default) | Yes; the next check refills it. Watched issues and report history are lost. |
+| The machine-readable snapshot | `snapshot.json` (the `snapshot` setting) | Yes; rewritten after every check. |
+| The inbox file, if you set one | The `inbox` setting | Yes; rewritten every few minutes. |
+| Your theme, filters, layout and which dots you've read | Your browser's storage for this page | Yes; clearing site data resets them. |
+
+Your GitHub token is read from the `GITHUB_TOKEN` environment variable when HelloGitty starts. It
+is never written to any of these files or shown on the page.
+
+---
+
+## Questions people ask
+
+**Why is something in Your move?** Its status line says why: someone replied, changes were
+requested, a check failed, there's a merge conflict, or someone mentioned you. Comments from bots
+and automated checks never put a row there.
+
+**Why did a row leave Your move?** You answered, pushed, or the other side acted. Rows that wait
+on others move to **Waiting on others**; merged and closed ones fold into **Finished**.
+
+**Does HelloGitty change anything on GitHub?** No. It only reads.
+
+**Can I use a fine-grained token?** Yes, for everything except the new-activity dots. GitHub
+doesn't let fine-grained tokens read notifications, so the dots fall back to amber and hollow, and
+a line under Your work says so.
+
+**How much of my GitHub quota does it use?** Your work is one request every five minutes on
+GitHub's separate GraphQL budget. Tracked repositories cost about 25 calls each on the first check
+and far fewer afterwards. Notifications cost nothing when nothing has changed. The header shows
+calls used this hour.
+
+**How do I hear when someone claims an issue I want?** Watch it:
+`hellogitty watch owner/name 123`. If someone is assigned, claims it in a comment, opens a pull
+request for it or closes it, you'll see it.
+
+**How do I add or remove a tracked repository?** Edit `repos` (or your `repos_file`) in
+`hellogitty.json`. A `repos_file` is re-read on every check, so no restart is needed.
+
+**Where is my configuration?** In `hellogitty.json`, in the folder you run HelloGitty from, unless
+you passed `-config`. **Help → About this install** shows the files in use.
+
+**How do I update?** Run the install command again (`go install
+github.com/FawwazLawal/hellogitty/cmd/hellogitty@latest`), then restart HelloGitty.
+
+---
+
+## Getting help
+
+- **In the app:** press **?** for this guide, the glossary of every term on the page, and the
+  details of your install (version, files, token access).
+- **Installing and configuring:** the [README](../README.md) has every setting.
+- **Something wrong?** Check [Troubleshooting](#troubleshooting) below first. If it's still wrong,
+  [open an issue](https://github.com/FawwazLawal/hellogitty/issues/new) with your version (from
+  **Help → About this install**), what you expected and what you saw. Don't paste your token or
+  your config's private paths.
+
+---
+
 ## Troubleshooting
 
 | You see | Likely cause | Fix |
@@ -367,3 +473,8 @@ lights.
 | **GitHub API** near the limit every hour | Many large repositories, or a short interval. | Track fewer repositories or set `"interval"` longer. |
 | Merge rate says "Not counted yet" | The pull request search runs after the first check finishes. | Wait for the first check. |
 | The page won't load | HelloGitty isn't running, or is on another address. | Start it; the address is the `listen` setting (default `localhost:7340`). |
+| No green dots ever, and a line under Your work says they're off | The token can't read notifications (fine-grained tokens never can). | Use a classic token; public repositories need no scopes, private ones need `repo` or `notifications`. |
+| A dot stays green after you read the thread | GitHub hasn't marked it read yet, or you read it somewhere that doesn't mark it. | Open it from the row's title, or on GitHub. The dot checks once a minute. |
+| A pull request of yours is missing from Your work | GitHub's search hasn't indexed it yet, or leaves it out. | It appears within a few minutes once it shows up in your notifications. |
+| A panel has disappeared | It was hidden or folded in **Layout**. | Open **Layout** and turn it back on, or click **Reset to everything**. |
+| Rows are missing from a list | A filter is on. | Look at the toolbar; **Clear filters** shows everything. |
