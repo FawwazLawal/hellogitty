@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -83,11 +84,17 @@ CREATE TABLE IF NOT EXISTS overlap (
     reported_at DATETIME NOT NULL,
     PRIMARY KEY (repo, number, signal)
 );
+
+CREATE TABLE IF NOT EXISTS ack (
+    id          TEXT PRIMARY KEY,
+    acked_at    DATETIME NOT NULL
+);
 `
 
 // schemaVersion goes up whenever schema gains a table, so an existing database runs the schema
-// again; every statement in it is CREATE ... IF NOT EXISTS. 2 added first_seen and overlap.
-const schemaVersion = 2
+// again; every statement in it is CREATE ... IF NOT EXISTS. 2 added first_seen and overlap; 3 added
+// ack.
+const schemaVersion = 3
 
 type Store struct {
 	db *sql.DB
@@ -350,6 +357,67 @@ func (s *Store) Overlaps() ([]Overlap, error) {
 		}
 		o.OccurredAt, o.ReportedAt = occurred.t, reported.t
 		out = append(out, o)
+	}
+	return out, rows.Err()
+}
+
+// RecentIssue is an open issue in a tracked repository, opened recently.
+type RecentIssue struct {
+	Repo        string // owner/name
+	Number      int
+	Title       string
+	Labels      []string
+	Assignees   []string
+	ClaimSignal string
+	CreatedAt   time.Time
+}
+
+// RecentIssues lists open issues in tracked repositories opened since the given time, newest first.
+func (s *Store) RecentIssues(since time.Time) ([]RecentIssue, error) {
+	rows, err := s.db.Query(`SELECT r.owner || '/' || r.name, i.number, i.title, COALESCE(i.labels, '[]'), COALESCE(i.assignees, '[]'),
+		COALESCE(i.claim_signal, ''), i.created_at FROM issues i JOIN repos r ON r.id = i.repo_id
+		WHERE i.state = 'open' AND i.created_at >= ? ORDER BY i.created_at DESC`, ts(&since))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []RecentIssue
+	for rows.Next() {
+		var ri RecentIssue
+		var labels, assignees string
+		var created nullTime
+		if err := rows.Scan(&ri.Repo, &ri.Number, &ri.Title, &labels, &assignees, &ri.ClaimSignal, &created); err != nil {
+			return nil, err
+		}
+		json.Unmarshal([]byte(labels), &ri.Labels)
+		json.Unmarshal([]byte(assignees), &ri.Assignees)
+		ri.CreatedAt = created.t
+		out = append(out, ri)
+	}
+	return out, rows.Err()
+}
+
+// Ack records that an item was acknowledged. Acknowledging it again keeps the first time.
+func (s *Store) Ack(id string, at time.Time) error {
+	_, err := s.db.Exec(`INSERT OR IGNORE INTO ack (id, acked_at) VALUES (?, ?)`, id, ts(&at))
+	return err
+}
+
+// Acked returns every acknowledged id and when.
+func (s *Store) Acked() (map[string]time.Time, error) {
+	rows, err := s.db.Query(`SELECT id, acked_at FROM ack`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]time.Time{}
+	for rows.Next() {
+		var id string
+		var at nullTime
+		if err := rows.Scan(&id, &at); err != nil {
+			return nil, err
+		}
+		out[id] = at.t
 	}
 	return out, rows.Err()
 }
