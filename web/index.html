@@ -71,6 +71,40 @@
   .gauge { display: inline-block; width: 80px; height: 6px; background: var(--track); vertical-align: middle; border-radius: 3px; overflow: hidden; align-self: center; }
   .gauge i { display: block; height: 100%; background: var(--dim); }
   .gauge.hot i { background: var(--caution); }
+  /* Layout (ADR-002): the header button, the sheet, folded and hidden modules. */
+  .layoutbtn { margin-left: auto; font: 12px/1 var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
+    border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+  .layoutbtn:hover { color: var(--text); background: var(--raised); }
+  .status.has-mascot .layoutbtn { margin-left: 0; }
+  .layoutbtn + .theme { margin-left: 0 !important; }
+  .mod-hidden { display: none !important; }
+  .panel.folded > :not(h2) { display: none; }
+  .panel.folded > h2 { border-bottom: 0; }
+  .unfold { font: 12px var(--sans); color: var(--text); background: transparent; border: 1px solid var(--rule-hi); border-radius: 4px;
+    padding: 3px 8px; cursor: pointer; }
+  .unfold:hover { background: var(--raised); }
+  .grid.onecol { grid-template-columns: minmax(0, 1fr); }
+  .grid.onecol > .rail { display: none; }
+  .sheet { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 64px); padding: 0; background: var(--panel); color: var(--text);
+    border: 1px solid var(--rule-hi); border-radius: 8px; }
+  .sheet::backdrop { background: rgba(0, 0, 0, 0.45); }
+  .sheet-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 16px 4px; }
+  .sheet-head h2 { margin: 0; font-size: 15px; font-weight: 650; }
+  .sheet .hint { padding: 0 16px 10px; }
+  .sheet .presets { display: flex; flex-wrap: wrap; margin: 0 16px 12px; }
+  .mods { list-style: none; margin: 0; padding: 0 16px; }
+  .mod { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 8px 0; border-top: 1px solid var(--rule); }
+  .mod.sub { padding-left: 24px; }
+  .mod .check:first-child { flex: 1 1 180px; font-size: 14px; }
+  .mod select { font: 13px var(--sans); color: var(--text); background: var(--bg); border: 1px solid var(--rule-hi); border-radius: 6px; padding: 4px 8px; }
+  .mod button { font: 12px var(--sans); color: var(--text); background: transparent; border: 1px solid var(--rule-hi); border-radius: 4px;
+    padding: 4px 8px; cursor: pointer; }
+  .mod button:disabled { color: var(--dim); cursor: default; opacity: 0.55; }
+  .sheet button:focus-visible, .sheet select:focus-visible, .sheet input:focus-visible, .unfold:focus-visible, .layoutbtn:focus-visible {
+    outline: 2px solid var(--text); outline-offset: 2px; }
+  .sheet-foot { display: flex; justify-content: flex-end; padding: 12px 16px 16px; }
+  .sheet .done { font: 600 13px var(--sans); color: var(--text); background: var(--raised); border: 1px solid var(--rule-hi); border-radius: 6px;
+    padding: 7px 14px; cursor: pointer; }
   .theme { display: inline-flex; border: 1px solid var(--rule-hi); border-radius: 6px; overflow: hidden; margin-left: auto; }
   .status.has-mascot .theme { margin-left: 0; }
   .theme button { font: 12px/1 var(--sans); color: var(--dim); background: transparent; border: 0; padding: 6px 10px; cursor: pointer; }
@@ -390,11 +424,12 @@
   <span class="item"><span class="lbl">Last check</span>{{if .LastPollUnix}}<span class="v" id="pollage" data-since="{{.LastPollUnix}}" title="{{.LastPollUTC}} UTC">{{.LastPollUTC}} UTC</span>{{else}}<span class="v zero">not yet</span>{{end}}</span>
   <span class="item"><span class="lbl term" data-term="api" tabindex="0">GitHub API</span>{{if .APIKnown}}<span class="v"><span class="fig">{{.APIUsed}}</span> of <span class="fig">{{.APILimit}}</span> this hour</span><span class="gauge{{if ge .APIPct 90}} hot{{end}}" role="img" aria-label="{{.APIPct}} percent of the hourly quota used"><i style="width:{{.APIPct}}%"></i></span>{{else}}<span class="v zero">no data yet</span>{{end}}</span>
   <span class="item"><span class="v"><span class="fig">{{.RepoCount}}</span> repos{{if .HasPipeline}} · <span class="fig">{{.TargetCount}}</span> in the pipeline{{end}}</span></span>
+  <button type="button" class="layoutbtn" id="layout-open" aria-haspopup="dialog">Layout</button>
   <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
   {{if .Mascot}}<div class="mascot" aria-hidden="true" data-routine="{{range $i, $c := .Mascot.Routine}}{{if $i}} {{end}}{{$c}}{{end}}" data-news="{{range $i, $c := .Mascot.News}}{{if $i}} {{end}}{{$c}}{{end}}"><video muted playsinline preload="none" poster="{{.Mascot.Rest}}" tabindex="-1"></video></div>{{end}}
 </header>
 
-<section class="cw" aria-label="Alerts">
+<section class="cw" aria-label="Alerts" data-module="alerts">
 {{range .Cells}}
   <div class="cell {{.Level}}{{if .Lit}} lit{{end}}{{if .Wide}} wide{{end}}{{if .Empty}} empty{{end}}" tabindex="0" data-term="{{if $.HasTerm (print "p:" .Label)}}p:{{.Label}}{{else}}cell-{{.Key}}{{end}}"{{if .Title}} data-extra="{{.Title}}"{{end}}>
     <div class="head"><span class="leg">{{.Label}}</span>{{if and .Value (not .Empty)}}<span class="cnt" data-v="cw-{{.Key}}">{{.Value}}</span>{{end}}</div>
@@ -405,7 +440,7 @@
 {{end}}
 </section>
 
-<section class="toolbar" aria-label="Filter and organize">
+<section class="toolbar" aria-label="Filter and organize" data-module="toolbar">
   <label class="search"><span class="sr">Search</span><input type="search" id="f-q" placeholder="Search titles, repos, labels, people" autocomplete="off" spellcheck="false"><kbd title="Press / to search">/</kbd></label>
   <div class="seg" role="group" aria-label="Show pull requests, issues or both"><button type="button" data-f-kind="all">All</button><button type="button" data-f-kind="pr">PRs</button><button type="button" data-f-kind="issue">Issues</button></div>
   <label class="pick"><span class="sr">Organization or repository</span><select id="f-scope"><option value="">All organizations and repos</option></select></label>
@@ -417,7 +452,7 @@
 
 <div class="grid">
   <div class="main">
-    <section class="panel" aria-labelledby="work-h" data-board>
+    <section class="panel" aria-labelledby="work-h" data-board data-module="your-work">
       <h2 id="work-h">Your work <span class="lbl">{{if .Work.Known}}Pull requests and issues @{{.Work.Login}} has out, anywhere on GitHub · updated {{.Work.FetchedAgo}}{{else}}Not fetched yet{{end}}<span class="newcount" id="newcount" hidden></span></span></h2>
       {{if not .Work.Known}}
       <p class="pad zero">{{if .Work.Err}}Couldn't load your pull requests and issues: <span class="err">{{.Work.Err}}</span>{{else}}Loading your pull requests and issues. This takes a few seconds after HelloGitty starts; the page reloads on its own.{{end}}</p>
@@ -426,16 +461,16 @@
         <h3><span class="term" data-term="group-you" tabindex="0">Your move</span> <span class="n{{if .Work.You}} hot{{end}}" data-v="work-you">{{len .Work.You}}</span></h3>
         {{if .Work.You}}<ul class="items">{{range .Work.You}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nothing is waiting on you.</p>{{end}}
       </div>
-      <div class="group mv">
+      <div class="group mv" data-module="work-them">
         <h3><span class="term" data-term="group-them" tabindex="0">Waiting on others</span> <span class="n" data-v="work-them">{{len .Work.Them}}</span></h3>
         {{if .Work.Them}}<ul class="items">{{range .Work.Them}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nothing out for review or waiting on a reply.</p>{{end}}
       </div>
-      {{if .Work.Other}}<div class="group mv">
+      {{if .Work.Other}}<div class="group mv" data-module="work-other">
         <h3><span class="term" data-term="group-other" tabindex="0">Other notifications</span> <span class="n">{{len .Work.Other}}</span></h3>
         <ul class="items">{{range .Work.Other}}{{template "other" .}}{{end}}</ul>
       </div>{{end}}
       {{if eq .Work.NotifyState "off"}}<p class="pad hint">New-activity dots are off: {{.Work.NotifyNote}}.</p>{{end}}
-      <details class="group mv" data-key="work-done">
+      <details class="group mv" data-key="work-done" data-module="work-done">
         <summary><span class="term" data-term="group-done">Finished</span> in the last 30 days <span class="n" data-v="work-done">{{len .Work.Done}}{{if .Work.DoneMore}}+{{end}}</span><span class="chev" aria-hidden="true"></span></summary>
         {{if .Work.Done}}<ul class="items">{{range .Work.Done}}{{template "item" .}}{{end}}</ul>{{if .Work.DoneMore}}<p class="hint">{{.Work.DoneMore}} more not shown.</p>{{end}}{{else}}<p class="none">Nothing merged or closed in the last 30 days.</p>{{end}}
       </details>
@@ -444,7 +479,7 @@
     </section>
 
     {{if .Work.Known}}
-    <section class="panel" aria-labelledby="repos-h" data-board>
+    <section class="panel" aria-labelledby="repos-h" data-board data-module="your-repos">
       <h2 id="repos-h">Your repositories <span class="lbl">Open pull requests and issues from others in {{.Work.Scope}}</span></h2>
       <div class="group mv">
         <h3><span class="term" data-term="group-inyou" tabindex="0">Needs you</span> <span class="n{{if .Work.InYou}} hot{{end}}" data-v="work-inyou">{{len .Work.InYou}}</span></h3>
@@ -458,7 +493,7 @@
     </section>
     {{end}}
 
-    <section class="panel{{if not .HasPipeline}} nopipe{{end}}" aria-labelledby="tracked-h">
+    <section class="panel{{if not .HasPipeline}} nopipe{{end}}" aria-labelledby="tracked-h" data-module="tracked">
       <h2 id="tracked-h">Tracked repositories <span class="lbl legend"><span class="li" data-term="health-ACTIVE"><span class="light ACTIVE"></span>active</span> <span class="li" data-term="health-SLOW"><span class="light SLOW"></span>slowing</span> <span class="li" data-term="health-DORMANT"><span class="light DORMANT"></span>dormant</span> <span class="li" data-term="health-UNKNOWN"><span class="light UNKNOWN"></span>not checked</span>{{if .HasPipeline}} <span class="li" data-term="stage-done"><span class="sw done"></span>done</span> <span class="li" data-term="stage-current"><span class="sw current"></span>current</span> <span class="li" data-term="stage-failed"><span class="sw failed"></span>failed</span>{{end}}</span></h2>
       <div class="tbar"><label class="pick"><span class="lbl">Sort</span><select id="f-sort">
         <option value="default">{{if .HasPipeline}}Furthest stage first{{else}}Name{{end}}</option><option value="name">Name</option><option value="open">Most open issues</option>
@@ -520,7 +555,7 @@
   </div>
 
   <div class="rail">
-    <section class="panel" aria-labelledby="watch-h">
+    <section class="panel" aria-labelledby="watch-h" data-module="watched">
       <h2 id="watch-h">Watched issues <span class="lbl">{{len .Watch}} watched</span></h2>
       {{if .Watch}}
       <ul class="wl">
@@ -536,7 +571,7 @@
       {{end}}
     </section>
 
-    <section class="panel" aria-labelledby="pl-h">
+    <section class="panel" aria-labelledby="pl-h" data-module="pipeline">
       <h2 id="pl-h">{{if .HasPipeline}}Pipeline <span class="lbl">{{.TargetCount}} repos by stage</span>{{else}}Merge rate <span class="lbl">Your pull requests in tracked repos</span>{{end}}</h2>
       {{if .HasPipeline}}<div class="occ">{{range .Pipeline.Counts}}<div {{if $.HasTerm (print "p:" .Abbr)}}data-term="p:{{.Abbr}}"{{else}}title="{{.Name}}"{{end}}><span class="lbl">{{.Abbr}}</span><b class="{{if not .Count}}zero{{end}}" data-v="occ-{{.Name}}">{{.Count}}</b></div>{{end}}</div>{{end}}
       <div class="prs">
@@ -556,7 +591,7 @@
       {{end}}
     </section>
 
-    <section class="panel" aria-labelledby="poll-h">
+    <section class="panel" aria-labelledby="poll-h" data-module="checks">
       <h2 id="poll-h">Checks</h2>
       <dl class="kv">
         <dt>Last check finished</dt><dd>{{if .LastPollUTC}}{{.LastPollUTC}} UTC{{else}}<span class="zero">not yet</span>{{end}}</dd>
@@ -571,6 +606,13 @@
     </section>
   </div>
 </div>
+<dialog id="layout" class="sheet" aria-labelledby="layout-h">
+  <div class="sheet-head"><h2 id="layout-h">Layout</h2><button type="button" class="clear" id="layout-reset">Reset to everything</button></div>
+  <p class="hint">Saved in this browser. Hidden panels still count in the alert cells.</p>
+  <div class="seg presets" role="group" aria-label="Presets"><span class="seglbl">Preset</span><button type="button" data-preset="everything">Everything</button><button type="button" data-preset="contributor">Contributor</button><button type="button" data-preset="maintainer">Maintainer</button><button type="button" data-preset="program">Program</button><button type="button" data-preset="focus">Focus</button></div>
+  <ol class="mods" id="layout-list"></ol>
+  <div class="sheet-foot"><button type="button" class="done" id="layout-done">Done</button></div>
+</dialog>
 <footer>Reloads every 5 minutes · checks your repositories every {{.PollInterval}} minutes and your work every 5 · runs only on this computer</footer>
 
 <script>
@@ -781,6 +823,142 @@
       });
       addEventListener("scroll", function () { if (owner) hide(true); }, { passive: true });
       addEventListener("resize", function () { if (owner) hide(true); });
+    })();
+
+    // Layout (ADR-002). Every panel is a module you can show, hide, fold and move between the main
+    // column and the side; presets set all of it at once. The server always renders the whole page,
+    // so without a saved layout (or with storage blocked) you see everything. Saved per browser.
+    (function () {
+      var key = "hellogitty-layout";
+      var main = document.querySelector(".grid > .main"), rail = document.querySelector(".grid > .rail"), grid = document.querySelector(".grid");
+      var dialog = document.getElementById("layout"), list = document.getElementById("layout-list");
+      if (!main || !rail || !dialog) return;
+      var el = {};
+      document.querySelectorAll("[data-module]").forEach(function (m) { el[m.dataset.module] = m; });
+      var TOP = ["alerts", "toolbar"], SUB = ["work-them", "work-other", "work-done"];
+      var NAMES = { alerts: "Alerts", toolbar: "Filter toolbar", "work-them": "Waiting on others", "work-other": "Other notifications", "work-done": "Finished" };
+      function name(id) {
+        if (NAMES[id]) return NAMES[id];
+        var h = el[id] && el[id].querySelector("h2");
+        return h ? h.firstChild.textContent.trim() : id;
+      }
+      var PRESETS = {
+        everything: { main: ["your-work", "your-repos", "tracked"], rail: ["watched", "pipeline", "checks"], hidden: [], folded: [] },
+        contributor: { main: ["your-work", "tracked", "your-repos"], rail: ["watched", "pipeline", "checks"], hidden: ["your-repos", "pipeline", "checks"], folded: ["tracked"] },
+        maintainer: { main: ["your-repos", "your-work", "tracked"], rail: ["watched", "pipeline", "checks"], hidden: [], folded: [] },
+        program: { main: ["tracked", "your-work", "your-repos"], rail: ["pipeline", "watched", "checks"], hidden: ["your-repos"], folded: ["your-work"] },
+        focus: { main: ["your-work", "your-repos", "tracked"], rail: ["watched", "pipeline", "checks"],
+          hidden: ["toolbar", "your-repos", "tracked", "watched", "pipeline", "checks", "work-them", "work-other", "work-done"], folded: [] }
+      };
+      function copy(p, preset) { return { preset: preset, main: p.main.slice(), rail: p.rail.slice(), hidden: p.hidden.slice(), folded: p.folded.slice() }; }
+      // Keep only modules on this page, and give any new panel a place in its usual column.
+      function normalize(st) {
+        var seen = {}, def = PRESETS.everything;
+        function clean(col) { return (st[col] || []).filter(function (id) { var ok = el[id] && TOP.indexOf(id) < 0 && SUB.indexOf(id) < 0 && !seen[id]; seen[id] = true; return ok; }); }
+        st.main = clean("main"); st.rail = clean("rail");
+        ["main", "rail"].forEach(function (col) { def[col].forEach(function (id) { if (el[id] && !seen[id]) { st[col].push(id); seen[id] = true; } }); });
+        st.hidden = (st.hidden || []).filter(function (id) { return el[id]; });
+        st.folded = (st.folded || []).filter(function (id) { return el[id]; });
+        if (!PRESETS[st.preset] && st.preset !== "custom") st.preset = "custom";
+        return st;
+      }
+      var state;
+      try { state = JSON.parse(localStorage.getItem(key) || "null"); } catch (e) {}
+      state = normalize(state && state.main ? state : copy(PRESETS.everything, "everything"));
+      function save() { try { localStorage.setItem(key, JSON.stringify(state)); } catch (e) {} }
+      function has(arr, id) { return arr.indexOf(id) >= 0; }
+      function filtersActive() {
+        try { var v = JSON.parse(localStorage.getItem("hellogitty-view") || "null"); return !!(v && (v.q || (v.kind && v.kind !== "all") || v.scope || v.mine)); } catch (e) { return false; }
+      }
+
+      function apply() {
+        state.main.forEach(function (id) { main.appendChild(el[id]); });
+        state.rail.forEach(function (id) { rail.appendChild(el[id]); });
+        Object.keys(el).forEach(function (id) {
+          var hide = has(state.hidden, id);
+          if (id === "toolbar" && hide && filtersActive()) hide = false; // never hide rows behind a filter you can't see
+          el[id].classList.toggle("mod-hidden", hide);
+          var folded = has(state.folded, id) && el[id].classList.contains("panel");
+          el[id].classList.toggle("folded", folded);
+          var h2 = el[id].querySelector(":scope > h2"), btn = h2 && h2.querySelector(".unfold");
+          if (folded && h2 && !btn) {
+            btn = document.createElement("button"); btn.type = "button"; btn.className = "unfold";
+            btn.textContent = "Unfold"; btn.setAttribute("aria-label", "Unfold " + name(id));
+            btn.addEventListener("click", function () { change(function () { state.folded = state.folded.filter(function (x) { return x !== id; }); }); });
+            h2.appendChild(btn);
+          } else if (!folded && btn) btn.remove();
+        });
+        var railShown = state.rail.some(function (id) { return !has(state.hidden, id); });
+        grid.classList.toggle("onecol", !railShown);
+        document.querySelectorAll(".presets [data-preset]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.preset === state.preset ? "true" : "false"); });
+      }
+      function change(fn) { fn(); state.preset = "custom"; save(); apply(); render(); }
+
+      function row(id, kind, col, i, len) {
+        var li = document.createElement("li"); li.className = "mod" + (kind === "sub" ? " sub" : ""); li.dataset.id = id;
+        var show = document.createElement("label"); show.className = "check";
+        var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = !has(state.hidden, id); cb.dataset.act = "show";
+        show.appendChild(cb); show.appendChild(document.createTextNode(" " + name(id)));
+        li.appendChild(show);
+        if (kind === "panel") {
+          var sel = document.createElement("select"); sel.dataset.act = "col"; sel.setAttribute("aria-label", "Column for " + name(id));
+          [["main", "Main column"], ["rail", "Side column"]].forEach(function (o) { var op = new Option(o[1], o[0]); op.selected = o[0] === col; sel.appendChild(op); });
+          li.appendChild(sel);
+          var fl = document.createElement("label"); fl.className = "check";
+          var fb = document.createElement("input"); fb.type = "checkbox"; fb.checked = has(state.folded, id); fb.dataset.act = "fold";
+          fl.appendChild(fb); fl.appendChild(document.createTextNode(" Folded")); li.appendChild(fl);
+          [["up", "Up", i === 0], ["down", "Down", i === len - 1]].forEach(function (b) {
+            var btn = document.createElement("button"); btn.type = "button"; btn.dataset.act = b[0]; btn.textContent = b[1];
+            btn.setAttribute("aria-label", "Move " + name(id) + " " + b[0]); btn.disabled = b[2]; li.appendChild(btn);
+          });
+        }
+        list.appendChild(li);
+      }
+      function render() {
+        var focus = document.activeElement, fid = focus && focus.closest && focus.closest(".mod") ? focus.closest(".mod").dataset.id : null, fact = focus && focus.dataset ? focus.dataset.act : null;
+        list.textContent = "";
+        TOP.forEach(function (id) { if (el[id]) row(id, "top"); });
+        ["main", "rail"].forEach(function (col) {
+          state[col].forEach(function (id, i) {
+            row(id, "panel", col, i, state[col].length);
+            if (id === "your-work") SUB.forEach(function (s) { if (el[s]) row(s, "sub"); });
+          });
+        });
+        if (fid && fact) {
+          var back = list.querySelector('.mod[data-id="' + fid + '"] [data-act="' + fact + '"]');
+          if (back && !back.disabled) back.focus(); else if (back) { var other = back.parentNode.querySelector('[data-act="' + (fact === "up" ? "down" : "up") + '"]'); if (other) other.focus(); }
+        }
+      }
+      list.addEventListener("change", function (e) {
+        var li = e.target.closest(".mod"), id = li && li.dataset.id, act = e.target.dataset.act;
+        if (!id) return;
+        change(function () {
+          if (act === "show") state.hidden = e.target.checked ? state.hidden.filter(function (x) { return x !== id; }) : state.hidden.concat(id);
+          if (act === "fold") state.folded = e.target.checked ? state.folded.concat(id) : state.folded.filter(function (x) { return x !== id; });
+          if (act === "col") {
+            var from = has(state.main, id) ? "main" : "rail";
+            state[from] = state[from].filter(function (x) { return x !== id; });
+            state[e.target.value].push(id);
+          }
+        });
+      });
+      list.addEventListener("click", function (e) {
+        var btn = e.target.closest("button[data-act]"), li = btn && btn.closest(".mod");
+        if (!btn || !li) return;
+        var id = li.dataset.id, col = has(state.main, id) ? "main" : "rail", arr = state[col], i = arr.indexOf(id), j = btn.dataset.act === "up" ? i - 1 : i + 1;
+        if (j < 0 || j >= arr.length) return;
+        change(function () { arr.splice(i, 1); arr.splice(j, 0, id); });
+      });
+      document.querySelectorAll(".presets [data-preset]").forEach(function (b) {
+        b.addEventListener("click", function () { state = normalize(copy(PRESETS[b.dataset.preset], b.dataset.preset)); save(); apply(); render(); });
+      });
+      document.getElementById("layout-reset").addEventListener("click", function () { state = normalize(copy(PRESETS.everything, "everything")); save(); apply(); render(); });
+      document.getElementById("layout-open").addEventListener("click", function () {
+        render();
+        if (typeof dialog.showModal === "function") dialog.showModal(); else dialog.setAttribute("open", "");
+      });
+      document.getElementById("layout-done").addEventListener("click", function () { if (dialog.close) dialog.close(); else dialog.removeAttribute("open"); });
+      apply();
     })();
 
     // The view is remembered in this browser so the 5-minute reload keeps it.

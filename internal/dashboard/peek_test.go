@@ -85,3 +85,22 @@ func TestPageCarriesTheGlossaryAndPeeks(t *testing.T) {
 		t.Error("a word the pipeline doesn't explain is not marked")
 	}
 }
+
+// Every panel is a module the layout script can show, hide, fold and move (ADR-002).
+func TestPanelsAreModules(t *testing.T) {
+	now := time.Now()
+	src := fakeSource{pipe: pipeFixture(t), reports: []store.RepoReport{{Repo: store.Repo{Owner: "acme", Name: "rocket", LastPoll: &now}}},
+		board: &work.Board{Login: "me"}}
+	_, body := get(t, handler(src), "/")
+	for _, id := range []string{"alerts", "toolbar", "your-work", "your-repos", "tracked", "watched", "pipeline", "checks", "work-them", "work-done"} {
+		if !strings.Contains(body, `data-module="`+id+`"`) {
+			t.Errorf("module %s missing", id)
+		}
+	}
+	for _, want := range []string{`<button type="button" class="layoutbtn" id="layout-open" aria-haspopup="dialog">Layout</button>`,
+		`<dialog id="layout" class="sheet" aria-labelledby="layout-h">`, `data-preset="focus"`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("missing %s", want)
+		}
+	}
+}
