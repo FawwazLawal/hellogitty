@@ -59,6 +59,8 @@ Your work fills in within a few seconds; each followed project takes a few secon
 - Before starting on an issue, watch it so you hear if someone else claims it:
   `hellogitty watch owner/name 123`.
 - Try the toolbar: press `/` to search, or group your work by organization.
+- Open **Layout** in the header to pick a preset (Focus is a one-column "just Your move" view) or
+  arrange the panels yourself.
 
 Hover any word with a dotted underline, or a row's title, for more about it.
 
@@ -247,9 +249,14 @@ script can act on it without calling GitHub:
 }
 ```
 
-`kind` is `pr_comment`, `pr_review`, `pr_state`, `pr_bot`, `issue_comment` (a reply that made an
+`kind` is `pr_comment`, `pr_review`, `pr_state`, `pr_label`, `pr_bot`, `issue_comment` (a reply that made an
 issue your move), `watched_issue`, `issue_overlap` or `issue_similar`
-(see [someone else's work](#someone-elses-work)). `pr_bot` is one entry per pull request of yours
+(see [someone else's work](#someone-elses-work)). A pull request of yours closed without merging is a `pr_state` entry that names who closed it and
+quotes what they said, or says "with no comment" when they said nothing. `pr_label` is one entry
+per label added to a pull request of yours, unless the label is known to be harmless (size and area
+tags, `community`, `documentation`, `docs`, `enhancement`, `bug`, `feature`, `dependencies`,
+`tests`). A label HelloGitty has never seen is reported, not ignored. Both carry `"priority":
+"high"`; other entries have no `priority`. `pr_bot` is one entry per pull request of yours
 for what bots still ask to be fixed: an unresolved review comment from a bot on current code, a
 bot's standing "changes requested", or a review saying "Actionable comments posted: N" with no
 commit since. Bot summaries, coverage reports and approvals never count. The entry is replaced
