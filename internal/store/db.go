@@ -89,12 +89,19 @@ CREATE TABLE IF NOT EXISTS ack (
     id          TEXT PRIMARY KEY,
     acked_at    DATETIME NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS repo_choice (
+    repo        TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    action      TEXT NOT NULL,
+    chosen_at   DATETIME NOT NULL
+);
 `
 
 // schemaVersion goes up whenever schema gains a table, so an existing database runs the schema
 // again; every statement in it is CREATE ... IF NOT EXISTS. 2 added first_seen and overlap; 3 added
-// ack.
-const schemaVersion = 3
+// ack; 4 added repo_choice.
+const schemaVersion = 4
 
 type Store struct {
 	db *sql.DB
@@ -397,9 +404,113 @@ func (s *Store) RecentIssues(since time.Time) ([]RecentIssue, error) {
 	return out, rows.Err()
 }
 
+// newestIssues lists a repository's newest open issues.
+func (s *Store) newestIssues(r Repo, n int) ([]RecentIssue, error) {
+	rows, err := s.db.Query(`SELECT number, title, COALESCE(labels, '[]'), COALESCE(assignees, '[]'), COALESCE(claim_signal, ''), created_at
+		FROM issues WHERE repo_id = ? AND state = 'open' ORDER BY created_at DESC LIMIT ?`, r.ID, n)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []RecentIssue
+	for rows.Next() {
+		ri := RecentIssue{Repo: r.Owner + "/" + r.Name}
+		var labels, assignees string
+		var created nullTime
+		if err := rows.Scan(&ri.Number, &ri.Title, &labels, &assignees, &ri.ClaimSignal, &created); err != nil {
+			return nil, err
+		}
+		json.Unmarshal([]byte(labels), &ri.Labels)
+		json.Unmarshal([]byte(assignees), &ri.Assignees)
+		ri.CreatedAt = created.t
+		out = append(out, ri)
+	}
+	return out, rows.Err()
+}
+
+// latestClosed lists a repository's most recently merged or closed pull requests.
+func (s *Store) latestClosed(repoID int64, n int) ([]ClosedPR, error) {
+	rows, err := s.db.Query(`SELECT number, title, COALESCE(merged, 0), COALESCE(merged_at, closed_at), COALESCE(author_association, '')
+		FROM pull_requests WHERE repo_id = ? AND state = 'closed' AND COALESCE(merged_at, closed_at) IS NOT NULL
+		ORDER BY COALESCE(merged_at, closed_at) DESC LIMIT ?`, repoID, n)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []ClosedPR
+	for rows.Next() {
+		var c ClosedPR
+		var at nullTime
+		if err := rows.Scan(&c.Number, &c.Title, &c.Merged, &at, &c.AuthorAssociation); err != nil {
+			return nil, err
+		}
+		c.At = at.t
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
 // Ack records that an item was acknowledged. Acknowledging it again keeps the first time.
 func (s *Store) Ack(id string, at time.Time) error {
 	_, err := s.db.Exec(`INSERT OR IGNORE INTO ack (id, acked_at) VALUES (?, ?)`, id, ts(&at))
+	return err
+}
+
+// Repositories you added or removed on the dashboard, on top of the config file. The config file is
+// never rewritten: it may be shared, generated, or someone else's (a repos_file another tool owns).
+const (
+	RepoAdded   = "add"
+	RepoRemoved = "remove"
+)
+
+// SetRepoChoice records that you added or removed a repository ("owner/name").
+func (s *Store) SetRepoChoice(full, action string, at time.Time) error {
+	_, err := s.db.Exec(`INSERT INTO repo_choice (repo, name, action, chosen_at) VALUES (?, ?, ?, ?)
+		ON CONFLICT(repo) DO UPDATE SET name = excluded.name, action = excluded.action, chosen_at = excluded.chosen_at`,
+		strings.ToLower(full), full, action, ts(&at))
+	return err
+}
+
+// ForgetRepoChoice drops a choice, so the config file alone decides again.
+func (s *Store) ForgetRepoChoice(full string) error {
+	_, err := s.db.Exec(`DELETE FROM repo_choice WHERE repo = ?`, strings.ToLower(full))
+	return err
+}
+
+// RepoChoices returns the repositories you added and removed, oldest first, as "owner/name".
+func (s *Store) RepoChoices() (added, removed []string, err error) {
+	rows, err := s.db.Query(`SELECT name, action FROM repo_choice ORDER BY chosen_at, repo`)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var name, action string
+		if err := rows.Scan(&name, &action); err != nil {
+			return nil, nil, err
+		}
+		if action == RepoAdded {
+			added = append(added, name)
+		} else {
+			removed = append(removed, name)
+		}
+	}
+	return added, removed, rows.Err()
+}
+
+// Unack forgets acknowledged ids.
+func (s *Store) Unack(ids ...string) error {
+	for _, id := range ids {
+		if _, err := s.db.Exec(`DELETE FROM ack WHERE id = ?`, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// UnackPrefix forgets every acknowledged id that starts with prefix.
+func (s *Store) UnackPrefix(prefix string) error {
+	_, err := s.db.Exec(`DELETE FROM ack WHERE substr(id, 1, ?) = ?`, len(prefix), prefix)
 	return err
 }
 
@@ -467,6 +578,19 @@ type RepoReport struct {
 	Watch                []WatchReport
 	DeniedPRs            []DeniedPR
 	DeniedPRsTotal       int
+	// For the repository's tabs on the dashboard: its newest open issues and its latest closed
+	// pull requests, merged or not. Not part of snapshot.json.
+	NewestIssues []RecentIssue
+	LatestClosed []ClosedPR
+}
+
+// ClosedPR is a pull request that was recently merged or closed.
+type ClosedPR struct {
+	Number            int
+	Title             string
+	Merged            bool
+	At                time.Time // when it was merged or closed
+	AuthorAssociation string
 }
 
 type WatchReport struct {
@@ -512,6 +636,12 @@ func (s *Store) Report(deniedLimit int) ([]RepoReport, error) {
 			return nil, err
 		}
 		if rr.DeniedPRs, rr.DeniedPRsTotal, err = s.deniedPRs(r.ID, deniedLimit); err != nil {
+			return nil, err
+		}
+		if rr.NewestIssues, err = s.newestIssues(r, 8); err != nil {
+			return nil, err
+		}
+		if rr.LatestClosed, err = s.latestClosed(r.ID, 6); err != nil {
 			return nil, err
 		}
 		out = append(out, rr)
