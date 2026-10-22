@@ -1,0 +1,74 @@
+{{define "listpage"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>{{.Title}} · HelloGitty</title>
+{{template "theme-head"}}
+<style>
+{{template "base-css"}}
+  /* A Pipeline number, opened: the same rows the dashboard would show, on a page of their own. */
+  .lbar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 20px;
+    background: var(--panel); border-bottom: 1px solid var(--rule); }
+  .lbar h1 { margin: 0; font-size: 17px; font-weight: 650; }
+  .back { font-size: 13px; color: var(--dim); }
+  .lbar .theme { margin-left: auto; }
+  .lwrap { max-width: 980px; margin: 0 auto; padding: 18px 20px 40px; }
+  .sub { margin: 0 0 14px; color: var(--dim); }
+  .jump { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 18px; padding: 0; list-style: none; }
+  .jump a { display: inline-flex; gap: 6px; align-items: baseline; padding: 4px 9px; border: 1px solid var(--rule-hi); border-radius: 6px;
+    font-size: 12.5px; color: var(--dim); text-decoration: none; }
+  .jump a:hover { color: var(--text); background: var(--raised); }
+  .jump a[aria-current="page"] { color: var(--text); border-color: var(--text); }
+  .jump b { font: 600 12.5px var(--mono); color: var(--text); }
+  .ltable { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+  .ltable th, .ltable td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  .ltable th { font-size: 12px; font-weight: 600; color: var(--dim); background: var(--head); }
+  .ltable tr:last-child td { border-bottom: 0; }
+  .ltable td.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ltable a { color: var(--text); }
+  .ltable .own { color: var(--dim); }
+  .tag { display: inline-block; font-size: 12px; padding: 1px 7px; border-radius: 4px; border: 1px solid var(--rule-hi); color: var(--dim); white-space: nowrap; }
+  .tag.Merged { color: var(--nom); border-color: color-mix(in srgb, var(--nom) 50%, transparent); }
+  .tag.Closed { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, transparent); }
+  .light { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2px solid transparent; vertical-align: -1px; margin-right: 6px; }
+  .light.ACTIVE { background: var(--nom); } .light.SLOW { border-color: var(--caution); } .light.DORMANT { background: var(--caution); }
+  .light.UNKNOWN { border: 1.5px dashed var(--dim); }
+  .empty { color: var(--dim); padding: 18px 0; }
+  @media (max-width: 640px) {
+    .lwrap { padding: 14px 16px 30px; }
+    .ltable .opt { display: none; }
+  }
+</style>
+</head>
+<body>
+<header class="lbar">
+  <a class="back" href="/">Dashboard</a>
+  <h1>{{.Title}}</h1>
+  <span class="lbl">{{.Version}}</span>
+  <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
+</header>
+<main class="lwrap">
+  <p class="sub">{{.Sub}}</p>
+  <ul class="jump" aria-label="Other lists">{{range .Links}}<li><a href="{{.URL}}"{{if .Current}} aria-current="page"{{end}}>{{.Label}} <b>{{.Count}}</b></a></li>{{end}}</ul>
+  {{if .PRs}}
+  <table class="ltable">
+    <thead><tr><th>State</th><th>Pull request</th><th class="opt">Opened</th></tr></thead>
+    <tbody>{{range .PRs}}<tr><td><span class="tag {{.State}}">{{.State}}</span></td><td><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a><br><span class="own">{{.Repo}} #{{.Number}}</span>{{if .NotesURL}} · <a href="{{.NotesURL}}" target="_blank">{{$.Labels.Notes}}</a>{{end}}</td><td class="num opt">{{.Opened}}</td></tr>{{end}}</tbody>
+  </table>
+  {{else if .Repos}}
+  <table class="ltable">
+    <thead><tr><th>Repository</th><th>{{.Labels.Status}}</th><th class="num">Open</th><th class="num opt">Good first</th><th class="num opt">Last commit</th><th class="num opt">Turned down</th></tr></thead>
+    <tbody>{{range .Repos}}<tr><td><span class="light {{.Health}}" role="img" aria-label="{{lower .Health}}"></span><a href="{{.URL}}" target="_blank" rel="noopener"><span class="own">{{.Owner}}/</span>{{.Name}}</a>{{if .NotesURL}} · <a href="{{.NotesURL}}" target="_blank">{{$.Labels.Notes}}</a>{{end}}</td>
+      <td>{{if .Label}}{{.Label}}{{else}}<span class="own">—</span>{{end}}</td><td class="num">{{.Open}}</td><td class="num opt">{{.GFI}}</td><td class="num opt">{{if .AgeKnown}}{{.AgeDays}} d{{else}}—{{end}}</td><td class="num opt">{{.DeniedTotal}}</td></tr>{{end}}</tbody>
+  </table>
+  {{else}}<p class="empty">{{.Empty}}</p>{{end}}
+</main>
+<script>
+  (function () {
+    {{template "theme-js"}}
+  })();
+</script>
+</body>
+</html>{{end}}

@@ -38,6 +38,18 @@ type Telemetry struct {
 	OurPRs        []PR
 	PRsKnown      bool
 	PRError       string
+	OpenPRs       map[string][]OpenPR // newest open pull requests per repository, by lowercase owner/name
+}
+
+// OpenPR is an open pull request in a tracked repository.
+type OpenPR struct {
+	Number    int
+	Title     string
+	URL       string
+	Author    string
+	Bot       bool
+	Draft     bool
+	CreatedAt time.Time
 }
 
 type PR struct {
@@ -76,12 +88,17 @@ type Handler struct {
 	// Markdown, the guide's screenshot, and facts about this install set at startup (files in use).
 	HelpTemplate string
 	FeedTemplate string // the feed on its own page, parsed with Template like Help
+	ListTemplate string // what a Pipeline number counts, on a page of its own
 	Guide        string
 	Screenshot   []byte
 	About        []AboutItem
 }
 
 type page struct {
+	// RepoTools says repositories can be added and removed here; RemovedRepos are config-file
+	// repositories you removed, which can come back with one click.
+	RepoTools    bool
+	RemovedRepos []string
 	Version      string
 	Baby         bool
 	Mascot       *mascot
@@ -113,6 +130,8 @@ type page struct {
 	GlossaryJSON template.JS
 	Feed         feedView
 	Token        string // sent back with acknowledgements; see Handler.token
+	// "New" counts beside each section's heading.
+	WorkNew, ConvNew, ReposNew, TrackedNew, TrackedNewRepos int
 }
 
 // HasTerm reports whether the hover help explains id, so the page only marks what it can explain.
@@ -134,6 +153,11 @@ type cell struct {
 	// More counts names left out of Detail; it renders outside the clamped text so it always shows.
 	More             int
 	Lit, Wide, Empty bool
+	// Items are the names that light the cell, for clearing; Cleared counts those you cleared.
+	Items     []string
+	ItemsAttr string
+	Clearable bool
+	Cleared   int
 }
 
 type stageHead struct{ Abbr, Name string }
@@ -159,9 +183,19 @@ type row struct {
 	DeniedTotal           int
 	Denied                []store.DeniedPR
 	Error                 string
+	ErrorRaw              string // GitHub's own words, for a bug report
 	PRs                   []prRow
 	Search                string // lowercase text the page's search box matches against
 	Peek                  peek
+	// The repository's tabs, and how much in the live feed about it is unacknowledged.
+	NewCount  int
+	NewIDs    string // the unacknowledged feed rows, space-separated, so the page can count down as they are acknowledged
+	NewIssues int
+	Issues    []repoIssue
+	OpenPRs   []repoPR
+	ClosedPRs []repoPR
+	Activity  []feedRow
+	Tab       string // the tab it opens on
 }
 
 type watchRow struct {
@@ -193,6 +227,7 @@ type pipelineView struct {
 	Known                        bool
 	Err                          string
 	PRs                          []prRow
+	All                          []prRow // every one, for the list page; PRs is the panel's first ten
 }
 
 var funcs = template.FuncMap{
@@ -267,6 +302,18 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveFeedJSON(w, r)
 	case r.URL.Path == "/feed/ack":
 		h.serveFeedAck(w, r)
+	case r.URL.Path == "/list":
+		h.serveList(w, r)
+	case r.URL.Path == "/repos/add":
+		h.serveRepos(w, r, true)
+	case r.URL.Path == "/repos/remove":
+		h.serveRepos(w, r, false)
+	case r.URL.Path == "/repos/ready":
+		h.serveRepoReady(w, r)
+	case r.URL.Path == "/cells/clear":
+		h.serveCells(w, r, false)
+	case r.URL.Path == "/cells/restore":
+		h.serveCells(w, r, true)
 	case r.URL.Path == "/help":
 		h.serveHelp(w, r)
 	case r.URL.Path == "/help/screenshot.png" && len(h.Screenshot) > 0:
@@ -403,8 +450,14 @@ func (h *Handler) build() (*page, error) {
 	}
 
 	p.Token = h.token()
+	if rs, ok := h.Source.(RepoSource); ok {
+		p.RepoTools, p.RemovedRepos = true, rs.Removed()
+	}
+	var news map[string]*repoNews
 	if fs, ok := h.Source.(FeedSource); ok {
-		p.Feed = buildFeed(fs.Feed(), now)
+		rows := fs.Feed()
+		p.Feed = buildFeed(rows, now)
+		news = newsByRepo(rows)
 	}
 
 	board, workErr := h.Source.Work()
@@ -413,6 +466,37 @@ func (h *Handler) build() (*page, error) {
 	if ns, ok := h.Source.(NotificationSource); ok {
 		nv := ns.Notifications()
 		applyAttention(&p.Work, nv, matchNotifications(board, nv.Items, now))
+	}
+	for _, list := range [][]workRow{p.Work.You, p.Work.Them, p.Work.Done} {
+		for _, r := range list {
+			if r.Attn == "new" {
+				p.WorkNew++
+			}
+		}
+	}
+	for _, o := range p.Work.Other {
+		if o.New > 0 {
+			p.WorkNew++
+		}
+	}
+	for _, list := range [][]workRow{p.Work.InYou, p.Work.InThem} {
+		for _, r := range list {
+			if r.Attn == "new" {
+				p.ReposNew++
+			}
+		}
+	}
+	for _, o := range p.Work.RepoOther {
+		if o.New > 0 {
+			p.ReposNew++
+		}
+	}
+	for _, list := range [][]workRow{p.Work.ConvYou, p.Work.ConvThem} {
+		for _, r := range list {
+			if r.Attn == "new" {
+				p.ConvNew++
+			}
+		}
 	}
 
 	notesURL := func(owner, name string) string {
@@ -424,7 +508,7 @@ func (h *Handler) build() (*page, error) {
 
 	prsByRepo := map[string][]prRow{}
 	pl := pipelineView{Known: tel.PRsKnown, Err: tel.PRError}
-	for _, pr := range tel.OurPRs {
+	for _, pr := range withBoardPRs(tel.OurPRs, board, reports) {
 		row := prRow{
 			Repo: pr.Owner + "/" + pr.Name, Title: pr.Title, URL: pr.URL, Number: pr.Number,
 			State: prState(pr), NotesURL: notesURL(pr.Owner, pr.Name),
@@ -448,6 +532,7 @@ func (h *Handler) build() (*page, error) {
 	if decided := pl.Merged + pl.Closed; decided > 0 {
 		pl.Rate = fmt.Sprintf("%d%%", pl.Merged*100/decided)
 	}
+	pl.All = pl.PRs
 	if len(pl.PRs) > 10 {
 		pl.PRs = pl.PRs[:10]
 	}
@@ -466,8 +551,9 @@ func (h *Handler) build() (*page, error) {
 			Key: strings.ToLower(full), Owner: r.Owner, Name: r.Name, URL: "https://github.com/" + full,
 			Health: store.HealthLabel(r.Repo),
 			Open:   r.OpenIssuesTotal, GFI: r.OpenIssuesGFI, Unassigned: r.OpenIssuesUnassigned,
-			DeniedTotal: r.DeniedPRsTotal, Error: tel.Errors[strings.ToLower(full)],
-			PRs: prsByRepo[strings.ToLower(full)], NotesURL: notesURL(r.Owner, r.Name),
+			DeniedTotal: r.DeniedPRsTotal, Error: checkError(tel.Errors[strings.ToLower(full)]),
+			ErrorRaw: tel.Errors[strings.ToLower(full)],
+			PRs:      prsByRepo[strings.ToLower(full)], NotesURL: notesURL(r.Owner, r.Name),
 		}
 		if len(r.DeniedPRs) > deniedShown {
 			rw.Denied = r.DeniedPRs[:deniedShown]
@@ -525,6 +611,11 @@ func (h *Handler) build() (*page, error) {
 		if rw.InPipeline {
 			rw.Search += " " + strings.ToLower(rw.Stage+" "+rw.Label)
 		}
+		fillRepoDetail(&rw, r, news[strings.ToLower(full)], tel.OpenPRs[strings.ToLower(full)], now)
+		if rw.NewCount > 0 {
+			p.TrackedNew += rw.NewCount
+			p.TrackedNewRepos++
+		}
 		rw.Peek = repoPeek(rw, now, overlaps)
 		p.Rows = append(p.Rows, rw)
 	}
@@ -552,22 +643,29 @@ func (h *Handler) build() (*page, error) {
 	for _, r := range reports {
 		shortName[strings.ToLower(r.Owner+"/"+r.Name)] = r.Name
 	}
-	var failNames []string
-	for k := range tel.Errors {
+	var failNames, failWhy []string
+	why := map[string]string{}
+	for k, e := range tel.Errors {
 		name := shortName[k]
 		if name == "" {
 			_, name, _ = strings.Cut(k, "/")
 		}
 		failNames = append(failNames, name)
+		why[name] = e
 	}
 	sort.Slice(failNames, func(i, j int) bool { return strings.ToLower(failNames[i]) < strings.ToLower(failNames[j]) })
+	for _, n := range failNames {
+		failWhy = append(failWhy, failedLine(n, why[n]))
+	}
 	if tel.PRError != "" {
 		pollFail++
 		failNames = append(failNames, "PR search")
+		failWhy = append(failWhy, failedLine("Searching for your pull requests", tel.PRError))
 	}
 	if p.Work.Err != "" {
 		pollFail++
 		failNames = append(failNames, "your work")
+		failWhy = append(failWhy, failedLine("Refreshing Your work", p.Work.Err))
 	}
 	staleLit := lastPoll.IsZero() || now.Sub(lastPoll) > staleAfter
 	staleShown := ""
@@ -589,7 +687,7 @@ func (h *Handler) build() (*page, error) {
 		closedCell.Value, closedCell.Empty = "nothing watched", true
 	}
 	var moveNames []string
-	for _, r := range append(append([]workRow(nil), p.Work.You...), p.Work.InYou...) {
+	for _, r := range append(append(append([]workRow(nil), p.Work.You...), p.Work.InYou...), p.Work.ConvYou...) {
 		moveNames = append(moveNames, shortRepo(r.Repo)+"#"+strconv.Itoa(r.Number))
 	}
 	moveCell := counter("your-move", "Your move", p.Work.YourMove(), "caution", moveNames, true)
@@ -598,10 +696,18 @@ func (h *Handler) build() (*page, error) {
 		moveCell.Value, moveCell.Empty = "not checked yet", true
 	}
 
+	failCell := counter("poll-fail", "Check failed", pollFail, "warn", failNames, false)
+	if len(failWhy) > 0 {
+		next := " HelloGitty tries again on the next check."
+		if left := lastPoll.Add(h.PollInterval).Sub(now); !lastPoll.IsZero() && h.PollInterval > 0 && left > time.Minute {
+			next = " HelloGitty tries again on the next check, in about " + plural(int(left.Minutes()+0.5), "minute") + "."
+		}
+		failCell.Title = strings.Join(failWhy, " ") + next
+	}
 	p.Cells = []cell{
 		claimedCell,
 		moveCell,
-		counter("poll-fail", "Check failed", pollFail, "warn", failNames, false),
+		failCell,
 		{Key: "data-stale", Label: "Data is stale", Value: staleShown, Level: "warn", Lit: staleLit,
 			Title: "Lit when the last check of GitHub is more than 2 hours old."},
 		closedCell,
@@ -615,6 +721,13 @@ func (h *Handler) build() (*page, error) {
 	}
 	p.Cells = append(p.Cells, cell{Key: "api-low", Label: "API running low", Value: apiValue, Level: "caution", Lit: apiLow,
 		Title: "Lit when under 10% of the hourly GitHub quota remains."})
+	if cs, ok := h.Source.(CellSource); ok {
+		if forget := applyCleared(p.Cells, cs.Cleared(), !lastPoll.IsZero() && len(reports) > 0); len(forget) > 0 {
+			if err := cs.ForgetCleared(forget); err != nil {
+				log.Printf("dashboard: forget cleared indicators: %v", err)
+			}
+		}
+	}
 	return p, nil
 }
 
@@ -653,7 +766,7 @@ func (h *Handler) mascot() *mascot {
 
 func counter(key, label string, n int, level string, names []string, wide bool) cell {
 	c := cell{Key: key, Label: label, Value: strconv.Itoa(n), Level: level, Lit: n > 0, Wide: wide,
-		Title: strings.Join(names, ", ")}
+		Title: strings.Join(names, ", "), Items: names}
 	limit := detailNamesNarrow
 	if wide {
 		limit = detailNamesWide
@@ -682,6 +795,41 @@ func duration(d time.Duration) string {
 		return strconv.Itoa(s/60) + " min"
 	}
 	return strconv.Itoa(s/60) + " min " + strconv.Itoa(s%60) + " s"
+}
+
+// withBoardPRs adds your pull requests in tracked repositories that the work board has and the
+// pull request search missed. GitHub's search leaves some out (impeccable#1084, merged, was one),
+// and the merge rate and each repository's "Your pull requests here" would miss them.
+func withBoardPRs(prs []PR, b *work.Board, reports []store.RepoReport) []PR {
+	if b == nil {
+		return prs
+	}
+	tracked, have := map[string]bool{}, map[string]bool{}
+	for _, r := range reports {
+		tracked[strings.ToLower(r.Owner+"/"+r.Name)] = true
+	}
+	for _, pr := range prs {
+		have[strings.ToLower(pr.Owner+"/"+pr.Name)+"#"+strconv.Itoa(pr.Number)] = true
+	}
+	out := append([]PR(nil), prs...)
+	for _, it := range b.Sent {
+		k := strings.ToLower(it.Repo) + "#" + strconv.Itoa(it.Number)
+		if !it.PR || it.Role != work.RoleAuthor || have[k] || !tracked[strings.ToLower(it.Repo)] {
+			continue
+		}
+		owner, name, _ := strings.Cut(it.Repo, "/")
+		created := it.CreatedAt
+		pr := PR{Owner: owner, Name: name, Number: it.Number, Title: it.Title, URL: it.URL, State: "open", CreatedAt: &created}
+		switch it.State {
+		case "MERGED":
+			pr.State, pr.Merged = "closed", true
+		case "CLOSED":
+			pr.State = "closed"
+		}
+		have[k] = true
+		out = append(out, pr)
+	}
+	return out
 }
 
 func prState(pr PR) string {

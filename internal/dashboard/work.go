@@ -58,14 +58,21 @@ type workView struct {
 	DoneMore   int
 	InYou      []workRow
 	InThem     []workRow
+	// Conversations: issues and pull requests you only joined (commented on or were mentioned in),
+	// kept apart from what you opened. ConvYou asks something of you; ConvThem is quiet.
+	ConvYou  []workRow
+	ConvThem []workRow
 
 	NotifyState string // "ok", "off" or "" (not configured or not fetched yet)
 	NotifyNote  string
 	Other       []otherRow
+	// RepoOther are notifications about your own repositories (a failed workflow run, a release),
+	// shown under Your repositories rather than with your work elsewhere.
+	RepoOther []otherRow
 }
 
 // YourMove counts everything waiting on you, sent and incoming.
-func (w workView) YourMove() int { return len(w.You) + len(w.InYou) }
+func (w workView) YourMove() int { return len(w.You) + len(w.InYou) + len(w.ConvYou) }
 
 func buildWork(b *work.Board, errText string, now time.Time) workView {
 	v := workView{Err: errText}
@@ -77,6 +84,16 @@ func buildWork(b *work.Board, errText string, now time.Time) workView {
 	v.Cost, v.Remaining = b.Cost, b.Remaining
 	for _, it := range b.Sent {
 		r := toRow(it, b.Login, now)
+		if it.Role == work.RoleInvolved {
+			// A thread you joined isn't yours to finish; once it closes it leaves the page.
+			switch it.Move {
+			case work.MoveYou:
+				v.ConvYou = append(v.ConvYou, r)
+			case work.MoveThem:
+				v.ConvThem = append(v.ConvThem, r)
+			}
+			continue
+		}
 		switch it.Move {
 		case work.MoveYou:
 			v.You = append(v.You, r)

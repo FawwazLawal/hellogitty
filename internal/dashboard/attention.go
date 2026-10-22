@@ -122,8 +122,24 @@ func rowKey(repo string, n int) string {
 // move, hollow otherwise.
 func applyAttention(v *workView, nv notify.View, a attention) {
 	v.NotifyState, v.NotifyNote = nv.State, nv.Note
-	v.Other = a.Other
-	for _, list := range []*[]workRow{&v.You, &v.Them, &v.Done, &v.InYou, &v.InThem} {
+	// Notifications about your own repositories go under Your repositories: those you own, and
+	// those you maintain (where contributors' pull requests and issues come from).
+	mine := map[string]bool{}
+	for _, list := range [][]workRow{v.InYou, v.InThem} {
+		for _, r := range list {
+			mine[strings.ToLower(r.Repo)] = true
+		}
+	}
+	v.Other, v.RepoOther = nil, nil
+	for _, o := range a.Other {
+		owner, _, _ := strings.Cut(o.Repo, "/")
+		if (v.Login != "" && strings.EqualFold(owner, v.Login)) || mine[strings.ToLower(o.Repo)] {
+			v.RepoOther = append(v.RepoOther, o)
+		} else {
+			v.Other = append(v.Other, o)
+		}
+	}
+	for _, list := range []*[]workRow{&v.You, &v.Them, &v.Done, &v.InYou, &v.InThem, &v.ConvYou, &v.ConvThem} {
 		for i := range *list {
 			r := &(*list)[i]
 			if n, ok := a.Rows[r.K]; ok && nv.State == "ok" {

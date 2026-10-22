@@ -327,7 +327,7 @@ func TestWorkBoardPanels(t *testing.T) {
 		`<span class="say caution">Changes requested by @lead</span><span class="note caution" data-term="merge-conflict" tabindex="0">Merge conflict</span>`,
 		`>@lead</a>Please add a test. x</blockquote>`, // quote cleaned of markup, HTML and quoted replies
 		`2 days ago`, `3 hours ago`, `updated 2 min ago`,
-		`Open pull requests and issues from others in repos owned by me`,
+		`Pull requests, issues and notifications in repos owned by me`,
 		`Closed as completed`,
 	} {
 		if !strings.Contains(html, want) {
@@ -393,6 +393,26 @@ func TestToolbarAndFilterHooks(t *testing.T) {
 		`data-repo="acme/rocket" data-name="Acme/Rocket" data-s="acme/rocket active" data-open="12" data-gfi="3"`, // a tracked row's hooks
 		`<span class="movetag you">Your move</span>`,
 		`hellogitty-view`, // the view survives the reload
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+}
+
+func TestCheckFailedSaysWhy(t *testing.T) {
+	now := time.Now()
+	h := &Handler{
+		Template: web.Index,
+		Source: fakeSource{pipe: pipeFixture(t), reports: []store.RepoReport{{Repo: store.Repo{Owner: "acme", Name: "rocket", LastPoll: &now}}},
+			tel: Telemetry{LastPoll: now.Add(-10 * time.Minute), Errors: map[string]string{"acme/rocket": "pull requests: context deadline exceeded (Client.Timeout)"}}},
+		PollInterval: time.Hour,
+	}
+	_, html := get(t, h, "/")
+	for _, want := range []string{
+		`data-extra="rocket: GitHub took too long to answer while sending its pull requests. HelloGitty tries again on the next check, in about 50 minutes."`,
+		`<span class="errtag" title="Last check failed: GitHub took too long to answer while sending its pull requests.">check failed</span>`,
+		`The last check failed: GitHub took too long to answer while sending its pull requests. The numbers shown`,
 	} {
 		if !strings.Contains(html, want) {
 			t.Errorf("missing %q", want)

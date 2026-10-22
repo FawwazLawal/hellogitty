@@ -60,7 +60,13 @@
   .mod button:disabled { color: var(--dim); cursor: default; opacity: 0.55; }
   .sheet button:focus-visible, .sheet select:focus-visible, .sheet input:focus-visible, .unfold:focus-visible, .layoutbtn:focus-visible {
     outline: 2px solid var(--text); outline-offset: 2px; }
-  .sheet-foot { display: flex; justify-content: flex-end; padding: 12px 16px 16px; }
+  .sheet-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px 16px; }
+  /* Are you sure: a small sheet that names the repository and what will happen. */
+  .confirm { width: min(440px, calc(100vw - 32px)); }
+  .confirm .cbody { margin: 0; padding: 6px 16px 4px; color: var(--dim); }
+  .confirm .cbody b { color: var(--text); font-weight: 600; }
+  .sheet .done.quiet { background: transparent; font-weight: 400; }
+  .sheet .done.danger { color: var(--warn-ink); background: var(--warn-fill); border-color: var(--warn-fill); }
   .sheet .done { font: 600 13px var(--sans); color: var(--text); background: var(--raised); border: 1px solid var(--rule-hi); border-radius: 6px;
     padding: 7px 14px; cursor: pointer; }
   .status.has-mascot .theme { margin-left: 0; }
@@ -68,7 +74,7 @@
   /* alert panel */
   .cw { display: grid; grid-auto-flow: column; grid-template-columns: 2fr 2fr; grid-auto-columns: minmax(0, 1fr); gap: 6px; padding: 12px 20px 0; }
   .cell { border: 1px solid var(--rule-hi); background: var(--panel); padding: 9px 11px; min-height: 64px; border-radius: 6px;
-    display: flex; flex-direction: column; gap: 4px; }
+    display: flex; flex-direction: column; gap: 4px; position: relative; }
   .cell.empty { border-style: dashed; }
   .cell .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .cell .leg { font-size: 13.5px; line-height: 1.3; font-weight: 600; color: var(--dim); }
@@ -85,14 +91,39 @@
   .cell .detrow { display: flex; align-items: flex-start; gap: 6px; }
   .cell .detrow .det { flex: 1; min-width: 0; }
   .cell .more { font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+  /* Clear: "I've seen these". Drawn in the cell's own ink so it sits quietly on the fill. */
+  .cbtn { flex: none; align-self: flex-end; font: 600 12px/1 var(--sans); color: inherit; background: transparent; cursor: pointer;
+    border: 1px solid color-mix(in srgb, currentColor 45%, transparent); border-radius: 4px; padding: 3px 7px; }
+  .cbtn:hover { background: color-mix(in srgb, currentColor 14%, transparent); }
+  .cbtn:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
+  .cbtn:disabled { opacity: .6; cursor: default; }
+  .cell.lit.warn .cbtn { color: var(--warn-ink); background: var(--warn-fill); }
+  .cell.lit.caution .cbtn { color: var(--caution-ink); background: var(--caution-fill); }
+  .cell:not(.lit) .cbtn { color: var(--dim); }
+  /* Clear waits in the corner until you point at or tab to the cell, so it never squeezes the names.
+     Without a pointer that hovers it sits on its own line. */
+  .cbtn[data-clear] { position: absolute; right: 8px; bottom: 8px; }
+  @media (hover: hover) {
+    .cbtn[data-clear] { opacity: 0; transition: opacity .12s ease-out; }
+    .cell:hover .cbtn[data-clear], .cell:focus-within .cbtn[data-clear] { opacity: 1; }
+  }
+  @media (hover: none) {
+    .cell .detrow { flex-wrap: wrap; }
+    .cbtn[data-clear] { position: static; margin-left: auto; }
+  }
 
   /* layout */
   .grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 12px; padding: 12px 20px 24px; align-items: start; }
   .main, .rail { display: grid; gap: 12px; min-width: 0; }
   .panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; min-width: 0; overflow: hidden; }
+  /* Each section heading sits on a strip that fades from the panel's black to a warm amber glow on
+     the right, the Black Bombay kitten's eyes. It is decoration, never a state: the glow stays well
+     short of the solid amber that means "your move", and the label text is tinted to read on it. */
   .panel > h2 { margin: 0; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px;
-    padding: 11px 14px; border-bottom: 1px solid var(--rule); font-size: 15px; line-height: 1.35; font-weight: 650; }
-  .panel > h2 .lbl { font-weight: 400; }
+    padding: 11px 14px; border-bottom: 1px solid var(--rule); font-size: 15px; line-height: 1.35; font-weight: 650;
+    background: var(--head); }
+  .panel > h2 .lbl { font-weight: 400; color: var(--head-dim); }
+  .panel > h2 .lbl a { color: inherit; }
   .pad { padding: 10px 14px; margin: 0; }
   .err { color: var(--warn); overflow-wrap: anywhere; }
 
@@ -125,7 +156,21 @@
     text-decoration: underline; text-decoration-color: var(--rule-hi); text-underline-offset: 3px; }
   .clear:hover { text-decoration-color: var(--text); }
   .toolbar .fcount { margin-left: auto; }
-  .tbar { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-bottom: 1px solid var(--rule); }
+  .tbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 14px; border-bottom: 1px solid var(--rule); }
+  /* Add a repository: a plain field and an outlined button, like the toolbar's own controls. */
+  .addrepo { display: flex; gap: 6px; margin-left: auto; flex: 0 1 340px; min-width: 220px; }
+  .addrepo input { flex: 1; min-width: 0; font: 13px/1.3 var(--sans); color: var(--text); background: var(--bg);
+    border: 1px solid var(--rule-hi); border-radius: 6px; padding: 5px 9px; }
+  .addrepo input::placeholder { color: var(--dim); }
+  .addrepo button, .untrack { font: 12.5px/1 var(--sans); color: var(--text); background: transparent; border: 1px solid var(--rule-hi);
+    border-radius: 6px; padding: 6px 10px; cursor: pointer; white-space: nowrap; }
+  .addrepo button:hover, .untrack:hover { background: var(--raised); }
+  .addrepo button:disabled, .untrack:disabled { opacity: .6; cursor: default; }
+  .untrack { font-size: 12px; padding: 3px 8px; margin-left: 8px; color: var(--dim); }
+  .addmsg { margin: 0; padding: 7px 14px; font-size: 13px; border-bottom: 1px solid var(--rule); }
+  .addmsg.bad { color: var(--warn); }
+  .removed { font-size: 13px; color: var(--dim); border-top: 1px solid var(--rule); }
+  .removed .untrack { margin: 4px 0 0 6px; }
   .movetag { display: none; font-size: 12px; color: var(--dim); }
   .movetag.you { color: var(--caution-text); font-weight: 600; }
   .regrouped .movetag { display: inline; }
@@ -226,6 +271,35 @@
     transform: rotate(-45deg); justify-self: center; }
   details[open] > summary .chev { transform: rotate(45deg); }
   .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .repo > summary > .name { display: flex; align-items: center; min-width: 0; }
+  .repo > summary > .name .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .repo > summary > .name .nb { flex: none; margin-left: 6px; }
+  .name.hasnew { font-weight: 700; }
+  /* "N new": unacknowledged items, beside a section heading or a repository's name. Green, like
+     the new-activity dot. */
+  /* A repository whose last check failed: a small red outlined tag beside its name, the reason on hover. */
+  .errtag { display: inline-flex; align-items: center; margin-left: 8px; padding: 1px 7px; border-radius: 999px; white-space: nowrap;
+    font: 600 12px/16px var(--sans); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent); flex: none; }
+  .nb { display: inline-flex; align-items: center; margin-left: 8px; padding: 1px 7px; border-radius: 999px; white-space: nowrap; vertical-align: 1px;
+    font: 650 12px/16px var(--sans); color: var(--nom); background: color-mix(in srgb, var(--nom) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--nom) 50%, transparent); }
+  .panel > h2 .nb { font-size: 12px; background: color-mix(in srgb, var(--nom) 14%, var(--panel)); } /* opaque, so it reads on the heading strip */
+  .rtabs { display: flex; flex-wrap: wrap; gap: 2px; margin: 8px 0 8px; border-bottom: 1px solid var(--rule); }
+  .rtabs button { font: 13px var(--sans); color: var(--dim); background: none; border: 0; border-bottom: 2px solid transparent;
+    padding: 6px 10px; margin-bottom: -1px; cursor: pointer; }
+  .rtabs button:hover { color: var(--text); }
+  .rtabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--text); font-weight: 600; }
+  .rtabs button:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+  .rtabs .nb { margin-left: 6px; }
+  .rlist { list-style: none; margin: 0; padding: 0; }
+  .rlist li { padding: 6px 0; border-top: 1px solid var(--rule); }
+  .rlist li:first-child { border-top: 0; }
+  .rlist .rt { display: flex; align-items: baseline; gap: 6px; }
+  .rlist .rt a { text-decoration: none; }
+  .rlist .rt a:hover { text-decoration: underline; }
+  .rlist .rm { display: flex; flex-wrap: wrap; gap: 2px 8px; font-size: 12px; color: var(--dim); margin-top: 1px; }
+  .rlist li.isnew .rt a { font-weight: 650; }
+  .rsub { margin: 12px 0 4px; font-size: 12.5px; font-weight: 650; color: var(--dim); }
   .name .own { color: var(--dim); }
   .light { width: 10px; height: 10px; border-radius: 50%; justify-self: center; border: 2px solid transparent; }
   .light.ACTIVE { background: var(--nom); }
@@ -261,6 +335,8 @@
   .legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; justify-content: flex-end; }
   .legend .li { white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; }
   .legend .light { display: inline-block; }
+  /* the amber key marks would melt into the heading strip's amber end; a ring of panel colour keeps them apart */
+  .panel > h2 .legend .light, .panel > h2 .legend .sw { box-shadow: 0 0 0 1.5px var(--panel); }
   .sw { display: inline-block; width: 12px; height: 9px; border: 1px solid var(--rule-hi); border-radius: 2px; }
   .sw.done { background: var(--dim); border-color: var(--dim); }
   .sw.current { background: var(--text); border-color: var(--text); }
@@ -278,12 +354,17 @@
 
   /* PR totals and checks */
   .occ { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border-bottom: 1px solid var(--rule); }
-  .occ div { padding: 8px 4px 9px; text-align: center; border-right: 1px solid var(--rule); }
-  .occ div:last-child { border-right: 0; }
+  .occ > * { padding: 8px 4px 9px; text-align: center; border-right: 1px solid var(--rule); }
+  .occ > *:last-child { border-right: 0; }
+  /* Each number opens what it counts on a page of its own. */
+  a.cntl { display: block; color: inherit; text-decoration: none; }
+  a.cntl:hover { background: var(--raised); }
+  a.cntl:hover b { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+  a.cntl:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; }
   .occ b, .prs b { display: block; font: 400 20px/1.3 var(--mono); font-variant-numeric: tabular-nums slashed-zero; }
   .prs { display: grid; grid-template-columns: repeat(5, 1fr); border-bottom: 1px solid var(--rule); }
-  .prs div { padding: 9px 10px; border-right: 1px solid var(--rule); }
-  .prs div:last-child { border-right: 0; }
+  .prs > * { padding: 9px 10px; border-right: 1px solid var(--rule); }
+  .prs > *:last-child { border-right: 0; }
   .nodata { padding: 10px 14px; margin: 0; color: var(--dim); font-size: 13px; }
   .nodata b { color: var(--text); font-weight: 600; }
   .prlist { list-style: none; margin: 0; padding: 2px 14px 10px; }
@@ -357,6 +438,7 @@
     --nom: #4fc469; --caution: #e9aa3b; --caution-text: #e9aa3b; --warn: #ff5244;
     --caution-fill: #e9aa3b; --caution-ink: #160e02; --warn-fill: #c4271d; --warn-ink: #ffffff;
     --tag-fill: #2b2610; --tag-ink: #f3d36b; --tag-rule: #4a3f17;
+    --head: linear-gradient(90deg, #101011 0%, #101011 15%, #3a2a12 55%, #7a561c 100%); --head-dim: #ddd5c5;
     --mascot-bg: #101011;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
@@ -369,6 +451,7 @@
       --text: #1c1c1d; --dim: #62625d; --track: #e3e3df;
       --nom: #18803a; --caution: #d08a12; --caution-text: #8a5600; --warn: #c3271c;
       --tag-fill: #fbf0c4; --tag-ink: #6a5200; --tag-rule: #ecd88a;
+      --head: linear-gradient(90deg, #ffffff 0%, #ffffff 15%, #f9ead0 55%, #f0d6a4 100%); --head-dim: #6b5a3e;
     }
   }
   :root[data-theme="light"] {
@@ -377,6 +460,7 @@
     --text: #1c1c1d; --dim: #62625d; --track: #e3e3df;
     --nom: #18803a; --caution: #d08a12; --caution-text: #8a5600; --warn: #c3271c;
     --tag-fill: #fbf0c4; --tag-ink: #6a5200; --tag-rule: #ecd88a;
+    --head: linear-gradient(90deg, #ffffff 0%, #ffffff 15%, #f9ead0 55%, #f0d6a4 100%); --head-dim: #6b5a3e;
   }
   * { box-sizing: border-box; }
   html { background: var(--bg); scrollbar-color: var(--rule-hi) var(--bg); }
@@ -444,7 +528,7 @@
   .fnone { padding: 12px 14px; color: var(--dim); font-size: 13px; }
   .wi.flash { animation: fresh 2.4s ease-out; }
 {{end}}
-{{define "feed-rows"}}{{range .Rows}}<li class="fr{{if .Acked}} acked{{end}}" data-id="{{.ID}}" data-k="{{.Key}}" data-thread="{{if .Thread}}1{{end}}">
+{{define "feed-rows"}}{{range .Rows}}<li class="fr{{if .Acked}} acked{{end}}" data-id="{{.ID}}" data-repo="{{lower .Repo}}" data-k="{{.Key}}" data-thread="{{if .Thread}}1{{end}}">
   <span class="fdot" aria-hidden="true"></span>
   <div><div class="fline"><span class="ftag {{.Kind}}">{{.Label}}</span><a class="ftext" href="{{.URL}}" target="_blank" rel="noopener">{{.Text}}</a></div>
   <div class="fmeta"><span>{{.Repo}}{{if .Number}} #{{.Number}}{{end}}</span>{{if .Actor}}<span>@{{.Actor}}</span>{{end}}<time datetime="{{.AgoTitle}}" title="{{.AgoTitle}}">{{.Ago}}</time></div></div>
@@ -471,7 +555,7 @@
       function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
       function row(r) {
         var li = el("li", "fr" + (r.acked ? " acked" : "") + (known[r.id] ? "" : " fresh"));
-        li.dataset.id = r.id; li.dataset.k = r.key || ""; li.dataset.thread = r.thread ? "1" : "";
+        li.dataset.id = r.id; li.dataset.k = r.key || ""; li.dataset.thread = r.thread ? "1" : ""; li.dataset.repo = (r.repo || "").toLowerCase();
         li.appendChild(el("span", "fdot")).setAttribute("aria-hidden", "true");
         var body = el("div"), line = el("div", "fline"), a = el("a", "ftext", r.text);
         line.appendChild(el("span", "ftag " + r.kind, r.label));
@@ -499,7 +583,17 @@
         }).catch(function () {});
       }
       function say(text) { if (msg) msg.textContent = text; }
+      // Rows acknowledged elsewhere on the page (a repository's Issues tab) settle here too.
+      window.addEventListener("hg-acked", function (e) {
+        if (e.detail.from === "feed") return;
+        e.detail.ids.forEach(function (id) {
+          var li = list.querySelector('.fr[data-id="' + id + '"]');
+          if (li && !li.classList.contains("acked")) { li.classList.add("acked"); var b = li.querySelector(".fack"); b.textContent = "Seen"; b.disabled = true; }
+        });
+        count();
+      });
       function ack(ids, lis) {
+        window.dispatchEvent(new CustomEvent("hg-acked", { detail: { ids: ids, from: "feed" } }));
         lis.forEach(function (li) {
           li.classList.add("acked"); var b = li.querySelector(".fack"); b.textContent = "Seen"; b.disabled = true;
           // The same pull request or issue on the dashboard counts as read too.
@@ -584,12 +678,13 @@
   {{if .Mascot}}<div class="mascot" aria-hidden="true" data-routine="{{range $i, $c := .Mascot.Routine}}{{if $i}} {{end}}{{$c}}{{end}}" data-news="{{range $i, $c := .Mascot.News}}{{if $i}} {{end}}{{$c}}{{end}}"><video muted playsinline preload="none" poster="{{.Mascot.Rest}}" tabindex="-1"></video></div>{{end}}
 </header>
 
-<section class="cw" aria-label="Alerts" data-module="alerts">
+<section class="cw" aria-label="Alerts" data-module="alerts" data-token="{{.Token}}">
 {{range .Cells}}
-  <div class="cell {{.Level}}{{if .Lit}} lit{{end}}{{if .Wide}} wide{{end}}{{if .Empty}} empty{{end}}" tabindex="0" data-term="{{if $.HasTerm (print "p:" .Label)}}p:{{.Label}}{{else}}cell-{{.Key}}{{end}}"{{if .Title}} data-extra="{{.Title}}"{{end}}>
+  <div class="cell {{.Level}}{{if .Lit}} lit{{end}}{{if .Wide}} wide{{end}}{{if .Empty}} empty{{end}}" tabindex="0" data-term="{{if $.HasTerm (print "p:" .Label)}}p:{{.Label}}{{else}}cell-{{.Key}}{{end}}"{{if .Title}} data-extra="{{.Title}}"{{end}} data-cell="{{.Key}}"{{if .Clearable}} data-items="{{.ItemsAttr}}"{{end}}>
     <div class="head"><span class="leg">{{.Label}}</span>{{if and .Value (not .Empty)}}<span class="cnt" data-v="cw-{{.Key}}">{{.Value}}</span>{{end}}</div>
     {{if .Empty}}<span class="det" data-v="cw-{{.Key}}">{{.Value}}</span>{{end}}
-    {{if and .Lit .Detail}}<div class="detrow"><span class="det">{{.Detail}}</span>{{if .More}}<span class="more">+{{.More}}</span>{{end}}</div>{{end}}
+    {{if and .Lit .Detail}}<div class="detrow"><span class="det">{{.Detail}}</span>{{if .More}}<span class="more">+{{.More}}</span>{{end}}{{if .Clearable}}<button type="button" class="cbtn" data-clear aria-label="Clear {{.Label}} until something new lights it">Clear</button>{{end}}</div>
+    {{else if .Cleared}}<div class="detrow"><span class="det">{{.Cleared}} cleared</span><button type="button" class="cbtn" data-restore aria-label="Show the cleared {{.Label}} again">Show</button></div>{{end}}
     <span class="sr">{{if .Lit}}lit{{else}}not lit{{end}}</span>
   </div>
 {{end}}
@@ -608,7 +703,7 @@
 <div class="grid">
   <div class="main">
     <section class="panel" aria-labelledby="work-h" data-board data-module="your-work">
-      <h2 id="work-h">Your work <span class="lbl">{{if .Work.Known}}Pull requests and issues @{{.Work.Login}} has out, anywhere on GitHub · updated {{.Work.FetchedAgo}}{{else}}Not fetched yet{{end}}<span class="newcount" id="newcount" hidden></span></span></h2>
+      <h2 id="work-h">Your work <span class="lbl">{{if .Work.Known}}Pull requests and issues @{{.Work.Login}} has out, anywhere on GitHub · updated {{.Work.FetchedAgo}}{{else}}Not fetched yet{{end}}</span><span class="nb" id="newcount"{{if not .WorkNew}} hidden{{end}}>{{.WorkNew}} new</span></h2>
       {{if not .Work.Known}}
       <p class="pad zero">{{if .Work.Err}}Couldn't load your pull requests and issues: <span class="err">{{.Work.Err}}</span>{{else}}Loading your pull requests and issues. This takes a few seconds after HelloGitty starts; the page reloads on its own.{{end}}</p>
       {{else}}
@@ -634,8 +729,20 @@
     </section>
 
     {{if .Work.Known}}
+    <section class="panel" aria-labelledby="conv-h" data-board data-module="conversations">
+      <h2 id="conv-h"><span class="term" data-term="conversations" tabindex="0">Conversations</span>{{if .ConvNew}}<span class="nb">{{.ConvNew}} new</span>{{end}} <span class="lbl">Issues and pull requests you joined but didn't open · {{len .Work.ConvYou}} ask something of you, {{len .Work.ConvThem}} quiet</span></h2>
+      <div class="group mv">
+        <h3><span class="term" data-term="group-convyou" tabindex="0">Asks something of you</span> <span class="n{{if .Work.ConvYou}} hot{{end}}" data-v="conv-you">{{len .Work.ConvYou}}</span></h3>
+        {{if .Work.ConvYou}}<ul class="items">{{range .Work.ConvYou}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nobody in a thread you joined is waiting on you.</p>{{end}}
+      </div>
+      <details class="group mv" data-key="conv-them">
+        <summary><span class="term" data-term="group-convthem">Quiet</span> <span class="n" data-v="conv-them">{{len .Work.ConvThem}}</span><span class="chev" aria-hidden="true"></span></summary>
+        {{if .Work.ConvThem}}<ul class="items">{{range .Work.ConvThem}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">No other open threads you joined.</p>{{end}}
+      </details>
+    </section>
+
     <section class="panel" aria-labelledby="repos-h" data-board data-module="your-repos">
-      <h2 id="repos-h">Your repositories <span class="lbl">Open pull requests and issues from others in {{.Work.Scope}}</span></h2>
+      <h2 id="repos-h">Your repositories{{if .ReposNew}}<span class="nb">{{.ReposNew}} new</span>{{end}} <span class="lbl">Pull requests, issues and notifications in {{.Work.Scope}}</span></h2>
       <div class="group mv">
         <h3><span class="term" data-term="group-inyou" tabindex="0">Needs you</span> <span class="n{{if .Work.InYou}} hot{{end}}" data-v="work-inyou">{{len .Work.InYou}}</span></h3>
         {{if .Work.InYou}}<ul class="items">{{range .Work.InYou}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">No reviews requested and no unanswered issues.</p>{{end}}
@@ -644,16 +751,24 @@
         <h3><span class="term" data-term="group-inthem" tabindex="0">Waiting on contributors</span> <span class="n" data-v="work-inthem">{{len .Work.InThem}}</span></h3>
         {{if .Work.InThem}}<ul class="items">{{range .Work.InThem}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nothing waiting on a contributor.</p>{{end}}
       </div>
+      {{if .Work.RepoOther}}<div class="group mv">
+        <h3><span class="term" data-term="group-repoother" tabindex="0">Notifications</span> <span class="n">{{len .Work.RepoOther}}</span></h3>
+        <ul class="items">{{range .Work.RepoOther}}{{template "other" .}}{{end}}</ul>
+      </div>{{end}}
       <p class="hint">Maintain repositories you don't own? List them under <code>"maintain"</code> in hellogitty.json.</p>
     </section>
     {{end}}
 
     <section class="panel{{if not .HasPipeline}} nopipe{{end}}" aria-labelledby="tracked-h" data-module="tracked">
-      <h2 id="tracked-h">Tracked repositories <span class="lbl legend"><span class="li" data-term="health-ACTIVE"><span class="light ACTIVE"></span>active</span> <span class="li" data-term="health-SLOW"><span class="light SLOW"></span>slowing</span> <span class="li" data-term="health-DORMANT"><span class="light DORMANT"></span>dormant</span> <span class="li" data-term="health-UNKNOWN"><span class="light UNKNOWN"></span>not checked</span>{{if .HasPipeline}} <span class="li" data-term="stage-done"><span class="sw done"></span>done</span> <span class="li" data-term="stage-current"><span class="sw current"></span>current</span> <span class="li" data-term="stage-failed"><span class="sw failed"></span>failed</span>{{end}}</span></h2>
+      <h2 id="tracked-h">Tracked repositories<span class="nb" id="tracked-new" title="Unacknowledged items in the live feed about these repositories"{{if not .TrackedNew}} hidden{{end}}>{{.TrackedNew}} new in {{.TrackedNewRepos}} {{if eq .TrackedNewRepos 1}}repo{{else}}repos{{end}}</span> <span class="lbl legend"><span class="li" data-term="health-ACTIVE"><span class="light ACTIVE"></span>active</span> <span class="li" data-term="health-SLOW"><span class="light SLOW"></span>slowing</span> <span class="li" data-term="health-DORMANT"><span class="light DORMANT"></span>dormant</span> <span class="li" data-term="health-UNKNOWN"><span class="light UNKNOWN"></span>not checked</span>{{if .HasPipeline}} <span class="li" data-term="stage-done"><span class="sw done"></span>done</span> <span class="li" data-term="stage-current"><span class="sw current"></span>current</span> <span class="li" data-term="stage-failed"><span class="sw failed"></span>failed</span>{{end}}</span></h2>
       <div class="tbar"><label class="pick"><span class="lbl">Sort</span><select id="f-sort">
         <option value="default">{{if .HasPipeline}}Furthest stage first{{else}}Name{{end}}</option><option value="name">Name</option><option value="open">Most open issues</option>
         <option value="gfi">Most good first issues</option><option value="unasgn">Most unassigned</option><option value="commit">Most recent commit</option><option value="denied">Most turned down</option>
-      </select></label><span class="fcount" id="tracked-count"></span></div>
+      </select></label><span class="fcount" id="tracked-count"></span>
+      {{if .RepoTools}}<form class="addrepo" id="repo-add" data-token="{{.Token}}" autocomplete="off"><label class="sr" for="repo-add-in">Add a repository to track</label>
+        <input id="repo-add-in" type="text" placeholder="Add a repo: owner/name or GitHub link" spellcheck="false" required>
+        <button type="submit">Track</button></form>{{end}}</div>
+      {{if .RepoTools}}<p class="addmsg" id="repo-add-msg" role="status" aria-live="polite" hidden></p>{{end}}
       <div class="thead">
         <span></span><span class="lbl">Repository</span>
         {{if .HasPipeline}}<span class="phead">{{range .Stages}}<span {{if $.HasTerm (print "p:" .Abbr)}}class="lbl term" data-term="p:{{.Abbr}}" tabindex="0" data-extra="{{.Name}}"{{else}}class="lbl" title="{{.Name}}"{{end}}>{{.Abbr}}</span>{{end}}</span>
@@ -661,10 +776,10 @@
         <span class="lbl num term" data-term="col-commit" tabindex="0">Last commit</span><span class="lbl num term" data-term="col-watching" tabindex="0">Watching</span><span class="lbl num term" data-term="col-denied" tabindex="0">Turned down</span><span></span>
       </div>
       {{range .Rows}}{{$repoURL := .URL}}
-      <details class="repo" data-key="repo-{{.Key}}" data-repo="{{.Key}}" data-name="{{.Owner}}/{{.Name}}" data-s="{{.Search}}" data-open="{{.Open}}" data-gfi="{{.GFI}}" data-unasgn="{{.Unassigned}}" data-age="{{if .AgeKnown}}{{.AgeDays}}{{else}}100000{{end}}" data-denied="{{.DeniedTotal}}">
+      <details class="repo" data-new-ids="{{.NewIDs}}" data-key="repo-{{.Key}}" data-repo="{{.Key}}" data-name="{{.Owner}}/{{.Name}}" data-s="{{.Search}}" data-open="{{.Open}}" data-gfi="{{.GFI}}" data-unasgn="{{.Unassigned}}" data-age="{{if .AgeKnown}}{{.AgeDays}}{{else}}100000{{end}}" data-denied="{{.DeniedTotal}}">
         <summary>
           <span class="light {{.Health}}" role="img" aria-label="{{lower .Health}}" data-term="health-{{.Health}}" data-v="h-{{.Key}}" data-val="{{.Health}}"></span>
-          <span class="name"><span class="own">{{.Owner}}/</span>{{.Name}}</span>
+          <span class="name{{if .NewCount}} hasnew{{end}}"><span class="nm"><span class="own">{{.Owner}}/</span>{{.Name}}</span>{{if .NewCount}}<span class="nb" data-repo-new>{{.NewCount}} new</span>{{end}}{{if .Error}}<span class="errtag" title="Last check failed: {{.Error}}">check failed</span>{{end}}</span>
           {{if $.HasPipeline}}{{if .InPipeline}}<span class="phase" data-v="ph-{{.Key}}" data-val="{{.Stage}}" title="Stage: {{.Stage}}">{{range .Phases}}<i class="{{.State}}"></i>{{end}}<span class="sr">stage {{.Stage}}</span></span>
           {{else}}<span class="phase none" title="Not in the pipeline">{{range $.Stages}}<i></i>{{end}}<span class="sr">not in the pipeline</span></span>{{end}}
           <span class="stg">{{if .InPipeline}}{{.StageAbbr}}{{else}}—{{end}}</span>
@@ -683,9 +798,9 @@
         <div class="expand">
           <div>
             <h3>Repository</h3>
-            <p><a href="{{.URL}}" target="_blank" rel="noopener">{{.Owner}}/{{.Name}}</a></p>
+            <p><a href="{{.URL}}" target="_blank" rel="noopener">{{.Owner}}/{{.Name}}</a>{{if $.RepoTools}} <button type="button" class="untrack" data-untrack="{{.Owner}}/{{.Name}}">Stop tracking</button>{{end}}</p>
             {{if $.HasPipeline}}<p class="zero">{{if .InPipeline}}Stage: {{.Stage}}{{if .Label}} · {{$.Labels.Status}}: {{.Label}}{{end}}{{else}}Not in the pipeline{{end}}{{if .NotesURL}} · <a href="{{.NotesURL}}" target="_blank">{{$.Labels.Notes}}</a>{{end}}</p>{{end}}
-            {{if .Error}}<p class="err">The last check failed: {{.Error}}</p>{{end}}
+            {{if .Error}}<p class="err" title="{{.ErrorRaw}}">The last check failed: {{.Error}} The numbers shown are from the check before; HelloGitty tries again on the next one.</p>{{end}}
             <h3>Watched issues</h3>
             {{if .Watch}}<ul>{{range .Watch}}<li><span class="st {{.Status}}" data-term="watch-{{.Status}}">{{watchText .Status}}</span> <a href="{{.URL}}" target="_blank" rel="noopener">#{{.Number}}</a> {{.Title}}</li>{{end}}</ul>
             {{else}}<p class="zero">None watched.</p>{{end}}
@@ -693,18 +808,43 @@
             {{if .PRs}}<ul>{{range .PRs}}<li><a href="{{.URL}}" target="_blank" rel="noopener">#{{.Number}}</a> {{.Title}} <span class="tag">{{.State}}</span>{{if .NotesURL}} <a href="{{.NotesURL}}" target="_blank">{{$.Labels.Notes}}</a>{{end}}</li>{{end}}</ul>
             {{else}}<p class="zero">None opened.</p>{{end}}
           </div>
-          <div>
-            <h3>Turned down from outside contributors · last {{len .Denied}} of {{.DeniedTotal}}</h3>
-            {{range .Denied}}
-            <div class="denial">
+          <div class="rtab" data-default="{{.Tab}}">
+            <div class="rtabs" role="tablist" aria-label="{{.Owner}}/{{.Name}}">
+              <button type="button" role="tab" data-tab="issues" aria-selected="{{if eq .Tab "issues"}}true{{else}}false{{end}}">Issues{{if .NewIssues}}<span class="nb">{{.NewIssues}} new</span>{{end}}</button>
+              <button type="button" role="tab" data-tab="prs" aria-selected="false">Pull requests</button>
+              <button type="button" role="tab" data-tab="activity" aria-selected="{{if eq .Tab "activity"}}true{{else}}false{{end}}">Activity</button>
+              <button type="button" role="tab" data-tab="lessons" aria-selected="{{if eq .Tab "lessons"}}true{{else}}false{{end}}">Lessons ({{.DeniedTotal}})</button>
+            </div>
+            <div role="tabpanel" data-panel="issues"{{if ne .Tab "issues"}} hidden{{end}}>
+              {{if .Issues}}<ul class="rlist">{{range .Issues}}<li{{if .New}} class="isnew"{{if .AckID}} data-ack="{{.AckID}}"{{end}}{{end}}><div class="rt">{{if .New}}<span class="nb">New</span>{{end}}<a href="{{.URL}}" target="_blank" rel="noopener">#{{.Number}} {{.Title}}</a></div><div class="rm"><time title="{{.AgoTitle}}">opened {{.Ago}}</time>{{if .Taken}}<span>{{.Taken}}</span>{{end}}{{range .Labels}}<span class="label">{{.}}</span>{{end}}</div></li>{{end}}</ul>
+              {{else}}<p class="zero">No open issues stored yet.</p>{{end}}
+            </div>
+            <div role="tabpanel" data-panel="prs" hidden>
+              <h3 class="rsub">Open, newest first</h3>
+              {{if .OpenPRs}}<ul class="rlist">{{range .OpenPRs}}<li><div class="rt"><a href="{{.URL}}" target="_blank" rel="noopener">#{{.Number}} {{.Title}}</a></div><div class="rm"><span>@{{.Author}}</span><time title="{{.AgoTitle}}">opened {{.Ago}}</time>{{if eq .State "draft"}}<span>draft</span>{{end}}</div></li>{{end}}</ul>
+              {{else}}<p class="zero">None open, or not fetched yet.</p>{{end}}
+              <h3 class="rsub">Recently merged or closed</h3>
+              {{if .ClosedPRs}}<ul class="rlist">{{range .ClosedPRs}}<li><div class="rt"><a href="{{.URL}}" target="_blank" rel="noopener">#{{.Number}} {{.Title}}</a></div><div class="rm"><span class="tag">{{.State}}</span><time title="{{.AgoTitle}}">{{.Ago}}</time>{{if .Outside}}<span>outside contributor</span>{{end}}</div></li>{{end}}</ul>
+              {{else}}<p class="zero">None among the latest 100 closed.</p>{{end}}
+            </div>
+            <div role="tabpanel" data-panel="activity"{{if ne .Tab "activity"}} hidden{{end}}>
+              {{if .Activity}}<ul class="rlist">{{range .Activity}}<li{{if not .Acked}} class="isnew"{{end}}><div class="rt"><span class="ftag {{.Kind}}">{{.Label}}</span><a href="{{.URL}}" target="_blank" rel="noopener">{{.Text}}</a></div><div class="rm">{{if .Number}}<span>#{{.Number}}</span>{{end}}{{if .Actor}}<span>@{{.Actor}}</span>{{end}}<time title="{{.AgoTitle}}">{{.Ago}}</time>{{if .Acked}}<span>seen</span>{{end}}</div></li>{{end}}</ul>
+              {{else}}<p class="zero">Nothing in the last week besides new issues. Your pull requests, someone else's work on your planned issues, health changes and notifications about this repository show here.</p>{{end}}
+            </div>
+            <div role="tabpanel" data-panel="lessons"{{if ne .Tab "lessons"}} hidden{{end}}>
+              <h3 class="rsub">Turned down from outside contributors · last {{len .Denied}} of {{.DeniedTotal}}</h3>
+              {{range .Denied}}
+              <div class="denial">
               <a href="{{$repoURL}}/pull/{{.Number}}" target="_blank" rel="noopener">#{{.Number}}</a> {{.Title}} <span class="tag">{{assoc .AuthorAssociation}}</span> {{if .ReviewVerdict}}<span class="tag{{if eq .ReviewVerdict "CHANGES_REQUESTED"}} cr{{end}}">{{verdict .ReviewVerdict}}</span> {{end}}<span class="tag">{{utc .ClosedAt}}</span>
               {{if .ClosingComment}}<q>{{.ClosingComment}}</q>{{else}}<q>No maintainer comment before it was closed.</q>{{end}}
             </div>
-            {{else}}<p class="zero">None among the latest 100 closed pull requests.</p>{{end}}
+                          {{else}}<p class="zero">None among the latest 100 closed pull requests.</p>{{end}}
+            </div>
           </div>
         </div>
       </details>
       {{end}}
+      {{if .RemovedRepos}}<p class="removed pad">Stopped tracking here (your config file still lists them):{{range .RemovedRepos}} <button type="button" class="untrack" data-retrack="{{.}}">{{.}} · Track again</button>{{end}}</p>{{end}}
       {{if .PipelineErr}}<p class="err pad">The pipeline command failed: {{.PipelineErr}}</p>{{end}}
     </section>
   </div>
@@ -717,7 +857,7 @@
       <div class="ffoot"><label class="check"><input type="checkbox" id="feed-show"> Show acknowledged</label><button type="button" class="clear" id="feed-all">Acknowledge all</button><span id="feed-msg" class="sr" role="status"></span></div>
     </section>
     <section class="panel" aria-labelledby="watch-h" data-module="watched">
-      <h2 id="watch-h">Watched issues <span class="lbl">{{len .Watch}} watched</span></h2>
+      <h2 id="watch-h"><span class="term" data-term="watched" tabindex="0">Watched issues</span> <span class="lbl">{{len .Watch}} watched</span></h2>
       {{if .Watch}}
       <ul class="wl">
       {{range .Watch}}
@@ -734,12 +874,12 @@
 
     <section class="panel" aria-labelledby="pl-h" data-module="pipeline">
       <h2 id="pl-h">{{if .HasPipeline}}Pipeline <span class="lbl">{{.TargetCount}} repos by stage</span>{{else}}Merge rate <span class="lbl">Your pull requests in tracked repos</span>{{end}}</h2>
-      {{if .HasPipeline}}<div class="occ">{{range .Pipeline.Counts}}<div {{if $.HasTerm (print "p:" .Abbr)}}data-term="p:{{.Abbr}}"{{else}}title="{{.Name}}"{{end}}><span class="lbl">{{.Abbr}}</span><b class="{{if not .Count}}zero{{end}}" data-v="occ-{{.Name}}">{{.Count}}</b></div>{{end}}</div>{{end}}
+      {{if .HasPipeline}}<div class="occ">{{range .Pipeline.Counts}}<a class="cntl" href="/list?stage={{.Name}}" {{if $.HasTerm (print "p:" .Abbr)}}data-term="p:{{.Abbr}}"{{else}}title="{{.Name}}"{{end}} aria-label="{{.Count}} at {{.Name}}: list them"><span class="lbl">{{.Abbr}}</span><b class="{{if not .Count}}zero{{end}}" data-v="occ-{{.Name}}">{{.Count}}</b></a>{{end}}</div>{{end}}
       <div class="prs">
-        <div><span class="lbl">Opened</span><b class="{{if not .Pipeline.Opened}}zero{{end}}" data-v="pr-opened">{{.Pipeline.Opened}}</b></div>
-        <div><span class="lbl">Open</span><b class="{{if not .Pipeline.Open}}zero{{end}}" data-v="pr-open">{{.Pipeline.Open}}</b></div>
-        <div><span class="lbl">Merged</span><b class="{{if not .Pipeline.Merged}}zero{{end}}" data-v="pr-merged">{{.Pipeline.Merged}}</b></div>
-        <div><span class="lbl">Closed</span><b class="{{if not .Pipeline.Closed}}zero{{end}}" data-v="pr-closed">{{.Pipeline.Closed}}</b></div>
+        <a class="cntl" href="/list?prs=opened" aria-label="{{.Pipeline.Opened}} opened: list them"><span class="lbl">Opened</span><b class="{{if not .Pipeline.Opened}}zero{{end}}" data-v="pr-opened">{{.Pipeline.Opened}}</b></a>
+        <a class="cntl" href="/list?prs=open" aria-label="{{.Pipeline.Open}} open: list them"><span class="lbl">Open</span><b class="{{if not .Pipeline.Open}}zero{{end}}" data-v="pr-open">{{.Pipeline.Open}}</b></a>
+        <a class="cntl" href="/list?prs=merged" aria-label="{{.Pipeline.Merged}} merged: list them"><span class="lbl">Merged</span><b class="{{if not .Pipeline.Merged}}zero{{end}}" data-v="pr-merged">{{.Pipeline.Merged}}</b></a>
+        <a class="cntl" href="/list?prs=closed" aria-label="{{.Pipeline.Closed}} closed: list them"><span class="lbl">Closed</span><b class="{{if not .Pipeline.Closed}}zero{{end}}" data-v="pr-closed">{{.Pipeline.Closed}}</b></a>
         <div><span class="lbl term" data-term="rate" tabindex="0">Rate</span><b class="{{if not .Pipeline.Rate}}zero{{end}}" data-v="pr-rate">{{if .Pipeline.Rate}}{{.Pipeline.Rate}}{{else}}—{{end}}</b></div>
       </div>
       {{if not .Pipeline.Known}}
@@ -770,12 +910,110 @@
 <dialog id="layout" class="sheet" aria-labelledby="layout-h">
   <div class="sheet-head"><h2 id="layout-h">Layout</h2><button type="button" class="clear" id="layout-reset">Reset to everything</button></div>
   <p class="hint">Saved in this browser. Hidden panels still count in the alert cells.</p>
-  <div class="seg presets" role="group" aria-label="Presets"><span class="seglbl">Preset</span><button type="button" data-preset="everything">Everything</button><button type="button" data-preset="contributor">Contributor</button><button type="button" data-preset="maintainer">Maintainer</button><button type="button" data-preset="program">Program</button><button type="button" data-preset="focus">Focus</button></div>
+  <div class="seg presets" role="group" aria-label="Presets"><span class="seglbl">Preset</span><button type="button" data-preset="everything">Everything</button><button type="button" data-preset="contributor">Contributor</button><button type="button" data-preset="maintainer">Maintainer</button><button type="button" data-preset="program">Program</button><button type="button" data-preset="focus">Focus</button><button type="button" data-preset="custom" title="Your own layout: any change you make is kept here">Custom</button></div>
   <ol class="mods" id="layout-list"></ol>
   <div class="sheet-foot"><button type="button" class="done" id="layout-done">Done</button></div>
 </dialog>
+<dialog id="confirm" class="sheet confirm" aria-labelledby="confirm-h" aria-describedby="confirm-b">
+  <form method="dialog">
+    <div class="sheet-head"><h2 id="confirm-h"></h2></div>
+    <p class="cbody" id="confirm-b"></p>
+    <div class="sheet-foot"><button type="submit" value="no" class="done quiet">Cancel</button><button type="submit" value="yes" class="done" id="confirm-ok"></button></div>
+  </form>
+</dialog>
 <footer>Reloads every 5 minutes · checks your repositories every {{.PollInterval}} minutes and your work every 5 · runs only on this computer</footer>
 
+<script>
+  // Add and remove tracked repositories. A new one appears once its first check finishes.
+  (function () {
+    var form = document.getElementById("repo-add"), msg = document.getElementById("repo-add-msg");
+    if (!form) return;
+    var token = form.dataset.token, input = form.querySelector("input"), btn = form.querySelector("button");
+    function say(text, bad) { msg.textContent = text; msg.hidden = false; msg.classList.toggle("bad", !!bad); }
+    function post(path, repo) {
+      return fetch(path, { method: "POST", headers: { "Content-Type": "application/json", "X-HelloGitty-Token": token },
+        body: JSON.stringify({ repo: repo }) }).then(function (r) {
+          return r.json().catch(function () { return { error: "HelloGitty didn't answer (" + r.status + ")" }; });
+        });
+    }
+    function waitFor(repo, tries) {
+      fetch("/repos/ready?repo=" + encodeURIComponent(repo)).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.ready || tries <= 0) location.reload();
+        else setTimeout(function () { waitFor(repo, tries - 1); }, 3000);
+      }).catch(function () { setTimeout(function () { location.reload(); }, 3000); });
+    }
+    // Are you sure: resolves true only on the confirming button.
+    var dlg = document.getElementById("confirm");
+    function ask(title, body, ok, danger) {
+      return new Promise(function (resolve) {
+        if (!dlg || typeof dlg.showModal !== "function") { resolve(window.confirm(title)); return; }
+        document.getElementById("confirm-h").textContent = title;
+        var b = document.getElementById("confirm-b"); b.textContent = "";
+        body.forEach(function (part) { var n = part.b ? document.createElement("b") : document.createTextNode(part.t); if (part.b) n.textContent = part.b; b.appendChild(n); });
+        var okBtn = document.getElementById("confirm-ok"); okBtn.textContent = ok; okBtn.classList.toggle("danger", !!danger);
+        dlg.returnValue = "";
+        dlg.addEventListener("close", function once() { dlg.removeEventListener("close", once); resolve(dlg.returnValue === "yes"); });
+        dlg.showModal();
+        okBtn.focus();
+      });
+    }
+    function add(repo, done) {
+      ask("Track this repository?", [{ t: "HelloGitty will check " }, { b: repo }, { t: " now and every hour from then on, and show it under Tracked repositories. It only reads; nothing is posted to GitHub." }], "Track it")
+        .then(function (yes) { if (yes) send(repo, done); else done(); });
+    }
+    function send(repo, done) {
+      post("/repos/add", repo).then(function (d) {
+        if (d.error) { say(d.error, true); done(); return; }
+        say("Tracking " + d.repo + ". Checking it for the first time; it joins the list when that's done (big repositories take a minute)." + (d.note ? " " + d.note : ""));
+        waitFor(d.repo, 60);
+      }).catch(function () { say("Couldn't reach HelloGitty. Is it still running?", true); done(); });
+    }
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var v = input.value.trim();
+      if (!v) return;
+      btn.disabled = true;
+      add(v, function () { btn.disabled = false; input.focus(); });
+    });
+    document.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-untrack], [data-retrack]");
+      if (!b) return;
+      e.preventDefault();
+      if (b.dataset.retrack) { b.disabled = true; add(b.dataset.retrack, function () { b.disabled = false; }); return; }
+      var repo = b.dataset.untrack;
+      ask("Stop tracking this repository?", [{ t: "HelloGitty stops checking " }, { b: repo }, { t: " and takes it off the dashboard. Its history is kept, so tracking it again picks up where it left off." }], "Stop tracking", true)
+        .then(function (yes) {
+          if (!yes) return;
+          b.disabled = true;
+          post("/repos/remove", repo).then(function (d) {
+            if (d.error) { b.disabled = false; b.textContent = d.error; return; }
+            var row = b.closest("details.repo");
+            if (row) row.remove();
+            say("Stopped tracking " + d.repo + ". Its history is kept, so tracking it again picks up where it left off.");
+          });
+        });
+    });
+  })();
+</script>
+<script>
+  // Clear and Show on the indicators. The page reloads so every count and the mascot agree.
+  (function () {
+    var cw = document.querySelector("section.cw");
+    if (!cw) return;
+    cw.addEventListener("click", function (e) {
+      var b = e.target.closest(".cbtn"), c = b && b.closest("[data-cell]");
+      if (!c) return;
+      e.stopPropagation();
+      var restore = b.hasAttribute("data-restore"), items = (c.dataset.items || "").split("|").filter(Boolean);
+      b.disabled = true;
+      fetch(restore ? "/cells/restore" : "/cells/clear", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-HelloGitty-Token": cw.dataset.token },
+        body: JSON.stringify({ key: c.dataset.cell, items: items }) })
+        .then(function (r) { if (!r.ok) return Promise.reject(r.status); location.reload(); })
+        .catch(function () { b.disabled = false; b.textContent = "Try again"; });
+    });
+  })();
+</script>
 <script>
   (function () {
     function store(get, key, val) {
@@ -850,7 +1088,7 @@
           if (chip) chip.hidden = !isNew;
           if (isNew) fresh++;
         });
-        if (counter) { counter.hidden = !fresh; counter.textContent = " · " + fresh + " new"; }
+        if (counter) { counter.hidden = !fresh; counter.textContent = fresh + " new"; }
       }
       rows.forEach(function (li) {
         var a = li.querySelector("a.title");
@@ -980,6 +1218,60 @@
 
 {{template "feed-js"}}
 
+    // A tracked repository's tabs. Its "N new" badge, and the one on the Tracked repositories heading,
+    // count its unacknowledged live-feed rows and count down as they are acknowledged anywhere on
+    // the page. Opening the Issues tab is reading the new issues there, so those are acknowledged,
+    // except ones with a GitHub notification behind them: those need Ack in the feed, because that
+    // also marks them read on GitHub.
+    (function () {
+      var repos = Array.prototype.slice.call(document.querySelectorAll("details.repo[data-new-ids]"));
+      var total = document.getElementById("tracked-new"), list = document.getElementById("feed-list");
+      var token = list ? list.dataset.token : "";
+      repos.forEach(function (d) { d._new = d.dataset.newIds ? d.dataset.newIds.split(" ").filter(Boolean) : []; });
+      function paint() {
+        var sum = 0, n = 0;
+        repos.forEach(function (d) {
+          var badge = d.querySelector("[data-repo-new]"), name = d.querySelector("summary .name");
+          if (badge) { badge.textContent = d._new.length + " new"; badge.hidden = !d._new.length; }
+          if (name) name.classList.toggle("hasnew", d._new.length > 0);
+          sum += d._new.length; if (d._new.length) n++;
+        });
+        if (total) { total.hidden = !sum; total.textContent = sum + " new in " + n + (n === 1 ? " repo" : " repos"); }
+      }
+      window.addEventListener("hg-acked", function (e) {
+        repos.forEach(function (d) { d._new = d._new.filter(function (id) { return e.detail.ids.indexOf(id) === -1; }); });
+        paint();
+      });
+      function show(d, tab) {
+        d.querySelectorAll(".rtabs [data-tab]").forEach(function (b) { b.setAttribute("aria-selected", b.dataset.tab === tab ? "true" : "false"); });
+        d.querySelectorAll("[data-panel]").forEach(function (p) { p.hidden = p.dataset.panel !== tab; });
+        if (tab === "issues") seenIssues(d);
+      }
+      function seenIssues(d) {
+        var items = Array.prototype.slice.call(d.querySelectorAll('[data-panel="issues"] li[data-ack]'));
+        if (!items.length || !token) return;
+        var ids = items.map(function (li) { return li.dataset.ack; });
+        items.forEach(function (li) { li.removeAttribute("data-ack"); });
+        fetch("/feed/ack", { method: "POST", headers: { "Content-Type": "application/json", "X-HelloGitty-Token": token }, body: JSON.stringify({ ids: ids }) })
+          .then(function (r) { if (!r.ok) throw r.status; window.dispatchEvent(new CustomEvent("hg-acked", { detail: { ids: ids, from: "repo" } })); })
+          .catch(function () { items.forEach(function (li, i) { li.dataset.ack = ids[i]; }); });
+      }
+      document.querySelectorAll("details.repo").forEach(function (d) {
+        d.querySelectorAll(".rtabs [data-tab]").forEach(function (b) {
+          b.addEventListener("click", function () { show(d, b.dataset.tab); });
+        });
+        // Only your own click counts as looking: a section reopened after the reload is not.
+        var summary = d.querySelector("summary");
+        if (summary) summary.addEventListener("click", function () {
+          setTimeout(function () {
+            var cur = d.querySelector('.rtabs [aria-selected="true"]');
+            if (d.open && cur && cur.dataset.tab === "issues") seenIssues(d);
+          }, 0);
+        });
+      });
+      paint();
+    })();
+
     // Layout (ADR-002). Every panel is a module you can show, hide, fold and move between the main
     // column and the side; presets set all of it at once. The server always renders the whole page,
     // so without a saved layout (or with storage blocked) you see everything. Saved per browser.
@@ -998,12 +1290,12 @@
         return h ? h.firstChild.textContent.trim() : id;
       }
       var PRESETS = {
-        everything: { main: ["your-work", "your-repos", "tracked"], rail: ["feed", "watched", "pipeline", "checks"], hidden: [], folded: [] },
-        contributor: { main: ["your-work", "tracked", "your-repos"], rail: ["feed", "watched", "pipeline", "checks"], hidden: ["your-repos", "pipeline", "checks"], folded: ["tracked"] },
-        maintainer: { main: ["your-repos", "your-work", "tracked"], rail: ["feed", "watched", "pipeline", "checks"], hidden: [], folded: [] },
-        program: { main: ["tracked", "your-work", "your-repos"], rail: ["pipeline", "feed", "watched", "checks"], hidden: ["your-repos"], folded: ["your-work"] },
-        focus: { main: ["your-work", "your-repos", "tracked"], rail: ["feed", "watched", "pipeline", "checks"],
-          hidden: ["toolbar", "feed", "your-repos", "tracked", "watched", "pipeline", "checks", "work-them", "work-other", "work-done"], folded: [] }
+        everything: { main: ["your-work", "conversations", "your-repos", "tracked"], rail: ["feed", "watched", "pipeline", "checks"], hidden: [], folded: [] },
+        contributor: { main: ["your-work", "conversations", "tracked", "your-repos"], rail: ["feed", "watched", "pipeline", "checks"], hidden: ["your-repos", "pipeline", "checks"], folded: ["tracked"] },
+        maintainer: { main: ["your-repos", "your-work", "conversations", "tracked"], rail: ["feed", "watched", "pipeline", "checks"], hidden: [], folded: ["conversations"] },
+        program: { main: ["tracked", "your-work", "conversations", "your-repos"], rail: ["pipeline", "feed", "watched", "checks"], hidden: ["your-repos"], folded: ["your-work", "conversations"] },
+        focus: { main: ["your-work", "conversations", "your-repos", "tracked"], rail: ["feed", "watched", "pipeline", "checks"],
+          hidden: ["toolbar", "feed", "conversations", "your-repos", "tracked", "watched", "pipeline", "checks", "work-them", "work-other", "work-done"], folded: [] }
       };
       function copy(p, preset) { return { preset: preset, main: p.main.slice(), rail: p.rail.slice(), hidden: p.hidden.slice(), folded: p.folded.slice() }; }
       // Keep only modules on this page, and give any new panel a place in its usual column.
@@ -1047,7 +1339,15 @@
         grid.classList.toggle("onecol", !railShown);
         document.querySelectorAll(".presets [data-preset]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.preset === state.preset ? "true" : "false"); });
       }
-      function change(fn) { fn(); state.preset = "custom"; save(); apply(); render(); }
+      // Custom is your own layout. Any change you make lands in it, and picking a preset never loses it.
+      var customKey = "hellogitty-layout-custom";
+      function saveCustom() { try { localStorage.setItem(customKey, JSON.stringify(state)); } catch (e) {} }
+      function loadCustom() {
+        var c = null;
+        try { c = JSON.parse(localStorage.getItem(customKey) || "null"); } catch (e) {}
+        return c && c.main ? normalize(Object.assign(c, { preset: "custom" })) : normalize(Object.assign(copy(state, "custom"), { preset: "custom" }));
+      }
+      function change(fn) { fn(); state.preset = "custom"; save(); saveCustom(); apply(); render(); }
 
       function row(id, kind, col, i, len) {
         var li = document.createElement("li"); li.className = "mod" + (kind === "sub" ? " sub" : ""); li.dataset.id = id;
@@ -1105,7 +1405,10 @@
         change(function () { arr.splice(i, 1); arr.splice(j, 0, id); });
       });
       document.querySelectorAll(".presets [data-preset]").forEach(function (b) {
-        b.addEventListener("click", function () { state = normalize(copy(PRESETS[b.dataset.preset], b.dataset.preset)); save(); apply(); render(); });
+        b.addEventListener("click", function () {
+          state = b.dataset.preset === "custom" ? loadCustom() : normalize(copy(PRESETS[b.dataset.preset], b.dataset.preset));
+          save(); apply(); render();
+        });
       });
       document.getElementById("layout-reset").addEventListener("click", function () { state = normalize(copy(PRESETS.everything, "everything")); save(); apply(); render(); });
       document.getElementById("layout-open").addEventListener("click", function () {

@@ -17,6 +17,11 @@ var Help string
 //go:embed feed.html
 var Feed string
 
+// List is what a Pipeline number counts, on a page of its own. Parsed with index.html.
+//
+//go:embed list.html
+var List string
+
 // Mascot holds the banner clips (kitten-routine-*.mp4, kitten-news-*.mp4) and the rest still
 // (rest.png) under mascot/.
 //
