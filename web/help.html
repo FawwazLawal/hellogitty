@@ -43,6 +43,19 @@
   .doc th, .doc td { text-align: left; vertical-align: top; padding: 8px 12px; border-top: 1px solid var(--rule); }
   .doc thead th { border-top: 0; background: var(--panel); font-weight: 650; }
   .hs { padding: 26px 0; border-top: 1px solid var(--rule); }
+  /* Search results: where each answer sits, then the words around it with the matches marked. */
+  .results { padding: 20px 0 30px; }
+  .rhead { margin: 0 0 10px; font-size: 13px; color: var(--dim); }
+  .hits { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .hit { display: grid; gap: 3px; padding: 10px 12px; border-radius: 6px; color: var(--text); text-decoration: none; border: 1px solid transparent; }
+  .hit:hover, .hit.sel { background: var(--raised); border-color: var(--rule); }
+  .hit:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+  .hit .where { font-size: 12px; font-weight: 600; color: var(--dim); }
+  .hit .snip { font-size: 14px; line-height: 1.5; }
+  .hit mark { background: var(--tag-fill); color: var(--tag-ink); border-radius: 2px; padding: 0 1px; }
+  .flash { animation: flash 2.4s ease-out forwards; scroll-margin-top: 90px; }
+  @keyframes flash { 0%, 55% { background: var(--tag-fill); } 100% { background: transparent; } }
+  @media (prefers-reduced-motion: reduce) { .flash { animation: none; } }
   .hs:first-of-type { border-top: 0; }
   .intro { padding-bottom: 8px; }
   .intro h2 { font-size: 24px; }
@@ -55,7 +68,6 @@
   .kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 18px; margin: 0; }
   .kv dt { color: var(--dim); }
   .kv dd { margin: 0; overflow-wrap: anywhere; }
-  .nomatch { color: var(--dim); }
   @media (max-width: 900px) {
     .hgrid { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 12px 16px 40px; }
     .toc { position: static; max-height: none; }
@@ -75,7 +87,7 @@
   <a class="back" href="/">&larr; Dashboard</a>
   <h1>Help</h1>
   <span class="lbl">{{.Version}}</span>
-  <label class="hsearch"><span class="sr">Search help</span><input type="search" id="h-q" placeholder="Search the guide and glossary" autocomplete="off" spellcheck="false"><kbd>/</kbd></label>
+  <label class="hsearch"><span class="sr">Search help</span><input type="search" id="h-q" placeholder="Ask or search, e.g. how to add a repo" autocomplete="off" spellcheck="false"><kbd>/</kbd></label>
   <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
 </header>
 <div class="hgrid">
@@ -89,6 +101,10 @@
     </ol>
   </nav>
   <main class="doc">
+    <section class="results" id="h-results" aria-live="polite" hidden>
+      <p class="rhead" id="h-rhead"></p>
+      <ol class="hits" id="h-hits"></ol>
+    </section>
     <section class="hs intro" data-s="{{.IntroText}}"><h2>{{.Title}}</h2>{{.Intro}}</section>
     {{range .Sections}}<section class="hs" id="{{.ID}}" data-s="{{.Text}}"><h2>{{.Title}}</h2>{{.HTML}}</section>
     {{end}}
@@ -103,33 +119,167 @@
       <h2>About this install</h2>
       <dl class="kv">{{range .About}}<dt>{{.Key}}</dt><dd>{{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener">{{.Value}}</a>{{else}}{{.Value}}{{end}}</dd>{{end}}</dl>
     </section>
-    <p class="nomatch" id="h-none" hidden>Nothing in Help matches. Try fewer words.</p>
   </main>
 </div>
 <script>
   (function () {
     {{template "theme-js"}}
 
-    // Search: hide the sections and glossary entries that don't contain every word typed.
-    var q = document.getElementById("h-q"), none = document.getElementById("h-none");
+    // Search reads a question the way you'd ask it: small words are dropped, plurals and word endings
+    // don't matter, and common other words count ("repo" finds "repository", "remove" finds "stop
+    // tracking"). It ranks the paragraphs, list items, table rows and glossary entries that answer
+    // it, and a result jumps straight to its spot in the guide.
+    var q = document.getElementById("h-q"), doc = document.querySelector("main.doc");
+    var results = document.getElementById("h-results"), rhead = document.getElementById("h-rhead"), hitsEl = document.getElementById("h-hits");
     var sections = Array.prototype.slice.call(document.querySelectorAll("main.doc > .hs"));
-    var terms = Array.prototype.slice.call(document.querySelectorAll(".gi"));
-    function apply() {
-      var words = q.value.toLowerCase().split(/\s+/).filter(Boolean), shown = 0;
-      function match(el) { var hay = el.dataset.s || ""; return words.every(function (w) { return hay.indexOf(w) !== -1; }); }
-      terms.forEach(function (t) { t.hidden = words.length > 0 && !match(t); });
-      sections.forEach(function (s) {
-        var keep = !words.length || match(s) || (s.id === "glossary" && terms.some(function (t) { return !t.hidden; }));
-        s.hidden = !keep;
-        if (keep) shown++;
-      });
-      none.hidden = shown > 0;
+    var STOP = {};
+    ("a an and are as at be but by can could did do does doing for from get got have how i if in into is it its " +
+     "me my of on or so that the then there these this those to too was way what when where which who why will " +
+     "with would you your yours want wanted need should please tell about mean means meaning").split(" ").forEach(function (w) { STOP[w] = 1; });
+    function stem(w) {
+      if (w.length > 4 && /ies$/.test(w)) return w.slice(0, -3) + "y";
+      if (w.length > 5 && /ing$/.test(w)) return w.slice(0, -3);
+      if (w.length > 4 && /ed$/.test(w)) return w.slice(0, -2);
+      if (w.length > 4 && /(ches|shes|xes|sses)$/.test(w)) return w.slice(0, -2);
+      if (w.length > 3 && /s$/.test(w) && !/ss$/.test(w)) return w.slice(0, -1);
+      return w;
     }
-    q.addEventListener("input", apply);
-    q.addEventListener("keydown", function (e) { if (e.key === "Escape") { q.value = ""; apply(); q.blur(); } });
+    // Each group is one idea; a word in a group matches every word in it.
+    var GROUPS = [
+      "repository repo project", "add follow", "remove delete untrack stop drop hide unfollow",
+      "pr pull", "alert cell indicator light annunciator", "clear dismiss acknowledge ack seen silence",
+      "notification notify inbox", "issue ticket", "token key credential auth", "setting config configure configuration option",
+      "colour color theme dark mode", "shortcut keyboard hotkey", "layout arrange rearrange customize preset panel",
+      "version release update build", "slow slowing dormant quiet inactive stale", "error fail broken problem wrong troubleshoot",
+      "search find filter", "mascot cat kitten", "merge merged", "privacy private data", "start launch run restart"
+    ];
+    var ALT = {};
+    GROUPS.forEach(function (g) {
+      var ws = g.split(" ").map(stem);
+      ws.forEach(function (w) { ALT[w] = ws; });
+    });
+    function words(text) {
+      return (text.toLowerCase().match(/[a-z0-9]+/g) || []).filter(function (w) { return !STOP[w]; }).map(stem);
+    }
+    // The pieces search ranks: every paragraph, list item, table row and glossary entry, with the
+    // section and sub-heading it sits under.
+    var chunks = [];
+    sections.forEach(function (sec) {
+      var h2 = sec.querySelector("h2"), title = h2 ? h2.textContent : "", sub = "";
+      sec.querySelectorAll("h3, p, li, tr, .gi, dt").forEach(function (el) {
+        if (el.tagName === "H3") { sub = el.textContent; return; }
+        if (el.closest(".gi") && !el.classList.contains("gi")) return;
+        if (el.tagName === "DT" && !el.closest(".kv")) return;
+        if (el.tagName === "LI" && el.closest(".toc")) return;
+        if (el.tagName === "P" && el.closest("li, td")) return;
+        if (el.tagName === "TR" && el.querySelector("th")) return;
+        var text = (el.tagName === "DT" ? el.textContent + " " + (el.nextElementSibling ? el.nextElementSibling.textContent : "") : el.textContent).replace(/\s+/g, " ").trim();
+        if (text.length < 3) return;
+        var lead = el.querySelector("strong, b, dt"), leadText = lead ? lead.textContent : "";
+        chunks.push({ el: el, sec: sec, title: el.classList.contains("gi") ? "Glossary" : title, sub: sub, text: text,
+          words: words(text), lead: words(leadText), sub: words(sub), sect: words(title) });
+      });
+    });
+    function has(list, alts) { for (var i = 0; i < alts.length; i++) if (list.indexOf(alts[i]) !== -1) return true; return false; }
+    function prefixHas(list, w) { for (var i = 0; i < list.length; i++) if (list[i].indexOf(w) === 0) return true; return false; }
+    function rank(query) {
+      var ideas = [];
+      words(query).forEach(function (w) { if (!ideas.some(function (x) { return x.indexOf(w) !== -1; })) ideas.push(ALT[w] || [w]); });
+      if (!ideas.length) return { ideas: ideas, hits: [] };
+      var last = ideas.length - 1, typing = !/\s$/.test(query);
+      var scored = chunks.map(function (c) {
+        var covered = 0, score = 0;
+        ideas.forEach(function (alts, i) {
+          var inText = has(c.words, alts) || (i === last && typing && alts.length === 1 && alts[0].length >= 3 && prefixHas(c.words, alts[0]));
+          // A bold lead-in names what the line is about; a sub-heading less so; the section least.
+          // A word only in the heading still counts: every line under "Keyboard shortcuts" is one.
+          var inHead = has(c.lead, alts) ? 4 : has(c.sub, alts) ? 2 : has(c.sect, alts) ? 1 : 0;
+          if (inText || inHead) covered++;
+          score += (inText ? 2 : 0) + inHead;
+        });
+        if (/^(How|What|Why|Where|When|Can|Do|Does|Is)\b.*\?/.test(c.text)) score += 1; // an answer written as a question
+        // A line whose lead-in is exactly what you asked about ("Watched issue") is its definition.
+        if (c.lead.length && c.lead.every(function (w) { return ideas.some(function (alts) { return alts.indexOf(w) !== -1; }); })) score += 3;
+        score -= Math.min(c.text.length, 600) / 600; // a short, direct line beats a long one that mentions everything
+        return { c: c, covered: covered, score: score };
+      }).filter(function (x) { return x.covered > 0; });
+      var best = scored.reduce(function (m, x) { return Math.max(m, x.covered); }, 0);
+      var hits = scored.filter(function (x) { return x.covered === best; })
+        .sort(function (a, b) { return b.score - a.score; }).slice(0, 12);
+      return { ideas: ideas, hits: hits, exact: best === ideas.length };
+    }
+    // A snippet around the first match, with the matched words marked. Built from text nodes only.
+    function snippet(c, ideas) {
+      var text = c.text, lower = text.toLowerCase(), first = -1, spans = [];
+      var re = /[a-z0-9]+/g, m;
+      while ((m = re.exec(lower))) {
+        var w = stem(m[0]);
+        if (!STOP[m[0]] && ideas.some(function (alts) { return alts.indexOf(w) !== -1 || (alts.length === 1 && alts[0].length >= 3 && w.indexOf(alts[0]) === 0); })) {
+          spans.push([m.index, m.index + m[0].length]);
+          if (first < 0) first = m.index;
+        }
+      }
+      var from = Math.max(0, first - 70), to = Math.min(text.length, from + 220);
+      if (from > 0) from = text.indexOf(" ", from) + 1 || from;
+      var frag = document.createDocumentFragment(), at = from;
+      if (from > 0) frag.appendChild(document.createTextNode("… "));
+      spans.forEach(function (sp) {
+        if (sp[0] < at || sp[1] > to) return;
+        frag.appendChild(document.createTextNode(text.slice(at, sp[0])));
+        var mk = document.createElement("mark"); mk.textContent = text.slice(sp[0], sp[1]); frag.appendChild(mk);
+        at = sp[1];
+      });
+      frag.appendChild(document.createTextNode(text.slice(at, to) + (to < text.length ? " …" : "")));
+      return frag;
+    }
+    var current = [], sel = 0;
+    function render() {
+      var v = q.value.trim();
+      if (!v) { results.hidden = true; sections.forEach(function (s) { s.hidden = false; }); return; }
+      var r = rank(q.value);
+      current = r.hits; sel = 0;
+      sections.forEach(function (s) { s.hidden = true; });
+      results.hidden = false;
+      hitsEl.textContent = "";
+      rhead.textContent = !r.hits.length ? "Nothing in Help mentions that. Try another word, or browse the contents."
+        : r.exact ? (r.hits.length === 1 ? "1 answer" : r.hits.length + " answers") + ", best first. Enter opens the first."
+        : "Nothing mentions all of that. Closest matches:";
+      r.hits.forEach(function (h, i) {
+        var li = document.createElement("li"), a = document.createElement("a");
+        a.href = "#"; a.className = "hit"; a.dataset.i = i;
+        var where = document.createElement("span"); where.className = "where";
+        where.textContent = h.c.title + (h.c.sub ? " › " + h.c.sub : "");
+        var body = document.createElement("span"); body.className = "snip"; body.appendChild(snippet(h.c, r.ideas));
+        a.appendChild(where); a.appendChild(body); li.appendChild(a); hitsEl.appendChild(li);
+      });
+      mark();
+    }
+    function mark() { hitsEl.querySelectorAll(".hit").forEach(function (a, i) { a.classList.toggle("sel", i === sel); }); }
+    function open(i) {
+      var h = current[i];
+      if (!h) return;
+      results.hidden = true;
+      sections.forEach(function (s) { s.hidden = false; });
+      var el = h.c.el.tagName === "DT" ? h.c.el.parentElement : h.c.el;
+      var d = el.closest("details"); if (d) d.open = true;
+      el.scrollIntoView({ block: "center" });
+      el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
+    }
+    hitsEl.addEventListener("click", function (e) {
+      var a = e.target.closest(".hit"); if (!a) return;
+      e.preventDefault(); open(+a.dataset.i);
+    });
+    q.addEventListener("input", render);
+    q.addEventListener("focus", function () { if (q.value.trim()) render(); });
+    q.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") { q.value = ""; render(); q.blur(); }
+      else if (e.key === "Enter") { e.preventDefault(); open(sel); }
+      else if (e.key === "ArrowDown" && current.length) { e.preventDefault(); sel = Math.min(sel + 1, current.length - 1); mark(); }
+      else if (e.key === "ArrowUp" && current.length) { e.preventDefault(); sel = Math.max(sel - 1, 0); mark(); }
+    });
     document.addEventListener("keydown", function (e) {
       var t = (e.target && e.target.tagName) || "";
-      if (e.key === "/" && t !== "INPUT" && t !== "TEXTAREA" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); q.focus(); }
+      if (e.key === "/" && t !== "INPUT" && t !== "TEXTAREA" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); q.focus(); q.select(); }
     });
 
     // The contents list marks the section being read.
