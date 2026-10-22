@@ -130,7 +130,8 @@ export GITHUB_TOKEN=github_pat_...
 Authenticated requests get 5,000 calls an hour. The first poll of a repository costs more because
 it fetches review details for recently closed pull requests; after that those are cached. Measured
 on real repositories: about 25 calls per repository on the first poll, and about 110 calls per
-hourly cycle for 15 repositories after that. The dashboard shows calls used against the hourly
+hourly cycle for 15 repositories after that, plus one call per repository each check for its newest
+open pull requests. The dashboard shows calls used against the hourly
 budget. Your work is one GraphQL request every 5 minutes, which counts against GitHub's separate
 GraphQL budget, not this one. The new-activity dots read your GitHub notifications about once a
 minute; an unchanged inbox answers "not modified", which costs nothing. Notifications need a

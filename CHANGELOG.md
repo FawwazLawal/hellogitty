@@ -7,6 +7,40 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 Changes in the next publish.
 
+- Each section heading sits on a strip that fades from black on the left to a warm amber on the
+  right, so Your work, Your repositories, Tracked repositories and the side panels are easy to tell
+  apart at a glance.
+- "N new" badges beside Your work, Your repositories and Tracked repositories, and on each tracked
+  repository with unacknowledged items, whose name also turns bold. They count down as you
+  acknowledge things anywhere on the page.
+- A tracked repository opens on four tabs: Issues (newest, new ones marked), Pull requests (newest
+  open and latest merged or closed), Activity (its live-feed lines) and Lessons (what it turned down,
+  and why). Opening Issues counts as reading its new issues.
+- Your pull requests that GitHub's search misses now count in the merge rate and show under a
+  repository's "Your pull requests here".
+- Conversations: issues and pull requests you joined but didn't open have their own panel, so
+  Your work lists only what you opened or were assigned. Threads that ask something of you still
+  count in Your move.
+- Notifications about your own repositories (a failed workflow run, a release) show under Your
+  repositories instead of Your work's Other notifications.
+- The Pipeline panel's numbers open what they count on a page of their own: your open, merged or
+  closed pull requests, or the repositories at a stage.
+- A Custom layout preset keeps your own arrangement; trying another preset no longer loses it.
+- Add and remove tracked repositories from the dashboard: type `owner/name` or paste a GitHub link
+  into **Add a repo** in Tracked repositories, or open a repository and click **Stop tracking**. Both ask you to confirm first.
+  HelloGitty checks the repository exists and checks it straight away. Your config file is never
+  rewritten; a config repository you remove shows under the panel with **Track again**.
+- Help search understands questions as you'd ask them ("how to add a repo"): small words are
+  ignored, plurals and common other words match, and it lists the best answers first with the
+  matching words marked. Enter or a click jumps to the exact paragraph.
+- Check failed says why. Hovering the alert gives each failure in plain words and when it's tried
+  again, and the repository's row carries a red "check failed" tag. A GitHub answer that times out
+  halfway through is now retried, like a failed connection, instead of failing that repository's
+  whole check.
+- Alerts can be cleared. A lit alert that names what lit it has a **Clear** button; it stays dark
+  until something new lights it, and **Show** brings it back. Data is stale and API running low
+  can't be cleared.
+
 ## v0.2.0 (4) · Black Bombay (baby) · 2026-10-21
 
 Tag `v0.2.4`.
