@@ -150,7 +150,7 @@ func run() int {
 
 	gh := github.New(token)
 	pl := &poller.Poller{GH: gh, Store: st, Targets: func() ([]poller.Target, error) {
-		repos, err := cfg.Targets()
+		repos, err := targets(cfg, st)
 		if err != nil {
 			return nil, err
 		}
@@ -160,6 +160,9 @@ func run() int {
 		}
 		return out, nil
 	}}
+	if ts, err := pl.Targets(); err == nil {
+		pl.Expect(ts)
+	}
 	pipe := &pipeline.Provider{Command: cfg.PipelineCommand(), Dir: cfg.Dir}
 	board := &work.Tracker{GH: gh, Maintain: cfg.Maintain}
 	feed := &notify.Feed{GH: gh}
@@ -177,7 +180,8 @@ func run() int {
 	}
 	ov := &overlap.Watcher{GH: gh, Store: st}
 	checkOverlap := overlapChecker(ov, st, pl, pipe, board)
-	src := source{st: st, p: pl, gh: gh, pipe: pipe, board: board, feed: feed, ov: ov}
+	src := source{st: st, p: pl, gh: gh, pipe: pipe, board: board, feed: feed, ov: ov,
+		repoManager: repoManager{cfg: cfg, st: st, gh: gh, p: pl}}
 	writeInbox := inboxWriter(cfg.Path(cfg.Inbox), src)
 	snapPath := cfg.Path(cfg.Snapshot)
 
@@ -242,6 +246,7 @@ func run() int {
 			Mascot:       mascotFS,
 			HelpTemplate: web.Help,
 			FeedTemplate: web.Feed,
+			ListTemplate: web.List,
 			Guide:        docs.Guide,
 			Screenshot:   docs.Screenshot,
 			About:        aboutInstall(cfg),
@@ -488,13 +493,14 @@ const overlapRefresh = 15 * time.Minute
 const workRefresh = 5 * time.Minute
 
 type source struct {
-	st    *store.Store
-	p     *poller.Poller
-	gh    *github.Client
-	pipe  *pipeline.Provider
-	board *work.Tracker
-	feed  *notify.Feed
-	ov    *overlap.Watcher
+	st          *store.Store
+	p           *poller.Poller
+	gh          *github.Client
+	pipe        *pipeline.Provider
+	board       *work.Tracker
+	feed        *notify.Feed
+	ov          *overlap.Watcher
+	repoManager // adding and removing repositories from the dashboard
 }
 
 // OverlapReports returns the overlap reports for issues still being watched, for the row peeks.
@@ -534,6 +540,16 @@ func (s source) Telemetry() dashboard.Telemetry {
 	for _, pr := range ps.OurPRs {
 		t.OurPRs = append(t.OurPRs, dashboard.PR{Owner: pr.Owner, Name: pr.Name, Number: pr.Number, Title: pr.Title,
 			URL: pr.URL, State: pr.State, Merged: pr.Merged, CreatedAt: pr.CreatedAt})
+	}
+	t.OpenPRs = map[string][]dashboard.OpenPR{}
+	for repo, prs := range ps.OpenPRs {
+		for _, pr := range prs {
+			o := dashboard.OpenPR{Number: pr.Number, Title: pr.Title, URL: pr.HTMLURL, Author: pr.User.Login, Bot: pr.User.IsBot(), Draft: pr.Draft}
+			if pr.CreatedAt != nil {
+				o.CreatedAt = *pr.CreatedAt
+			}
+			t.OpenPRs[repo] = append(t.OpenPRs[repo], o)
+		}
 	}
 	return t
 }
@@ -588,14 +604,14 @@ func runWatch(args []string) error {
 	if err != nil {
 		return err
 	}
-	targets, err := cfg.Targets()
+	tracked, err := targets(cfg, st)
 	if err != nil {
 		return err
 	}
 	var repo *config.Repo
-	for i := range targets {
-		if strings.EqualFold(targets[i].String(), want.String()) {
-			repo = &targets[i]
+	for i := range tracked {
+		if strings.EqualFold(tracked[i].String(), want.String()) {
+			repo = &tracked[i]
 		}
 	}
 	if repo == nil {

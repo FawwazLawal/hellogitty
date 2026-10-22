@@ -45,7 +45,7 @@ func (s source) entries(now time.Time) ([]inbox.Entry, bool) {
 	if issues, err := s.st.RecentIssues(now.Add(-inbox.NewIssueWindow)); err != nil {
 		log.Printf("inbox: new issues left out: %v", err)
 	} else {
-		entries = inbox.Sorted(append(entries, inbox.NewIssues(issues, s.planning(reports), now)...))
+		entries = inbox.Sorted(append(entries, inbox.NewIssues(s.trackedOnly(issues), s.planning(reports), now)...))
 	}
 	return entries, true
 }
@@ -73,7 +73,7 @@ func (s source) Feed() []feed.Row {
 	in := feed.Input{Now: now, Notes: s.feed.Snapshot().Items}
 	in.Entries, _ = s.entries(now)
 	if issues, err := s.st.RecentIssues(now.Add(-feed.Window)); err == nil {
-		in.Issues = issues
+		in.Issues = s.trackedOnly(issues)
 	}
 	in.Acked, _ = s.st.Acked()
 	in.Health = s.healthChanges(now)
@@ -137,6 +137,58 @@ func (s source) Ack(ctx context.Context, ids []string) []dashboard.AckResult {
 			}
 		}
 		out = append(out, res)
+	}
+	return out
+}
+
+// Cleared returns the indicator items you cleared, kept with the feed's acknowledgements.
+func (s source) Cleared() map[string]bool {
+	acked, err := s.st.Acked()
+	if err != nil {
+		log.Printf("indicators: %v", err)
+		return nil
+	}
+	out := map[string]bool{}
+	for id := range acked {
+		if strings.HasPrefix(id, "c:") {
+			out[id] = true
+		}
+	}
+	return out
+}
+
+// ClearCell clears what lights one indicator now; something new lights it again.
+func (s source) ClearCell(key string, items []string) error {
+	now := time.Now().UTC()
+	for _, it := range items {
+		if err := s.st.Ack(dashboard.ClearedID(key, it), now); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// RestoreCell forgets what you cleared on one indicator.
+func (s source) RestoreCell(key string) error { return s.st.UnackPrefix("c:" + key + ":") }
+
+// ForgetCleared drops cleared items that no longer light their indicator.
+func (s source) ForgetCleared(ids []string) error { return s.st.Unack(ids...) }
+
+// trackedOnly drops issues from repositories you no longer track; the database keeps their history.
+func (s source) trackedOnly(issues []store.RecentIssue) []store.RecentIssue {
+	targets := s.p.Status().Targets
+	if len(targets) == 0 {
+		return issues // before the first check, nothing is known to be untracked
+	}
+	keep := map[string]bool{}
+	for _, t := range targets {
+		keep[strings.ToLower(t.Owner+"/"+t.Name)] = true
+	}
+	out := issues[:0:0]
+	for _, i := range issues {
+		if keep[strings.ToLower(i.Repo)] {
+			out = append(out, i)
+		}
 	}
 	return out
 }
