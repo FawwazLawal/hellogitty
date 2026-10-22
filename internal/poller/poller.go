@@ -82,6 +82,9 @@ type Status struct {
 	OurPRs        []OurPR
 	PRsKnown      bool
 	PRError       string
+	// OpenPRs holds each repository's newest open pull requests, keyed by lowercase owner/name,
+	// for the dashboard's repository tabs.
+	OpenPRs map[string][]github.PullRequest
 }
 
 func (p *Poller) Status() Status {
@@ -101,6 +104,9 @@ func (p *Poller) Status() Status {
 	return st
 }
 
+// openPRsShown is how many open pull requests per repository the dashboard lists.
+const openPRsShown = 8
+
 // PollAll polls every target once. One repo failing never stops the others.
 func (p *Poller) PollAll(ctx context.Context) error {
 	targets, err := p.Targets()
@@ -110,6 +116,12 @@ func (p *Poller) PollAll(ctx context.Context) error {
 	cycleStart, reqStart := time.Now(), p.GH.Requests()
 	errs := map[string]string{}
 	totals := map[string]IssueTotals{}
+	p.mu.Lock()
+	open := make(map[string][]github.PullRequest, len(p.status.OpenPRs))
+	for k, v := range p.status.OpenPRs {
+		open[k] = v // a repository whose list can't be fetched this time keeps the last one
+	}
+	p.mu.Unlock()
 	for _, t := range targets {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -128,10 +140,28 @@ func (p *Poller) PollAll(ctx context.Context) error {
 			}
 			continue
 		}
+		// Who else is working here right now: one more call, and a failure costs only this list.
+		if prs, err := p.GH.OpenPRs(ctx, t.Owner, t.Name, openPRsShown); err == nil {
+			open[strings.ToLower(t.Owner+"/"+t.Name)] = prs
+		}
 		rem, lim, _ := p.GH.RateLimit()
 		log.Printf("poll %s/%s: ok in %s (rate %d/%d)", t.Owner, t.Name, time.Since(start).Round(time.Millisecond), rem, lim)
 	}
 	prs, prErr := p.ourPRs(ctx, targets)
+	// A repository removed while the cycle ran must not come back when it ends.
+	if now, err := p.Targets(); err == nil {
+		keep := map[string]bool{}
+		for _, t := range now {
+			keep[strings.ToLower(t.Owner+"/"+t.Name)] = true
+		}
+		kept := targets[:0:0]
+		for _, t := range targets {
+			if keep[strings.ToLower(t.Owner+"/"+t.Name)] {
+				kept = append(kept, t)
+			}
+		}
+		targets = kept
+	}
 	p.mu.Lock()
 	prev := p.status
 	p.status = Status{
@@ -143,6 +173,7 @@ func (p *Poller) PollAll(ctx context.Context) error {
 		CycleRequests: p.GH.Requests() - reqStart,
 		OurPRs:        prs,
 		PRsKnown:      prErr == nil,
+		OpenPRs:       open,
 	}
 	if prErr != nil {
 		log.Printf("poll: our PRs: %v", prErr)
@@ -152,6 +183,71 @@ func (p *Poller) PollAll(ctx context.Context) error {
 	}
 	p.mu.Unlock()
 	return nil
+}
+
+// PollOne polls one repository now, outside the cycle, and adds it to the last cycle's results so
+// a repository you just added shows up without waiting for the next check.
+func (p *Poller) PollOne(ctx context.Context, t Target) error {
+	key := strings.ToLower(t.Owner + "/" + t.Name)
+	tot, err := p.pollRepo(ctx, t)
+	var prs []github.PullRequest
+	if err == nil {
+		prs, _ = p.GH.OpenPRs(ctx, t.Owner, t.Name, openPRsShown)
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	known := false
+	for _, x := range p.status.Targets {
+		known = known || strings.EqualFold(x.Owner+"/"+x.Name, key)
+	}
+	if !known {
+		p.status.Targets = append(p.status.Targets, t)
+	}
+	if p.status.Errors == nil {
+		p.status.Errors = map[string]string{}
+	}
+	delete(p.status.Errors, key)
+	if err != nil {
+		p.status.Errors[key] = err.Error()
+	}
+	if tot != nil {
+		if p.status.Totals == nil {
+			p.status.Totals = map[string]IssueTotals{}
+		}
+		p.status.Totals[key] = *tot
+	}
+	if prs != nil {
+		if p.status.OpenPRs == nil {
+			p.status.OpenPRs = map[string][]github.PullRequest{}
+		}
+		p.status.OpenPRs[key] = prs
+	}
+	return err
+}
+
+// Expect sets the repositories the first cycle will check, so that until it finishes the dashboard
+// shows those and not every repository the database remembers (one you removed, say).
+func (p *Poller) Expect(targets []Target) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.status.Targets == nil {
+		p.status.Targets = append([]Target{}, targets...)
+	}
+}
+
+// Drop takes a repository out of the last cycle's results, so one you removed disappears now.
+func (p *Poller) Drop(owner, name string) {
+	key := strings.ToLower(owner + "/" + name)
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	kept := p.status.Targets[:0:0]
+	for _, x := range p.status.Targets {
+		if !strings.EqualFold(x.Owner+"/"+x.Name, key) {
+			kept = append(kept, x)
+		}
+	}
+	p.status.Targets = kept
+	delete(p.status.Errors, key)
 }
 
 func (p *Poller) ourPRs(ctx context.Context, targets []Target) ([]OurPR, error) {
