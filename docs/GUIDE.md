@@ -75,7 +75,7 @@ One cell per condition. Each cell has three looks:
 |---|---|---|---|
 | **Watched issue claimed** | red | An issue you are watching was assigned to someone, or someone commented in the last 30 days that they are taking it. | Don't start work on it. Pick something else or talk to that person. |
 | **Your move** | amber | Anything in **Your move** or **Needs you** (below). Names the items. | Work through the Your move list. |
-| **Check failed** | red | A tracked repository, the pull request search, or the Your work refresh failed. | Open the repository's row, or read the error in the panel. See [Troubleshooting](#troubleshooting). |
+| **Check failed** | red | A tracked repository, the pull request search, or the Your work refresh failed. Hover or tap the cell for why, in plain words (for example "GitHub took too long to answer while sending its pull requests") and when it's tried again. The repository's row also carries a red **check failed** tag. | Usually nothing: a slow moment at GitHub clears on the next check. If the same one keeps failing, open its row for the details. See [Troubleshooting](#troubleshooting). |
 | **Data is stale** | red | The last successful check of your repositories finished more than two hours ago. | HelloGitty has probably stopped. Restart it. |
 | **Watched issue closed** | amber | A watched issue was closed, fixed or not. | Read how it was closed, then unwatch it. |
 | **Repo dormant** | amber | A tracked repository has had no commit for more than 90 days. | Work sent there may never be reviewed. |
@@ -85,6 +85,19 @@ One cell per condition. Each cell has three looks:
 With a pipeline command configured, two more cells appear, named by your command (by default
 **Repo flagged** and **Stage failed**): one for repositories it marks as needing attention, one for
 a stage it reports as failed.
+
+**Watched issues** are the issues you plan to take: the ones your pipeline command lists, plus any
+you add yourself with `hellogitty watch owner/name 123`. HelloGitty checks them every cycle for
+someone else being assigned or saying they're taking it, and for the issue closing. They're listed
+in the **Watched issues** panel; `hellogitty unwatch owner/name 123` drops one.
+
+**Clearing an alert.** A lit cell that names what lit it has a **Clear** button. Clearing says
+"I've seen these": the cell goes dark and stays dark until something new lights it, such as
+another repository going dormant or another watched issue being claimed. Anything that stops
+lighting it is forgotten, so it lights the cell again if it comes back later. A cleared cell reads
+"N cleared" with a **Show** button that lights it again. **Data is stale** and **API running
+low** can't be cleared: they mean the board itself can't be trusted right now, and they go dark on
+their own.
 
 ---
 
@@ -215,6 +228,16 @@ combined check state.
 
 ---
 
+## Conversations
+
+Issues and pull requests you **joined but didn't open**: you commented on them, or someone
+mentioned you. They used to sit in Your work; they have their own panel so that Your work counts
+only what you opened or were assigned, and the counts there mean "my pull requests and issues".
+
+- **Asks something of you:** someone mentioned you, or replied to you, since you last spoke. These
+  count in the Your move alert.
+- **Quiet:** nobody is waiting on you. Folded away; a thread leaves the panel once it closes.
+
 ## Your repositories
 
 Open pull requests and issues **from other people** in repositories your account owns, plus any
@@ -226,6 +249,9 @@ repository.
   a new pull request nobody has reviewed; an approved pull request ready to merge; a new issue
   nobody has answered; someone commented after you.
 - **Waiting on contributors:** you spoke last, or the pull request is a draft.
+- **Notifications:** GitHub notifications about these repositories that match no pull request or
+  issue above, such as a failed workflow run or a release. Notifications about other people's
+  repositories stay under Your work's **Other notifications**.
 
 ---
 
@@ -234,10 +260,19 @@ repository.
 The repositories you follow, from your config, with their health. Rows your pipeline command
 reports come first, furthest stage first; the rest follow alphabetically.
 
+**Adding and removing repositories.** Type `owner/name`, or paste the repository's GitHub address,
+into **Add a repo** at the top of the panel and press **Track**, then confirm. HelloGitty checks
+that the repository exists and that your token can see it, then checks it straight away; it joins
+the list when that first check finishes. To stop tracking one, open its row, click **Stop
+tracking** and confirm. Both ask "are you sure" first and name the repository. Its history is kept, so tracking it again picks up where
+it left off. Your config file is never rewritten: repositories you add here are kept in
+HelloGitty's own database, and one your config file lists that you remove here shows under the
+panel with a **Track again** button.
+
 | Column | Meaning |
 |---|---|
 | **Light** | Green dot: active, a commit in the last 30 days. Amber ring: slowing, 31 to 90 days. Amber dot: dormant, over 90 days. Dashed ring: not checked successfully yet. |
-| **Repository** | Owner (dim) and name. |
+| **Repository** | Owner (dim) and name. In bold, with a green **N new** badge, when the live feed has things about it you haven't acknowledged: new issues, activity on your pull requests there, someone else's work on an issue you plan to take. |
 | **Stage strip** and **status** | Only with a pipeline command: one square per stage (grey done, white current, amber failed; dotted when the command doesn't report the repository) and the command's label. |
 | **Open** | Open issues, pull requests not counted. |
 | **Good first** | Open issues labelled good first issue (`good first issue`, `good-first-issue` or `good_first_issue`). |
@@ -246,11 +281,25 @@ reports come first, furthest stage first; the rest follow alphabetically.
 | **Watching** | How many of this repository's issues you watch. |
 | **Turned down** | Pull requests from outside contributors, among the latest 100 closed, that were closed without merging. Bots and pull requests the maintainer says they merged by hand are not counted. |
 
-Click a row to open it (it stays open across reloads): a link to the repository, its watched
-issues, your pull requests there, and the last five turned-down pull requests from outside
-contributors, each with who sent it (first-time or past contributor), the review verdict, when it
-was closed and the maintainer's last comment. Read those comments before contributing to a new
-project: they say, in the maintainers' own words, what they turn down and why.
+Click a row to open it (it stays open across reloads). On the left: a link to the repository, its
+watched issues and your pull requests there. On the right, four tabs:
+
+- **Issues:** its newest open issues, with new ones marked and who has taken one (assigned or
+  claimed). Opening this tab counts as reading the new ones, so their badges clear and they leave
+  the live feed. An issue with a GitHub notification behind it stays until you press Ack in the
+  feed, because that also marks it read on GitHub.
+- **Pull requests:** the newest open ones and who sent them (dependency bots left out), then the
+  latest merged or closed, marking outside contributors.
+- **Activity:** this repository's lines from the live feed in the last week, apart from new issues.
+- **Lessons:** the last five turned-down pull requests from outside contributors, each with who sent
+  it (first-time or past contributor), the review verdict, when it was closed and the maintainer's
+  last comment. Read those before contributing to a new project: they say, in the maintainers' own
+  words, what they turn down and why.
+
+A row opens on Issues when it has new ones, otherwise on Lessons.
+
+The **N new in M repos** badge beside the Tracked repositories heading adds those counts up. Your
+work's heading counts its green dots the same way.
 
 ---
 
@@ -282,6 +331,11 @@ Counts of pull requests your account opened **in tracked repositories**: opened,
 closed (without merging) and rate, which is merged ÷ (merged + closed). Open ones don't count
 toward the rate. With a pipeline command this panel is titled **Pipeline** and also shows how many
 repositories sit at each stage.
+
+Every number opens what it counts on a page of its own: click **Open** to see your open pull
+requests, **Merged** for the merged ones, or a stage such as **BLD** for the repositories at that
+stage. The page lists them with their details and has buttons to move between the other counts;
+each pull request or repository on it links to GitHub.
 
 ---
 
@@ -360,6 +414,8 @@ Presets set everything at once:
 - **Maintainer:** Your repositories first.
 - **Program:** pipeline and tracked repositories first, with Your work folded.
 - **Focus:** one column with the alerts and Your move, nothing else.
+- **Custom:** your own layout. Any change you make (showing, hiding, folding or moving a panel)
+  is kept here, so trying a preset never loses it: press **Custom** to get yours back.
 
 **Reset to everything** undoes it all.
 
@@ -473,8 +529,11 @@ calls used this hour.
 `hellogitty watch owner/name 123`. If someone is assigned, claims it in a comment, opens a pull
 request for it or closes it, you'll see it.
 
-**How do I add or remove a tracked repository?** Edit `repos` (or your `repos_file`) in
-`hellogitty.json`. A `repos_file` is re-read on every check, so no restart is needed.
+**How do I add or remove a tracked repository?** On the dashboard: type `owner/name` or a GitHub
+link into **Add a repo** in Tracked repositories and press **Track**; open a repository's row and
+click **Stop tracking** to remove it. See [Tracked repositories](#tracked-repositories). You can
+also list them under `repos` (or in your `repos_file`) in `hellogitty.json`; a `repos_file` is
+re-read on every check, so no restart is needed.
 
 **Where is my configuration?** In `hellogitty.json`, in the folder you run HelloGitty from, unless
 you passed `-config`. **Help → About this install** shows the files in use.
