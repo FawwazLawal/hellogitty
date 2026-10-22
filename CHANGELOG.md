@@ -7,6 +7,10 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 Changes in the next publish.
 
+## v0.2.0 (5) · Black Bombay (baby) · 2026-10-22
+
+Tag `v0.2.5`.
+
 - Each section heading sits on a strip that fades from black on the left to a warm amber on the
   right, so Your work, Your repositories, Tracked repositories and the side panels are easy to tell
   apart at a glance.
