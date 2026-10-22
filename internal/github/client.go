@@ -104,6 +104,9 @@ type PullRequest struct {
 	ClosedAt          *time.Time `json:"closed_at"`
 	AuthorAssociation string     `json:"author_association"`
 	User              User       `json:"user"`
+	HTMLURL           string     `json:"html_url"`
+	CreatedAt         *time.Time `json:"created_at"`
+	Draft             bool       `json:"draft"`
 }
 
 type Review struct {
@@ -170,8 +173,34 @@ func (c *Client) Issue(ctx context.Context, owner, repo string, number int) (*Is
 	return &i, err
 }
 
+// RepoInfo is what adding a repository checks: that it exists, its exact name, and whether it is
+// archived (nothing there will ever be reviewed).
+type RepoInfo struct {
+	FullName string `json:"full_name"`
+	Archived bool   `json:"archived"`
+	Private  bool   `json:"private"`
+}
+
+// Repo looks a repository up. A repository that doesn't exist, or that the token can't see, is a
+// *StatusError with Code 404.
+func (c *Client) Repo(ctx context.Context, owner, repo string) (*RepoInfo, error) {
+	var r RepoInfo
+	if _, err := c.get(ctx, c.url(fmt.Sprintf("/repos/%s/%s", owner, repo), nil), &r); err != nil {
+		return nil, err
+	}
+	return &r, nil
+}
+
 func (c *Client) ClosedPRs(ctx context.Context, owner, repo string) ([]PullRequest, error) {
 	q := url.Values{"state": {"closed"}, "per_page": {"100"}, "sort": {"updated"}, "direction": {"desc"}}
+	var prs []PullRequest
+	_, err := c.get(ctx, c.url(fmt.Sprintf("/repos/%s/%s/pulls", owner, repo), q), &prs)
+	return prs, err
+}
+
+// OpenPRs lists a repository's newest open pull requests, one call.
+func (c *Client) OpenPRs(ctx context.Context, owner, repo string, n int) ([]PullRequest, error) {
+	q := url.Values{"state": {"open"}, "per_page": {strconv.Itoa(n)}, "sort": {"created"}, "direction": {"desc"}}
 	var prs []PullRequest
 	_, err := c.get(ctx, c.url(fmt.Sprintf("/repos/%s/%s/pulls", owner, repo), q), &prs)
 	return prs, err
@@ -357,6 +386,14 @@ func (c *Client) send(ctx context.Context, method, rawURL string, payload []byte
 		body, readErr := io.ReadAll(io.LimitReader(resp.Body, 32<<20))
 		resp.Body.Close()
 		if readErr != nil {
+			// A slow answer that times out halfway through is worth another try, like a failed
+			// connection; one slow moment shouldn't fail the whole repository's check.
+			if attempt < maxAttempts && ctx.Err() == nil {
+				if err := c.sleep(ctx, backoff(attempt)); err != nil {
+					return "", nil, false, err
+				}
+				continue
+			}
 			return "", nil, false, readErr
 		}
 
