@@ -236,6 +236,14 @@ func prEntries(it work.Item, login string, seen FirstSeen) []Entry {
 var (
 	actionableCount = regexp.MustCompile(`(?i)actionable comments posted:\s*(\d+)`)
 	badgeLine       = regexp.MustCompile(`^\s*\*\*[^\n]*\|[^\n]*\n+`) // "**🎯 Correctness** | **🟡 Minor**"
+
+	// bodyFindingFile matches a <details><summary> that names a source file with an
+	// optional parenthetical finding count. Review bots that cannot attach a finding
+	// to a changed line post it in the review body this way. CodeRabbit, Copilot and
+	// Greptile all use this layout; a bot that uses a different one will need its own
+	// pattern when encountered (the <details> convention is the de facto standard as
+	// of 2026-10).
+	bodyFindingFile = regexp.MustCompile(`(?i)<summary>[^<]*?(\S+\.\w{1,10})\s*(?:\((\d+)\))?\s*</summary>`)
 )
 
 // finding is one thing a bot asks to be fixed.
@@ -280,8 +288,35 @@ func botEntry(it work.Item) (Entry, bool) {
 		latest[r.Author] = r // oldest first, so the last one wins
 	}
 	for bot, r := range latest {
+		stale := it.LastCommitAt != nil && it.LastCommitAt.After(r.At)
+
+		// Body-carried findings: file-specific feedback the bot could not place on
+		// a changed line, posted inside <details><summary>file (N)</summary> blocks.
+		var bodyCount int
+		if !stale {
+			for _, m := range bodyFindingFile.FindAllStringSubmatch(r.Body, -1) {
+				n := 1
+				if m[2] != "" {
+					if parsed, err := strconv.Atoi(m[2]); err == nil && parsed > 0 {
+						n = parsed
+					}
+				}
+				file := filepath.Base(m[1])
+				for i := 0; i < n; i++ {
+					id := "body-" + eventID(r.URL) + "-" + strings.ToLower(file)
+					if n > 1 {
+						id += "-" + strconv.Itoa(i)
+					}
+					fs = append(fs, finding{bot, id, "In review body on " + file, r.At})
+					bodyCount++
+				}
+			}
+		}
+
+		// Actionable-count fallback: skip when threads or body findings already
+		// give a specific count for this bot.
 		m := actionableCount.FindStringSubmatch(r.Body)
-		if m == nil || m[1] == "0" || threads[bot] > 0 || (it.LastCommitAt != nil && it.LastCommitAt.After(r.At)) {
+		if m == nil || m[1] == "0" || threads[bot] > 0 || bodyCount > 0 || stale {
 			continue
 		}
 		fs = append(fs, finding{bot, eventID(r.URL), "@" + bot + ": " + m[1] + " actionable comments posted", r.At})
