@@ -164,6 +164,10 @@ func Open(path string) (*Store, error) {
 		db.Close()
 		return nil, fmt.Errorf("migrate: %w", err)
 	}
+	if err := s.mergeCaseDuplicates(); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("merge duplicate repositories: %w", err)
+	}
 	return s, nil
 }
 
@@ -185,14 +189,75 @@ func (s *Store) migrate() error {
 }
 
 func (s *Store) UpsertRepo(owner, name, upstream string) (int64, error) {
-	_, err := s.db.Exec(`INSERT INTO repos (owner, name, upstream) VALUES (?, ?, ?)
+	// GitHub names are case-insensitive: "owner/Name" and "owner/name" are one repository, so an
+	// existing row in any case is the one to use.
+	var id int64
+	err := s.db.QueryRow(`SELECT id FROM repos WHERE owner = ? COLLATE NOCASE AND name = ? COLLATE NOCASE ORDER BY id LIMIT 1`, owner, name).Scan(&id)
+	if err == nil {
+		return id, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return 0, err
+	}
+	_, err = s.db.Exec(`INSERT INTO repos (owner, name, upstream) VALUES (?, ?, ?)
 		ON CONFLICT(owner, name) DO UPDATE SET upstream = excluded.upstream`, owner, name, upstream)
 	if err != nil {
 		return 0, err
 	}
-	var id int64
 	err = s.db.QueryRow(`SELECT id FROM repos WHERE owner = ? AND name = ?`, owner, name).Scan(&id)
 	return id, err
+}
+
+// mergeCaseDuplicates folds repository rows that differ only in letter case into one, keeping the
+// row the poller checks (or the oldest). Watches move to it; the duplicate's copies of issues and
+// pull requests are dropped, since the kept row has its own.
+func (s *Store) mergeCaseDuplicates() error {
+	rows, err := s.db.Query(`SELECT d.id, k.id FROM repos d JOIN repos k
+		ON lower(d.owner) = lower(k.owner) AND lower(d.name) = lower(k.name) AND d.id != k.id
+		WHERE k.id = (SELECT id FROM repos r WHERE lower(r.owner) = lower(d.owner) AND lower(r.name) = lower(d.name)
+			ORDER BY r.last_poll IS NULL, r.id LIMIT 1)`)
+	if err != nil {
+		return err
+	}
+	var pairs [][2]int64
+	for rows.Next() {
+		var dup, keep int64
+		if err := rows.Scan(&dup, &keep); err != nil {
+			rows.Close()
+			return err
+		}
+		pairs = append(pairs, [2]int64{dup, keep})
+	}
+	rows.Close()
+	for _, p := range pairs {
+		for _, q := range []string{
+			`UPDATE OR IGNORE watch_list SET repo_id = ? WHERE repo_id = ?`,
+		} {
+			if _, err := s.db.Exec(q, p[1], p[0]); err != nil {
+				return err
+			}
+		}
+		for _, q := range []string{
+			`DELETE FROM watch_list WHERE repo_id = ?`, `DELETE FROM issues WHERE repo_id = ?`,
+			`DELETE FROM pull_requests WHERE repo_id = ?`, `DELETE FROM repos WHERE id = ?`,
+		} {
+			if _, err := s.db.Exec(q, p[0]); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// RemoveWatchByName drops an issue from the watch list by repository name, in any letter case.
+func (s *Store) RemoveWatchByName(owner, name string, issueNumber int) (bool, error) {
+	res, err := s.db.Exec(`DELETE FROM watch_list WHERE issue_number = ? AND repo_id IN
+		(SELECT id FROM repos WHERE owner = ? COLLATE NOCASE AND name = ? COLLATE NOCASE)`, issueNumber, owner, name)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n > 0, err
 }
 
 func (s *Store) RepoByName(owner, name string) (*Repo, error) {
@@ -404,6 +469,64 @@ func (s *Store) RecentIssues(since time.Time) ([]RecentIssue, error) {
 	return out, rows.Err()
 }
 
+// TopOpenIssues lists the n most recently updated open issues across tracked repositories.
+func (s *Store) TopOpenIssues(n int) ([]RecentIssue, error) {
+	rows, err := s.db.Query(`SELECT r.owner || '/' || r.name, i.number, i.title, COALESCE(i.labels, '[]'), COALESCE(i.assignees, '[]'),
+		COALESCE(i.claim_signal, ''), i.created_at FROM issues i JOIN repos r ON r.id = i.repo_id
+		WHERE i.state = 'open' AND r.status = 'active' ORDER BY i.updated_at DESC LIMIT ?`, n)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []RecentIssue
+	for rows.Next() {
+		var ri RecentIssue
+		var labels, assignees string
+		var created nullTime
+		if err := rows.Scan(&ri.Repo, &ri.Number, &ri.Title, &labels, &assignees, &ri.ClaimSignal, &created); err != nil {
+			return nil, err
+		}
+		json.Unmarshal([]byte(labels), &ri.Labels)
+		json.Unmarshal([]byte(assignees), &ri.Assignees)
+		ri.CreatedAt = created.t
+		out = append(out, ri)
+	}
+	return out, rows.Err()
+}
+
+// PageOpenIssues lists open issues updated since the given time, paginated. It returns the matching
+// issues for the requested page and the total count of issues in the window.
+func (s *Store) PageOpenIssues(since time.Time, offset, limit int) ([]RecentIssue, int, error) {
+	var total int
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM issues i JOIN repos r ON r.id = i.repo_id
+		WHERE i.state = 'open' AND r.status = 'active' AND i.updated_at >= ?`, ts(&since)).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+	rows, err := s.db.Query(`SELECT r.owner || '/' || r.name, i.number, i.title, COALESCE(i.labels, '[]'), COALESCE(i.assignees, '[]'),
+		COALESCE(i.claim_signal, ''), i.created_at FROM issues i JOIN repos r ON r.id = i.repo_id
+		WHERE i.state = 'open' AND r.status = 'active' AND i.updated_at >= ?
+		ORDER BY i.updated_at DESC LIMIT ? OFFSET ?`, ts(&since), limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var out []RecentIssue
+	for rows.Next() {
+		var ri RecentIssue
+		var labels, assignees string
+		var created nullTime
+		if err := rows.Scan(&ri.Repo, &ri.Number, &ri.Title, &labels, &assignees, &ri.ClaimSignal, &created); err != nil {
+			return nil, 0, err
+		}
+		json.Unmarshal([]byte(labels), &ri.Labels)
+		json.Unmarshal([]byte(assignees), &ri.Assignees)
+		ri.CreatedAt = created.t
+		out = append(out, ri)
+	}
+	return out, total, rows.Err()
+}
+
 // newestIssues lists a repository's newest open issues.
 func (s *Store) newestIssues(r Repo, n int) ([]RecentIssue, error) {
 	rows, err := s.db.Query(`SELECT number, title, COALESCE(labels, '[]'), COALESCE(assignees, '[]'), COALESCE(claim_signal, ''), created_at
@@ -555,6 +678,33 @@ func (s *Store) WatchList(repoID int64) ([]WatchItem, error) {
 		var w WatchItem
 		var sc nullTime
 		if err := rows.Scan(&w.ID, &w.RepoID, &w.IssueNumber, &w.Status, &sc); err != nil {
+			return nil, err
+		}
+		w.StatusChangedAt = sc.ptr()
+		out = append(out, w)
+	}
+	return out, rows.Err()
+}
+
+// WatchedIssue is a watch-list entry with its repository's name.
+type WatchedIssue struct {
+	WatchItem
+	Owner, Name string
+}
+
+// AllWatches returns every watched issue, in any repository.
+func (s *Store) AllWatches() ([]WatchedIssue, error) {
+	rows, err := s.db.Query(`SELECT w.id, w.repo_id, w.issue_number, COALESCE(w.status, 'open'), w.status_changed_at, r.owner, r.name
+		FROM watch_list w JOIN repos r ON r.id = w.repo_id ORDER BY r.owner, r.name, w.issue_number`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []WatchedIssue
+	for rows.Next() {
+		var w WatchedIssue
+		var sc nullTime
+		if err := rows.Scan(&w.ID, &w.RepoID, &w.IssueNumber, &w.Status, &sc, &w.Owner, &w.Name); err != nil {
 			return nil, err
 		}
 		w.StatusChangedAt = sc.ptr()

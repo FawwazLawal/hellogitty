@@ -41,6 +41,8 @@ Usage:
   hellogitty watch owner/name 123 [456]    watch issues for claims and fixes
   hellogitty watch                         list watched issues
   hellogitty unwatch owner/name 123 [456]  stop watching issues
+  hellogitty track owner/name              start following a repository
+  hellogitty untrack owner/name            stop following a repository
 
 Repositories come from a config file (default ./hellogitty.json) or from -repos.
 GITHUB_TOKEN must hold a GitHub token; read-only access is enough.
@@ -53,6 +55,13 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "watch" {
 		if err := runWatch(os.Args[2:]); err != nil {
 			fmt.Fprintln(os.Stderr, "hellogitty watch:", err)
+			os.Exit(1)
+		}
+		return
+	}
+	if len(os.Args) > 1 && (os.Args[1] == "track" || os.Args[1] == "untrack") {
+		if err := runTrack(os.Args[2:], os.Args[1] == "track"); err != nil {
+			fmt.Fprintln(os.Stderr, "hellogitty "+os.Args[1]+":", err)
 			os.Exit(1)
 		}
 		return
@@ -246,7 +255,8 @@ func run() int {
 			Mascot:       mascotFS,
 			HelpTemplate: web.Help,
 			FeedTemplate: web.Feed,
-			ListTemplate: web.List,
+			ListTemplate:   web.List,
+			IssuesTemplate: web.Issues,
 			Guide:        docs.Guide,
 			Screenshot:   docs.Screenshot,
 			About:        aboutInstall(cfg),
@@ -527,6 +537,11 @@ func (s source) Notifications() notify.View { return s.feed.Snapshot() }
 func (s source) Work() (*work.Board, string) { return s.board.Snapshot() }
 
 func (s source) Reports() ([]store.RepoReport, error) { return tracked(s.st, s.p) }
+
+func (s source) TopOpenIssues(n int) ([]store.RecentIssue, error) { return s.st.TopOpenIssues(n) }
+func (s source) PageOpenIssues(since time.Time, offset, limit int) ([]store.RecentIssue, int, error) {
+	return s.st.PageOpenIssues(since, offset, limit)
+}
 
 func (s source) Pipeline() (*pipeline.State, error) { return s.pipe.Get(context.Background()) }
 

@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -166,3 +168,60 @@ func (m repoManager) Ready(full string) bool {
 }
 
 var _ dashboard.RepoSource = repoManager{}
+
+// runTrack follows or stops following a repository from the command line, the same way the
+// dashboard's Add a repo and Stop tracking do. A running HelloGitty picks it up on its next check.
+func runTrack(args []string, on bool) error {
+	fs := flag.NewFlagSet("track", flag.ContinueOnError)
+	cf := commonFlags(fs)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() != 1 {
+		return errors.New("usage: hellogitty track owner/name, or hellogitty untrack owner/name")
+	}
+	r, err := config.ParseRepo(fs.Arg(0))
+	if err != nil {
+		return err
+	}
+	cfg, err := cf.load(fs)
+	if err != nil {
+		return err
+	}
+	st, err := store.Open(cfg.Path(cfg.Database))
+	if err != nil {
+		return err
+	}
+	defer st.Close()
+	full := r.String()
+	if !on {
+		if inConfig(cfg, full) {
+			err = st.SetRepoChoice(full, store.RepoRemoved, time.Now().UTC())
+		} else {
+			err = st.ForgetRepoChoice(full)
+		}
+		if err == nil {
+			fmt.Printf("stopped following %s (its history is kept)\n", full)
+		}
+		return err
+	}
+	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+		info, err := github.New(token).Repo(context.Background(), r.Owner, r.Name)
+		var se *github.StatusError
+		switch {
+		case errors.As(err, &se) && se.Code == 404:
+			return fmt.Errorf("GitHub has no repository %s that your token can see", full)
+		case err == nil && info.FullName != "":
+			full = info.FullName
+		}
+	}
+	if inConfig(cfg, full) {
+		err = st.ForgetRepoChoice(full)
+	} else {
+		err = st.SetRepoChoice(full, store.RepoAdded, time.Now().UTC())
+	}
+	if err == nil {
+		fmt.Printf("following %s (checked on the next check)\n", full)
+	}
+	return err
+}

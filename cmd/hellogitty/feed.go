@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -188,6 +189,38 @@ func (s source) trackedOnly(issues []store.RecentIssue) []store.RecentIssue {
 	for _, i := range issues {
 		if keep[strings.ToLower(i.Repo)] {
 			out = append(out, i)
+		}
+	}
+	return out
+}
+
+// ClearNotification clears a notification row: kept here so it stays off the page until the thread
+// changes, and marked read on GitHub (HelloGitty's one kind of write there).
+func (s source) ClearNotification(ctx context.Context, threadID string) error {
+	if err := s.st.Ack("n:"+threadID, time.Now().UTC()); err != nil {
+		return err
+	}
+	for _, n := range s.feed.Snapshot().Items {
+		if n.ID == threadID && n.Unread {
+			if err := s.gh.MarkThreadRead(ctx, threadID); err != nil {
+				return fmt.Errorf("cleared here, but GitHub didn't mark it read: %w", err)
+			}
+			s.feed.MarkRead(threadID)
+		}
+	}
+	return nil
+}
+
+// ClearedNotifications returns when each notification row was cleared or acknowledged.
+func (s source) ClearedNotifications() map[string]time.Time {
+	acked, err := s.st.Acked()
+	if err != nil {
+		return nil
+	}
+	out := map[string]time.Time{}
+	for id, at := range acked {
+		if strings.HasPrefix(id, "n:") {
+			out[id] = at
 		}
 	}
 	return out

@@ -42,6 +42,8 @@ type Row struct {
 	// is kept here only.
 	Thread string `json:"thread,omitempty"`
 	Acked  bool   `json:"acked"`
+	// Watched says the issue is on your watch list, for the eye. Set by whoever has the list.
+	Watched bool `json:"watched,omitempty"`
 }
 
 // HealthChange is a tracked repository reaching a quieter state, and when HelloGitty first saw it.

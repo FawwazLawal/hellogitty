@@ -34,6 +34,7 @@ const feedShown = 40
 
 type feedRow struct {
 	feed.Row
+	Eye      bool // show the eye: a row about an issue, on a page that can watch
 	Ago      string
 	AgoTitle string
 }
@@ -97,6 +98,12 @@ func (h *Handler) serveFeedJSON(w http.ResponseWriter, r *http.Request) {
 		if rows := fs.Feed(); rows != nil {
 			out.Rows = rows
 		}
+		if ws, ok := h.Source.(WatchSource); ok {
+			keys := ws.WatchedKeys()
+			for i := range out.Rows {
+				out.Rows[i].Watched = keys[out.Rows[i].Key]
+			}
+		}
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
@@ -149,12 +156,21 @@ func (h *Handler) serveFeedPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p := struct {
-		Version string
-		Token   string
-		Feed    feedView
+		Version  string
+		Token    string
+		Feed     feedView
+		CanWatch bool
 	}{Version: h.Version, Token: h.token()}
 	if fs, ok := h.Source.(FeedSource); ok {
 		p.Feed = buildFeed(fs.Feed(), h.now())
+	}
+	if ws, ok := h.Source.(WatchSource); ok {
+		keys := ws.WatchedKeys()
+		p.CanWatch = true
+		for i := range p.Feed.Rows {
+			p.Feed.Rows[i].Watched = keys[p.Feed.Rows[i].Key]
+			p.Feed.Rows[i].Eye = issueKind(p.Feed.Rows[i].Kind)
+		}
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")

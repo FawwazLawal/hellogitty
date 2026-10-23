@@ -20,6 +20,8 @@ type repoIssue struct {
 	AckID         string // the feed row to acknowledge when you look at it here; "" when a GitHub notification is behind it
 	Labels        []string
 	Taken         string // "assigned" or "claimed", when someone has it
+	Watched, Eye  bool
+	K             string
 }
 
 type repoPR struct {
@@ -84,7 +86,7 @@ func fillRepoDetail(rw *row, r store.RepoReport, news *repoNews, open []OpenPR, 
 		}
 	}
 	for _, i := range r.NewestIssues {
-		ri := repoIssue{Number: i.Number, Title: i.Title, URL: "https://github.com/" + full + "/issues/" + strconv.Itoa(i.Number),
+		ri := repoIssue{Number: i.Number, Title: i.Title, K: rowKey(full, i.Number), URL: "https://github.com/" + full + "/issues/" + strconv.Itoa(i.Number),
 			Ago: ago(now, i.CreatedAt), AgoTitle: i.CreatedAt.UTC().Format("2006-01-02 15:04Z"), Labels: i.Labels}
 		switch {
 		case len(i.Assignees) > 0:

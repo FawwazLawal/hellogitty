@@ -250,7 +250,10 @@ repository.
   nobody has answered; someone commented after you.
 - **Waiting on contributors:** you spoke last, or the pull request is a draft.
 - **Notifications:** GitHub notifications about these repositories that match no pull request or
-  issue above, such as a failed workflow run or a release. Notifications about other people's
+  issue above, such as a failed workflow run or a release. **Clear** takes one off the page until
+  that thread has new activity, and marks it read on GitHub if it wasn't. GitHub doesn't tell apps
+  which notifications you marked Done there, so a read one that still asks something of you (a
+  failed run) stays here until you clear it. Notifications about other people's
   repositories stay under Your work's **Other notifications**.
 
 ---
@@ -260,6 +263,12 @@ repository.
 The repositories you follow, from your config, with their health. Rows your pipeline command
 reports come first, furthest stage first; the rest follow alphabetically.
 
+**Finding and pinning.** **Search repositories**, beside the sort menu, narrows the list as you
+type: a name, an owner, a stage or a label. To keep a repository at the top whatever the sort,
+point at its row and click the pin beside its name; pinned ones stay first, in the order you
+pinned them, with a line under the last. Click the pin again to unpin. Pins and the search are
+saved in this browser.
+
 **Adding and removing repositories.** Type `owner/name`, or paste the repository's GitHub address,
 into **Add a repo** at the top of the panel and press **Track**, then confirm. HelloGitty checks
 that the repository exists and that your token can see it, then checks it straight away; it joins
@@ -267,7 +276,8 @@ the list when that first check finishes. To stop tracking one, open its row, cli
 tracking** and confirm. Both ask "are you sure" first and name the repository. Its history is kept, so tracking it again picks up where
 it left off. Your config file is never rewritten: repositories you add here are kept in
 HelloGitty's own database, and one your config file lists that you remove here shows under the
-panel with a **Track again** button.
+panel with a **Track again** button. From a terminal, `hellogitty track owner/name` and
+`hellogitty untrack owner/name` do the same; a running HelloGitty picks them up on its next check.
 
 | Column | Meaning |
 |---|---|
@@ -305,11 +315,18 @@ work's heading counts its green dots the same way.
 
 ## Watched issues
 
-Issues you plan to work on, across all tracked repositories, most urgent first.
+Issues you want to keep an eye on, most urgent first: ones you plan to work on, or any issue
+whose outcome you care about. Commenting on an issue doesn't watch it; you choose.
+
+**The eye.** Every issue on the dashboard has an eye beside it: in Your work, Conversations, the
+live feed and a repository's Issues tab. Click it to watch that issue; the eye fills in, and the
+issue joins this panel. Click a filled eye (here or anywhere) to stop. The eye works for issues in
+any public repository, not just ones you track: HelloGitty looks each one up on every check. It
+watches issues only; pull requests you're part of already show under Your work or Conversations.
 
 | Status | Meaning |
 |---|---|
-| **Claimed** (red) | Assigned to someone, or a comment in the last 30 days such as "I'll take this", "I'm working on this", "taking this" or "I can do this". The link goes to the claim. |
+| **Claimed** (red) | Assigned to someone, or someone else's comment in the last 30 days that takes it, such as "I'll take this", "I'm working on this", "Can I work on this?" or "Please assign me". The link goes to the claim. |
 | **Fixed** (amber) | Closed by a merged pull request or a commit. |
 | **Closed** (amber) | Closed without a linked fix. |
 | **Open** (green) | Open and unclaimed. |
@@ -320,8 +337,20 @@ hellogitty watch                         # list what you are watching
 hellogitty unwatch owner/name 123        # stop watching issue 123
 ```
 
-To watch, the repository must be one you track; the new watch shows up after the next check.
-An unwatched issue leaves the page on its next reload.
+**How a claim is spotted.** On every check, HelloGitty reads each watched issue's comments from
+the last 30 days, newest first, sentence by sentence. A sentence that says its author is taking
+the issue ("I'll take", "I'm working", "working on this", "taking this", "I can do this", "I'd like
+to work on", "Can I work on", "assign me" and similar) marks it claimed. It skips your own
+comments, bots, quoted lines, and questions put to someone else, so "Are you still working on
+this?" or "Is anyone working on it?" never count. An assignee always counts.
+
+**Seen.** A claimed or closed issue has a **Seen** button. Pressing it says you know: the badge
+turns from solid to outlined, and the matching alert goes dark. You keep watching; if anything
+changes again (a new claim, the issue closing) it lights up afresh. To stop watching altogether,
+click its eye.
+
+From the command line the repository must be one you track. With the eye, the issue's state
+shows within seconds. An unwatched issue leaves the page on its next reload.
 
 ---
 
@@ -399,6 +428,21 @@ own work and your notifications arrives within a few minutes.
 ---
 
 ## Layouts
+
+**On the panels themselves:**
+- **Collapse:** the arrow at the right end of a panel's heading folds it down to its heading;
+  press it again to expand.
+- **Move:** drag a panel by the grip (the six dots before its title) and drop it above or below
+  another panel, in either column. With the keyboard, focus the grip and use the up and down arrow
+  keys; left and right move it between the main and side columns.
+- **Resize:** drag a panel's bottom edge (a short bar appears when you point at it) to make it
+  shorter or taller. A shortened panel scrolls inside, with its heading, sort bar and column
+  headers staying in view. Double-click the edge to fit the content again. With the keyboard,
+  focus the edge and use the up and down arrow keys.
+
+Scrolling the page is never trapped by a panel that scrolls inside. A scroll already moving the
+page keeps moving it when the pointer passes over one; a scroll you start over a panel scrolls
+that panel, and carries on down the page once it reaches its end.
 
 **Layout** in the header opens a sheet where you set what the page shows:
 - turn any panel or section on or off;

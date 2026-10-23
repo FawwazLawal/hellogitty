@@ -1,0 +1,156 @@
+{{define "issuespage"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Open issues · HelloGitty</title>
+{{template "theme-head"}}
+<style>
+{{template "base-css"}}
+  .ibar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 20px;
+    background: var(--panel); border-bottom: 1px solid var(--rule); }
+  .ibar h1 { margin: 0; font-size: 17px; font-weight: 650; }
+  .back { font-size: 13px; color: var(--dim); }
+  .ibar .theme { margin-left: auto; }
+  .iwrap { max-width: 980px; margin: 0 auto; padding: 18px 20px 40px; }
+  .sub { margin: 0 0 14px; color: var(--dim); }
+  .isearch { position: relative; margin: 0 0 14px; }
+  .isearch label { display: contents; }
+  .isearch input { width: 100%; box-sizing: border-box; padding: 7px 10px; border: 1px solid var(--rule-hi); border-radius: 6px;
+    font: 14px var(--sans); background: var(--panel); color: var(--text); }
+  .isearch input::placeholder { color: var(--dim); }
+  .isearch input:not(:placeholder-shown) { border-color: var(--caution); box-shadow: 0 0 0 1px var(--caution); padding-right: 30px; }
+  .isearch input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+  .isearch .qclear { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; border: 0; background: transparent;
+    color: var(--caution); font: 15px/1 var(--sans); cursor: pointer; padding: 0; border-radius: 50%; z-index: 1; }
+  .isearch .qclear:hover { background: var(--raised); }
+  .isearch .qclear[hidden] { display: none; }
+  .itable { width: 100%; table-layout: fixed; border-collapse: collapse; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+  .itable th, .itable td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  .itable th { font-size: 12px; font-weight: 600; color: var(--dim); background: var(--raised); }
+  .itable .cnum { width: 60px; }
+  .itable .clbl { width: 160px; }
+  .itable .copn { width: 70px; }
+  .itable .ceye { width: 40px; }
+  .itable tr:last-child td { border-bottom: 0; }
+  .itable td.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .itable td:nth-child(2) { overflow-wrap: break-word; word-break: break-word; }
+  .itable td.opt, .itable th.opt { overflow: hidden; }
+  .itable a { color: var(--text); }
+  .itable .rp { color: var(--dim); font-size: 12.5px; }
+  .tag { display: inline-block; font-size: 12px; padding: 1px 7px; border-radius: 4px; border: 1px solid var(--rule-hi); color: var(--dim); white-space: nowrap; margin: 1px 2px; }
+  .tag.taken { color: var(--caution); border-color: color-mix(in srgb, var(--caution) 50%, transparent); }
+  .empty { color: var(--dim); padding: 18px 0; }
+  .count { font-size: 13px; color: var(--dim); margin: 0 0 10px; }
+  .eye { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 26px; height: 22px; padding: 0;
+    border: 1px solid transparent; border-radius: 4px; background: none; color: var(--dim); cursor: pointer; }
+  .eye svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; }
+  .eye:hover { color: var(--text); background: var(--raised); border-color: var(--rule-hi); }
+  .eye:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+  .eye.on { color: var(--text); }
+  .eye.on circle { fill: currentColor; }
+  .eye:disabled { opacity: .5; cursor: progress; }
+  .eyemsg { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 20; max-width: min(520px, calc(100vw - 32px));
+    padding: 8px 16px; border-radius: 6px; background: var(--panel); border: 1px solid var(--rule); font-size: 13px; color: var(--text); }
+  .eyemsg.bad { color: var(--warn); }
+  .pager { display: flex; justify-content: center; align-items: center; gap: 16px; padding: 16px 0; font-size: 14px; }
+  .pager a { color: var(--caution); text-decoration: none; }
+  .pager a:hover { text-decoration: underline; }
+  .pager .off { color: var(--dim); }
+  @media (max-width: 640px) {
+    .iwrap { padding: 14px 16px 30px; }
+    .itable .opt { display: none; }
+  }
+</style>
+</head>
+<body>
+<header class="ibar">
+  <a class="back" href="/">Dashboard</a>
+  <h1>Open issues</h1>
+  <span class="lbl">{{.Version}}</span>
+  <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
+</header>
+<main class="iwrap">
+  <p class="sub">Open issues updated in the last {{.Window}} days, newest activity first.</p>
+  <div class="isearch">
+    <label><span class="sr">Search issues</span><input type="search" id="iq" placeholder="Search by #number, repo, title or label…" autocomplete="off"></label>
+    <button type="button" class="qclear" aria-label="Clear search" title="Clear search" hidden>&times;</button>
+  </div>
+  <p class="count"><span id="shown">{{len .Issues}}</span> of {{.Total}} open issues (page {{.Page}} of {{.Pages}})</p>
+  {{if .Issues}}
+  <table class="itable">
+    <thead><tr><th class="cnum">#</th><th>Issue</th><th class="opt clbl">Labels</th><th class="opt copn">Opened</th>{{if .CanWatch}}<th class="ceye"></th>{{end}}</tr></thead>
+    <tbody id="issue-rows">{{range .Issues}}<tr data-s="{{.Search}}"><td class="num">{{.Number}}</td><td><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a><br><span class="rp">{{.Repo}}</span>{{if .Taken}} <span class="tag taken">{{.Taken}}</span>{{end}}</td><td class="opt">{{range .Labels}}<span class="tag">{{.}}</span>{{end}}</td><td class="num opt" title="{{.AgoTitle}}">{{.Ago}}</td>{{if $.CanWatch}}<td>{{eye .K .Watched}}</td>{{end}}</tr>{{end}}</tbody>
+  </table>
+  <nav class="pager" aria-label="Pagination">
+    {{if .HasPrev}}<a href="/issues?page={{.PrevPage}}">&larr; Previous</a>{{else}}<span class="off">&larr; Previous</span>{{end}}
+    <span>Page {{.Page}} of {{.Pages}}</span>
+    {{if .HasNext}}<a href="/issues?page={{.NextPage}}">Next &rarr;</a>{{else}}<span class="off">Next &rarr;</span>{{end}}
+  </nav>
+  {{else}}<p class="empty">No open issues updated in the last {{.Window}} days.</p>{{end}}
+</main>
+<script>
+  (function () {
+    {{template "theme-js"}}
+
+    var q = document.getElementById("iq");
+    var tbody = document.getElementById("issue-rows");
+    var shown = document.getElementById("shown");
+    var qclear = q ? q.closest(".isearch").querySelector(".qclear") : null;
+
+    function filter() {
+      if (!q || !tbody) return;
+      var words = q.value.toLowerCase().split(/\s+/).filter(Boolean);
+      var vis = 0;
+      var rows = tbody.querySelectorAll("tr[data-s]");
+      rows.forEach(function (tr) {
+        var s = tr.getAttribute("data-s");
+        var ok = words.every(function (w) { return s.indexOf(w) >= 0; });
+        tr.hidden = !ok;
+        if (ok) vis++;
+      });
+      if (shown) shown.textContent = vis;
+      if (qclear) qclear.hidden = !q.value;
+    }
+    if (q) {
+      q.addEventListener("input", filter);
+      if (qclear) qclear.addEventListener("click", function () { q.value = ""; filter(); q.focus(); });
+    }
+
+    // Eye toggle for watching issues
+    var token = "{{.Token}}";
+    var msg = null, timer = 0;
+    function say(text, bad) {
+      if (!msg) { msg = document.createElement("div"); msg.className = "eyemsg"; msg.setAttribute("role", "status"); document.body.appendChild(msg); }
+      msg.textContent = text; msg.classList.toggle("bad", !!bad); msg.hidden = false;
+      clearTimeout(timer); timer = setTimeout(function () { msg.hidden = true; }, 5000);
+    }
+    function paint(key, on) {
+      document.querySelectorAll('.eye[data-watch="' + key.replace(/"/g, "") + '"]').forEach(function (b) {
+        b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false");
+        b.setAttribute("aria-label", (on ? "Stop watching " : "Watch ") + key);
+        b.title = on ? "Watching: you'll hear if someone claims it or it closes. Click to stop." : "Watch: hear if someone claims it or it closes";
+      });
+    }
+    document.addEventListener("click", function (e) {
+      var b = e.target.closest(".eye[data-watch]");
+      if (!b) return;
+      e.preventDefault(); e.stopPropagation();
+      var key = b.dataset.watch, on = !b.classList.contains("on");
+      b.disabled = true;
+      fetch("/watch", { method: "POST", headers: { "Content-Type": "application/json", "X-HelloGitty-Token": token },
+        body: JSON.stringify({ key: key, on: on }) })
+        .then(function (r) { return r.json().catch(function () { return { error: "HelloGitty didn't answer (" + r.status + ")" }; }); })
+        .then(function (d) {
+          b.disabled = false;
+          if (d.error) { say(d.error, true); return; }
+          paint(key, on);
+          say(on ? "Watching " + key + ". You'll hear if someone claims it or it closes." : "Stopped watching " + key + ".");
+        })
+        .catch(function () { b.disabled = false; say("Couldn't reach HelloGitty. Is it still running?", true); });
+    }, true);
+  })();
+</script>
+</body>
+</html>{{end}}

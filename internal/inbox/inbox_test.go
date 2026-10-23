@@ -72,7 +72,6 @@ func TestBuildKeepsOnlyPertinentEvents(t *testing.T) {
 		"hg-opencti-platform-opencti-19110-review-1761234567": KindReview,
 		"hg-opencti-platform-opencti-19110-comment-555":       KindComment,
 		"hg-opencti-platform-opencti-19110-bot-inline-777":    KindBot,
-		"hg-opencti-platform-opencti-19110-threads-3-0":       KindThreads,
 		"hg-opencti-platform-opencti-19110-ci-red-abcdef0":    KindState,
 		"hg-opencti-platform-opencti-19110-conflict-abcdef0":  KindState,
 		"hg-pbakaus-impeccable-1084-merged":                   KindState,
@@ -153,7 +152,7 @@ func TestWriteReplacesAtomicallyAndLeavesNoTempFiles(t *testing.T) {
 	}
 	var got File
 	b, _ := os.ReadFile(path)
-	if err := json.Unmarshal(b, &got); err != nil || len(got.Entries) != 8 || !got.GeneratedAt.Equal(t0.Add(time.Minute)) {
+	if err := json.Unmarshal(b, &got); err != nil || len(got.Entries) != 7 || !got.GeneratedAt.Equal(t0.Add(time.Minute)) {
 		t.Fatalf("second write should be the whole file: err=%v entries=%d at=%v", err, len(got.Entries), got.GeneratedAt)
 	}
 	names, _ := os.ReadDir(dir)
@@ -393,70 +392,6 @@ func TestOurPRClosedOrLabelledIsShouted(t *testing.T) {
 	}
 	if m := byID["hg-o-r-8-merged"]; m.Summary != "Merged by @maint" {
 		t.Errorf("the first merge must not arrive silently: %+v", m)
-	}
-}
-
-func TestThreadEntryCountsUnresolvedThreads(t *testing.T) {
-	cases := []struct {
-		name    string
-		it      work.Item
-		wantOK  bool
-		wantID  string
-		wantSum string
-	}{
-		{"mixed active and outdated",
-			work.Item{PR: true, Role: work.RoleAuthor, State: "OPEN", Repo: "o/r", Number: 7,
-				URL: "u", UpdatedAt: t0,
-				Threads: []work.Thread{
-					{Author: "alice", At: t0, Body: "fix this"},
-					{Author: "bob", Bot: true, At: t0.Add(time.Minute), Body: "rename", Outdated: true},
-					{Author: "carol", At: t0.Add(2 * time.Minute), Body: "typo"},
-				}},
-			true, "hg-o-r-7-threads-2-1", "3 unresolved review threads (1 outdated)"},
-		{"all outdated",
-			work.Item{PR: true, Role: work.RoleAuthor, State: "OPEN", Repo: "o/r", Number: 8,
-				URL: "u", UpdatedAt: t0,
-				Threads: []work.Thread{
-					{Author: "x", At: t0, Body: "old", Outdated: true},
-					{Author: "y", At: t0, Body: "old2", Outdated: true},
-				}},
-			true, "hg-o-r-8-threads-0-2", "2 unresolved review threads (all outdated)"},
-		{"none outdated",
-			work.Item{PR: true, Role: work.RoleAuthor, State: "OPEN", Repo: "o/r", Number: 9,
-				URL: "u", UpdatedAt: t0,
-				Threads: []work.Thread{{Author: "z", At: t0, Body: "fix"}}},
-			true, "hg-o-r-9-threads-1-0", "1 unresolved review thread"},
-		{"no threads",
-			work.Item{PR: true, Role: work.RoleAuthor, State: "OPEN", Repo: "o/r", Number: 10, URL: "u"},
-			false, "", ""},
-		{"closed PR ignored",
-			work.Item{PR: true, Role: work.RoleAuthor, State: "CLOSED", Repo: "o/r", Number: 11, URL: "u",
-				Threads: []work.Thread{{Author: "a", At: t0, Body: "x"}}},
-			false, "", ""},
-		{"not author ignored",
-			work.Item{PR: true, Role: work.RoleInvolved, State: "OPEN", Repo: "o/r", Number: 12, URL: "u",
-				Threads: []work.Thread{{Author: "a", At: t0, Body: "x"}}},
-			false, "", ""},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			e, ok := threadEntry(c.it)
-			if ok != c.wantOK {
-				t.Fatalf("ok=%v want %v", ok, c.wantOK)
-			}
-			if !ok {
-				return
-			}
-			if e.ID != c.wantID {
-				t.Errorf("id=%q want %q", e.ID, c.wantID)
-			}
-			if e.Kind != KindThreads {
-				t.Errorf("kind=%q want %q", e.Kind, KindThreads)
-			}
-			if e.Summary != c.wantSum {
-				t.Errorf("summary=%q want %q", e.Summary, c.wantSum)
-			}
-		})
 	}
 }
 

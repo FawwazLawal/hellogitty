@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"sort"
@@ -41,6 +42,7 @@ type otherRow struct {
 	New      int64 // unix time when unread, else 0
 	Attn     string
 	Move     string // "you" when it asks something of you, for the "Needs me only" filter
+	Updated  time.Time
 }
 
 type attention struct {
@@ -89,7 +91,7 @@ func matchNotifications(b *work.Board, items []notify.Item, now time.Time) atten
 			}
 			repeats[r] = true
 		}
-		o := otherRow{Key: "n:" + n.ID, Title: n.Title, URL: n.URL, Repo: n.Repo, Number: n.Number, Words: n.Words(),
+		o := otherRow{Key: "n:" + n.ID, Title: n.Title, URL: n.URL, Repo: n.Repo, Number: n.Number, Words: n.Words(), Updated: n.UpdatedAt,
 			Ago: ago(now, n.UpdatedAt), AgoTitle: n.UpdatedAt.UTC().Format("2006-01-02 15:04Z")}
 		o.Move = work.MoveThem
 		if n.Action() {
@@ -172,4 +174,55 @@ func (h *Handler) serveAttention(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
 	json.NewEncoder(w).Encode(out)
+}
+
+// NoticeSource is optional: a Source that can clear a notification row for good. Clearing keeps it
+// out of the page until that thread has new activity, and marks it read on GitHub.
+type NoticeSource interface {
+	ClearNotification(ctx context.Context, threadID string) error
+	// ClearedNotifications returns when each cleared row ("n:<thread>") was cleared.
+	ClearedNotifications() map[string]time.Time
+}
+
+// dropCleared leaves out notification rows you cleared, unless the thread changed since.
+func dropCleared(rows []otherRow, cleared map[string]time.Time) []otherRow {
+	out := rows[:0:0]
+	for _, o := range rows {
+		if at, ok := cleared[o.Key]; ok && !o.Updated.After(at) {
+			continue
+		}
+		out = append(out, o)
+	}
+	return out
+}
+
+func (h *Handler) serveNoticeClear(w http.ResponseWriter, r *http.Request) {
+	ns, ok := h.Source.(NoticeSource)
+	switch {
+	case !ok:
+		http.NotFound(w, r)
+		return
+	case r.Method != http.MethodPost:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	case !sameOrigin(r) || r.Header.Get("X-HelloGitty-Token") != h.token():
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	var req struct {
+		Key string `json:"key"`
+	}
+	err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<10)).Decode(&req)
+	id := strings.TrimPrefix(req.Key, "n:")
+	if err != nil || id == req.Key || id == "" || len(id) > 40 {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+	defer cancel()
+	if err := ns.ClearNotification(ctx, id); err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

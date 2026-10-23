@@ -40,6 +40,8 @@ type workRow struct {
 	New      int64  // when the newest unread notification on it arrived, unix seconds
 	NewWhat  string // what it says: "New comment", "CI failed: lint"
 	Peek     peek   // the hover card
+	Watched  bool   // on your watch list (the eye)
+	Eye      bool   // show the eye: an issue, on a page that can watch
 }
 
 type note struct{ Text, Level, Term string }

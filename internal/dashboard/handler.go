@@ -88,7 +88,8 @@ type Handler struct {
 	// Markdown, the guide's screenshot, and facts about this install set at startup (files in use).
 	HelpTemplate string
 	FeedTemplate string // the feed on its own page, parsed with Template like Help
-	ListTemplate string // what a Pipeline number counts, on a page of its own
+	ListTemplate   string // what a Pipeline number counts, on a page of its own
+	IssuesTemplate string // all open issues across tracked repos, on a page of its own
 	Guide        string
 	Screenshot   []byte
 	About        []AboutItem
@@ -99,6 +100,7 @@ type page struct {
 	// repositories you removed, which can come back with one click.
 	RepoTools    bool
 	RemovedRepos []string
+	CanWatch     bool // the eye can watch and unwatch issues
 	Version      string
 	Baby         bool
 	Mascot       *mascot
@@ -130,6 +132,9 @@ type page struct {
 	GlossaryJSON template.JS
 	Feed         feedView
 	Token        string // sent back with acknowledgements; see Handler.token
+	// Issues panel: the most recent open issues across tracked repos.
+	Issues     []globalIssue
+	IssueTotal int
 	// "New" counts beside each section's heading.
 	WorkNew, ConvNew, ReposNew, TrackedNew, TrackedNewRepos int
 }
@@ -206,7 +211,26 @@ type watchRow struct {
 	ClaimDetail string
 	ChangedAt   *time.Time
 	URL         string
+	Outside     bool // in a repository you don't track, watched with the eye
+	// Item is how the alert cells name it ("Name#123"); Seen says you marked its claim or closing
+	// as seen, which also clears it from the alert.
+	Item string
+	Seen bool
 }
+
+// CellKey is the alert cell this row's state lights, or "" when it lights none.
+func (w watchRow) CellKey() string {
+	switch w.Status {
+	case "CLAIMED":
+		return "watch-claimed"
+	case "CLOSED_FIXED", "CLOSED_WONT":
+		return "watch-closed"
+	}
+	return ""
+}
+
+// K is the issue as "owner/name#123", the eye's key.
+func (w watchRow) K() string { return rowKey(w.Repo, w.Number) }
 
 type stageCount struct {
 	Abbr, Name string
@@ -230,7 +254,21 @@ type pipelineView struct {
 	All                          []prRow // every one, for the list page; PRs is the panel's first ten
 }
 
+// eye draws the watch toggle for an issue keyed "owner/name#123": an outlined eye, filled in when
+// you watch it.
+func eye(key string, on bool) template.HTML {
+	k := template.HTMLEscapeString(key)
+	state, label, title := "", "Watch "+k, "Watch: hear if someone claims it or it closes"
+	if on {
+		state, label, title = " on", "Stop watching "+k, "Watching: you'll hear if someone claims it or it closes. Click to stop."
+	}
+	return template.HTML(`<button type="button" class="eye` + state + `" data-watch="` + k + `" aria-pressed="` +
+		strconv.FormatBool(on) + `" aria-label="` + label + `" title="` + title + `"><svg viewBox="0 0 16 16" aria-hidden="true">` +
+		`<path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></svg></button>`)
+}
+
 var funcs = template.FuncMap{
+	"eye":   eye,
 	"lower": strings.ToLower,
 	"upper": strings.ToUpper,
 	"isURL": func(s string) bool { return strings.HasPrefix(s, "https://") },
@@ -302,6 +340,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveFeedJSON(w, r)
 	case r.URL.Path == "/feed/ack":
 		h.serveFeedAck(w, r)
+	case r.URL.Path == "/notifications/clear":
+		h.serveNoticeClear(w, r)
+	case r.URL.Path == "/watch":
+		h.serveWatch(w, r)
+	case r.URL.Path == "/issues":
+		h.serveIssues(w, r)
 	case r.URL.Path == "/list":
 		h.serveList(w, r)
 	case r.URL.Path == "/repos/add":
@@ -467,6 +511,10 @@ func (h *Handler) build() (*page, error) {
 		nv := ns.Notifications()
 		applyAttention(&p.Work, nv, matchNotifications(board, nv.Items, now))
 	}
+	if cn, ok := h.Source.(NoticeSource); ok {
+		cleared := cn.ClearedNotifications()
+		p.Work.Other, p.Work.RepoOther = dropCleared(p.Work.Other, cleared), dropCleared(p.Work.RepoOther, cleared)
+	}
 	for _, list := range [][]workRow{p.Work.You, p.Work.Them, p.Work.Done} {
 		for _, r := range list {
 			if r.Attn == "new" {
@@ -544,6 +592,7 @@ func (h *Handler) build() (*page, error) {
 	stageIdx := func(stage string) int { return pst.StageIndex(stage) }
 
 	var claimed, closed, dormant, slow, flagged, failed int
+	var closedRepos []string
 	var claimedRepos, dormantRepos, slowRepos, flaggedRepos, failedRepos []string
 	for _, r := range reports {
 		full := r.Owner + "/" + r.Name
@@ -604,7 +653,9 @@ func (h *Handler) build() (*page, error) {
 				claimedRepos = append(claimedRepos, fmt.Sprintf("%s#%d", r.Name, wr.Number))
 			case "CLOSED_FIXED", "CLOSED_WONT":
 				closed++
+				closedRepos = append(closedRepos, fmt.Sprintf("%s#%d", r.Name, wr.Number))
 			}
+			w.Item = fmt.Sprintf("%s#%d", r.Name, wr.Number)
 			rw.Watch = append(rw.Watch, w)
 			p.Watch = append(p.Watch, w)
 		}
@@ -636,7 +687,37 @@ func (h *Handler) build() (*page, error) {
 		}
 		return strings.ToLower(a.Owner+"/"+a.Name) < strings.ToLower(b.Owner+"/"+b.Name)
 	})
+	// The eye: which issues on the page you watch, and watches in repositories you don't track.
+	if ws, ok := h.Source.(WatchSource); ok {
+		p.CanWatch = true
+		for _, r := range ws.OtherWatched() {
+			full := r.Owner + "/" + r.Name
+			for _, wr := range r.Watch {
+				w := watchRow{Repo: full, Number: wr.Number, Title: wr.Title, Status: store.WatchLabel(wr.Status),
+					ClaimDetail: wr.ClaimDetail, ChangedAt: wr.StatusChangedAt,
+					URL: "https://github.com/" + full + "/issues/" + strconv.Itoa(wr.Number), Outside: true}
+				switch w.Status {
+				case "CLAIMED":
+					claimed++
+					claimedRepos = append(claimedRepos, fmt.Sprintf("%s#%d", r.Name, wr.Number))
+				case "CLOSED_FIXED", "CLOSED_WONT":
+					closed++
+					closedRepos = append(closedRepos, fmt.Sprintf("%s#%d", r.Name, wr.Number))
+				}
+				w.Item = fmt.Sprintf("%s#%d", r.Name, wr.Number)
+				p.Watch = append(p.Watch, w)
+			}
+		}
+		markWatched(p, ws.WatchedKeys())
+	}
 	sort.SliceStable(p.Watch, func(i, j int) bool { return risk(p.Watch[i].Status) < risk(p.Watch[j].Status) })
+
+	// Issues panel: most recent open issues.
+	var watchedKeys map[string]bool
+	if ws, ok := h.Source.(WatchSource); ok {
+		watchedKeys = ws.WatchedKeys()
+	}
+	p.Issues, p.IssueTotal = h.buildPanelIssues(watchedKeys)
 
 	pollFail := len(tel.Errors)
 	shortName := map[string]string{}
@@ -680,7 +761,7 @@ func (h *Handler) build() (*page, error) {
 		apiValue = strconv.Itoa(tel.RateRemaining) + " left"
 	}
 	claimedCell := counter("watch-claimed", "Watched issue claimed", claimed, "warn", claimedRepos, true)
-	closedCell := counter("watch-closed", "Watched issue closed", closed, "caution", nil, false)
+	closedCell := counter("watch-closed", "Watched issue closed", closed, "caution", closedRepos, false)
 	if len(p.Watch) == 0 {
 		// A zero here must only ever mean "watched and clear".
 		claimedCell.Value, claimedCell.Empty = "nothing watched", true
@@ -722,7 +803,13 @@ func (h *Handler) build() (*page, error) {
 	p.Cells = append(p.Cells, cell{Key: "api-low", Label: "API running low", Value: apiValue, Level: "caution", Lit: apiLow,
 		Title: "Lit when under 10% of the hourly GitHub quota remains."})
 	if cs, ok := h.Source.(CellSource); ok {
-		if forget := applyCleared(p.Cells, cs.Cleared(), !lastPoll.IsZero() && len(reports) > 0); len(forget) > 0 {
+		cleared := cs.Cleared()
+		for i := range p.Watch {
+			if k := p.Watch[i].CellKey(); k != "" {
+				p.Watch[i].Seen = cleared[ClearedID(k, p.Watch[i].Item)]
+			}
+		}
+		if forget := applyCleared(p.Cells, cleared, !lastPoll.IsZero() && len(reports) > 0); len(forget) > 0 {
 			if err := cs.ForgetCleared(forget); err != nil {
 				log.Printf("dashboard: forget cleared indicators: %v", err)
 			}

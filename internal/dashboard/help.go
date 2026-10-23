@@ -39,6 +39,7 @@ type helpPage struct {
 	Sections  []helpSection
 	Glossary  []helpTerm
 	About     []AboutItem
+	AIPrompt  string
 }
 
 // guideLinks points the guide's links where they work from inside the app: its screenshot to the
@@ -102,6 +103,7 @@ func (h *Handler) serveHelp(w http.ResponseWriter, r *http.Request) {
 		return p.Glossary[i].Kind < p.Glossary[j].Kind
 	})
 	p.About = h.about()
+	p.AIPrompt = aiPrompt(p.About)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	if err := tmpl.ExecuteTemplate(w, "help", p); err != nil {

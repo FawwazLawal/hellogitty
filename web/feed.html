@@ -22,7 +22,7 @@
 </head>
 <body>
 <header class="fbar"><h1>HelloGitty live <span class="lbl"><span id="feed-open">{{.Feed.Open}}</span> new</span></h1><span class="lbl">{{.Version}} · <a href="/" target="_blank" rel="noopener">Dashboard</a></span></header>
-<ol class="feed tall" id="feed-list" data-token="{{.Token}}" aria-live="polite">{{template "feed-rows" .Feed}}</ol>
+<ol class="feed tall" id="feed-list" data-token="{{.Token}}"{{if .CanWatch}} data-watch="1"{{end}} aria-live="polite">{{template "feed-rows" .Feed}}</ol>
 <p class="fnone" id="feed-none"{{if .Feed.Open}} hidden{{end}}>Nothing new. New issues, comments, reviews and notifications appear here as they happen.</p>
 <div class="ffoot"><label class="check"><input type="checkbox" id="feed-show"> Show acknowledged</label><button type="button" class="clear" id="feed-all">Acknowledge all</button><span id="feed-msg" class="sr" role="status"></span></div>
 <script>

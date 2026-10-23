@@ -38,9 +38,33 @@
   .mod-hidden { display: none !important; }
   .panel.folded > :not(h2) { display: none; }
   .panel.folded > h2 { border-bottom: 0; }
-  .unfold { font: 12px var(--sans); color: var(--text); background: transparent; border: 1px solid var(--rule-hi); border-radius: 4px;
-    padding: 3px 8px; cursor: pointer; }
-  .unfold:hover { background: var(--raised); }
+  /* Panel controls. The grip (drag to move) sits before the title; the arrow (collapse/expand) ends
+     the heading; the resize handle runs along the bottom edge. */
+  .panel { position: relative; }
+  .panel > h2 { justify-content: flex-start; }
+  .panel > h2 > .lbl { margin-left: auto; }
+  .pgrip, .pfold { display: inline-flex; align-items: center; justify-content: center; align-self: center; flex: none; width: 24px; height: 24px;
+    padding: 0; color: var(--head-dim); background: transparent; border: 1px solid transparent; border-radius: 4px; cursor: pointer; }
+  .pgrip { margin: -2px -4px -2px -8px; cursor: grab; }
+  .pgrip svg { width: 16px; height: 16px; fill: currentColor; }
+  .pfold { margin-left: auto; }
+  .panel > h2 > .lbl ~ .pfold { margin-left: 2px; }
+  .pfold svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s ease-out; }
+  .pfold[aria-expanded="false"] svg { transform: rotate(180deg); }
+  .pgrip:hover, .pfold:hover { color: var(--text); background: color-mix(in srgb, var(--panel) 70%, transparent); border-color: var(--rule-hi); }
+  .pgrip:focus-visible, .pfold:focus-visible, .presize:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+  .panel.sized { overflow: auto; }
+  .panel.sized > h2 { position: sticky; top: 0; z-index: 3; }
+  .panel.sized > .tbar, .panel.sized > .thead { position: sticky; z-index: 2; background: var(--panel); }
+  .presize { position: sticky; bottom: 0; z-index: 3; height: 10px; margin-top: -10px; cursor: ns-resize; touch-action: none; }
+  .presize::after { content: ""; position: absolute; left: 50%; bottom: 3px; width: 36px; height: 3px; margin-left: -18px; border-radius: 2px;
+    background: var(--rule-hi); opacity: 0; transition: opacity .12s ease-out; }
+  .panel:hover > .presize::after, .presize:focus-visible::after, .panel.resizing > .presize::after { opacity: 1; }
+  .panel.resizing { user-select: none; }
+  .panel.dragging { opacity: .5; }
+  .panel.drop-before { box-shadow: 0 -3px 0 0 var(--text); }
+  .panel.drop-after { box-shadow: 0 3px 0 0 var(--text); }
+  @media (prefers-reduced-motion: reduce) { .pfold svg, .presize::after { transition: none; } }
   .grid.onecol { grid-template-columns: minmax(0, 1fr); }
   .grid.onecol > .rail { display: none; }
   .sheet { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 64px); padding: 0; background: var(--panel); color: var(--text);
@@ -58,7 +82,7 @@
   .mod button { font: 12px var(--sans); color: var(--text); background: transparent; border: 1px solid var(--rule-hi); border-radius: 4px;
     padding: 4px 8px; cursor: pointer; }
   .mod button:disabled { color: var(--dim); cursor: default; opacity: 0.55; }
-  .sheet button:focus-visible, .sheet select:focus-visible, .sheet input:focus-visible, .unfold:focus-visible, .layoutbtn:focus-visible {
+  .sheet button:focus-visible, .sheet select:focus-visible, .sheet input:focus-visible, .layoutbtn:focus-visible {
     outline: 2px solid var(--text); outline-offset: 2px; }
   .sheet-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px 16px; }
   /* Are you sure: a small sheet that names the repository and what will happen. */
@@ -137,9 +161,16 @@
     border: 1px solid var(--rule-hi); border-radius: 6px; padding: 6px 30px 6px 10px; }
   .toolbar input[type="search"]::placeholder { color: var(--dim); }
   .toolbar input[type="search"]:focus { outline: 2px solid var(--text); outline-offset: 1px; }
+  .toolbar input[type="search"]:not(:placeholder-shown) { border-color: var(--caution); box-shadow: 0 0 0 1px var(--caution); padding-right: 30px; }
+  .toolbar input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
   .toolbar kbd { position: absolute; right: 8px; font: 11px var(--mono); color: var(--dim); border: 1px solid var(--rule-hi);
     border-radius: 4px; padding: 0 5px; pointer-events: none; }
   .toolbar input:not(:placeholder-shown) + kbd { display: none; }
+  .toolbar .search label { display: contents; }
+  .toolbar .qclear { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; border: 0; background: transparent;
+    color: var(--caution); font: 15px/1 var(--sans); cursor: pointer; padding: 0; border-radius: 50%; z-index: 1; }
+  .toolbar .qclear:hover { background: var(--raised); }
+  .toolbar .qclear[hidden] { display: none; }
   .seg { display: inline-flex; align-items: center; border: 1px solid var(--rule-hi); border-radius: 6px; overflow: hidden; }
   .seg .seglbl { font-size: 12px; color: var(--dim); padding: 0 8px; border-right: 1px solid var(--rule-hi); align-self: stretch; display: flex; align-items: center; }
   .seg button { font: 13px/1 var(--sans); color: var(--dim); background: transparent; border: 0; padding: 7px 10px; cursor: pointer; white-space: nowrap; }
@@ -272,6 +303,32 @@
   details[open] > summary .chev { transform: rotate(45deg); }
   .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .repo > summary > .name { display: flex; align-items: center; min-width: 0; }
+  /* Pin: keeps a repository at the top of the list whatever the sort. Shows on hover until pinned. */
+  .pin { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 22px; height: 22px; margin-left: 4px; padding: 0;
+    color: var(--dim); background: transparent; border: 1px solid transparent; border-radius: 4px; cursor: pointer; }
+  .pin svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linejoin: round; }
+  .pin:hover { color: var(--text); border-color: var(--rule-hi); background: var(--panel); }
+  .pin:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+  .pin[aria-pressed="true"] { color: var(--text); }
+  .pin[aria-pressed="true"] svg { fill: currentColor; }
+  @media (hover: hover) {
+    .pin[aria-pressed="false"] { opacity: 0; }
+    .repo > summary:hover .pin, .pin:focus-visible { opacity: 1; }
+  }
+  details.repo.pinned:not(.pinned ~ .pinned) { border-top: 0; }
+  details.repo.pinlast { border-bottom: 1px solid var(--rule-hi); }
+  .rsearch { display: flex; flex: 0 1 240px; min-width: 160px; }
+  .rsearch { position: relative; }
+  .rsearch input { width: 100%; font: 13px/1.3 var(--sans); color: var(--text); background: var(--bg); border: 1px solid var(--rule-hi);
+    border-radius: 6px; padding: 5px 9px; }
+  .rsearch input::placeholder { color: var(--dim); }
+  .rsearch input:not(:placeholder-shown) { border-color: var(--caution); box-shadow: 0 0 0 1px var(--caution); padding-right: 30px; }
+  .rsearch input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+  .rsearch label { display: contents; }
+  .rsearch .qclear { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; border: 0;
+    background: transparent; color: var(--caution); font: 15px/1 var(--sans); cursor: pointer; padding: 0; border-radius: 50%; }
+  .rsearch .qclear:hover { background: var(--raised); }
+  .rsearch .qclear[hidden] { display: none; }
   .repo > summary > .name .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .repo > summary > .name .nb { flex: none; margin-left: 6px; }
   .name.hasnew { font-weight: 700; }
@@ -349,6 +406,17 @@
   .st { font-size: 12px; padding: 1px 6px; text-align: center; align-self: start; border: 1px solid var(--rule-hi); border-radius: 4px; color: var(--nom); }
   .st.CLAIMED { background: var(--warn-fill); border-color: var(--warn-fill); color: var(--warn-ink); font-weight: 600; }
   .st.CLOSED_FIXED, .st.CLOSED_WONT { background: var(--caution-fill); border-color: var(--caution-fill); color: var(--caution-ink); font-weight: 600; }
+  /* Seen: the same word, outlined instead of lit, so you know it's acknowledged but still true. */
+  .st.CLAIMED.seen { background: transparent; color: var(--warn); border-color: color-mix(in srgb, var(--warn) 55%, transparent); font-weight: 400; }
+  .st.CLOSED_FIXED.seen, .st.CLOSED_WONT.seen { background: transparent; color: var(--caution-text); border-color: color-mix(in srgb, var(--caution) 55%, transparent); font-weight: 400; }
+  .nclear { font: 12px/1 var(--sans); color: var(--text); background: transparent; border: 1px solid var(--rule-hi); border-radius: 4px;
+    padding: 3px 8px; cursor: pointer; }
+  .nclear:hover { background: var(--raised); }
+  .nclear:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+  .seenbtn { flex: none; margin-left: 6px; font: 12px/1 var(--sans); color: var(--text); background: transparent; border: 1px solid var(--rule-hi);
+    border-radius: 4px; padding: 3px 7px; cursor: pointer; }
+  .seenbtn:hover { background: var(--raised); }
+  .seenbtn:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
   .wl .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .wl .d { grid-column: 2; font-size: 12.5px; color: var(--dim); overflow-wrap: anywhere; }
 
@@ -502,10 +570,30 @@
     showTheme();
 {{end}}
 {{define "feed-css"}}
+  /* The eye: watch any issue. Outlined and dim until you watch it, then filled in Text. */
+  .eye { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 26px; height: 22px; padding: 0;
+    color: var(--dim); background: transparent; border: 1px solid transparent; border-radius: 4px; cursor: pointer; vertical-align: middle; }
+  .eye svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; }
+  .eye:hover { color: var(--text); background: var(--raised); border-color: var(--rule-hi); }
+  .eye:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+  .eye.on { color: var(--text); }
+  .eye.on circle { fill: currentColor; }
+  .eye:disabled { opacity: .5; cursor: progress; }
+  .rt .eye, .tw .eye { margin-left: 4px; }
+  .endtop { display: inline-flex; align-items: center; gap: 4px; }
+  .fr .eye { margin-top: -1px; }
+  .fr > .fack { grid-column: 4; }
+  .tw { display: flex; align-items: center; min-width: 0; }
+  .tw .t { min-width: 0; }
+  .wl li.unwatched { opacity: .55; }
+  .eyemsg { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 20; max-width: min(520px, calc(100vw - 32px));
+    padding: 8px 14px; border-radius: 6px; font-size: 13px; color: var(--text); background: var(--raised); border: 1px solid var(--rule-hi);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, .35); }
+  .eyemsg.bad { color: var(--warn); }
   /* Live feed: a running list of what just happened, newest first, with an Acknowledge per row. */
-  .feed { list-style: none; margin: 0; padding: 0; max-height: 460px; overflow-y: auto; overscroll-behavior: contain; }
+  .feed { list-style: none; margin: 0; padding: 0; max-height: 460px; overflow-y: auto; }
   .feed.tall { max-height: none; }
-  .fr { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; column-gap: 10px; align-items: start; padding: 8px 14px; border-top: 1px solid var(--rule); }
+  .fr { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto auto; column-gap: 10px; align-items: start; padding: 8px 14px; border-top: 1px solid var(--rule); }
   .fr:first-child { border-top: 0; }
   .feed:not(.showall) .fr.acked { display: none; }
   .fr .fdot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; background: var(--nom); }
@@ -532,9 +620,47 @@
   <span class="fdot" aria-hidden="true"></span>
   <div><div class="fline"><span class="ftag {{.Kind}}">{{.Label}}</span><a class="ftext" href="{{.URL}}" target="_blank" rel="noopener">{{.Text}}</a></div>
   <div class="fmeta"><span>{{.Repo}}{{if .Number}} #{{.Number}}{{end}}</span>{{if .Actor}}<span>@{{.Actor}}</span>{{end}}<time datetime="{{.AgoTitle}}" title="{{.AgoTitle}}">{{.Ago}}</time></div></div>
-  <button type="button" class="fack" title="{{if .Thread}}Acknowledge; also marks it read on GitHub{{else}}Acknowledge; kept in HelloGitty only{{end}}"{{if .Acked}} disabled{{end}}>{{if .Acked}}Seen{{else}}Ack{{end}}</button>
+  {{if .Eye}}{{eye .Key .Watched}}{{end}}<button type="button" class="fack" title="{{if .Thread}}Acknowledge; also marks it read on GitHub{{else}}Acknowledge; kept in HelloGitty only{{end}}"{{if .Acked}} disabled{{end}}>{{if .Acked}}Seen{{else}}Ack{{end}}</button>
 </li>{{end}}{{end}}
 {{define "feed-js"}}
+  // The eye: watch or stop watching an issue from anywhere on the page. Every eye for the same issue
+  // follows, and a short note says what happened.
+  (function () {
+    var token = (document.querySelector("section.cw") || {}).dataset;
+    token = token ? token.token : "";
+    var msg = null, timer = 0;
+    function say(text, bad) {
+      if (!msg) { msg = document.createElement("div"); msg.className = "eyemsg"; msg.setAttribute("role", "status"); document.body.appendChild(msg); }
+      msg.textContent = text; msg.classList.toggle("bad", !!bad); msg.hidden = false;
+      clearTimeout(timer); timer = setTimeout(function () { msg.hidden = true; }, 5000);
+    }
+    function paint(key, on) {
+      document.querySelectorAll('.eye[data-watch="' + key.replace(/"/g, "") + '"]').forEach(function (b) {
+        b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false");
+        b.setAttribute("aria-label", (on ? "Stop watching " : "Watch ") + key);
+        b.title = on ? "Watching: you'll hear if someone claims it or it closes. Click to stop." : "Watch: hear if someone claims it or it closes";
+        var li = b.closest(".wl li"); if (li) li.classList.toggle("unwatched", !on);
+      });
+    }
+    document.addEventListener("click", function (e) {
+      var b = e.target.closest(".eye[data-watch]");
+      if (!b) return;
+      e.preventDefault(); e.stopPropagation();
+      var key = b.dataset.watch, on = !b.classList.contains("on");
+      b.disabled = true;
+      fetch("/watch", { method: "POST", headers: { "Content-Type": "application/json", "X-HelloGitty-Token": token || (document.getElementById("feed-list") || {}).dataset.token },
+        body: JSON.stringify({ key: key, on: on }) })
+        .then(function (r) { return r.json().catch(function () { return { error: "HelloGitty didn't answer (" + r.status + ")" }; }); })
+        .then(function (d) {
+          b.disabled = false;
+          if (d.error) { say(d.error, true); return; }
+          paint(key, on);
+          say(on ? "Watching " + key + ". You'll hear if someone claims it or it closes; it's in Watched issues." + (d.note ? " " + d.note : "")
+                 : "Stopped watching " + key + ".");
+        })
+        .catch(function () { b.disabled = false; say("Couldn't reach HelloGitty. Is it still running?", true); });
+    }, true);
+  })();
     // Live feed: re-read every 30 seconds; new rows flash once. Ack marks a row seen here, and on
     // GitHub too when a notification is behind it; reading it on GitHub settles the row here.
     (function () {
@@ -564,6 +690,13 @@
         meta.appendChild(el("span", "", r.repo + (r.number ? " #" + r.number : "")));
         if (r.actor) meta.appendChild(el("span", "", "@" + r.actor));
         t.dateTime = r.at; t.title = r.at; meta.appendChild(t); body.appendChild(meta); li.appendChild(body);
+        if (list.dataset.watch && ["new-issue", "issue", "watch", "overlap"].indexOf(r.kind) >= 0 && r.key) {
+          var e = document.createElement("button"); e.type = "button"; e.className = "eye" + (r.watched ? " on" : ""); e.dataset.watch = r.key;
+          e.setAttribute("aria-pressed", r.watched ? "true" : "false"); e.setAttribute("aria-label", (r.watched ? "Stop watching " : "Watch ") + r.key);
+          e.title = r.watched ? "Watching: you'll hear if someone claims it or it closes. Click to stop." : "Watch: hear if someone claims it or it closes";
+          e.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></svg>';
+          li.appendChild(e);
+        }
         var b = el("button", "fack", r.acked ? "Seen" : "Ack"); b.type = "button"; b.disabled = !!r.acked;
         b.title = r.thread ? "Acknowledge; also marks it read on GitHub" : "Acknowledge; kept in HelloGitty only";
         li.appendChild(b);
@@ -650,7 +783,7 @@
     {{if .Quote}}<blockquote>{{if .QuoteURL}}<a href="{{.QuoteURL}}" target="_blank" rel="noopener">{{.QuoteBy}}</a>{{else}}<b>{{.QuoteBy}}</b> {{end}}{{.Quote}}</blockquote>{{end}}
   </div>
   <div class="end">
-    <time class="when" title="Since {{.AgoTitle}}">{{.Ago}}</time>
+    <span class="endtop">{{if .Eye}}{{eye .K .Watched}}{{end}}<time class="when" title="Since {{.AgoTitle}}">{{.Ago}}</time></span>
     <span class="trail" data-term="pill" data-extra="{{.Repo}} #{{.Number}}"><span class="rp">{{.Repo}}</span><span class="num">#{{.Number}}</span></span>
   </div>
 </li>{{end}}
@@ -662,7 +795,7 @@
     <div class="state"><span class="newchip"{{if not .New}} hidden{{end}}>New</span><span class="say">{{.Words}}</span></div>
   </div>
   <div class="end">
-    <time class="when" title="{{.AgoTitle}}">{{.Ago}}</time>
+    <span class="endtop"><button type="button" class="nclear" data-nclear="{{.Key}}" title="Clear: keep it off this page until the thread has new activity, and mark it read on GitHub">Clear</button><time class="when" title="{{.AgoTitle}}">{{.Ago}}</time></span>
     <span class="trail" title="{{.Repo}}{{if .Number}} #{{.Number}}{{end}}"><span class="rp">{{.Repo}}</span>{{if .Number}}<span class="num">#{{.Number}}</span>{{end}}</span>
   </div>
 </li>{{end}}
@@ -691,7 +824,7 @@
 </section>
 
 <section class="toolbar" aria-label="Filter and organize" data-module="toolbar">
-  <label class="search"><span class="sr">Search</span><input type="search" id="f-q" placeholder="Search titles, repos, labels, people" autocomplete="off" spellcheck="false"><kbd title="Press / to search">/</kbd></label>
+  <span class="search"><label><span class="sr">Search</span><input type="search" id="f-q" placeholder="Search titles, repos, labels, people" autocomplete="off" spellcheck="false"><kbd title="Press / to search">/</kbd></label><button type="button" class="qclear" aria-label="Clear search" title="Clear search" hidden>&times;</button></span>
   <div class="seg" role="group" aria-label="Show pull requests, issues or both"><button type="button" data-f-kind="all">All</button><button type="button" data-f-kind="pr">PRs</button><button type="button" data-f-kind="issue">Issues</button></div>
   <label class="pick"><span class="sr">Organization or repository</span><select id="f-scope"><option value="">All organizations and repos</option></select></label>
   <label class="check"><input type="checkbox" id="f-mine"> Needs me only</label>
@@ -764,7 +897,9 @@
       <div class="tbar"><label class="pick"><span class="lbl">Sort</span><select id="f-sort">
         <option value="default">{{if .HasPipeline}}Furthest stage first{{else}}Name{{end}}</option><option value="name">Name</option><option value="open">Most open issues</option>
         <option value="gfi">Most good first issues</option><option value="unasgn">Most unassigned</option><option value="commit">Most recent commit</option><option value="denied">Most turned down</option>
-      </select></label><span class="fcount" id="tracked-count"></span>
+      </select></label>
+      <span class="rsearch"><label><span class="sr">Search tracked repositories</span><input type="search" id="f-rq" placeholder="Search repositories" autocomplete="off" spellcheck="false"></label><button type="button" class="qclear" aria-label="Clear search" title="Clear search" hidden>&times;</button></span>
+      <span class="fcount" id="tracked-count"></span>
       {{if .RepoTools}}<form class="addrepo" id="repo-add" data-token="{{.Token}}" autocomplete="off"><label class="sr" for="repo-add-in">Add a repository to track</label>
         <input id="repo-add-in" type="text" placeholder="Add a repo: owner/name or GitHub link" spellcheck="false" required>
         <button type="submit">Track</button></form>{{end}}</div>
@@ -779,7 +914,7 @@
       <details class="repo" data-new-ids="{{.NewIDs}}" data-key="repo-{{.Key}}" data-repo="{{.Key}}" data-name="{{.Owner}}/{{.Name}}" data-s="{{.Search}}" data-open="{{.Open}}" data-gfi="{{.GFI}}" data-unasgn="{{.Unassigned}}" data-age="{{if .AgeKnown}}{{.AgeDays}}{{else}}100000{{end}}" data-denied="{{.DeniedTotal}}">
         <summary>
           <span class="light {{.Health}}" role="img" aria-label="{{lower .Health}}" data-term="health-{{.Health}}" data-v="h-{{.Key}}" data-val="{{.Health}}"></span>
-          <span class="name{{if .NewCount}} hasnew{{end}}"><span class="nm"><span class="own">{{.Owner}}/</span>{{.Name}}</span>{{if .NewCount}}<span class="nb" data-repo-new>{{.NewCount}} new</span>{{end}}{{if .Error}}<span class="errtag" title="Last check failed: {{.Error}}">check failed</span>{{end}}</span>
+          <span class="name{{if .NewCount}} hasnew{{end}}"><span class="nm"><span class="own">{{.Owner}}/</span>{{.Name}}</span><button type="button" class="pin" data-pin="{{.Key}}" aria-pressed="false" aria-label="Pin {{.Owner}}/{{.Name}} to the top" title="Pin to the top"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.8 2.2l4 4-2.3.9-2.6 2.6.3 3.1-1.4 1.4-2.5-2.5L2.8 14l-.6-.6 2.3-2.5L2 8.4l1.4-1.4 3.1.3 2.6-2.6z"/></svg></button>{{if .NewCount}}<span class="nb" data-repo-new>{{.NewCount}} new</span>{{end}}{{if .Error}}<span class="errtag" title="Last check failed: {{.Error}}">check failed</span>{{end}}</span>
           {{if $.HasPipeline}}{{if .InPipeline}}<span class="phase" data-v="ph-{{.Key}}" data-val="{{.Stage}}" title="Stage: {{.Stage}}">{{range .Phases}}<i class="{{.State}}"></i>{{end}}<span class="sr">stage {{.Stage}}</span></span>
           {{else}}<span class="phase none" title="Not in the pipeline">{{range $.Stages}}<i></i>{{end}}<span class="sr">not in the pipeline</span></span>{{end}}
           <span class="stg">{{if .InPipeline}}{{.StageAbbr}}{{else}}—{{end}}</span>
@@ -816,7 +951,7 @@
               <button type="button" role="tab" data-tab="lessons" aria-selected="{{if eq .Tab "lessons"}}true{{else}}false{{end}}">Lessons ({{.DeniedTotal}})</button>
             </div>
             <div role="tabpanel" data-panel="issues"{{if ne .Tab "issues"}} hidden{{end}}>
-              {{if .Issues}}<ul class="rlist">{{range .Issues}}<li{{if .New}} class="isnew"{{if .AckID}} data-ack="{{.AckID}}"{{end}}{{end}}><div class="rt">{{if .New}}<span class="nb">New</span>{{end}}<a href="{{.URL}}" target="_blank" rel="noopener">#{{.Number}} {{.Title}}</a></div><div class="rm"><time title="{{.AgoTitle}}">opened {{.Ago}}</time>{{if .Taken}}<span>{{.Taken}}</span>{{end}}{{range .Labels}}<span class="label">{{.}}</span>{{end}}</div></li>{{end}}</ul>
+              {{if .Issues}}<ul class="rlist">{{range .Issues}}<li{{if .New}} class="isnew"{{if .AckID}} data-ack="{{.AckID}}"{{end}}{{end}}><div class="rt">{{if .New}}<span class="nb">New</span>{{end}}<a href="{{.URL}}" target="_blank" rel="noopener">#{{.Number}} {{.Title}}</a>{{if .Eye}}{{eye .K .Watched}}{{end}}</div><div class="rm"><time title="{{.AgoTitle}}">opened {{.Ago}}</time>{{if .Taken}}<span>{{.Taken}}</span>{{end}}{{range .Labels}}<span class="label">{{.}}</span>{{end}}</div></li>{{end}}</ul>
               {{else}}<p class="zero">No open issues stored yet.</p>{{end}}
             </div>
             <div role="tabpanel" data-panel="prs" hidden>
@@ -852,7 +987,7 @@
   <div class="rail">
     <section class="panel" aria-labelledby="feed-h" data-module="feed">
       <h2 id="feed-h"><span class="term" data-term="live" tabindex="0">Live</span> <span class="lbl"><span id="feed-open">{{.Feed.Open}}</span> new · <a href="/feed" target="_blank" rel="noopener">Open in a window</a></span></h2>
-      <ol class="feed" id="feed-list" data-token="{{.Token}}" aria-live="polite">{{template "feed-rows" .Feed}}</ol>
+      <ol class="feed" id="feed-list" data-token="{{.Token}}"{{if .CanWatch}} data-watch="1"{{end}} aria-live="polite">{{template "feed-rows" .Feed}}</ol>
       <p class="fnone" id="feed-none"{{if .Feed.Open}} hidden{{end}}>{{if .Feed.Known}}Nothing new. New issues, comments, reviews and notifications appear here as they happen.{{else}}The live feed appears once HelloGitty has checked GitHub.{{end}}</p>
       <div class="ffoot"><label class="check"><input type="checkbox" id="feed-show"> Show acknowledged</label><button type="button" class="clear" id="feed-all">Acknowledge all</button><span id="feed-msg" class="sr" role="status"></span></div>
     </section>
@@ -861,14 +996,25 @@
       {{if .Watch}}
       <ul class="wl">
       {{range .Watch}}
-        <li data-repo="{{lower .Repo}}" data-name="{{.Repo}}" data-kind="issue" data-s="{{lower .Repo}} #{{.Number}} {{lower .Title}} {{lower (watchText .Status)}}"><span class="st {{.Status}}" data-term="watch-{{.Status}}">{{watchText .Status}}</span>
-          <a class="t" href="{{.URL}}" target="_blank" rel="noopener" title="{{.Title}}">{{.Repo}}#{{.Number}} {{.Title}}</a>
+        <li data-repo="{{lower .Repo}}" data-name="{{.Repo}}" data-kind="issue" data-s="{{lower .Repo}} #{{.Number}} {{lower .Title}} {{lower (watchText .Status)}}"><span class="st {{.Status}}{{if .Seen}} seen{{end}}" data-term="watch-{{.Status}}"{{if .Seen}} title="Seen. It lights up again if anything changes."{{end}}>{{watchText .Status}}</span>
+          <span class="tw"><a class="t" href="{{.URL}}" target="_blank" rel="noopener" title="{{.Title}}">{{.Repo}}#{{.Number}} {{.Title}}</a>{{if and .CellKey (not .Seen)}}<button type="button" class="seenbtn" data-seen-cell="{{.CellKey}}" data-seen-item="{{.Item}}" title="Mark this {{lower (watchText .Status)}} as seen: the badge and the alert go quiet until something changes. You keep watching it.">Seen</button>{{end}}{{if $.CanWatch}}{{eye .K true}}{{end}}</span>
           {{if or .ClaimDetail .ChangedAt}}<span class="d">{{if isURL .ClaimDetail}}<a href="{{.ClaimDetail}}" target="_blank" rel="noopener">the claim</a>{{else}}{{.ClaimDetail}}{{end}}{{if .ChangedAt}} · changed {{utc .ChangedAt}}{{end}}</span>{{end}}
         </li>
       {{end}}
       </ul>
       {{else}}
-      <p class="nodata"><b>Nothing watched.</b> Watch an issue before you start on it, and you'll hear if someone else claims or fixes it: <code>hellogitty watch owner/name 123</code></p>
+      <p class="nodata"><b>Nothing watched.</b> Watch an issue before you start on it, and you'll hear if someone else claims or fixes it. Click the eye on any issue on this page, or run <code>hellogitty watch owner/name 123</code>.</p>
+      {{end}}
+    </section>
+
+    <section class="panel" aria-labelledby="issues-h" data-module="issues">
+      <h2 id="issues-h">Recent issues <span class="lbl">{{.IssueTotal}} newest · <a href="/issues">Show all</a></span></h2>
+      {{if .Issues}}
+      <ul class="wl">
+      {{range .Issues}}<li data-s="{{.Search}}"><span class="tw"><a class="t" href="{{.URL}}" target="_blank" rel="noopener" title="{{.Title}}">{{.Repo}}#{{.Number}} {{.Title}}</a>{{if .Taken}} <span class="tag taken">{{.Taken}}</span>{{end}}{{if $.CanWatch}}{{eye .K .Watched}}{{end}}</span>{{if .Labels}}<span class="d">{{range .Labels}}<span class="tag">{{.}}</span> {{end}}</span>{{end}}</li>{{end}}
+      </ul>
+      {{else}}
+      <p class="nodata"><b>No open issues</b> in tracked repositories.</p>
       {{end}}
     </section>
 
@@ -993,6 +1139,64 @@
           });
         });
     });
+  })();
+</script>
+<script>
+  // Clear on a GitHub notification row: it leaves now, and stays away until the thread changes.
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest(".nclear");
+    if (!b) return;
+    var cw = document.querySelector("section.cw"), li = b.closest("li");
+    b.disabled = true;
+    fetch("/notifications/clear", { method: "POST", headers: { "Content-Type": "application/json", "X-HelloGitty-Token": cw ? cw.dataset.token : "" },
+      body: JSON.stringify({ key: b.dataset.nclear }) })
+      .then(function (r) { return r.ok ? null : r.text().then(function (t) { return Promise.reject(t); }); })
+      .then(function () {
+        var group = li.closest(".group"), n = group && group.querySelector("h3 .n");
+        li.remove();
+        if (n) n.textContent = Math.max(0, (+n.textContent || 1) - 1);
+        if (group && !group.querySelector("li")) group.remove();
+      })
+      .catch(function (t) { b.disabled = false; b.textContent = "Try again"; b.title = String(t || "HelloGitty didn't answer"); });
+  });
+</script>
+<script>
+  // Seen on a claimed or closed watched issue: the same acknowledgement as clearing it from the alert.
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest(".seenbtn");
+    if (!b) return;
+    var cw = document.querySelector("section.cw");
+    b.disabled = true;
+    fetch("/cells/clear", { method: "POST", headers: { "Content-Type": "application/json", "X-HelloGitty-Token": cw ? cw.dataset.token : "" },
+      body: JSON.stringify({ key: b.dataset.seenCell, items: [b.dataset.seenItem] }) })
+      .then(function (r) { if (!r.ok) return Promise.reject(r.status); location.reload(); })
+      .catch(function () { b.disabled = false; b.textContent = "Try again"; });
+  });
+</script>
+<script>
+  // Scrolling down the page must not get caught in a panel that scrolls inside (a shortened panel,
+  // the feed, a long quote). A scroll already moving the page keeps moving it when the pointer
+  // passes over one; a scroll you start over a panel scrolls that panel, and once it reaches its
+  // end it carries on down the page.
+  (function () {
+    var pageAt = 0, latch = 250;
+    addEventListener("scroll", function () { pageAt = Date.now(); }, { passive: true });
+    function scroller(el) {
+      for (; el && el !== document.body; el = el.parentElement) {
+        if (el.scrollHeight - el.clientHeight > 1) {
+          var o = getComputedStyle(el).overflowY;
+          if (o === "auto" || o === "scroll") return el;
+        }
+      }
+      return null;
+    }
+    addEventListener("wheel", function (e) {
+      if (e.ctrlKey || e.defaultPrevented || !e.deltaY) return; // ctrl+wheel is the browser's zoom
+      if (Date.now() - pageAt > latch) return;                  // not mid-scroll: the panel may have it
+      if (!scroller(e.target)) return;
+      e.preventDefault();
+      scrollBy(0, e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * innerHeight : e.deltaY);
+    }, { passive: false });
   })();
 </script>
 <script>
@@ -1284,20 +1488,23 @@
       document.querySelectorAll("[data-module]").forEach(function (m) { el[m.dataset.module] = m; });
       var TOP = ["alerts", "toolbar"], SUB = ["work-them", "work-other", "work-done"];
       var NAMES = { alerts: "Alerts", toolbar: "Filter toolbar", "work-them": "Waiting on others", "work-other": "Other notifications", "work-done": "Finished" };
+      var named = {};
       function name(id) {
         if (NAMES[id]) return NAMES[id];
+        if (named[id]) return named[id];
         var h = el[id] && el[id].querySelector("h2");
-        return h ? h.firstChild.textContent.trim() : id;
+        return (named[id] = h ? h.firstChild.textContent.trim() : id);
       }
+      Object.keys(el).forEach(name); // before the grip and arrow join the headings
       var PRESETS = {
-        everything: { main: ["your-work", "conversations", "your-repos", "tracked"], rail: ["feed", "watched", "pipeline", "checks"], hidden: [], folded: [] },
-        contributor: { main: ["your-work", "conversations", "tracked", "your-repos"], rail: ["feed", "watched", "pipeline", "checks"], hidden: ["your-repos", "pipeline", "checks"], folded: ["tracked"] },
-        maintainer: { main: ["your-repos", "your-work", "conversations", "tracked"], rail: ["feed", "watched", "pipeline", "checks"], hidden: [], folded: ["conversations"] },
-        program: { main: ["tracked", "your-work", "conversations", "your-repos"], rail: ["pipeline", "feed", "watched", "checks"], hidden: ["your-repos"], folded: ["your-work", "conversations"] },
-        focus: { main: ["your-work", "conversations", "your-repos", "tracked"], rail: ["feed", "watched", "pipeline", "checks"],
-          hidden: ["toolbar", "feed", "conversations", "your-repos", "tracked", "watched", "pipeline", "checks", "work-them", "work-other", "work-done"], folded: [] }
+        everything: { main: ["your-work", "conversations", "your-repos", "tracked"], rail: ["feed", "watched", "issues", "pipeline", "checks"], hidden: [], folded: [] },
+        contributor: { main: ["your-work", "conversations", "tracked", "your-repos"], rail: ["feed", "watched", "issues", "pipeline", "checks"], hidden: ["your-repos", "pipeline", "checks"], folded: ["tracked"] },
+        maintainer: { main: ["your-repos", "your-work", "conversations", "tracked"], rail: ["feed", "watched", "issues", "pipeline", "checks"], hidden: [], folded: ["conversations"] },
+        program: { main: ["tracked", "your-work", "conversations", "your-repos"], rail: ["pipeline", "feed", "watched", "issues", "checks"], hidden: ["your-repos"], folded: ["your-work", "conversations"] },
+        focus: { main: ["your-work", "conversations", "your-repos", "tracked"], rail: ["feed", "watched", "issues", "pipeline", "checks"],
+          hidden: ["toolbar", "feed", "conversations", "your-repos", "tracked", "watched", "issues", "pipeline", "checks", "work-them", "work-other", "work-done"], folded: [] }
       };
-      function copy(p, preset) { return { preset: preset, main: p.main.slice(), rail: p.rail.slice(), hidden: p.hidden.slice(), folded: p.folded.slice() }; }
+      function copy(p, preset) { return { preset: preset, main: p.main.slice(), rail: p.rail.slice(), hidden: p.hidden.slice(), folded: p.folded.slice(), sizes: {} }; }
       // Keep only modules on this page, and give any new panel a place in its usual column.
       function normalize(st) {
         var seen = {}, def = PRESETS.everything;
@@ -1306,9 +1513,13 @@
         ["main", "rail"].forEach(function (col) { def[col].forEach(function (id) { if (el[id] && !seen[id]) { st[col].push(id); seen[id] = true; } }); });
         st.hidden = (st.hidden || []).filter(function (id) { return el[id]; });
         st.folded = (st.folded || []).filter(function (id) { return el[id]; });
+        var sizes = {};
+        Object.keys(st.sizes || {}).forEach(function (id) { var h = +st.sizes[id]; if (el[id] && h >= MINH) sizes[id] = Math.round(h); });
+        st.sizes = sizes;
         if (!PRESETS[st.preset] && st.preset !== "custom") st.preset = "custom";
         return st;
       }
+      var MINH = 120; // the smallest a resized panel gets: its heading and a few rows
       var state;
       try { state = JSON.parse(localStorage.getItem(key) || "null"); } catch (e) {}
       state = normalize(state && state.main ? state : copy(PRESETS.everything, "everything"));
@@ -1327,13 +1538,17 @@
           el[id].classList.toggle("mod-hidden", hide);
           var folded = has(state.folded, id) && el[id].classList.contains("panel");
           el[id].classList.toggle("folded", folded);
-          var h2 = el[id].querySelector(":scope > h2"), btn = h2 && h2.querySelector(".unfold");
-          if (folded && h2 && !btn) {
-            btn = document.createElement("button"); btn.type = "button"; btn.className = "unfold";
-            btn.textContent = "Unfold"; btn.setAttribute("aria-label", "Unfold " + name(id));
-            btn.addEventListener("click", function () { change(function () { state.folded = state.folded.filter(function (x) { return x !== id; }); }); });
-            h2.appendChild(btn);
-          } else if (!folded && btn) btn.remove();
+          var arrow = el[id].querySelector(":scope > h2 > .pfold");
+          if (arrow) {
+            arrow.setAttribute("aria-expanded", folded ? "false" : "true");
+            arrow.setAttribute("aria-label", (folded ? "Expand " : "Collapse ") + name(id));
+            arrow.title = folded ? "Expand" : "Collapse";
+          }
+          // A resized panel keeps its height and scrolls inside; folded, it is just its heading.
+          var h = state.sizes[id], sized = !!h && !folded && el[id].classList.contains("panel");
+          el[id].classList.toggle("sized", sized);
+          el[id].style.height = sized ? h + "px" : "";
+          if (sized) pin(el[id]);
         });
         var railShown = state.rail.some(function (id) { return !has(state.hidden, id); });
         grid.classList.toggle("onecol", !railShown);
@@ -1416,13 +1631,127 @@
         if (typeof dialog.showModal === "function") dialog.showModal(); else dialog.setAttribute("open", "");
       });
       document.getElementById("layout-done").addEventListener("click", function () { if (dialog.close) dialog.close(); else dialog.removeAttribute("open"); });
+
+      // On the panels themselves: a grip to drag a panel to another place, an arrow to collapse or
+      // expand it, and a handle along the bottom edge to make it shorter or taller.
+      var GRIP = '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="4" r="1.1"/><circle cx="10" cy="4" r="1.1"/><circle cx="6" cy="8" r="1.1"/><circle cx="10" cy="8" r="1.1"/><circle cx="6" cy="12" r="1.1"/><circle cx="10" cy="12" r="1.1"/></svg>';
+      var CHEV = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 10l4-4 4 4"/></svg>';
+      var dragging = null;
+      Object.keys(el).forEach(function (id) {
+        var p = el[id], h2 = p.classList.contains("panel") && p.querySelector(":scope > h2");
+        if (!h2) return;
+        var grip = document.createElement("button");
+        grip.type = "button"; grip.className = "pgrip"; grip.innerHTML = GRIP;
+        grip.setAttribute("aria-label", "Move " + name(id) + ": drag, or use the arrow keys");
+        grip.title = "Drag to move this panel. Arrow keys move it too.";
+        h2.insertBefore(grip, h2.firstChild);
+        var arrow = document.createElement("button");
+        arrow.type = "button"; arrow.className = "pfold"; arrow.innerHTML = CHEV;
+        arrow.addEventListener("click", function () {
+          change(function () { state.folded = has(state.folded, id) ? state.folded.filter(function (x) { return x !== id; }) : state.folded.concat(id); });
+        });
+        h2.appendChild(arrow);
+        var bar = document.createElement("div");
+        bar.className = "presize"; bar.tabIndex = 0;
+        bar.setAttribute("role", "separator"); bar.setAttribute("aria-orientation", "horizontal");
+        bar.setAttribute("aria-label", "Resize " + name(id) + ": drag, or use the up and down arrow keys. Double-click to fit its content.");
+        bar.title = "Drag to resize. Double-click to fit the content.";
+        p.appendChild(bar);
+
+        // Resize: drag the bottom edge, or arrow keys on it. Double-click returns to natural height.
+        function setH(px) {
+          change(function () { if (px == null) delete state.sizes[id]; else state.sizes[id] = Math.max(MINH, Math.round(px)); });
+        }
+        bar.addEventListener("pointerdown", function (e) {
+          if (e.button !== 0) return;
+          e.preventDefault();
+          var startY = e.clientY, startH = p.getBoundingClientRect().height;
+          bar.setPointerCapture(e.pointerId);
+          p.classList.add("resizing");
+          function move(ev) { var h = Math.max(MINH, startH + ev.clientY - startY); p.style.height = h + "px"; p.classList.add("sized"); }
+          function up(ev) {
+            bar.removeEventListener("pointermove", move); bar.removeEventListener("pointerup", up); bar.removeEventListener("pointercancel", up);
+            p.classList.remove("resizing");
+            if (Math.abs(ev.clientY - startY) > 2) setH(startH + ev.clientY - startY); else apply();
+          }
+          bar.addEventListener("pointermove", move); bar.addEventListener("pointerup", up); bar.addEventListener("pointercancel", up);
+        });
+        bar.addEventListener("dblclick", function () { setH(null); });
+        bar.addEventListener("keydown", function (e) {
+          var cur = state.sizes[id] || p.getBoundingClientRect().height;
+          if (e.key === "ArrowUp") { e.preventDefault(); setH(cur - 40); }
+          if (e.key === "ArrowDown") { e.preventDefault(); setH(cur + 40); }
+          if (e.key === "Escape" || e.key === "Home") { e.preventDefault(); setH(null); }
+        });
+
+        // Move: drag by the grip onto another panel (drops above or below it, by where you let go)
+        // or into an empty column. Arrow keys on the grip move it one place, left/right between columns.
+        grip.addEventListener("pointerdown", function () { p.draggable = true; });
+        grip.addEventListener("pointerup", function () { p.draggable = false; }); // a click, not a drag
+        p.addEventListener("dragstart", function (e) {
+          if (!p.draggable) return;
+          dragging = id; p.classList.add("dragging");
+          e.dataTransfer.effectAllowed = "move";
+          try { e.dataTransfer.setData("text/plain", id); } catch (err) {}
+        });
+        p.addEventListener("dragend", function () {
+          p.draggable = false; p.classList.remove("dragging"); dragging = null;
+          document.querySelectorAll(".drop-before, .drop-after").forEach(function (x) { x.classList.remove("drop-before", "drop-after"); });
+        });
+        p.addEventListener("dragover", function (e) {
+          if (!dragging || dragging === id) return;
+          e.preventDefault(); e.stopPropagation();
+          var r = p.getBoundingClientRect(), after = e.clientY > r.top + r.height / 2;
+          p.classList.toggle("drop-after", after); p.classList.toggle("drop-before", !after);
+        });
+        p.addEventListener("dragleave", function () { p.classList.remove("drop-before", "drop-after"); });
+        p.addEventListener("drop", function (e) {
+          if (!dragging || dragging === id) return;
+          e.preventDefault(); e.stopPropagation();
+          var after = p.classList.contains("drop-after"), moved = dragging;
+          p.classList.remove("drop-before", "drop-after");
+          change(function () { place(moved, has(state.main, id) ? "main" : "rail", id, after); });
+        });
+        grip.addEventListener("keydown", function (e) {
+          var col = has(state.main, id) ? "main" : "rail", arr = state[col], i = arr.indexOf(id);
+          if (e.key === "ArrowUp" && i > 0) { e.preventDefault(); change(function () { place(id, col, arr[i - 1], false); }); grip.focus(); }
+          else if (e.key === "ArrowDown" && i < arr.length - 1) { e.preventDefault(); change(function () { place(id, col, arr[i + 1], true); }); grip.focus(); }
+          else if ((e.key === "ArrowLeft" && col === "rail") || (e.key === "ArrowRight" && col === "main")) {
+            e.preventDefault(); change(function () { place(id, col === "main" ? "rail" : "main", null, false); }); grip.focus();
+          }
+        });
+      });
+      // In a resized panel the heading, a sort bar and column headers stay in view while the rest
+      // scrolls under them; each sticks just below the one before.
+      function pin(p) {
+        var top = 0;
+        Array.prototype.forEach.call(p.children, function (c) {
+          if (c.matches("h2, .tbar, .thead")) { c.style.top = top + "px"; top += c.offsetHeight; }
+        });
+      }
+      // Put a panel in a column, before or after another, or at its end.
+      function place(id, col, target, after) {
+        state.main = state.main.filter(function (x) { return x !== id; });
+        state.rail = state.rail.filter(function (x) { return x !== id; });
+        var arr = state[col], i = target ? arr.indexOf(target) : -1;
+        if (i < 0) arr.push(id); else arr.splice(after ? i + 1 : i, 0, id);
+      }
+      [["main", main], ["rail", rail]].forEach(function (c) {
+        c[1].addEventListener("dragover", function (e) { if (dragging) e.preventDefault(); });
+        c[1].addEventListener("drop", function (e) {
+          if (!dragging) return;
+          e.preventDefault();
+          var moved = dragging;
+          change(function () { place(moved, c[0], null, false); });
+        });
+      });
       apply();
     })();
 
     // The view is remembered in this browser so the 5-minute reload keeps it.
     (function () {
       var viewKey = "hellogitty-view";
-      var view = { q: "", kind: "all", scope: "", mine: false, group: "move", sort: "default" };
+      var view = { q: "", kind: "all", scope: "", mine: false, group: "move", sort: "default", rq: "", pins: [] };
       try { var saved = JSON.parse(localStorage.getItem(viewKey) || "null"); if (saved) for (var k in view) if (k in saved) view[k] = saved[k]; } catch (e) {}
       function save() { try { localStorage.setItem(viewKey, JSON.stringify(view)); } catch (e) {} }
 
@@ -1527,11 +1856,29 @@
           denied: function (d) { return -Number(d.dataset.denied); }
         }[key];
         var parent = repos.length ? repos[0].parentNode : null, after = parent ? repos[repos.length - 1].nextSibling : null;
-        repos.slice().sort(function (a, b) {
+        var pins = view.pins || [], pinned = function (d) { return pins.indexOf(d.dataset.repo) !== -1; };
+        var sorted = repos.slice().sort(function (a, b) {
+          // Pinned repositories first, in the order you pinned them; then the chosen sort.
+          var pa = pins.indexOf(a.dataset.repo), pb = pins.indexOf(b.dataset.repo);
+          if (pa !== -1 || pb !== -1) return pa === -1 ? 1 : pb === -1 ? -1 : pa - pb;
           if (!by) return a._order - b._order;
           var x = by(a), y = by(b);
           return x < y ? -1 : x > y ? 1 : a._order - b._order;
-        }).forEach(function (d) { parent.insertBefore(d, after); });
+        });
+        var last = null;
+        sorted.forEach(function (d) {
+          parent.insertBefore(d, after);
+          var on = pinned(d), b = d.querySelector(".pin");
+          d.classList.toggle("pinned", on); d.classList.remove("pinlast");
+          if (on && !d.hidden) last = d;
+          if (b) {
+            b.setAttribute("aria-pressed", on ? "true" : "false");
+            var nm = d.dataset.name || d.dataset.repo;
+            b.setAttribute("aria-label", (on ? "Unpin " : "Pin ") + nm + (on ? "" : " to the top"));
+            b.title = on ? "Pinned to the top. Click to unpin." : "Pin to the top";
+          }
+        });
+        if (last && sorted.some(function (d) { return !pinned(d) && !d.hidden; })) last.classList.add("pinlast");
       }
 
       function apply() {
@@ -1543,7 +1890,13 @@
         items.forEach(function (li) { li.hidden = !workMatch(li); if (!li.hidden) shown++; });
         watched.forEach(function (li) { li.hidden = !(inScope(li.dataset.repo) && textMatch(li) && (view.kind !== "pr")); });
         var repoShown = 0;
-        repos.forEach(function (d) { d.hidden = !(inScope(d.dataset.repo) && textMatch(d)); if (!d.hidden) repoShown++; });
+        var rwords = (view.rq || "").toLowerCase().split(/\s+/).filter(Boolean);
+        repos.forEach(function (d) {
+          var hay = (d.dataset.s || "") + " " + (d.dataset.name || "").toLowerCase();
+          var found = rwords.every(function (w) { return hay.indexOf(w) !== -1; });
+          d.hidden = !(inScope(d.dataset.repo) && textMatch(d) && found); if (!d.hidden) repoShown++;
+        });
+        if (rq) rq.value = view.rq || "";
         document.querySelectorAll(".mv, .rg > section").forEach(function (c) {
           counts(c, Array.prototype.slice.call(c.querySelectorAll(".wi")));
         });
@@ -1552,6 +1905,8 @@
         var tc = document.getElementById("tracked-count");
         if (tc) tc.textContent = repoShown !== repos.length ? repoShown + " of " + repos.length + " repositories" : "";
         clear.hidden = !active();
+        if (qClear) qClear.hidden = !view.q;
+        if (rqClear) rqClear.hidden = !(view.rq);
         // A filter that leaves the folded Finished list with matches opens it, so results aren't hidden.
         var done = document.querySelector('details.mv[data-key="work-done"]');
         if (done && active() && done.querySelector(".wi:not([hidden])")) done.open = true;
@@ -1564,6 +1919,24 @@
       scope.addEventListener("change", function () { view.scope = scope.value; apply(); });
       mine.addEventListener("change", function () { view.mine = mine.checked; apply(); });
       if (sortSel) sortSel.addEventListener("change", function () { view.sort = sortSel.value; apply(); });
+      var rq = document.getElementById("f-rq"), rtyping;
+      if (rq) {
+        rq.addEventListener("input", function () { clearTimeout(rtyping); rtyping = setTimeout(function () { view.rq = rq.value.trim(); apply(); }, 120); });
+        rq.addEventListener("keydown", function (e) { if (e.key === "Escape") { view.rq = ""; apply(); rq.blur(); } });
+      }
+      var qClear = q.closest(".search").querySelector(".qclear");
+      var rqClear = rq ? rq.closest(".rsearch").querySelector(".qclear") : null;
+      if (qClear) qClear.addEventListener("click", function () { view.q = ""; apply(); q.focus(); });
+      if (rqClear) rqClear.addEventListener("click", function () { view.rq = ""; apply(); rq.focus(); });
+      // Pin and unpin. The pin sits in the row's summary, so it must not open or close the row.
+      document.addEventListener("click", function (e) {
+        var b = e.target.closest(".pin[data-pin]");
+        if (!b) return;
+        e.preventDefault(); e.stopPropagation();
+        var k = b.dataset.pin, pins = (view.pins || []).slice(), i = pins.indexOf(k);
+        if (i === -1) pins.push(k); else pins.splice(i, 1);
+        view.pins = pins; apply(); b.focus();
+      }, true);
       document.querySelectorAll("[data-f-kind]").forEach(function (b) { b.addEventListener("click", function () { view.kind = b.dataset.fKind; apply(); }); });
       document.querySelectorAll("[data-group]").forEach(function (b) { b.addEventListener("click", function () { view.group = b.dataset.group; apply(); }); });
       clear.addEventListener("click", function () { view.q = ""; view.kind = "all"; view.scope = ""; view.mine = false; apply(); });

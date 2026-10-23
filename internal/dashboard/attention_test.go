@@ -64,3 +64,16 @@ func TestNotificationsLandOnTheirRows(t *testing.T) {
 		}
 	}
 }
+
+func TestDropClearedComesBackOnNewActivity(t *testing.T) {
+	cleared := time.Date(2026, 10, 22, 8, 0, 0, 0, time.UTC)
+	rows := []otherRow{
+		{Key: "n:1", Updated: cleared.Add(-time.Hour)}, // cleared after its last activity: stays away
+		{Key: "n:2", Updated: cleared.Add(time.Hour)},  // new activity since: back
+		{Key: "n:3", Updated: cleared},                 // never cleared
+	}
+	got := dropCleared(rows, map[string]time.Time{"n:1": cleared, "n:2": cleared})
+	if len(got) != 2 || got[0].Key != "n:2" || got[1].Key != "n:3" {
+		t.Fatalf("got %+v", got)
+	}
+}

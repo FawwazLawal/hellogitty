@@ -15,8 +15,11 @@ import (
 )
 
 func TestContainsClaim(t *testing.T) {
-	yes := []string{"I'll take this one", "I’m working on a fix", "Taking this!", "i can do this tonight"}
-	no := []string{"Is anyone working on it?", "This is still broken", ""}
+	yes := []string{"I'll take this one", "I’m working on a fix", "Taking this!", "i can do this tonight",
+		"Can I work on this?", "Thanks for the report. I'd like to take it.", "Please assign me"}
+	no := []string{"Is anyone working on it?", "This is still broken", "",
+		"@geonseok-ship-it Are you still working on this? Happy to leave it to you if so.",
+		"> I'll take this\n\nThanks, any update?"}
 	for _, s := range yes {
 		if !containsClaim(s) {
 			t.Errorf("should detect claim: %q", s)
@@ -271,5 +274,22 @@ func TestCappedIssueListUsesExactTotals(t *testing.T) {
 	ps = run()
 	if _, ok := ps.Totals["big/repo"]; ok || !strings.Contains(ps.Errors["big/repo"], "exact totals are unavailable") {
 		t.Errorf("a failed totals search must surface as a poll failure: totals %v errors %v", ps.Totals, ps.Errors)
+	}
+}
+
+func TestFindClaimSkipsYouAndBots(t *testing.T) {
+	now := time.Now()
+	since := now.Add(-time.Hour)
+	at := now.Add(-time.Minute)
+	comments := []github.Comment{
+		{Body: "I'll take this", User: github.User{Login: "someone"}, CreatedAt: &at, HTMLURL: "theirs"},
+		{Body: "I'm working on a fix", User: github.User{Login: "Me"}, CreatedAt: &at, HTMLURL: "mine"},
+		{Body: "Taking this!", User: github.User{Login: "helper[bot]", Type: "Bot"}, CreatedAt: &at, HTMLURL: "bot"},
+	}
+	if c := findClaim(comments, since, "me"); c == nil || c.HTMLURL != "theirs" {
+		t.Fatalf("want the other person's claim, got %+v", c)
+	}
+	if c := findClaim(comments[1:], since, "me"); c != nil {
+		t.Fatalf("your own comment or a bot's must not count as a claim: %+v", c)
 	}
 }

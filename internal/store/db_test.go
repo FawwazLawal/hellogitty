@@ -228,3 +228,44 @@ func TestAnOlderDatabaseGainsTheNewTables(t *testing.T) {
 		t.Errorf("overlap missing after upgrade: %v", err)
 	}
 }
+
+func TestRepoNamesIgnoreCase(t *testing.T) {
+	s := openTemp(t)
+	a, err := s.UpsertRepo("nicklockwood", "SwiftFormat", "https://github.com/nicklockwood/SwiftFormat")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := s.UpsertRepo("nicklockwood", "swiftformat", "https://github.com/nicklockwood/swiftformat")
+	if err != nil || a != b {
+		t.Fatalf("same repository in another case got its own row: %d vs %d (%v)", a, b, err)
+	}
+	if err := s.AddWatch(b, 2437); err != nil {
+		t.Fatal(err)
+	}
+	if removed, err := s.RemoveWatchByName("NickLockwood", "SWIFTFORMAT", 2437); err != nil || !removed {
+		t.Fatalf("unwatch in another case: removed=%v err=%v", removed, err)
+	}
+}
+
+func TestMergeCaseDuplicates(t *testing.T) {
+	s := openTemp(t)
+	keep, _ := s.UpsertRepo("acme", "Rocket", "")
+	if _, err := s.db.Exec(`INSERT INTO repos (owner, name, upstream) VALUES ('acme', 'rocket', '')`); err != nil {
+		t.Fatal(err)
+	}
+	var dup int64
+	s.db.QueryRow(`SELECT id FROM repos WHERE name = 'rocket'`).Scan(&dup)
+	s.AddWatch(dup, 7)
+	if err := s.mergeCaseDuplicates(); err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	s.db.QueryRow(`SELECT count(*) FROM repos WHERE lower(name) = 'rocket'`).Scan(&n)
+	if n != 1 {
+		t.Fatalf("%d rows for acme/rocket after merging", n)
+	}
+	w, _ := s.WatchList(keep)
+	if len(w) != 1 || w[0].IssueNumber != 7 {
+		t.Fatalf("watch did not move to the kept row: %+v", w)
+	}
+}

@@ -37,6 +37,14 @@
   .doc img { max-width: 100%; height: auto; border: 1px solid var(--rule); border-radius: 6px; }
   .doc pre { overflow-x: auto; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; }
   .doc pre code { background: none; padding: 0; font-size: 12px; line-height: 1.35; }
+  /* Code and the assistant prompt carry a Copy button in their top-right corner. */
+  .prompt { position: relative; }
+  .prompt pre { padding-top: 38px; }
+  #ai-prompt { white-space: pre-wrap; font: 12.5px/1.55 var(--mono); }
+  .copy { position: absolute; top: 8px; right: 8px; font: 12px/1 var(--sans); color: var(--text); background: var(--raised);
+    border: 1px solid var(--rule-hi); border-radius: 4px; padding: 5px 9px; cursor: pointer; }
+  .copy:hover { border-color: var(--text); }
+  .copy:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
   .doc blockquote { margin: 12px 0; padding: 2px 14px; border-left: 3px solid var(--rule-hi); color: var(--dim); }
   .tw { overflow-x: auto; margin: 12px 0; border: 1px solid var(--rule); border-radius: 6px; }
   .doc table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
@@ -96,6 +104,7 @@
     <ol>
       {{range .Sections}}<li><a href="#{{.ID}}">{{.Title}}</a></li>{{end}}
       <li class="sep" aria-hidden="true"></li>
+      <li><a href="#ai">Use with an AI assistant</a></li>
       <li><a href="#glossary">Glossary</a></li>
       <li><a href="#about">About this install</a></li>
     </ol>
@@ -108,6 +117,12 @@
     <section class="hs intro" data-s="{{.IntroText}}"><h2>{{.Title}}</h2>{{.Intro}}</section>
     {{range .Sections}}<section class="hs" id="{{.ID}}" data-s="{{.Text}}"><h2>{{.Title}}</h2>{{.HTML}}</section>
     {{end}}
+    <section class="hs" id="ai" data-s="ai assistant claude code copilot cursor chatgpt agent automate prompt integrate">
+      <h2>Use with an AI assistant</h2>
+      <p>If you work with an AI coding assistant (Claude Code, Copilot, Cursor, or another), it can keep HelloGitty up to date for you: follow the repositories you start working in, watch the issues you comment on, or turn your project's task list into pipeline stages. Copy this prompt into your assistant, replace the part in square brackets with what you want, and it will propose the changes before making them.</p>
+      <p>The prompt names this install's own folder and files, and tells the assistant the ground rules: no tokens in files, no edits to HelloGitty's database or code, and nothing posted to GitHub.</p>
+      <div class="prompt"><button type="button" class="copy" data-copy="ai-prompt">Copy prompt</button><pre id="ai-prompt">{{.AIPrompt}}</pre></div>
+    </section>
     <section class="hs" id="glossary" data-s="glossary">
       <h2>Glossary</h2>
       <p class="lbl">Every word and mark the dashboard explains when you hover it, in one place.</p>
@@ -280,6 +295,27 @@
     document.addEventListener("keydown", function (e) {
       var t = (e.target && e.target.tagName) || "";
       if (e.key === "/" && t !== "INPUT" && t !== "TEXTAREA" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); q.focus(); q.select(); }
+    });
+
+    // Copy buttons: the assistant prompt has its own; every code block gets one.
+    document.querySelectorAll("main.doc pre").forEach(function (pre, i) {
+      if (pre.parentElement.classList.contains("prompt")) return;
+      var wrap = document.createElement("div"); wrap.className = "prompt";
+      pre.parentNode.insertBefore(wrap, pre); wrap.appendChild(pre);
+      if (!pre.id) pre.id = "code-" + i;
+      var b = document.createElement("button"); b.type = "button"; b.className = "copy"; b.dataset.copy = pre.id; b.textContent = "Copy";
+      wrap.insertBefore(b, pre);
+    });
+    document.addEventListener("click", function (e) {
+      var b = e.target.closest(".copy[data-copy]"); if (!b) return;
+      var text = document.getElementById(b.dataset.copy).textContent, label = b.textContent;
+      function done(ok) { b.textContent = ok ? "Copied" : "Select and copy it"; setTimeout(function () { b.textContent = label; }, 1800); }
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
+      else {
+        var r = document.createRange(); r.selectNodeContents(document.getElementById(b.dataset.copy));
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        try { done(document.execCommand("copy")); } catch (err) { done(false); }
+      }
     });
 
     // The contents list marks the section being read.

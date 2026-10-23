@@ -23,6 +23,8 @@ const (
 
 var claimPhrases = []string{
 	"i'll take", "i'll work", "working on this", "i'm working", "taking this", "i can do this",
+	"i'd like to take", "i'd like to work on", "i would like to work on", "i want to work on",
+	"can i work on", "can i take", "may i work on", "assign me", "assign this to me",
 }
 
 var maintainerAssociations = map[string]bool{"OWNER": true, "MEMBER": true, "COLLABORATOR": true}
@@ -114,6 +116,7 @@ func (p *Poller) PollAll(ctx context.Context) error {
 		return fmt.Errorf("load targets: %w", err)
 	}
 	cycleStart, reqStart := time.Now(), p.GH.Requests()
+	p.resolveLogin(ctx) // claim detection skips your own comments, so know who you are first
 	errs := map[string]string{}
 	totals := map[string]IssueTotals{}
 	p.mu.Lock()
@@ -147,6 +150,7 @@ func (p *Poller) PollAll(ctx context.Context) error {
 		rem, lim, _ := p.GH.RateLimit()
 		log.Printf("poll %s/%s: ok in %s (rate %d/%d)", t.Owner, t.Name, time.Since(start).Round(time.Millisecond), rem, lim)
 	}
+	p.pollLooseWatches(ctx, targets)
 	prs, prErr := p.ourPRs(ctx, targets)
 	// A repository removed while the cycle ran must not come back when it ends.
 	if now, err := p.Targets(); err == nil {
@@ -235,6 +239,71 @@ func (p *Poller) Expect(targets []Target) {
 	}
 }
 
+// pollLooseWatches checks watched issues in repositories you don't track: one issue lookup each,
+// plus its recent comments while open, instead of fetching the whole repository.
+func (p *Poller) pollLooseWatches(ctx context.Context, targets []Target) {
+	tracked := map[string]bool{}
+	for _, t := range targets {
+		tracked[strings.ToLower(t.Owner+"/"+t.Name)] = true
+	}
+	all, err := p.Store.AllWatches()
+	if err != nil {
+		log.Printf("poll: watched issues: %v", err)
+		return
+	}
+	for _, w := range all {
+		if ctx.Err() != nil {
+			return
+		}
+		if tracked[strings.ToLower(w.Owner+"/"+w.Name)] {
+			continue // checked with its repository
+		}
+		if err := p.checkWatch(ctx, w); err != nil {
+			log.Printf("watch %s/%s#%d: %v", w.Owner, w.Name, w.IssueNumber, err)
+		}
+	}
+}
+
+// CheckWatch checks one watched issue now, so the eye you just clicked shows its state at once.
+func (p *Poller) CheckWatch(ctx context.Context, owner, name string, number int) error {
+	all, err := p.Store.AllWatches()
+	if err != nil {
+		return err
+	}
+	for _, w := range all {
+		if strings.EqualFold(w.Owner, owner) && strings.EqualFold(w.Name, name) && w.IssueNumber == number {
+			return p.checkWatch(ctx, w)
+		}
+	}
+	return nil
+}
+
+func (p *Poller) checkWatch(ctx context.Context, w store.WatchedIssue) error {
+	p.resolveLogin(ctx)
+	t := Target{Owner: w.Owner, Name: w.Name, Upstream: "https://github.com/" + w.Owner + "/" + w.Name}
+	gi, err := p.GH.Issue(ctx, w.Owner, w.Name, w.IssueNumber)
+	if err != nil {
+		return err
+	}
+	now := p.now()
+	row, err := p.issueRow(ctx, t, w.RepoID, *gi, true, now)
+	if err != nil {
+		return err
+	}
+	if err := p.Store.UpsertIssue(row); err != nil {
+		return err
+	}
+	signal := row.ClaimSignal
+	if row.State == "closed" && signal == "" {
+		signal = "closed_wont"
+	}
+	if next := watchStatus(signal); next != w.Status {
+		log.Printf("watch %s/%s#%d: %s -> %s", w.Owner, w.Name, w.IssueNumber, w.Status, next)
+		return p.Store.SetWatchStatus(w.ID, next, now)
+	}
+	return nil
+}
+
 // Drop takes a repository out of the last cycle's results, so one you removed disappears now.
 func (p *Poller) Drop(owner, name string) {
 	key := strings.ToLower(owner + "/" + name)
@@ -248,6 +317,16 @@ func (p *Poller) Drop(owner, name string) {
 	}
 	p.status.Targets = kept
 	delete(p.status.Errors, key)
+}
+
+// resolveLogin learns the token's account once. A failure leaves it empty for now; ourPRs reports it.
+func (p *Poller) resolveLogin(ctx context.Context) {
+	if p.login != "" {
+		return
+	}
+	if login, err := p.GH.AuthenticatedUser(ctx); err == nil {
+		p.login = login
+	}
 }
 
 func (p *Poller) ourPRs(ctx context.Context, targets []Target) ([]OurPR, error) {
@@ -435,7 +514,7 @@ func (p *Poller) issueRow(ctx context.Context, t Target, repoID int64, gi github
 		if err != nil {
 			return row, err
 		}
-		if c := findClaim(comments, since); c != nil {
+		if c := findClaim(comments, since, p.login); c != nil {
 			row.ClaimSignal, row.ClaimDetail = "comment_claim", c.HTMLURL
 		}
 	}
@@ -524,10 +603,15 @@ func (p *Poller) pollPRs(ctx context.Context, t Target, repoID int64) error {
 	return nil
 }
 
-func findClaim(comments []github.Comment, since time.Time) *github.Comment {
+// findClaim returns the newest comment since since that claims the issue. Your own comments
+// (self) and bots' never do: asking "are you still working on this?" is not you claiming it.
+func findClaim(comments []github.Comment, since time.Time, self string) *github.Comment {
 	for i := len(comments) - 1; i >= 0; i-- {
 		c := comments[i]
 		if c.CreatedAt != nil && c.CreatedAt.Before(since) {
+			continue
+		}
+		if c.User.IsBot() || (self != "" && strings.EqualFold(c.User.Login, self)) {
 			continue
 		}
 		if containsClaim(c.Body) {
@@ -537,10 +621,43 @@ func findClaim(comments []github.Comment, since time.Time) *github.Comment {
 	return nil
 }
 
+// containsClaim reports whether a comment says its author is taking the issue. It reads sentence
+// by sentence, skips quoted lines, and skips questions put to someone else ("Are you still working
+// on this?", "Is anyone working on it?"), which mention the work without claiming it.
 func containsClaim(body string) bool {
 	b := strings.ToLower(strings.NewReplacer("’", "'", "‘", "'").Replace(body))
-	for _, phrase := range claimPhrases {
-		if strings.Contains(b, phrase) {
+	var kept []string
+	for _, line := range strings.Split(b, "\n") {
+		if !strings.HasPrefix(strings.TrimSpace(line), ">") {
+			kept = append(kept, line)
+		}
+	}
+	b = strings.Join(kept, "\n")
+	start := 0
+	for i := 0; i <= len(b); i++ {
+		if i < len(b) && !strings.ContainsRune(".!?\n", rune(b[i])) {
+			continue
+		}
+		sentence := b[start:i]
+		question := i < len(b) && b[i] == '?'
+		start = i + 1
+		if question && askingOthers(sentence) {
+			continue
+		}
+		for _, phrase := range claimPhrases {
+			if strings.Contains(sentence, phrase) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// askingOthers says a question is put to someone else rather than asking leave to take the issue.
+func askingOthers(q string) bool {
+	for _, w := range strings.Fields(q) {
+		switch strings.Trim(w, ",;:@") {
+		case "you", "you're", "your", "anyone", "anybody", "someone", "somebody":
 			return true
 		}
 	}

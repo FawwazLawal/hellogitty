@@ -5,10 +5,41 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
-- The inbox reports the total count of unresolved review threads on each of your open pull requests
-  (`pr_threads` entry), independent of which actor posted them. Outdated threads are counted
-  separately so they are not mistaken for answered ones. This catches findings that arrive after a
-  bot's earlier entry was read and resolved.
+Changes in the next publish.
+
+## v0.2.0 (6) · Black Bombay (baby) · 2026-10-23
+
+Tag `v0.2.6`.
+
+- Tracked repositories has its own search box, and a pin on each row keeps a repository at the top
+  whatever the sort.
+- Fixed: scrolling the page no longer gets caught in a panel that scrolls inside (a shortened
+  panel, the live feed). A scroll already moving the page keeps moving it, and a panel scrolled to
+  its end carries on down the page.
+- Panels can be collapsed with an arrow in their heading, moved by dragging their grip (or with
+  the arrow keys), and resized by dragging their bottom edge; a shortened panel scrolls inside with
+  its heading and column headers in view. All of it is saved with your layout.
+- GitHub notification rows have a Clear button: the row leaves until that thread has new activity,
+  and it is marked read on GitHub if it wasn't.
+- Seen: a claimed or closed watched issue has a Seen button that quiets its badge and its alert
+  until something changes again.
+- Claims are spotted more carefully: your own comments, bots, quoted lines and questions to someone
+  else ("Are you still working on this?") no longer mark an issue claimed, and more ways of taking
+  an issue are recognised ("Can I work on this?", "Please assign me").
+- Help has a "Use with an AI assistant" section: a prompt to paste into Claude Code, Copilot,
+  Cursor or another assistant so it can keep HelloGitty up to date for you. Code blocks in Help have
+  Copy buttons.
+- `hellogitty track owner/name` and `hellogitty untrack owner/name` follow and unfollow repositories
+  from a terminal.
+- Watch any issue with the eye. Every issue on the dashboard (Your work, Conversations, the live
+  feed, a repository's Issues tab) has an eye: click it to watch, and a filled eye to stop. It
+  works for issues in repositories you don't track too, and you hear if someone claims the issue or
+  it closes.
+- **Recent issues** panel on the dashboard: the 30 most recently updated open issues across every
+  tracked repository, with labels, claim status and the eye toggle. "Show all" opens the full issues
+  page.
+- The issues page now shows the last 90 days of open issues, 100 per page, with Previous / Next
+  pagination. Search still filters the current page.
 
 ## v0.2.0 (5) · Black Bombay (baby) · 2026-10-22
 
