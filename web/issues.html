@@ -8,11 +8,7 @@
 {{template "theme-head"}}
 <style>
 {{template "base-css"}}
-  .ibar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 20px;
-    background: var(--panel); border-bottom: 1px solid var(--rule); }
-  .ibar h1 { margin: 0; font-size: 17px; font-weight: 650; }
-  .back { font-size: 13px; color: var(--dim); }
-  .ibar .theme { margin-left: auto; }
+{{template "header-css"}}
   .iwrap { max-width: 980px; margin: 0 auto; padding: 18px 20px 40px; }
   .sub { margin: 0 0 14px; color: var(--dim); }
   .isearch { position: relative; margin: 0 0 14px; }
@@ -67,35 +63,31 @@
 </style>
 </head>
 <body>
-<header class="ibar">
-  <a class="back" href="/">Dashboard</a>
-  <h1>Open issues</h1>
-  <span class="lbl">{{.Version}}</span>
-  <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
-</header>
+{{template "site-header" .}}
 <main class="iwrap">
-  <p class="sub">Open issues updated in the last {{.Window}} days, newest activity first.</p>
+  <p class="sub">Open issues updated in the last {{.IssueWindow}} days, newest activity first.</p>
   <form class="isearch" method="get" action="/issues">
-    <label><span class="sr">Search issues</span><input type="search" name="q" id="iq" value="{{.Query}}" placeholder="Search by #number, repo, title or label… (press Enter to search across all pages)" autocomplete="off"></label>
-    <button type="button" class="qclear" aria-label="Clear search" title="Clear search"{{if not .Query}} hidden{{end}}>&times;</button>
+    <label><span class="sr">Search issues</span><input type="search" name="q" id="iq" value="{{.IssueQuery}}" placeholder="Search by #number, repo, title or label… (press Enter to search across all pages)" autocomplete="off"></label>
+    <button type="button" class="qclear" aria-label="Clear search" title="Clear search"{{if not .IssueQuery}} hidden{{end}}>&times;</button>
     <select id="irf" aria-label="Filter by repository"><option value="">All repos</option></select>
   </form>
-  <p class="count">{{if .Query}}<span id="shown">{{len .Issues}}</span> of {{.Total}} results for "{{.Query}}"{{else}}<span id="shown">{{len .Issues}}</span> of {{.Total}} open issues{{end}} (page {{.Page}} of {{.Pages}})</p>
+  <p class="count">{{if .IssueQuery}}<span id="shown">{{len .Issues}}</span> of {{.IssueTotal}} results for "{{.IssueQuery}}"{{else}}<span id="shown">{{len .Issues}}</span> of {{.IssueTotal}} open issues{{end}} (page {{.IssuePg}} of {{.IssuePages}})</p>
   {{if .Issues}}
   <table class="itable">
     <thead><tr><th class="cnum">#</th><th>Issue</th><th class="opt clbl">Labels</th><th class="opt copn">Opened</th>{{if .CanWatch}}<th class="ceye"></th>{{end}}</tr></thead>
     <tbody id="issue-rows">{{range .Issues}}<tr data-s="{{.Search}}" data-repo="{{.Repo}}"><td class="num">{{.Number}}</td><td><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a><br><span class="rp">{{.Repo}}</span>{{if .Taken}} <span class="tag taken">{{.Taken}}</span>{{end}}</td><td class="opt">{{range .Labels}}<span class="tag">{{.}}</span>{{end}}</td><td class="num opt" title="{{.AgoTitle}}">{{.Ago}}</td>{{if $.CanWatch}}<td>{{eye .K .Watched}}</td>{{end}}</tr>{{end}}</tbody>
   </table>
   <nav class="pager" aria-label="Pagination">
-    {{if .HasPrev}}<a href="/issues?page={{.PrevPage}}{{if .Query}}&amp;q={{.Query}}{{end}}">&larr; Previous</a>{{else}}<span class="off">&larr; Previous</span>{{end}}
-    <span>Page {{.Page}} of {{.Pages}}</span>
-    {{if .HasNext}}<a href="/issues?page={{.NextPage}}{{if .Query}}&amp;q={{.Query}}{{end}}">Next &rarr;</a>{{else}}<span class="off">Next &rarr;</span>{{end}}
+    {{if .IssueHasPrev}}<a href="/issues?page={{.IssuePrevPage}}{{if .IssueQuery}}&amp;q={{.IssueQuery}}{{end}}">&larr; Previous</a>{{else}}<span class="off">&larr; Previous</span>{{end}}
+    <span>Page {{.IssuePg}} of {{.IssuePages}}</span>
+    {{if .IssueHasNext}}<a href="/issues?page={{.IssueNextPage}}{{if .IssueQuery}}&amp;q={{.IssueQuery}}{{end}}">Next &rarr;</a>{{else}}<span class="off">Next &rarr;</span>{{end}}
   </nav>
-  {{else}}<p class="empty">No open issues updated in the last {{.Window}} days.</p>{{end}}
+  {{else}}<p class="empty">No open issues updated in the last {{.IssueWindow}} days.</p>{{end}}
 </main>
 <script>
   (function () {
     {{template "theme-js"}}
+    {{template "nav-active-js"}}
 
     var q = document.getElementById("iq");
     var tbody = document.getElementById("issue-rows");

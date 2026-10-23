@@ -47,6 +47,26 @@ var Conversations string
 //go:embed your-repos.html
 var YourRepos string
 
+// Work is your work on a page of its own. Parsed with index.html.
+//
+//go:embed work.html
+var Work string
+
+//go:embed alert-your-move.html
+var AlertYourMove string
+
+//go:embed alert-watched-claimed.html
+var AlertWatchedClaimed string
+
+//go:embed alert-watched-closed.html
+var AlertWatchedClosed string
+
+//go:embed alert-check-failed.html
+var AlertCheckFailed string
+
+//go:embed alert-repo-health.html
+var AlertRepoHealth string
+
 // Mascot holds the banner clips (kitten-routine-*.mp4, kitten-news-*.mp4) and the rest still
 // (rest.png) under mascot/.
 //

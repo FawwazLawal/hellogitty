@@ -7,6 +7,25 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 Changes in the next publish.
 
+## v0.2.0 (8) · Black Bombay (baby) · 2026-10-23
+
+Tag `v0.2.8`.
+
+- **Work dismiss**: entries can be silently dismissed from the "Your work" panel on the
+  dashboard, removing merged PRs and other resolved items from view without losing them.
+  Uses the same ack/unack store as cell clearing, with a `d:` key prefix.
+- **Your work page** (`/work`): a dedicated full page that organises all work items by
+  status — Your move, Waiting on others, Finished and Dismissed — with filter buttons,
+  search, overview cards and one-click restore for dismissed items.
+- **Persistent header on all sub-pages**: the status bar and quicknav navigation now
+  appear on the Issues page, List page and all five alert detail pages, not only on pages
+  routed through `serveSubPage`.
+- Fixed: the Issues page (`/issues`) rendered blank because `serveIssues` passed a custom
+  `issuesPage` struct that lacked the fields the shared `site-header` template requires;
+  it now uses `build()` and the full `page` struct.
+- Fixed: the List page (`/list`) had the same blank-render risk with its `listPage`
+  struct; rewritten to populate the shared `page` struct directly.
+
 ## v0.2.0 (7) · Black Bombay (baby) · 2026-10-23
 
 Tag `v0.2.7`.

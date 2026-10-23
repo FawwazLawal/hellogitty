@@ -94,6 +94,13 @@ type Handler struct {
 	PipelineTemplate      string // pipeline on a page of its own
 	ConversationsTemplate string // conversations on a page of its own
 	YourReposTemplate     string // your repos on a page of its own
+
+	WorkTemplate               string // your work on a page of its own
+	AlertYourMoveTemplate      string
+	AlertWatchedClaimedTemplate string
+	AlertWatchedClosedTemplate  string
+	AlertCheckFailedTemplate    string
+	AlertRepoHealthTemplate     string
 	Guide        string
 	Screenshot   []byte
 	About        []AboutItem
@@ -139,8 +146,39 @@ type page struct {
 	// Issues panel: the most recent open issues across tracked repos.
 	Issues     []globalIssue
 	IssueTotal int
+
+	// Issues full-page (/issues).
+	IssuePages    int
+	IssuePg       int
+	IssuePrevPage int
+	IssueNextPage int
+	IssueHasPrev  bool
+	IssueHasNext  bool
+	IssueWindow   int
+	IssueQuery    string
+
+	// List page (/list).
+	ListTitle string
+	ListSub   string
+	ListPRs   []prRow
+	ListRepos []row
+	ListEmpty string
+	ListLinks []listLink
 	// "New" counts beside each section's heading.
 	WorkNew, ConvNew, ReposNew, TrackedNew, TrackedNewRepos int
+
+	// Work items dismissed from the dashboard but shown on the /work page.
+	DismissedWork []workRow
+
+	// Alert detail pages.
+	ClaimedWatch []watchRow
+	ClaimedCount int
+	ClosedWatch  []watchRow
+	ClosedCount  int
+	FailedRepos  []failedRepo
+	HealthRepos  []row
+	AlertTitle   string
+	AlertDesc    string
 }
 
 // HasTerm reports whether the hover help explains id, so the page only marks what it can explain.
@@ -167,6 +205,12 @@ type cell struct {
 	ItemsAttr string
 	Clearable bool
 	Cleared   int
+	Link      string // alert detail page URL, if the cell is clickable
+}
+
+type failedRepo struct {
+	Name  string
+	Error string
 }
 
 type stageHead struct{ Abbr, Name string }
@@ -358,6 +402,18 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveConversationsPage(w, r)
 	case r.URL.Path == "/your-repos":
 		h.serveYourReposPage(w, r)
+	case r.URL.Path == "/alerts/your-move":
+		h.serveAlertYourMove(w, r)
+	case r.URL.Path == "/alerts/watched-claimed":
+		h.serveAlertWatchedClaimed(w, r)
+	case r.URL.Path == "/alerts/watched-closed":
+		h.serveAlertWatchedClosed(w, r)
+	case r.URL.Path == "/alerts/check-failed":
+		h.serveAlertCheckFailed(w, r)
+	case r.URL.Path == "/alerts/repo-dormant":
+		h.serveAlertRepoHealthPage(w, r)
+	case r.URL.Path == "/alerts/repo-slow":
+		h.serveAlertRepoHealthPage(w, r)
 	case r.URL.Path == "/list":
 		h.serveList(w, r)
 	case r.URL.Path == "/repos/add":
@@ -370,6 +426,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveCells(w, r, false)
 	case r.URL.Path == "/cells/restore":
 		h.serveCells(w, r, true)
+	case r.URL.Path == "/work":
+		h.serveWorkPage(w, r)
+	case r.URL.Path == "/work/dismiss":
+		h.serveWorkDismiss(w, r, false)
+	case r.URL.Path == "/work/restore":
+		h.serveWorkDismiss(w, r, true)
 	case r.URL.Path == "/help":
 		h.serveHelp(w, r)
 	case r.URL.Path == "/help/screenshot.png" && len(h.Screenshot) > 0:
@@ -526,6 +588,24 @@ func (h *Handler) build() (*page, error) {
 	if cn, ok := h.Source.(NoticeSource); ok {
 		cleared := cn.ClearedNotifications()
 		p.Work.Other, p.Work.RepoOther = dropCleared(p.Work.Other, cleared), dropCleared(p.Work.RepoOther, cleared)
+	}
+	if ds, ok := h.Source.(WorkDismissSource); ok {
+		dismissed := ds.DismissedWork()
+		var d []workRow
+		p.Work.You, d = filterDismissed(p.Work.You, dismissed)
+		p.DismissedWork = append(p.DismissedWork, d...)
+		p.Work.Them, d = filterDismissed(p.Work.Them, dismissed)
+		p.DismissedWork = append(p.DismissedWork, d...)
+		p.Work.Done, d = filterDismissed(p.Work.Done, dismissed)
+		p.DismissedWork = append(p.DismissedWork, d...)
+		p.Work.ConvYou, d = filterDismissed(p.Work.ConvYou, dismissed)
+		p.DismissedWork = append(p.DismissedWork, d...)
+		p.Work.ConvThem, d = filterDismissed(p.Work.ConvThem, dismissed)
+		p.DismissedWork = append(p.DismissedWork, d...)
+		p.Work.InYou, d = filterDismissed(p.Work.InYou, dismissed)
+		p.DismissedWork = append(p.DismissedWork, d...)
+		p.Work.InThem, d = filterDismissed(p.Work.InThem, dismissed)
+		p.DismissedWork = append(p.DismissedWork, d...)
 	}
 	for _, list := range [][]workRow{p.Work.You, p.Work.Them, p.Work.Done} {
 		for _, r := range list {
@@ -773,7 +853,9 @@ func (h *Handler) build() (*page, error) {
 		apiValue = strconv.Itoa(tel.RateRemaining) + " left"
 	}
 	claimedCell := counter("watch-claimed", "Watched issue claimed", claimed, "warn", claimedRepos, true)
+	claimedCell.Link = "/alerts/watched-claimed"
 	closedCell := counter("watch-closed", "Watched issue closed", closed, "caution", closedRepos, false)
+	closedCell.Link = "/alerts/watched-closed"
 	if len(p.Watch) == 0 {
 		// A zero here must only ever mean "watched and clear".
 		claimedCell.Value, claimedCell.Empty = "nothing watched", true
@@ -784,12 +866,14 @@ func (h *Handler) build() (*page, error) {
 		moveNames = append(moveNames, shortRepo(r.Repo)+"#"+strconv.Itoa(r.Number))
 	}
 	moveCell := counter("your-move", "Your move", p.Work.YourMove(), "caution", moveNames, true)
+	moveCell.Link = "/alerts/your-move"
 	moveCell.Title = "Pull requests and issues waiting on you. " + moveCell.Title
 	if !p.Work.Known {
 		moveCell.Value, moveCell.Empty = "not checked yet", true
 	}
 
 	failCell := counter("poll-fail", "Check failed", pollFail, "warn", failNames, false)
+	failCell.Link = "/alerts/check-failed"
 	if len(failWhy) > 0 {
 		next := " HelloGitty tries again on the next check."
 		if left := lastPoll.Add(h.PollInterval).Sub(now); !lastPoll.IsZero() && h.PollInterval > 0 && left > time.Minute {
@@ -804,8 +888,8 @@ func (h *Handler) build() (*page, error) {
 		{Key: "data-stale", Label: "Data is stale", Value: staleShown, Level: "warn", Lit: staleLit,
 			Title: "Lit when the last check of GitHub is more than 2 hours old."},
 		closedCell,
-		counter("repo-dormant", "Repo dormant", dormant, "caution", dormantRepos, false),
-		counter("repo-slow", "Repo slowing", slow, "caution", slowRepos, false),
+		withLink(counter("repo-dormant", "Repo dormant", dormant, "caution", dormantRepos, false), "/alerts/repo-dormant"),
+		withLink(counter("repo-slow", "Repo slowing", slow, "caution", slowRepos, false), "/alerts/repo-slow"),
 	}
 	if pst != nil {
 		p.Cells = append(p.Cells,
@@ -827,6 +911,26 @@ func (h *Handler) build() (*page, error) {
 			}
 		}
 	}
+
+	// Alert detail page data.
+	for _, w := range p.Watch {
+		switch w.Status {
+		case "CLAIMED":
+			if !w.Seen {
+				p.ClaimedWatch = append(p.ClaimedWatch, w)
+			}
+		case "CLOSED_FIXED", "CLOSED_WONT":
+			if !w.Seen {
+				p.ClosedWatch = append(p.ClosedWatch, w)
+			}
+		}
+	}
+	p.ClaimedCount = len(p.ClaimedWatch)
+	p.ClosedCount = len(p.ClosedWatch)
+	for _, n := range failNames {
+		p.FailedRepos = append(p.FailedRepos, failedRepo{Name: n, Error: why[n]})
+	}
+
 	return p, nil
 }
 
@@ -878,6 +982,8 @@ func counter(key, label string, n int, level string, names []string, wide bool) 
 	}
 	return c
 }
+
+func withLink(c cell, link string) cell { c.Link = link; return c }
 
 func shortRepo(full string) string {
 	_, name, _ := strings.Cut(full, "/")
