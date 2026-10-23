@@ -31,6 +31,7 @@ const (
 	KindNewIssue = "new_issue"     // a new issue plausibly yours to take, in a repository where you plan work
 	KindIssue    = "issue_comment" // a reply on an issue that is your move: one you opened or were assigned, or one that mentions you
 	KindOverlap  = "issue_overlap" // someone else is on an issue you plan to take: a PR, an assignee, a claim, a close
+	KindThreads  = "pr_threads"    // unresolved review threads on a pull request you opened: one entry per pull request
 	KindSimilar  = "issue_similar" // another PR's title shares the subject; only worth a look
 )
 
@@ -71,6 +72,9 @@ func Build(b *work.Board, reports []store.RepoReport, seen FirstSeen) []Entry {
 				out = append(out, prEntries(it, b.Login, seen)...)
 				out = append(out, labelEntries(it, seen)...)
 				if e, ok := botEntry(it); ok {
+					out = append(out, e)
+				}
+				if e, ok := threadEntry(it); ok {
 					out = append(out, e)
 				}
 			}
@@ -302,6 +306,45 @@ func botEntry(it work.Item) (Entry, bool) {
 	}
 	return Entry{ID: "hg-" + slug(it.Repo) + "-" + strconv.Itoa(it.Number) + "-bot-" + newest.id, Kind: KindBot, Repo: it.Repo,
 		Number: it.Number, URL: it.URL, Actor: newest.bot, OccurredAt: when.UTC(), Summary: summary}, true
+}
+
+// threadEntry reports the unresolved review thread count on an open pull request you opened, as one
+// entry per pull request. Unlike botEntry, which counts only bot findings, this counts every
+// unresolved thread regardless of author, and distinguishes outdated threads from active ones.
+func threadEntry(it work.Item) (Entry, bool) {
+	if !it.PR || it.Role != work.RoleAuthor || it.State != "OPEN" || len(it.Threads) == 0 {
+		return Entry{}, false
+	}
+	total := len(it.Threads)
+	var outdated int
+	var newest time.Time
+	for _, t := range it.Threads {
+		if t.Outdated {
+			outdated++
+		}
+		if t.At.After(newest) {
+			newest = t.At
+		}
+	}
+	active := total - outdated
+
+	var summary string
+	switch {
+	case outdated == 0:
+		summary = plural(total, "unresolved review thread")
+	case active == 0:
+		summary = plural(total, "unresolved review thread") + " (all outdated)"
+	default:
+		summary = plural(total, "unresolved review thread") + " (" + strconv.Itoa(outdated) + " outdated)"
+	}
+
+	when := newest
+	if when.IsZero() {
+		when = it.UpdatedAt
+	}
+	id := "hg-" + slug(it.Repo) + "-" + strconv.Itoa(it.Number) + "-threads-" + strconv.Itoa(active) + "-" + strconv.Itoa(outdated)
+	return Entry{ID: id, Kind: KindThreads, Repo: it.Repo, Number: it.Number,
+		URL: it.URL, OccurredAt: when.UTC(), Summary: summary}, true
 }
 
 func humanThreads(ts []work.Thread) int {
