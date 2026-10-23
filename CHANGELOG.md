@@ -5,6 +5,11 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+- Bot findings carried in a review body (outside the diff range) are now counted
+  alongside thread-based findings in the `pr_bot` inbox entry. A bot that posts
+  file-specific feedback under `<details><summary>` blocks in the review body, rather
+  than as inline threads, now surfaces in the entry's count and summary.
+
 Changes in the next publish.
 
 ## v0.2.0 (6) · Black Bombay (baby) · 2026-10-23
