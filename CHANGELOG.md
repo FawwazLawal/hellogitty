@@ -5,7 +5,10 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
-Changes in the next publish.
+- The inbox reports the total count of unresolved review threads on each of your open pull requests
+  (`pr_threads` entry), independent of which actor posted them. Outdated threads are counted
+  separately so they are not mistaken for answered ones. This catches findings that arrive after a
+  bot's earlier entry was read and resolved.
 
 ## v0.2.0 (5) · Black Bombay (baby) · 2026-10-22
 
