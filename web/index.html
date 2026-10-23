@@ -53,10 +53,10 @@
   .pfold[aria-expanded="false"] svg { transform: rotate(180deg); }
   .pgrip:hover, .pfold:hover { color: var(--text); background: color-mix(in srgb, var(--panel) 70%, transparent); border-color: var(--rule-hi); }
   .pgrip:focus-visible, .pfold:focus-visible, .presize:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
-  .panel.sized { overflow: auto; }
+  .panel.sized { overflow: auto; display: flex; flex-direction: column; }
   .panel.sized > h2 { position: sticky; top: 0; z-index: 3; }
   .panel.sized > .tbar, .panel.sized > .thead { position: sticky; z-index: 2; background: var(--panel); }
-  .presize { position: sticky; bottom: 0; z-index: 3; height: 10px; margin-top: -10px; cursor: ns-resize; touch-action: none; }
+  .presize { position: sticky; bottom: 0; z-index: 3; height: 10px; margin-top: auto; cursor: ns-resize; touch-action: none; flex-shrink: 0; }
   .presize::after { content: ""; position: absolute; left: 50%; bottom: 3px; width: 36px; height: 3px; margin-left: -18px; border-radius: 2px;
     background: var(--rule-hi); opacity: 0; transition: opacity .12s ease-out; }
   .panel:hover > .presize::after, .presize:focus-visible::after, .panel.resizing > .presize::after { opacity: 1; }
@@ -94,6 +94,16 @@
   .sheet .done { font: 600 13px var(--sans); color: var(--text); background: var(--raised); border: 1px solid var(--rule-hi); border-radius: 6px;
     padding: 7px 14px; cursor: pointer; }
   .status.has-mascot .theme { margin-left: 0; }
+
+  /* Quick-access navigation bar */
+  .quicknav { display: flex; flex-wrap: wrap; align-items: center; gap: 0;
+    background: var(--panel); border-bottom: 1px solid var(--rule-hi); padding: 0 20px; }
+  .quicknav a { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; font: 600 13px/1 var(--sans); color: var(--dim);
+    text-decoration: none; border-bottom: 2px solid transparent; transition: color .12s, border-color .12s; white-space: nowrap; }
+  .quicknav a:hover { color: var(--text); background: var(--raised); }
+  .quicknav a.active { color: var(--text); border-bottom-color: var(--head-accent); }
+  .quicknav a svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  @media (prefers-reduced-motion: reduce) { .quicknav a { transition: none; } }
 
   /* alert panel */
   .cw { display: grid; grid-auto-flow: column; grid-template-columns: 2fr 2fr; grid-auto-columns: minmax(0, 1fr); gap: 6px; padding: 12px 20px 0; }
@@ -140,12 +150,9 @@
   .grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 12px; padding: 12px 20px 24px; align-items: start; }
   .main, .rail { display: grid; gap: 12px; min-width: 0; }
   .panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; min-width: 0; overflow: hidden; }
-  /* Each section heading sits on a strip that fades from the panel's black to a warm amber glow on
-     the right, the Black Bombay kitten's eyes. It is decoration, never a state: the glow stays well
-     short of the solid amber that means "your move", and the label text is tinted to read on it. */
   .panel > h2 { margin: 0; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px;
     padding: 11px 14px; border-bottom: 1px solid var(--rule); font-size: 15px; line-height: 1.35; font-weight: 650;
-    background: var(--head); }
+    background: var(--head); border-left: 3px solid var(--head-accent); }
   .panel > h2 .lbl { font-weight: 400; color: var(--head-dim); }
   .panel > h2 .lbl a { color: inherit; }
   .pad { padding: 10px 14px; margin: 0; }
@@ -340,7 +347,7 @@
   .nb { display: inline-flex; align-items: center; margin-left: 8px; padding: 1px 7px; border-radius: 999px; white-space: nowrap; vertical-align: 1px;
     font: 650 12px/16px var(--sans); color: var(--nom); background: color-mix(in srgb, var(--nom) 12%, transparent);
     border: 1px solid color-mix(in srgb, var(--nom) 50%, transparent); }
-  .panel > h2 .nb { font-size: 12px; background: color-mix(in srgb, var(--nom) 14%, var(--panel)); } /* opaque, so it reads on the heading strip */
+  .panel > h2 .nb { font-size: 12px; background: color-mix(in srgb, var(--nom) 14%, var(--head)); }
   .rtabs { display: flex; flex-wrap: wrap; gap: 2px; margin: 8px 0 8px; border-bottom: 1px solid var(--rule); }
   .rtabs button { font: 13px var(--sans); color: var(--dim); background: none; border: 0; border-bottom: 2px solid transparent;
     padding: 6px 10px; margin-bottom: -1px; cursor: pointer; }
@@ -392,8 +399,9 @@
   .legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; justify-content: flex-end; }
   .legend .li { white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; }
   .legend .light { display: inline-block; }
-  /* the amber key marks would melt into the heading strip's amber end; a ring of panel colour keeps them apart */
-  .panel > h2 .legend .light, .panel > h2 .legend .sw { box-shadow: 0 0 0 1.5px var(--panel); }
+  a.ilink { text-decoration: none; color: inherit; cursor: pointer; border-radius: 3px; }
+  a.ilink:hover { background: var(--raised); text-decoration: underline; }
+  .panel > h2 .legend .light, .panel > h2 .legend .sw { box-shadow: 0 0 0 1.5px var(--head); }
   .sw { display: inline-block; width: 12px; height: 9px; border: 1px solid var(--rule-hi); border-radius: 2px; }
   .sw.done { background: var(--dim); border-color: var(--dim); }
   .sw.current { background: var(--text); border-color: var(--text); }
@@ -419,6 +427,24 @@
   .seenbtn:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
   .wl .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .wl .d { grid-column: 2; font-size: 12.5px; color: var(--dim); overflow-wrap: anywhere; }
+
+  /* issues panel list */
+  .il { list-style: none; margin: 0; padding: 0; }
+  .il li { padding: 7px 14px; border-bottom: 1px solid var(--rule); }
+  .il li:last-child { border-bottom: 0; }
+  .il .ir { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .il .irp { flex: none; font-size: 12px; color: var(--dim); white-space: nowrap; }
+  .il .irt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-size: 13.5px; color: var(--text); text-decoration: none; }
+  .il .irt:hover { text-decoration: underline; }
+  .il .irtk { flex: none; }
+  .il .ild { display: flex; flex-wrap: wrap; gap: 2px 4px; margin-top: 3px; padding-left: 0; }
+  .itools { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px; border-bottom: 1px solid var(--rule); align-items: center; }
+  .itools input[type="search"] { flex: 1; min-width: 120px; padding: 5px 8px; border: 1px solid var(--rule-hi); border-radius: 5px;
+    font: 13px var(--sans); background: var(--panel); color: var(--text); }
+  .itools input::placeholder { color: var(--dim); }
+  .itools select { padding: 5px 8px; border: 1px solid var(--rule-hi); border-radius: 5px;
+    font: 13px var(--sans); background: var(--panel); color: var(--text); cursor: pointer; }
 
   /* PR totals and checks */
   .occ { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border-bottom: 1px solid var(--rule); }
@@ -506,7 +532,7 @@
     --nom: #4fc469; --caution: #e9aa3b; --caution-text: #e9aa3b; --warn: #ff5244;
     --caution-fill: #e9aa3b; --caution-ink: #160e02; --warn-fill: #c4271d; --warn-ink: #ffffff;
     --tag-fill: #2b2610; --tag-ink: #f3d36b; --tag-rule: #4a3f17;
-    --head: linear-gradient(90deg, #101011 0%, #101011 15%, #3a2a12 55%, #7a561c 100%); --head-dim: #ddd5c5;
+    --head: #141416; --head-dim: #9a9a96; --head-accent: #e9aa3b;
     --mascot-bg: #101011;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
@@ -519,7 +545,7 @@
       --text: #1c1c1d; --dim: #62625d; --track: #e3e3df;
       --nom: #18803a; --caution: #d08a12; --caution-text: #8a5600; --warn: #c3271c;
       --tag-fill: #fbf0c4; --tag-ink: #6a5200; --tag-rule: #ecd88a;
-      --head: linear-gradient(90deg, #ffffff 0%, #ffffff 15%, #f9ead0 55%, #f0d6a4 100%); --head-dim: #6b5a3e;
+      --head: #f6f6f4; --head-dim: #62625d; --head-accent: #d08a12;
     }
   }
   :root[data-theme="light"] {
@@ -528,7 +554,7 @@
     --text: #1c1c1d; --dim: #62625d; --track: #e3e3df;
     --nom: #18803a; --caution: #d08a12; --caution-text: #8a5600; --warn: #c3271c;
     --tag-fill: #fbf0c4; --tag-ink: #6a5200; --tag-rule: #ecd88a;
-    --head: linear-gradient(90deg, #ffffff 0%, #ffffff 15%, #f9ead0 55%, #f0d6a4 100%); --head-dim: #6b5a3e;
+    --head: #f6f6f4; --head-dim: #62625d; --head-accent: #d08a12;
   }
   * { box-sizing: border-box; }
   html { background: var(--bg); scrollbar-color: var(--rule-hi) var(--bg); }
@@ -811,6 +837,15 @@
   {{if .Mascot}}<div class="mascot" aria-hidden="true" data-routine="{{range $i, $c := .Mascot.Routine}}{{if $i}} {{end}}{{$c}}{{end}}" data-news="{{range $i, $c := .Mascot.News}}{{if $i}} {{end}}{{$c}}{{end}}"><video muted playsinline preload="none" poster="{{.Mascot.Rest}}" tabindex="-1"></video></div>{{end}}
 </header>
 
+<nav class="quicknav" aria-label="Quick access">
+  <a href="/" class="active"><svg viewBox="0 0 16 16"><path d="M2 6l6-4.5L14 6v7.5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6z"/><path d="M6 14.5V8h4v6.5"/></svg>Dashboard</a>
+  <a href="/issues"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="1.25"/></svg>Issues</a>
+  <a href="/repos"><svg viewBox="0 0 16 16"><path d="M2 2.5h12v11H2z"/><path d="M5 2.5V1M11 2.5V1M2 6h12"/></svg>Tracked repos</a>
+  <a href="/pipeline"><svg viewBox="0 0 16 16"><path d="M1.5 13.5h13M3.5 10h2v3.5h-2zM7 7h2v6.5H7zM10.5 4h2v9.5h-2z"/></svg>Pipeline</a>
+  <a href="/conversations"><svg viewBox="0 0 16 16"><path d="M2 2h12v9H6l-3 3v-3H2V2z"/><path d="M5 5.5h6M5 8h4"/></svg>Conversations</a>
+  <a href="/your-repos"><svg viewBox="0 0 16 16"><path d="M8 1L2 4.5v7L8 15l6-3.5v-7L8 1z"/><path d="M2 4.5L8 8l6-3.5M8 8v7"/></svg>Your repositories</a>
+</nav>
+
 <section class="cw" aria-label="Alerts" data-module="alerts" data-token="{{.Token}}">
 {{range .Cells}}
   <div class="cell {{.Level}}{{if .Lit}} lit{{end}}{{if .Wide}} wide{{end}}{{if .Empty}} empty{{end}}" tabindex="0" data-term="{{if $.HasTerm (print "p:" .Label)}}p:{{.Label}}{{else}}cell-{{.Key}}{{end}}"{{if .Title}} data-extra="{{.Title}}"{{end}} data-cell="{{.Key}}"{{if .Clearable}} data-items="{{.ItemsAttr}}"{{end}}>
@@ -920,12 +955,12 @@
           <span class="stg">{{if .InPipeline}}{{.StageAbbr}}{{else}}—{{end}}</span>
           <span class="gate {{.Level}}"{{if $.HasTerm (print "p:" .Label)}} data-term="p:{{.Label}}"{{else}} title="{{.Label}}"{{end}}>{{if .Label}}{{.Label}}{{else}}<span class="zero">—</span>{{end}}</span>{{end}}
           <span class="m">
-            <span class="num{{if not .Open}} zero{{end}}" data-v="o-{{.Key}}"><span class="mlbl">Open</span>{{.Open}}</span>
-            <span class="num{{if not .GFI}} zero{{end}}" data-v="g-{{.Key}}"><span class="mlbl">Good first</span>{{.GFI}}</span>
-            <span class="num{{if not .Unassigned}} zero{{end}}" data-v="u-{{.Key}}"><span class="mlbl">Unassigned</span>{{.Unassigned}}</span>
+            <a class="num ilink{{if not .Open}} zero{{end}}" href="{{.URL}}/issues" target="_blank" rel="noopener" data-v="o-{{.Key}}" title="Open issues on GitHub"><span class="mlbl">Open</span>{{.Open}}</a>
+            <a class="num ilink{{if not .GFI}} zero{{end}}" href="{{.URL}}/issues?q=is%3Aopen+label%3A%22good+first+issue%22" target="_blank" rel="noopener" data-v="g-{{.Key}}" title="Good first issues on GitHub"><span class="mlbl">Good first</span>{{.GFI}}</a>
+            <a class="num ilink{{if not .Unassigned}} zero{{end}}" href="{{.URL}}/issues?q=is%3Aopen+no%3Aassignee" target="_blank" rel="noopener" data-v="u-{{.Key}}" title="Unassigned issues on GitHub"><span class="mlbl">Unassigned</span>{{.Unassigned}}</a>
             <span class="age{{if .AgeWarn}} old{{end}}"><span class="mlbl">Last commit</span>{{if .AgeKnown}}<span class="bar" aria-hidden="true"><i style="width:{{.AgePct}}%"></i></span><span title="{{.AgeDays}} days since the last commit">{{.AgeDays}} d</span>{{else}}<span class="zero">—</span>{{end}}</span>
             <span class="num{{if not .Watch}} zero{{end}}"><span class="mlbl">Watching</span>{{len .Watch}}</span>
-            <span class="num{{if not .DeniedTotal}} zero{{end}}" data-v="d-{{.Key}}"><span class="mlbl">Turned down</span>{{.DeniedTotal}}</span>
+            <a class="num ilink{{if not .DeniedTotal}} zero{{end}}" href="{{.URL}}/pulls?q=is%3Apr+is%3Aclosed" target="_blank" rel="noopener" data-v="d-{{.Key}}" title="Closed pull requests on GitHub"><span class="mlbl">Turned down</span>{{.DeniedTotal}}</a>
           </span>
           <span class="chev" aria-hidden="true"></span>
         </summary>
@@ -1010,8 +1045,12 @@
     <section class="panel" aria-labelledby="issues-h" data-module="issues">
       <h2 id="issues-h">Recent issues <span class="lbl">{{.IssueTotal}} newest · <a href="/issues">Show all</a></span></h2>
       {{if .Issues}}
-      <ul class="wl">
-      {{range .Issues}}<li data-s="{{.Search}}"><span class="tw"><a class="t" href="{{.URL}}" target="_blank" rel="noopener" title="{{.Title}}">{{.Repo}}#{{.Number}} {{.Title}}</a>{{if .Taken}} <span class="tag taken">{{.Taken}}</span>{{end}}{{if $.CanWatch}}{{eye .K .Watched}}{{end}}</span>{{if .Labels}}<span class="d">{{range .Labels}}<span class="tag">{{.}}</span> {{end}}</span>{{end}}</li>{{end}}
+      <div class="itools">
+        <input type="search" id="ipq" placeholder="Search issues…" autocomplete="off">
+        <select id="ipf" aria-label="Filter by repository"><option value="">All repos</option></select>
+      </div>
+      <ul class="il" id="iplist">
+      {{range .Issues}}<li data-s="{{.Search}}" data-repo="{{.Repo}}"><div class="ir"><span class="irp">{{.Repo}}#{{.Number}}</span><a class="irt" href="{{.URL}}" target="_blank" rel="noopener" title="{{.Title}}">{{.Title}}</a>{{if .Taken}}<span class="tag taken irtk">{{.Taken}}</span>{{end}}{{if $.CanWatch}}<span class="irtk">{{eye .K .Watched}}</span>{{end}}</div>{{if .Labels}}<div class="ild">{{range .Labels}}<span class="tag">{{.}}</span>{{end}}</div>{{end}}</li>{{end}}
       </ul>
       {{else}}
       <p class="nodata"><b>No open issues</b> in tracked repositories.</p>
@@ -1963,6 +2002,46 @@
     tick();
     setInterval(tick, 15000);
   })();
+</script>
+<script>
+  (function () {
+    var ipq = document.getElementById("ipq");
+    var ipf = document.getElementById("ipf");
+    var iplist = document.getElementById("iplist");
+    if (!ipq || !ipf || !iplist) return;
+
+    var items = Array.prototype.slice.call(iplist.querySelectorAll("li[data-s]"));
+    var repos = [];
+    var seen = {};
+    items.forEach(function (li) {
+      var r = li.getAttribute("data-repo");
+      if (r && !seen[r]) { seen[r] = true; repos.push(r); }
+    });
+    repos.sort();
+    repos.forEach(function (r) {
+      var o = document.createElement("option");
+      o.value = r; o.textContent = r;
+      ipf.appendChild(o);
+    });
+
+    function filterPanel() {
+      var words = ipq.value.toLowerCase().split(/\s+/).filter(Boolean);
+      var repo = ipf.value;
+      items.forEach(function (li) {
+        var s = li.getAttribute("data-s");
+        var r = li.getAttribute("data-repo");
+        var matchWords = words.every(function (w) { return s.indexOf(w) >= 0; });
+        var matchRepo = !repo || r === repo;
+        li.hidden = !(matchWords && matchRepo);
+      });
+    }
+    ipq.addEventListener("input", filterPanel);
+    ipf.addEventListener("change", filterPanel);
+  })();
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest("summary a.ilink, summary a.cntl");
+    if (a) e.stopPropagation();
+  }, true);
 </script>
 </body>
 </html>

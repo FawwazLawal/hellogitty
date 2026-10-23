@@ -26,6 +26,8 @@
     color: var(--caution); font: 15px/1 var(--sans); cursor: pointer; padding: 0; border-radius: 50%; z-index: 1; }
   .isearch .qclear:hover { background: var(--raised); }
   .isearch .qclear[hidden] { display: none; }
+  .isearch select { margin-top: 6px; width: 100%; box-sizing: border-box; padding: 7px 10px; border: 1px solid var(--rule-hi); border-radius: 6px;
+    font: 14px var(--sans); background: var(--panel); color: var(--text); cursor: pointer; }
   .itable { width: 100%; table-layout: fixed; border-collapse: collapse; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
   .itable th, .itable td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
   .itable th { font-size: 12px; font-weight: 600; color: var(--dim); background: var(--raised); }
@@ -73,20 +75,21 @@
 </header>
 <main class="iwrap">
   <p class="sub">Open issues updated in the last {{.Window}} days, newest activity first.</p>
-  <div class="isearch">
-    <label><span class="sr">Search issues</span><input type="search" id="iq" placeholder="Search by #number, repo, title or label…" autocomplete="off"></label>
-    <button type="button" class="qclear" aria-label="Clear search" title="Clear search" hidden>&times;</button>
-  </div>
-  <p class="count"><span id="shown">{{len .Issues}}</span> of {{.Total}} open issues (page {{.Page}} of {{.Pages}})</p>
+  <form class="isearch" method="get" action="/issues">
+    <label><span class="sr">Search issues</span><input type="search" name="q" id="iq" value="{{.Query}}" placeholder="Search by #number, repo, title or label… (press Enter to search across all pages)" autocomplete="off"></label>
+    <button type="button" class="qclear" aria-label="Clear search" title="Clear search"{{if not .Query}} hidden{{end}}>&times;</button>
+    <select id="irf" aria-label="Filter by repository"><option value="">All repos</option></select>
+  </form>
+  <p class="count">{{if .Query}}<span id="shown">{{len .Issues}}</span> of {{.Total}} results for "{{.Query}}"{{else}}<span id="shown">{{len .Issues}}</span> of {{.Total}} open issues{{end}} (page {{.Page}} of {{.Pages}})</p>
   {{if .Issues}}
   <table class="itable">
     <thead><tr><th class="cnum">#</th><th>Issue</th><th class="opt clbl">Labels</th><th class="opt copn">Opened</th>{{if .CanWatch}}<th class="ceye"></th>{{end}}</tr></thead>
-    <tbody id="issue-rows">{{range .Issues}}<tr data-s="{{.Search}}"><td class="num">{{.Number}}</td><td><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a><br><span class="rp">{{.Repo}}</span>{{if .Taken}} <span class="tag taken">{{.Taken}}</span>{{end}}</td><td class="opt">{{range .Labels}}<span class="tag">{{.}}</span>{{end}}</td><td class="num opt" title="{{.AgoTitle}}">{{.Ago}}</td>{{if $.CanWatch}}<td>{{eye .K .Watched}}</td>{{end}}</tr>{{end}}</tbody>
+    <tbody id="issue-rows">{{range .Issues}}<tr data-s="{{.Search}}" data-repo="{{.Repo}}"><td class="num">{{.Number}}</td><td><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a><br><span class="rp">{{.Repo}}</span>{{if .Taken}} <span class="tag taken">{{.Taken}}</span>{{end}}</td><td class="opt">{{range .Labels}}<span class="tag">{{.}}</span>{{end}}</td><td class="num opt" title="{{.AgoTitle}}">{{.Ago}}</td>{{if $.CanWatch}}<td>{{eye .K .Watched}}</td>{{end}}</tr>{{end}}</tbody>
   </table>
   <nav class="pager" aria-label="Pagination">
-    {{if .HasPrev}}<a href="/issues?page={{.PrevPage}}">&larr; Previous</a>{{else}}<span class="off">&larr; Previous</span>{{end}}
+    {{if .HasPrev}}<a href="/issues?page={{.PrevPage}}{{if .Query}}&amp;q={{.Query}}{{end}}">&larr; Previous</a>{{else}}<span class="off">&larr; Previous</span>{{end}}
     <span>Page {{.Page}} of {{.Pages}}</span>
-    {{if .HasNext}}<a href="/issues?page={{.NextPage}}">Next &rarr;</a>{{else}}<span class="off">Next &rarr;</span>{{end}}
+    {{if .HasNext}}<a href="/issues?page={{.NextPage}}{{if .Query}}&amp;q={{.Query}}{{end}}">Next &rarr;</a>{{else}}<span class="off">Next &rarr;</span>{{end}}
   </nav>
   {{else}}<p class="empty">No open issues updated in the last {{.Window}} days.</p>{{end}}
 </main>
@@ -98,15 +101,34 @@
     var tbody = document.getElementById("issue-rows");
     var shown = document.getElementById("shown");
     var qclear = q ? q.closest(".isearch").querySelector(".qclear") : null;
+    var irf = document.getElementById("irf");
+
+    if (irf && tbody) {
+      var seen = {}, repos = [];
+      tbody.querySelectorAll("tr[data-repo]").forEach(function (tr) {
+        var r = tr.getAttribute("data-repo");
+        if (r && !seen[r]) { seen[r] = true; repos.push(r); }
+      });
+      repos.sort();
+      repos.forEach(function (r) {
+        var o = document.createElement("option");
+        o.value = r; o.textContent = r;
+        irf.appendChild(o);
+      });
+    }
 
     function filter() {
       if (!q || !tbody) return;
       var words = q.value.toLowerCase().split(/\s+/).filter(Boolean);
+      var repo = irf ? irf.value : "";
       var vis = 0;
       var rows = tbody.querySelectorAll("tr[data-s]");
       rows.forEach(function (tr) {
         var s = tr.getAttribute("data-s");
-        var ok = words.every(function (w) { return s.indexOf(w) >= 0; });
+        var r = tr.getAttribute("data-repo") || "";
+        var matchWords = words.every(function (w) { return s.indexOf(w) >= 0; });
+        var matchRepo = !repo || r === repo;
+        var ok = matchWords && matchRepo;
         tr.hidden = !ok;
         if (ok) vis++;
       });
@@ -115,8 +137,12 @@
     }
     if (q) {
       q.addEventListener("input", filter);
-      if (qclear) qclear.addEventListener("click", function () { q.value = ""; filter(); q.focus(); });
+      if (qclear) qclear.addEventListener("click", function () {
+        if (location.search.indexOf("q=") >= 0) { location.href = "/issues"; return; }
+        q.value = ""; filter(); q.focus();
+      });
     }
+    if (irf) irf.addEventListener("change", filter);
 
     // Eye toggle for watching issues
     var token = "{{.Token}}";

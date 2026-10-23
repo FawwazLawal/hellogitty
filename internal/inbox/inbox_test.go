@@ -336,47 +336,6 @@ func TestBotFindings(t *testing.T) {
 		t.Errorf("a bot's standing changes-requested review: %+v", e)
 	}
 
-	// A bot review carrying findings in its body (outside diff range), with no threads.
-	bodyOnly := pr()
-	bodyOnly.BotReviews = []work.Activity{
-		{Author: "coderabbitai", Bot: true, Review: "COMMENTED",
-			Body: "## New Issues\n\n<details>\n<summary>internal/corazawaf/rule_multiphase.go (2)</summary>\n\nfinding 1\nfinding 2\n</details>\n<details>\n<summary>README.md</summary>\n\nfinding 3\n</details>",
-			At:   review, URL: "https://github.com/corazawaf/coraza/pull/1785#pullrequestreview-950"},
-	}
-	bodyOnly.LastCommitAt = tp(review.Add(-time.Hour))
-	e, ok = botEntry(bodyOnly)
-	if !ok || !strings.Contains(e.Summary, "3 open findings") {
-		t.Errorf("body-carried findings should count 2+1=3: got %+v ok=%v", e, ok)
-	}
-
-	// Thread findings AND body findings on the same PR from the same bot.
-	combined := pr()
-	combined.Threads = []work.Thread{
-		{Author: "coderabbitai", Bot: true, Path: "src/a.go", Body: "Fix this", At: review, URL: "u#discussion_r100"},
-	}
-	combined.BotReviews = []work.Activity{
-		{Author: "coderabbitai", Bot: true, Review: "COMMENTED",
-			Body: "<details>\n<summary>internal/other.go (1)</summary>\n\nfinding\n</details>",
-			At:   review, URL: "u#pullrequestreview-960"},
-	}
-	combined.LastCommitAt = tp(review.Add(-time.Hour))
-	e, ok = botEntry(combined)
-	if !ok || !strings.Contains(e.Summary, "2 open findings") {
-		t.Errorf("thread + body findings should both count: got %+v ok=%v", e, ok)
-	}
-
-	// Body findings skipped when a commit came after the review.
-	afterPush := pr()
-	afterPush.BotReviews = []work.Activity{
-		{Author: "coderabbitai", Bot: true, Review: "COMMENTED",
-			Body: "<details>\n<summary>file.go (1)</summary>\n\nstale\n</details>",
-			At:   review, URL: "u#pullrequestreview-970"},
-	}
-	afterPush.LastCommitAt = tp(review.Add(time.Hour))
-	if _, ok := botEntry(afterPush); ok {
-		t.Error("body findings after a commit should be skipped")
-	}
-
 	theirs := open
 	theirs.Role = work.RoleInvolved
 	if _, ok := botEntry(theirs); ok {

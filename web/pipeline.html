@@ -1,0 +1,113 @@
+{{define "pipelinepage"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Pipeline · HelloGitty</title>
+{{template "theme-head"}}
+<style>
+{{template "base-css"}}
+  .pbar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 20px;
+    background: var(--panel); border-bottom: 1px solid var(--rule); }
+  .pbar h1 { margin: 0; font-size: 17px; font-weight: 650; }
+  .back { font-size: 13px; color: var(--dim); }
+  .pbar .theme { margin-left: auto; }
+  .pwrap { max-width: 980px; margin: 0 auto; padding: 18px 20px 40px; }
+  .sub { margin: 0 0 18px; color: var(--dim); }
+  .overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 0 0 24px; }
+  .ocard { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; text-align: center; text-decoration: none; color: inherit; transition: border-color .12s; }
+  .ocard:hover { border-color: var(--head-accent); background: var(--raised); }
+  .ocard .ov { font: 700 28px var(--mono); font-variant-numeric: tabular-nums; display: block; }
+  .ocard .ol { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .ocard .ov.zero { color: var(--dim); }
+  .rate { font: 700 28px var(--mono); color: var(--head-accent); }
+  .section { margin: 0 0 24px; }
+  .section h2 { margin: 0 0 10px; font-size: 15px; font-weight: 650; border-left: 3px solid var(--head-accent); padding-left: 10px; }
+  .ptable { width: 100%; table-layout: fixed; border-collapse: collapse; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+  .ptable th, .ptable td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  .ptable th { font-size: 12px; font-weight: 600; color: var(--dim); background: var(--head); }
+  .ptable tr:last-child td { border-bottom: 0; }
+  .ptable .cnum { width: 60px; }
+  .ptable .cst { width: 80px; }
+  .ptable td.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .ptable a { color: var(--text); }
+  .tag { font-size: 12px; color: var(--dim); border: 1px solid var(--rule-hi); border-radius: 4px; padding: 0 6px; white-space: nowrap; }
+  .tag.Merged { color: var(--nom); border-color: color-mix(in srgb, var(--nom) 50%, transparent); }
+  .tag.Closed { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, transparent); }
+  .tag.Open, .tag.Draft { color: var(--caution-text); border-color: color-mix(in srgb, var(--caution) 50%, transparent); }
+  .empty { color: var(--dim); padding: 40px 0; text-align: center; }
+  .pfilter { display: flex; gap: 6px; margin: 0 0 14px; }
+  .pfilter button { font: 13px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  .pfilter button:hover { color: var(--text); background: var(--raised); }
+  .pfilter button[aria-pressed="true"] { color: var(--text); background: var(--raised); font-weight: 600; border-color: var(--head-accent); }
+  {{if .HasPipeline}}
+  .stages { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 0 0 24px; }
+  .scard { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; text-align: center; text-decoration: none; color: inherit; }
+  .scard:hover { border-color: var(--head-accent); }
+  .scard .sv { font: 700 24px var(--mono); display: block; }
+  .scard .sl { font-size: 12px; color: var(--dim); }
+  {{end}}
+  @media (max-width: 640px) { .overview { grid-template-columns: repeat(2, 1fr); } }
+  @media (prefers-reduced-motion: reduce) { .ocard, .scard { transition: none; } }
+</style>
+</head>
+<body>
+<header class="pbar">
+  <a class="back" href="/">Dashboard</a>
+  <h1>Pipeline</h1>
+  <span class="lbl">{{.Version}}</span>
+  <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
+</header>
+<main class="pwrap">
+  <p class="sub">Your pull requests in tracked repositories and the pipeline stages.</p>
+
+  <div class="overview">
+    <a class="ocard" href="/list?prs=opened"><span class="ov{{if not .Pipeline.Opened}} zero{{end}}">{{.Pipeline.Opened}}</span><span class="ol">Opened</span></a>
+    <a class="ocard" href="/list?prs=open"><span class="ov{{if not .Pipeline.Open}} zero{{end}}">{{.Pipeline.Open}}</span><span class="ol">Open</span></a>
+    <a class="ocard" href="/list?prs=merged"><span class="ov{{if not .Pipeline.Merged}} zero{{end}}">{{.Pipeline.Merged}}</span><span class="ol">Merged</span></a>
+    <a class="ocard" href="/list?prs=closed"><span class="ov{{if not .Pipeline.Closed}} zero{{end}}">{{.Pipeline.Closed}}</span><span class="ol">Closed</span></a>
+    <div class="ocard"><span class="ov{{if not .Pipeline.Rate}} zero{{end}}">{{if .Pipeline.Rate}}{{.Pipeline.Rate}}{{else}}—{{end}}</span><span class="ol">Merge rate</span></div>
+  </div>
+
+  {{if .HasPipeline}}
+  <div class="section">
+    <h2>Stages</h2>
+    <div class="stages">
+      {{range .Pipeline.Counts}}<a class="scard" href="/list?stage={{.Name}}"><span class="sv{{if not .Count}} zero{{end}}">{{.Count}}</span><span class="sl">{{.Name}}</span></a>{{end}}
+    </div>
+  </div>
+  {{end}}
+
+  <div class="section">
+    <h2>Pull requests</h2>
+    <div class="pfilter" role="group" aria-label="Filter pull requests">
+      <button type="button" data-pf="all" aria-pressed="true">All</button>
+      <button type="button" data-pf="Open" aria-pressed="false">Open</button>
+      <button type="button" data-pf="Merged" aria-pressed="false">Merged</button>
+      <button type="button" data-pf="Closed" aria-pressed="false">Closed</button>
+    </div>
+    {{if .Pipeline.PRs}}
+    <table class="ptable">
+      <thead><tr><th class="cnum">#</th><th>Pull request</th><th>Repository</th><th class="cst">State</th></tr></thead>
+      <tbody id="pr-rows">{{range .Pipeline.All}}<tr data-state="{{.State}}"><td class="num">{{.Number}}</td><td><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a></td><td>{{.Repo}}</td><td><span class="tag {{.State}}">{{.State}}</span></td></tr>{{end}}</tbody>
+    </table>
+    {{else}}<p class="empty">No pull requests yet in tracked repositories.</p>{{end}}
+  </div>
+</main>
+<script>
+(function () {
+  {{template "theme-js"}}
+  var btns = document.querySelectorAll("[data-pf]"), rows = document.querySelectorAll("#pr-rows tr[data-state]");
+  btns.forEach(function (b) {
+    b.addEventListener("click", function () {
+      btns.forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
+      b.setAttribute("aria-pressed", "true");
+      var f = b.dataset.pf;
+      rows.forEach(function (r) { r.hidden = f !== "all" && r.dataset.state !== f; });
+    });
+  });
+})();
+</script>
+</body>
+</html>{{end}}

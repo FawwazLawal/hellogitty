@@ -1,0 +1,130 @@
+{{define "repospage"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Tracked repositories · HelloGitty</title>
+{{template "theme-head"}}
+<style>
+{{template "base-css"}}
+  .rbar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 20px;
+    background: var(--panel); border-bottom: 1px solid var(--rule); }
+  .rbar h1 { margin: 0; font-size: 17px; font-weight: 650; }
+  .back { font-size: 13px; color: var(--dim); }
+  .rbar .theme { margin-left: auto; }
+  .rwrap { max-width: 1200px; margin: 0 auto; padding: 18px 20px 40px; }
+  .sub { margin: 0 0 14px; color: var(--dim); }
+  .rtools { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 0 0 14px; align-items: center; }
+  .rtools input[type="search"] { flex: 1; min-width: 200px; max-width: 400px; padding: 7px 10px; border: 1px solid var(--rule-hi); border-radius: 6px;
+    font: 14px var(--sans); background: var(--panel); color: var(--text); }
+  .rtools input::placeholder { color: var(--dim); }
+  .rtools select { padding: 7px 10px; border: 1px solid var(--rule-hi); border-radius: 6px; font: 14px var(--sans); background: var(--panel); color: var(--text); cursor: pointer; }
+  .rtools .count { font-size: 13px; color: var(--dim); margin-left: auto; }
+  .rgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; }
+  .rcard { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; transition: border-color .12s; }
+  .rcard:hover { border-color: var(--rule-hi); }
+  .rcard-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--rule);
+    background: var(--head); border-left: 3px solid var(--head-accent); }
+  .rcard-head .light { flex: none; }
+  .rcard-head .rname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 650; font-size: 14px; }
+  .rcard-head .rname a { color: var(--text); text-decoration: none; }
+  .rcard-head .rname a:hover { text-decoration: underline; }
+  .rcard-head .rname .own { color: var(--dim); font-weight: 400; }
+  .rcard-body { padding: 10px 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .rstat { text-align: center; }
+  .rstat .sv { font: 600 18px var(--mono); font-variant-numeric: tabular-nums; display: block; }
+  .rstat .sl { font-size: 11px; color: var(--dim); }
+  .rstat a { color: var(--text); text-decoration: none; }
+  .rstat a:hover { text-decoration: underline; }
+  .rcard-tags { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 14px 10px; }
+  .rtag { font-size: 11.5px; padding: 2px 8px; border-radius: 4px; border: 1px solid var(--rule-hi); color: var(--dim); white-space: nowrap; }
+  .rtag.active { color: var(--nom); border-color: color-mix(in srgb, var(--nom) 50%, transparent); }
+  .rtag.slow { color: var(--caution-text); border-color: color-mix(in srgb, var(--caution) 50%, transparent); }
+  .rtag.dormant { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, transparent); }
+  .rtag.stage { color: var(--text); background: var(--raised); }
+  .light { width: 10px; height: 10px; border-radius: 50%; border: 2px solid transparent; }
+  .light.ACTIVE { background: var(--nom); }
+  .light.SLOW { border-color: var(--caution); }
+  .light.DORMANT { background: var(--caution); }
+  .light.UNKNOWN { border: 1.5px dashed var(--dim); }
+  .empty { color: var(--dim); padding: 40px 0; text-align: center; }
+  @media (max-width: 640px) { .rgrid { grid-template-columns: 1fr; } }
+  @media (prefers-reduced-motion: reduce) { .rcard { transition: none; } }
+</style>
+</head>
+<body>
+<header class="rbar">
+  <a class="back" href="/">Dashboard</a>
+  <h1>Tracked repositories</h1>
+  <span class="lbl">{{len .Rows}} repos</span>
+  <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
+</header>
+<main class="rwrap">
+  <p class="sub">All repositories HelloGitty tracks, with health, issue counts and pipeline stage.</p>
+  <div class="rtools">
+    <input type="search" id="rq" placeholder="Search repositories…" autocomplete="off">
+    <select id="rf-health" aria-label="Filter by health"><option value="">All health</option><option value="ACTIVE">Active</option><option value="SLOW">Slowing</option><option value="DORMANT">Dormant</option><option value="UNKNOWN">Not checked</option></select>
+    <select id="rf-sort" aria-label="Sort by"><option value="name">Name</option><option value="open">Most open issues</option><option value="gfi">Most good first issues</option><option value="commit">Most recent commit</option></select>
+    <span class="count" id="rcount"></span>
+  </div>
+  {{if .Rows}}
+  <div class="rgrid" id="rgrid">
+    {{range .Rows}}
+    <div class="rcard" data-name="{{.Owner}}/{{.Name}}" data-health="{{.Health}}" data-open="{{.Open}}" data-gfi="{{.GFI}}" data-age="{{if .AgeKnown}}{{.AgeDays}}{{else}}100000{{end}}">
+      <div class="rcard-head">
+        <span class="light {{.Health}}" aria-label="{{lower .Health}}"></span>
+        <span class="rname"><a href="{{.URL}}" target="_blank" rel="noopener"><span class="own">{{.Owner}}/</span>{{.Name}}</a></span>
+      </div>
+      <div class="rcard-body">
+        <div class="rstat"><a href="{{.URL}}/issues" target="_blank" rel="noopener"><span class="sv{{if not .Open}} zero{{end}}">{{.Open}}</span><span class="sl">Open</span></a></div>
+        <div class="rstat"><a href="{{.URL}}/issues?q=is%3Aopen+label%3A%22good+first+issue%22" target="_blank" rel="noopener"><span class="sv{{if not .GFI}} zero{{end}}">{{.GFI}}</span><span class="sl">Good first</span></a></div>
+        <div class="rstat"><a href="{{.URL}}/issues?q=is%3Aopen+no%3Aassignee" target="_blank" rel="noopener"><span class="sv{{if not .Unassigned}} zero{{end}}">{{.Unassigned}}</span><span class="sl">Unassigned</span></a></div>
+      </div>
+      <div class="rcard-tags">
+        <span class="rtag {{lower .Health}}">{{lower .Health}}</span>
+        {{if .AgeKnown}}<span class="rtag">{{.AgeDays}}d since commit</span>{{end}}
+        {{if .InPipeline}}<span class="rtag stage">{{.Stage}}</span>{{end}}
+        {{if .DeniedTotal}}<span class="rtag">{{.DeniedTotal}} turned down</span>{{end}}
+      </div>
+    </div>
+    {{end}}
+  </div>
+  {{else}}<p class="empty">No repositories tracked yet.</p>{{end}}
+</main>
+<script>
+(function () {
+  {{template "theme-js"}}
+  var q = document.getElementById("rq"), health = document.getElementById("rf-health"),
+      sortSel = document.getElementById("rf-sort"), grid = document.getElementById("rgrid"),
+      count = document.getElementById("rcount");
+  if (!q || !grid) return;
+  var cards = Array.prototype.slice.call(grid.querySelectorAll(".rcard"));
+  function run() {
+    var words = q.value.toLowerCase().split(/\s+/).filter(Boolean);
+    var h = health.value, vis = 0;
+    cards.forEach(function (c) {
+      var name = (c.getAttribute("data-name") || "").toLowerCase();
+      var ch = c.getAttribute("data-health");
+      var ok = words.every(function (w) { return name.indexOf(w) >= 0; }) && (!h || ch === h);
+      c.hidden = !ok;
+      if (ok) vis++;
+    });
+    if (count) count.textContent = vis + " of " + cards.length;
+    var by = sortSel.value;
+    var sorted = cards.filter(function (c) { return !c.hidden; }).sort(function (a, b) {
+      if (by === "open") return (parseInt(b.dataset.open) || 0) - (parseInt(a.dataset.open) || 0);
+      if (by === "gfi") return (parseInt(b.dataset.gfi) || 0) - (parseInt(a.dataset.gfi) || 0);
+      if (by === "commit") return (parseInt(a.dataset.age) || 0) - (parseInt(b.dataset.age) || 0);
+      return (a.dataset.name || "").localeCompare(b.dataset.name || "");
+    });
+    sorted.forEach(function (c) { grid.appendChild(c); });
+  }
+  q.addEventListener("input", run);
+  health.addEventListener("change", run);
+  sortSel.addEventListener("change", run);
+  run();
+})();
+</script>
+</body>
+</html>{{end}}

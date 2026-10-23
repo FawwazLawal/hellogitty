@@ -1,0 +1,119 @@
+{{define "conversationspage"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Conversations · HelloGitty</title>
+{{template "theme-head"}}
+<style>
+{{template "base-css"}}
+  .cbar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 20px;
+    background: var(--panel); border-bottom: 1px solid var(--rule); }
+  .cbar h1 { margin: 0; font-size: 17px; font-weight: 650; }
+  .back { font-size: 13px; color: var(--dim); }
+  .cbar .theme { margin-left: auto; }
+  .cwrap { max-width: 980px; margin: 0 auto; padding: 18px 20px 40px; }
+  .sub { margin: 0 0 18px; color: var(--dim); }
+  .overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 0 0 24px; }
+  .ocard { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; text-align: center; transition: border-color .12s; }
+  .ocard .ov { font: 700 28px var(--mono); font-variant-numeric: tabular-nums; display: block; }
+  .ocard .ol { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .ocard .ov.zero { color: var(--dim); }
+  .section { margin: 0 0 28px; }
+  .section h2 { margin: 0 0 10px; font-size: 15px; font-weight: 650; border-left: 3px solid var(--head-accent); padding-left: 10px; }
+  .cfilter { display: flex; gap: 6px; margin: 0 0 14px; }
+  .cfilter button { font: 13px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  .cfilter button:hover { color: var(--text); background: var(--raised); }
+  .cfilter button[aria-pressed="true"] { color: var(--text); background: var(--raised); font-weight: 600; border-color: var(--head-accent); }
+  .cfilter .search { flex: 1; min-width: 160px; max-width: 300px; padding: 6px 10px; border: 1px solid var(--rule-hi); border-radius: 6px;
+    font: 13px var(--sans); background: var(--panel); color: var(--text); }
+  .cfilter .search::placeholder { color: var(--dim); }
+  .clist { list-style: none; margin: 0; padding: 0; }
+  .citem { display: grid; grid-template-columns: auto 1fr auto; gap: 8px 12px; align-items: baseline; padding: 10px 14px;
+    border-bottom: 1px solid var(--rule); background: var(--panel); transition: background .1s; }
+  .citem:first-child { border-radius: 8px 8px 0 0; border-top: 1px solid var(--rule); }
+  .citem:last-child { border-radius: 0 0 8px 8px; }
+  .citem:only-child { border-radius: 8px; }
+  .citem:hover { background: var(--raised); }
+  .citem .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; }
+  .citem .dot.new { background: var(--head-accent); }
+  .citem .dot.caution { background: var(--caution); }
+  .ctitle { font-size: 14px; font-weight: 500; }
+  .ctitle a { color: var(--text); text-decoration: none; }
+  .ctitle a:hover { text-decoration: underline; }
+  .cmeta { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .cago { font-size: 12px; color: var(--dim); white-space: nowrap; text-align: right; }
+  .tag { font-size: 11px; display: inline-block; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--rule-hi); color: var(--dim); margin-left: 6px; }
+  .tag.move { color: var(--caution-text); border-color: color-mix(in srgb, var(--caution) 50%, transparent); }
+  .empty { color: var(--dim); padding: 40px 0; text-align: center; }
+  @media (max-width: 640px) { .overview { grid-template-columns: repeat(2, 1fr); } }
+  @media (prefers-reduced-motion: reduce) { .citem, .ocard { transition: none; } }
+</style>
+</head>
+<body>
+<header class="cbar">
+  <a class="back" href="/">Dashboard</a>
+  <h1>Conversations</h1>
+  <span class="lbl">{{.Version}}</span>
+  <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
+</header>
+<main class="cwrap">
+  <p class="sub">Issues and pull requests you joined — commented on or were mentioned in — across tracked repositories.</p>
+
+  <div class="overview">
+    <div class="ocard"><span class="ov{{if not .Work.ConvYou}} zero{{end}}">{{len .Work.ConvYou}}</span><span class="ol">Needs your reply</span></div>
+    <div class="ocard"><span class="ov{{if not .Work.ConvThem}} zero{{end}}">{{len .Work.ConvThem}}</span><span class="ol">Waiting on others</span></div>
+    <div class="ocard"><span class="ov{{if not .ConvNew}} zero{{end}}">{{.ConvNew}}</span><span class="ol">Unread</span></div>
+  </div>
+
+  <div class="section">
+    <h2>All conversations</h2>
+    <div class="cfilter" role="group" aria-label="Filter conversations">
+      <button type="button" data-cf="all" aria-pressed="true">All</button>
+      <button type="button" data-cf="you" aria-pressed="false">Needs me</button>
+      <button type="button" data-cf="them" aria-pressed="false">Waiting</button>
+      <input type="search" class="search" id="cq" placeholder="Search…" autocomplete="off">
+    </div>
+    {{if or .Work.ConvYou .Work.ConvThem}}
+    <ul class="clist" id="clist">
+      {{range .Work.ConvYou}}<li class="citem" data-group="you" data-search="{{.Search}}">
+        <span class="dot {{.Attn}}"></span>
+        <div><div class="ctitle"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a><span class="tag move">needs you</span></div><div class="cmeta">{{.Repo}}#{{.Number}}{{if .Why}} · {{.Why}}{{end}}</div></div>
+        <span class="cago" title="{{.AgoTitle}}">{{.Ago}}</span>
+      </li>{{end}}
+      {{range .Work.ConvThem}}<li class="citem" data-group="them" data-search="{{.Search}}">
+        <span class="dot {{.Attn}}"></span>
+        <div><div class="ctitle"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a></div><div class="cmeta">{{.Repo}}#{{.Number}}{{if .Why}} · {{.Why}}{{end}}</div></div>
+        <span class="cago" title="{{.AgoTitle}}">{{.Ago}}</span>
+      </li>{{end}}
+    </ul>
+    {{else}}<p class="empty">No conversations yet. Comment on or get mentioned in an issue or PR in a tracked repository to see it here.</p>{{end}}
+  </div>
+</main>
+<script>
+(function () {
+  {{template "theme-js"}}
+  var btns = document.querySelectorAll("[data-cf]"), items = document.querySelectorAll("#clist .citem"),
+      q = document.getElementById("cq");
+  function run() {
+    var f = "all", words = (q ? q.value : "").toLowerCase().split(/\s+/).filter(Boolean);
+    btns.forEach(function (b) { if (b.getAttribute("aria-pressed") === "true") f = b.dataset.cf; });
+    items.forEach(function (li) {
+      var g = li.dataset.group, s = (li.dataset.search || "").toLowerCase();
+      var groupOk = f === "all" || g === f;
+      var searchOk = words.every(function (w) { return s.indexOf(w) >= 0; });
+      li.hidden = !(groupOk && searchOk);
+    });
+  }
+  btns.forEach(function (b) {
+    b.addEventListener("click", function () {
+      btns.forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
+      b.setAttribute("aria-pressed", "true"); run();
+    });
+  });
+  if (q) q.addEventListener("input", run);
+})();
+</script>
+</body>
+</html>{{end}}

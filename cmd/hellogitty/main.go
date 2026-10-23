@@ -256,7 +256,11 @@ func run() int {
 			HelpTemplate: web.Help,
 			FeedTemplate: web.Feed,
 			ListTemplate:   web.List,
-			IssuesTemplate: web.Issues,
+			IssuesTemplate:        web.Issues,
+			ReposTemplate:         web.Repos,
+			PipelineTemplate:      web.Pipeline,
+			ConversationsTemplate: web.Conversations,
+			YourReposTemplate:     web.YourRepos,
 			Guide:        docs.Guide,
 			Screenshot:   docs.Screenshot,
 			About:        aboutInstall(cfg),
@@ -541,6 +545,9 @@ func (s source) Reports() ([]store.RepoReport, error) { return tracked(s.st, s.p
 func (s source) TopOpenIssues(n int) ([]store.RecentIssue, error) { return s.st.TopOpenIssues(n) }
 func (s source) PageOpenIssues(since time.Time, offset, limit int) ([]store.RecentIssue, int, error) {
 	return s.st.PageOpenIssues(since, offset, limit)
+}
+func (s source) SearchOpenIssues(since time.Time, q string, offset, limit int) ([]store.RecentIssue, int, error) {
+	return s.st.SearchOpenIssues(since, q, offset, limit)
 }
 
 func (s source) Pipeline() (*pipeline.State, error) { return s.pipe.Get(context.Background()) }

@@ -89,7 +89,11 @@ type Handler struct {
 	HelpTemplate string
 	FeedTemplate string // the feed on its own page, parsed with Template like Help
 	ListTemplate   string // what a Pipeline number counts, on a page of its own
-	IssuesTemplate string // all open issues across tracked repos, on a page of its own
+	IssuesTemplate        string // all open issues across tracked repos, on a page of its own
+	ReposTemplate         string // tracked repos on a page of its own
+	PipelineTemplate      string // pipeline on a page of its own
+	ConversationsTemplate string // conversations on a page of its own
+	YourReposTemplate     string // your repos on a page of its own
 	Guide        string
 	Screenshot   []byte
 	About        []AboutItem
@@ -346,6 +350,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveWatch(w, r)
 	case r.URL.Path == "/issues":
 		h.serveIssues(w, r)
+	case r.URL.Path == "/repos":
+		h.serveReposPage(w, r)
+	case r.URL.Path == "/pipeline":
+		h.servePipelinePage(w, r)
+	case r.URL.Path == "/conversations":
+		h.serveConversationsPage(w, r)
+	case r.URL.Path == "/your-repos":
+		h.serveYourReposPage(w, r)
 	case r.URL.Path == "/list":
 		h.serveList(w, r)
 	case r.URL.Path == "/repos/add":

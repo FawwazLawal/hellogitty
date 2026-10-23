@@ -15,6 +15,7 @@ import (
 type IssueSource interface {
 	TopOpenIssues(n int) ([]store.RecentIssue, error)
 	PageOpenIssues(since time.Time, offset, limit int) ([]store.RecentIssue, int, error)
+	SearchOpenIssues(since time.Time, q string, offset, limit int) ([]store.RecentIssue, int, error)
 }
 
 const (
@@ -36,6 +37,7 @@ type issuesPage struct {
 	HasPrev  bool
 	HasNext  bool
 	Window   int
+	Query    string
 }
 
 type globalIssue struct {
@@ -115,10 +117,17 @@ func (h *Handler) serveIssues(w http.ResponseWriter, r *http.Request) {
 			pg = n
 		}
 	}
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	offset := (pg - 1) * pageIssues
 	since := h.now().Add(-issueWindow)
 
-	items, total, err := is.PageOpenIssues(since, offset, pageIssues)
+	var items []store.RecentIssue
+	var total int
+	if q != "" {
+		items, total, err = is.SearchOpenIssues(since, q, offset, pageIssues)
+	} else {
+		items, total, err = is.PageOpenIssues(since, offset, pageIssues)
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -135,6 +144,7 @@ func (h *Handler) serveIssues(w http.ResponseWriter, r *http.Request) {
 		Page: pg, Pages: pages, Window: 90,
 		HasPrev: pg > 1, HasNext: pg < pages,
 		PrevPage: pg - 1, NextPage: pg + 1,
+		Query: q,
 	}
 	if ws, ok := h.Source.(WatchSource); ok {
 		ip.CanWatch = true

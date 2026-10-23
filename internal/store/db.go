@@ -527,6 +527,43 @@ func (s *Store) PageOpenIssues(since time.Time, offset, limit int) ([]RecentIssu
 	return out, total, rows.Err()
 }
 
+// SearchOpenIssues searches open issues by title, number or repo name across all pages within the
+// time window. It returns matching issues (paginated) and the total count of matches.
+func (s *Store) SearchOpenIssues(since time.Time, q string, offset, limit int) ([]RecentIssue, int, error) {
+	like := "%" + q + "%"
+	var total int
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM issues i JOIN repos r ON r.id = i.repo_id
+		WHERE i.state = 'open' AND r.status = 'active' AND i.updated_at >= ?
+		AND (LOWER(i.title) LIKE LOWER(?) OR CAST(i.number AS TEXT) LIKE ? OR LOWER(r.owner || '/' || r.name) LIKE LOWER(?))`,
+		ts(&since), like, like, like).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+	rows, err := s.db.Query(`SELECT r.owner || '/' || r.name, i.number, i.title, COALESCE(i.labels, '[]'), COALESCE(i.assignees, '[]'),
+		COALESCE(i.claim_signal, ''), i.created_at FROM issues i JOIN repos r ON r.id = i.repo_id
+		WHERE i.state = 'open' AND r.status = 'active' AND i.updated_at >= ?
+		AND (LOWER(i.title) LIKE LOWER(?) OR CAST(i.number AS TEXT) LIKE ? OR LOWER(r.owner || '/' || r.name) LIKE LOWER(?))
+		ORDER BY i.updated_at DESC LIMIT ? OFFSET ?`, ts(&since), like, like, like, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var out []RecentIssue
+	for rows.Next() {
+		var ri RecentIssue
+		var labels, assignees string
+		var created nullTime
+		if err := rows.Scan(&ri.Repo, &ri.Number, &ri.Title, &labels, &assignees, &ri.ClaimSignal, &created); err != nil {
+			return nil, 0, err
+		}
+		json.Unmarshal([]byte(labels), &ri.Labels)
+		json.Unmarshal([]byte(assignees), &ri.Assignees)
+		ri.CreatedAt = created.t
+		out = append(out, ri)
+	}
+	return out, total, rows.Err()
+}
+
 // newestIssues lists a repository's newest open issues.
 func (s *Store) newestIssues(r Repo, n int) ([]RecentIssue, error) {
 	rows, err := s.db.Query(`SELECT number, title, COALESCE(labels, '[]'), COALESCE(assignees, '[]'), COALESCE(claim_signal, ''), created_at

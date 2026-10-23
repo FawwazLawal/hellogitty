@@ -27,6 +27,26 @@ var List string
 //go:embed issues.html
 var Issues string
 
+// Repos is the tracked repos on a page of its own. Parsed with index.html.
+//
+//go:embed repos.html
+var Repos string
+
+// Pipeline is the pipeline on a page of its own. Parsed with index.html.
+//
+//go:embed pipeline.html
+var Pipeline string
+
+// Conversations is the conversations on a page of its own. Parsed with index.html.
+//
+//go:embed conversations.html
+var Conversations string
+
+// YourRepos is your repositories on a page of its own. Parsed with index.html.
+//
+//go:embed your-repos.html
+var YourRepos string
+
 // Mascot holds the banner clips (kitten-routine-*.mp4, kitten-news-*.mp4) and the rest still
 // (rest.png) under mascot/.
 //

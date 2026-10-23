@@ -5,12 +5,35 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+Changes in the next publish.
+
+## v0.2.0 (7) · Black Bombay (baby) · 2026-10-23
+
+Tag `v0.2.7`.
+
+- **Quick-access navigation bar**: a persistent shortcuts bar across the top links to
+  Dashboard, Issues, Tracked repos, Pipeline, Conversations and Your repositories.
+  Each opens a dedicated full page with interactive features.
+- **Sub-pages**: Tracked repos, Pipeline, Conversations and Your repositories are now
+  full pages with search, filters, sorting, overview cards and detailed listings.
+  Tracked repos shows a card grid with health lights and tags; Pipeline shows stage
+  counts, merge rate and a filterable PR table; Conversations lists threads you joined
+  with needs-me/waiting filters; Your repositories shows your open work, recently
+  finished items and repository activity.
+- **Server-side issue search**: the Issues page search now queries the database across
+  all pages, not just the current page. Searching for an issue number or title that
+  appears on any page returns it regardless of which page you are viewing.
+- **Clickable indicators**: issue counts (Open, GFI, Unassigned, Denied) on tracked
+  repositories link directly to the corresponding GitHub issue or PR query.
+- **Header redesign**: gradient panel headers replaced with solid backgrounds and a
+  left accent border for clearer visual hierarchy; the accent colour is reserved for
+  meaning rather than decoration.
+- Fixed: the panel resize handle now stays at the panel's bottom edge when the panel
+  is taller than its content, instead of floating right after the last row.
 - Bot findings carried in a review body (outside the diff range) are now counted
   alongside thread-based findings in the `pr_bot` inbox entry. A bot that posts
   file-specific feedback under `<details><summary>` blocks in the review body, rather
   than as inline threads, now surfaces in the entry's count and summary.
-
-Changes in the next publish.
 
 ## v0.2.0 (6) · Black Bombay (baby) · 2026-10-23
 
