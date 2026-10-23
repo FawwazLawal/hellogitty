@@ -5,23 +5,10 @@ import (
 	"log"
 	"net/http"
 	"strings"
-
-	"github.com/FawwazLawal/hellogitty/internal/pipeline"
 )
 
 // The Pipeline panel's numbers open what they count on a page of their own: the repositories at a
 // stage, or your pull requests that are open, merged or closed.
-
-type listPage struct {
-	Version     string
-	Title, Sub  string
-	PRs         []prRow
-	Repos       []row
-	HasPipeline bool
-	Labels      pipeline.Labels
-	Empty       string
-	Links       []listLink // the panel's other numbers, to move between lists
-}
 
 type listLink struct {
 	Label, URL string
@@ -41,14 +28,14 @@ func (h *Handler) serveList(w http.ResponseWriter, r *http.Request) {
 	}
 	p, err := h.build()
 	if err != nil {
+		log.Printf("dashboard: list build: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	q := r.URL.Query()
-	lp := listPage{Version: h.Version, HasPipeline: p.HasPipeline, Labels: p.Labels}
 	prWant, stage := q.Get("prs"), q.Get("stage")
 	for _, c := range p.Pipeline.Counts {
-		lp.Links = append(lp.Links, listLink{Label: c.Abbr + " · " + c.Name, URL: "/list?stage=" + c.Name, Count: c.Count, Current: c.Name == stage})
+		p.ListLinks = append(p.ListLinks, listLink{Label: c.Abbr + " · " + c.Name, URL: "/list?stage=" + c.Name, Count: c.Count, Current: c.Name == stage})
 	}
 	for _, k := range []struct{ key, label string }{{"opened", "Opened"}, {"open", "Open"}, {"merged", "Merged"}, {"closed", "Closed"}} {
 		n := 0
@@ -57,24 +44,24 @@ func (h *Handler) serveList(w http.ResponseWriter, r *http.Request) {
 				n++
 			}
 		}
-		lp.Links = append(lp.Links, listLink{Label: k.label, URL: "/list?prs=" + k.key, Count: n, Current: k.key == prWant})
+		p.ListLinks = append(p.ListLinks, listLink{Label: k.label, URL: "/list?prs=" + k.key, Count: n, Current: k.key == prWant})
 	}
 	switch {
 	case prWant != "":
 		for _, pr := range p.Pipeline.All {
 			if prMatches(pr, prWant) {
-				lp.PRs = append(lp.PRs, pr)
+				p.ListPRs = append(p.ListPRs, pr)
 			}
 		}
-		lp.Title = map[string]string{"opened": "Pull requests you opened", "open": "Your open pull requests",
+		p.ListTitle = map[string]string{"opened": "Pull requests you opened", "open": "Your open pull requests",
 			"merged": "Your merged pull requests", "closed": "Your pull requests closed without merging",
 			"decided": "Your merged and closed pull requests"}[prWant]
-		if lp.Title == "" {
+		if p.ListTitle == "" {
 			http.NotFound(w, r)
 			return
 		}
-		lp.Sub = "In tracked repositories, newest first."
-		lp.Empty = "None yet."
+		p.ListSub = "In tracked repositories, newest first."
+		p.ListEmpty = "None yet."
 	case stage != "":
 		known := false
 		for _, c := range p.Pipeline.Counts {
@@ -86,19 +73,19 @@ func (h *Handler) serveList(w http.ResponseWriter, r *http.Request) {
 		}
 		for _, rw := range p.Rows {
 			if rw.InPipeline && rw.Stage == stage {
-				lp.Repos = append(lp.Repos, rw)
+				p.ListRepos = append(p.ListRepos, rw)
 			}
 		}
-		lp.Title = "Repositories at " + stage
-		lp.Sub = "Where your pipeline command says each repository is now."
-		lp.Empty = "No repository is at this stage."
+		p.ListTitle = "Repositories at " + stage
+		p.ListSub = "Where your pipeline command says each repository is now."
+		p.ListEmpty = "No repository is at this stage."
 	default:
 		http.NotFound(w, r)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
-	if err := tmpl.ExecuteTemplate(w, "listpage", lp); err != nil {
+	if err := tmpl.ExecuteTemplate(w, "listpage", p); err != nil {
 		log.Printf("dashboard: render list: %v", err)
 	}
 }

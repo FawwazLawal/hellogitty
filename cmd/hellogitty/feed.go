@@ -175,6 +175,32 @@ func (s source) RestoreCell(key string) error { return s.st.UnackPrefix("c:" + k
 // ForgetCleared drops cleared items that no longer light their indicator.
 func (s source) ForgetCleared(ids []string) error { return s.st.Unack(ids...) }
 
+// DismissedWork returns the keys of work items you dismissed from the dashboard.
+func (s source) DismissedWork() map[string]bool {
+	acked, err := s.st.Acked()
+	if err != nil {
+		log.Printf("dismiss: %v", err)
+		return nil
+	}
+	out := map[string]bool{}
+	for id := range acked {
+		if strings.HasPrefix(id, "d:") {
+			out[strings.TrimPrefix(id, "d:")] = true
+		}
+	}
+	return out
+}
+
+// DismissWork hides a work item from the dashboard; the /work page still shows it.
+func (s source) DismissWork(key string) error {
+	return s.st.Ack(dashboard.DismissedWorkID(key), time.Now().UTC())
+}
+
+// RestoreWork brings a dismissed item back to the dashboard.
+func (s source) RestoreWork(key string) error {
+	return s.st.Unack(dashboard.DismissedWorkID(key))
+}
+
 // trackedOnly drops issues from repositories you no longer track; the database keeps their history.
 func (s source) trackedOnly(issues []store.RecentIssue) []store.RecentIssue {
 	targets := s.p.Status().Targets

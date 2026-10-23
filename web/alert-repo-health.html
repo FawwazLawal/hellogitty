@@ -1,0 +1,77 @@
+{{define "alert-repo-health"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>{{.AlertTitle}} · HelloGitty</title>
+{{template "theme-head"}}
+<style>
+{{template "base-css"}}
+{{template "header-css"}}
+  .cwrap { max-width: 980px; margin: 0 auto; padding: 18px 20px 40px; }
+  .sub { margin: 0 0 18px; color: var(--dim); }
+  .overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 0 0 24px; }
+  .ocard { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; text-align: center; }
+  .ocard .ov { font: 700 28px var(--mono); font-variant-numeric: tabular-nums; display: block; }
+  .ocard .ol { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .ocard .ov.zero { color: var(--dim); }
+  .section { margin: 0 0 28px; }
+  .section h2 { margin: 0 0 10px; font-size: 15px; font-weight: 650; border-left: 3px solid var(--head-accent); padding-left: 10px; }
+  .rlist { list-style: none; padding: 0; margin: 0; }
+  .rlist li { display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid var(--rule);
+    transition: background .1s; }
+  .rlist li:hover { background: var(--raised); }
+  .rlist .name { font-size: 14px; font-weight: 550; flex: 1; }
+  .rlist .name a { color: var(--text); text-decoration: none; }
+  .rlist .name a:hover { text-decoration: underline; }
+  .rlist .health { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; }
+  .rlist .health.dormant { background: #fef2f2; color: #dc2626; }
+  .rlist .health.slow { background: #fffbeb; color: #b45309; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .rlist .health.dormant { background: #450a0a33; color: #f87171; }
+    :root:not([data-theme="light"]) .rlist .health.slow { background: #451a0333; color: #fbbf24; }
+  }
+  :root[data-theme="dark"] .rlist .health.dormant { background: #450a0a33; color: #f87171; }
+  :root[data-theme="dark"] .rlist .health.slow { background: #451a0333; color: #fbbf24; }
+  .rlist .stats { font-size: 12px; color: var(--dim); display: flex; gap: 12px; }
+  .rlist .age { font-size: 12px; color: var(--dim); white-space: nowrap; }
+  .nodata { color: var(--dim); padding: 20px; text-align: center; }
+</style>
+</head>
+<body>
+{{template "site-header" .}}
+<div class="cwrap">
+  <p class="sub">{{.AlertDesc}}</p>
+  <div class="overview">
+    <div class="ocard"><span class="ov">{{len .HealthRepos}}</span><span class="ol">{{.AlertTitle}}</span></div>
+    <div class="ocard"><span class="ov">{{.RepoCount}}</span><span class="ol">Total tracked</span></div>
+  </div>
+
+  {{if .HealthRepos}}
+  <div class="section">
+    <h2>Repositories</h2>
+    <ul class="rlist">{{range .HealthRepos}}
+      <li>
+        <div class="name"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Owner}}/{{.Name}}</a></div>
+        <span class="health {{lower .Health}}">{{.Health}}</span>
+        <div class="stats">
+          <span>{{.Open}} open</span>
+          <span>{{.GFI}} GFI</span>
+        </div>
+        {{if .AgeKnown}}<span class="age">Last commit: {{.AgeDays}}d ago</span>{{end}}
+      </li>
+    {{end}}</ul>
+  </div>
+  {{else}}
+  <p class="nodata">No repositories in this state.</p>
+  {{end}}
+</div>
+<script>
+(function () {
+  {{template "theme-js"}}
+  {{template "nav-active-js"}}
+})();
+</script>
+</body>
+</html>{{end}}

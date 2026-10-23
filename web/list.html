@@ -4,16 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>{{.Title}} · HelloGitty</title>
+<title>{{.ListTitle}} · HelloGitty</title>
 {{template "theme-head"}}
 <style>
 {{template "base-css"}}
-  /* A Pipeline number, opened: the same rows the dashboard would show, on a page of their own. */
-  .lbar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 20px;
-    background: var(--panel); border-bottom: 1px solid var(--rule); }
-  .lbar h1 { margin: 0; font-size: 17px; font-weight: 650; }
-  .back { font-size: 13px; color: var(--dim); }
-  .lbar .theme { margin-left: auto; }
+{{template "header-css"}}
   .lwrap { max-width: 980px; margin: 0 auto; padding: 18px 20px 40px; }
   .sub { margin: 0 0 14px; color: var(--dim); }
   .jump { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 18px; padding: 0; list-style: none; }
@@ -43,31 +38,27 @@
 </style>
 </head>
 <body>
-<header class="lbar">
-  <a class="back" href="/">Dashboard</a>
-  <h1>{{.Title}}</h1>
-  <span class="lbl">{{.Version}}</span>
-  <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
-</header>
+{{template "site-header" .}}
 <main class="lwrap">
-  <p class="sub">{{.Sub}}</p>
-  <ul class="jump" aria-label="Other lists">{{range .Links}}<li><a href="{{.URL}}"{{if .Current}} aria-current="page"{{end}}>{{.Label}} <b>{{.Count}}</b></a></li>{{end}}</ul>
-  {{if .PRs}}
+  <p class="sub">{{.ListSub}}</p>
+  <ul class="jump" aria-label="Other lists">{{range .ListLinks}}<li><a href="{{.URL}}"{{if .Current}} aria-current="page"{{end}}>{{.Label}} <b>{{.Count}}</b></a></li>{{end}}</ul>
+  {{if .ListPRs}}
   <table class="ltable">
     <thead><tr><th>State</th><th>Pull request</th><th class="opt">Opened</th></tr></thead>
-    <tbody>{{range .PRs}}<tr><td><span class="tag {{.State}}">{{.State}}</span></td><td><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a><br><span class="own">{{.Repo}} #{{.Number}}</span>{{if .NotesURL}} · <a href="{{.NotesURL}}" target="_blank">{{$.Labels.Notes}}</a>{{end}}</td><td class="num opt">{{.Opened}}</td></tr>{{end}}</tbody>
+    <tbody>{{range .ListPRs}}<tr><td><span class="tag {{.State}}">{{.State}}</span></td><td><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a><br><span class="own">{{.Repo}} #{{.Number}}</span>{{if .NotesURL}} · <a href="{{.NotesURL}}" target="_blank">{{$.Labels.Notes}}</a>{{end}}</td><td class="num opt">{{.Opened}}</td></tr>{{end}}</tbody>
   </table>
-  {{else if .Repos}}
+  {{else if .ListRepos}}
   <table class="ltable">
     <thead><tr><th>Repository</th><th>{{.Labels.Status}}</th><th class="num">Open</th><th class="num opt">Good first</th><th class="num opt">Last commit</th><th class="num opt">Turned down</th></tr></thead>
-    <tbody>{{range .Repos}}<tr><td><span class="light {{.Health}}" role="img" aria-label="{{lower .Health}}"></span><a href="{{.URL}}" target="_blank" rel="noopener"><span class="own">{{.Owner}}/</span>{{.Name}}</a>{{if .NotesURL}} · <a href="{{.NotesURL}}" target="_blank">{{$.Labels.Notes}}</a>{{end}}</td>
+    <tbody>{{range .ListRepos}}<tr><td><span class="light {{.Health}}" role="img" aria-label="{{lower .Health}}"></span><a href="{{.URL}}" target="_blank" rel="noopener"><span class="own">{{.Owner}}/</span>{{.Name}}</a>{{if .NotesURL}} · <a href="{{.NotesURL}}" target="_blank">{{$.Labels.Notes}}</a>{{end}}</td>
       <td>{{if .Label}}{{.Label}}{{else}}<span class="own">—</span>{{end}}</td><td class="num">{{.Open}}</td><td class="num opt">{{.GFI}}</td><td class="num opt">{{if .AgeKnown}}{{.AgeDays}} d{{else}}—{{end}}</td><td class="num opt">{{.DeniedTotal}}</td></tr>{{end}}</tbody>
   </table>
-  {{else}}<p class="empty">{{.Empty}}</p>{{end}}
+  {{else}}<p class="empty">{{.ListEmpty}}</p>{{end}}
 </main>
 <script>
   (function () {
     {{template "theme-js"}}
+    {{template "nav-active-js"}}
   })();
 </script>
 </body>

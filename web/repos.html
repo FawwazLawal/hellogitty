@@ -8,11 +8,7 @@
 {{template "theme-head"}}
 <style>
 {{template "base-css"}}
-  .rbar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 20px;
-    background: var(--panel); border-bottom: 1px solid var(--rule); }
-  .rbar h1 { margin: 0; font-size: 17px; font-weight: 650; }
-  .back { font-size: 13px; color: var(--dim); }
-  .rbar .theme { margin-left: auto; }
+{{template "header-css"}}
   .rwrap { max-width: 1200px; margin: 0 auto; padding: 18px 20px 40px; }
   .sub { margin: 0 0 14px; color: var(--dim); }
   .rtools { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 0 0 14px; align-items: center; }
@@ -54,12 +50,7 @@
 </style>
 </head>
 <body>
-<header class="rbar">
-  <a class="back" href="/">Dashboard</a>
-  <h1>Tracked repositories</h1>
-  <span class="lbl">{{len .Rows}} repos</span>
-  <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
-</header>
+{{template "site-header" .}}
 <main class="rwrap">
   <p class="sub">All repositories HelloGitty tracks, with health, issue counts and pipeline stage.</p>
   <div class="rtools">
@@ -95,6 +86,7 @@
 <script>
 (function () {
   {{template "theme-js"}}
+  {{template "nav-active-js"}}
   var q = document.getElementById("rq"), health = document.getElementById("rf-health"),
       sortSel = document.getElementById("rf-sort"), grid = document.getElementById("rgrid"),
       count = document.getElementById("rcount");

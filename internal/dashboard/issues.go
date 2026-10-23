@@ -24,21 +24,8 @@ const (
 	issueWindow   = 90 * 24 * time.Hour
 )
 
-type issuesPage struct {
-	Version  string
-	Token    string
-	CanWatch bool
-	Issues   []globalIssue
-	Total    int
-	Page     int
-	Pages    int
-	PrevPage int
-	NextPage int
-	HasPrev  bool
-	HasNext  bool
-	Window   int
-	Query    string
-}
+// issuesPage is no longer used; /issues now renders through the shared page struct so that
+// site-header has every field it needs.
 
 type globalIssue struct {
 	Number        int
@@ -111,6 +98,13 @@ func (h *Handler) serveIssues(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	p, err := h.build()
+	if err != nil {
+		log.Printf("dashboard: issues build: %v", err)
+		http.Error(w, "could not read data", http.StatusInternalServerError)
+		return
+	}
+
 	pg := 1
 	if v := r.URL.Query().Get("page"); v != "" {
 		if n, e := strconv.Atoi(v); e == nil && n > 0 {
@@ -139,22 +133,24 @@ func (h *Handler) serveIssues(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var keys map[string]bool
-	ip := issuesPage{
-		Version: h.Version, Token: h.token(), Total: total,
-		Page: pg, Pages: pages, Window: 90,
-		HasPrev: pg > 1, HasNext: pg < pages,
-		PrevPage: pg - 1, NextPage: pg + 1,
-		Query: q,
-	}
 	if ws, ok := h.Source.(WatchSource); ok {
-		ip.CanWatch = true
 		keys = ws.WatchedKeys()
 	}
-	ip.Issues = toGlobalIssues(items, h.now(), keys)
+
+	p.IssueTotal = total
+	p.IssuePg = pg
+	p.IssuePages = pages
+	p.IssueWindow = 90
+	p.IssueHasPrev = pg > 1
+	p.IssueHasNext = pg < pages
+	p.IssuePrevPage = pg - 1
+	p.IssueNextPage = pg + 1
+	p.IssueQuery = q
+	p.Issues = toGlobalIssues(items, h.now(), keys)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
-	if err := tmpl.ExecuteTemplate(w, "issuespage", ip); err != nil {
+	if err := tmpl.ExecuteTemplate(w, "issuespage", p); err != nil {
 		log.Printf("dashboard: render issues: %v", err)
 	}
 }

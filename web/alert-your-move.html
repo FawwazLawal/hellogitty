@@ -1,0 +1,124 @@
+{{define "alert-your-move"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Your move · HelloGitty</title>
+{{template "theme-head"}}
+<style>
+{{template "base-css"}}
+{{template "header-css"}}
+  .cwrap { max-width: 980px; margin: 0 auto; padding: 18px 20px 40px; }
+  .sub { margin: 0 0 18px; color: var(--dim); }
+  .overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 0 0 24px; }
+  .ocard { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; text-align: center; transition: border-color .12s; }
+  .ocard .ov { font: 700 28px var(--mono); font-variant-numeric: tabular-nums; display: block; }
+  .ocard .ol { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .ocard .ov.zero { color: var(--dim); }
+  .ocard.caution { border-color: var(--head-accent); }
+  .section { margin: 0 0 28px; }
+  .section h2 { margin: 0 0 10px; font-size: 15px; font-weight: 650; border-left: 3px solid var(--head-accent); padding-left: 10px; }
+  .ilist { list-style: none; padding: 0; margin: 0; }
+  .ilist li { display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--rule);
+    transition: background .1s; }
+  .ilist li:hover { background: var(--raised); }
+  .ilist .icon { flex-shrink: 0; width: 20px; height: 20px; color: var(--dim); margin-top: 2px; }
+  .ilist .icon svg { width: 100%; height: 100%; }
+  .ilist .body { flex: 1; min-width: 0; }
+  .ilist .title { font-size: 14px; font-weight: 550; }
+  .ilist .title a { color: var(--text); text-decoration: none; }
+  .ilist .title a:hover { text-decoration: underline; }
+  .ilist .meta { font-size: 12px; color: var(--dim); margin-top: 2px; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+  .ilist .meta .repo { font-weight: 500; }
+  .ilist .status { font-size: 12px; margin-top: 4px; }
+  .ilist .status .say { padding: 2px 8px; border-radius: 4px; background: var(--raised); }
+  .ilist .status .say.caution { color: #b45309; background: #fef3c7; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ilist .status .say.caution { color: #fbbf24; background: #451a0344; } }
+  :root[data-theme="dark"] .ilist .status .say.caution { color: #fbbf24; background: #451a0344; }
+  .ilist .quote { font-size: 12px; color: var(--dim); margin-top: 4px; border-left: 2px solid var(--rule); padding-left: 8px; font-style: italic; }
+  .ilist .when { font-size: 12px; color: var(--dim); white-space: nowrap; margin-top: 2px; }
+  .nodata { color: var(--dim); padding: 20px; text-align: center; }
+  .pill { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--raised); color: var(--dim); margin-left: 4px; }
+  .pill.pr { color: #6f42c1; } .pill.issue { color: #1a7f37; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pill.pr { color: #d2a8ff; } :root:not([data-theme="light"]) .pill.issue { color: #56d364; } }
+  :root[data-theme="dark"] .pill.pr { color: #d2a8ff; }
+  :root[data-theme="dark"] .pill.issue { color: #56d364; }
+  .label { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 10px; background: var(--rule); margin-left: 4px; }
+</style>
+</head>
+<body>
+{{template "site-header" .}}
+<div class="cwrap">
+  <p class="sub">Pull requests and issues waiting on you — things where the next action is yours.</p>
+  <div class="overview">
+    <div class="ocard caution"><span class="ov">{{.Work.YourMove}}</span><span class="ol">Total waiting on you</span></div>
+    <div class="ocard"><span class="ov{{if not .Work.You}} zero{{end}}">{{len .Work.You}}</span><span class="ol">Your PRs / issues</span></div>
+    <div class="ocard"><span class="ov{{if not .Work.InYou}} zero{{end}}">{{len .Work.InYou}}</span><span class="ol">Incoming (others' repos)</span></div>
+    <div class="ocard"><span class="ov{{if not .Work.ConvYou}} zero{{end}}">{{len .Work.ConvYou}}</span><span class="ol">Conversations</span></div>
+  </div>
+
+  {{if .Work.You}}
+  <div class="section">
+    <h2>Your pull requests and issues</h2>
+    <ul class="ilist">{{range .Work.You}}
+      <li>
+        <span class="icon"><svg viewBox="0 0 16 16"><use href="#i-{{if eq .Kind "PR"}}pr{{else}}issue{{end}}"/></svg></span>
+        <div class="body">
+          <div class="title"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a><span class="pill {{lower .Kind}}">{{.Kind}}</span></div>
+          <div class="meta"><span class="repo">{{.Repo}}</span><span>#{{.Number}}</span>{{if .Why}}<span>{{.Why}}</span>{{end}}</div>
+          <div class="status"><span class="say{{if .Level}} {{.Level}}{{end}}">{{.Status}}</span>{{range .Notes}} <span class="say">{{.Text}}</span>{{end}}</div>
+          {{if .Quote}}<div class="quote"><b>{{.QuoteBy}}:</b> {{.Quote}}</div>{{end}}
+        </div>
+        <span class="when" title="Since {{.AgoTitle}}">{{.Ago}}</span>
+      </li>
+    {{end}}</ul>
+  </div>
+  {{end}}
+
+  {{if .Work.InYou}}
+  <div class="section">
+    <h2>Incoming — in others' repositories</h2>
+    <ul class="ilist">{{range .Work.InYou}}
+      <li>
+        <span class="icon"><svg viewBox="0 0 16 16"><use href="#i-{{if eq .Kind "PR"}}pr{{else}}issue{{end}}"/></svg></span>
+        <div class="body">
+          <div class="title"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a><span class="pill {{lower .Kind}}">{{.Kind}}</span></div>
+          <div class="meta"><span class="repo">{{.Repo}}</span><span>#{{.Number}}</span>{{if .Why}}<span>{{.Why}}</span>{{end}}</div>
+          <div class="status"><span class="say{{if .Level}} {{.Level}}{{end}}">{{.Status}}</span>{{range .Notes}} <span class="say">{{.Text}}</span>{{end}}</div>
+          {{if .Quote}}<div class="quote"><b>{{.QuoteBy}}:</b> {{.Quote}}</div>{{end}}
+        </div>
+        <span class="when" title="Since {{.AgoTitle}}">{{.Ago}}</span>
+      </li>
+    {{end}}</ul>
+  </div>
+  {{end}}
+
+  {{if .Work.ConvYou}}
+  <div class="section">
+    <h2>Conversations waiting on you</h2>
+    <ul class="ilist">{{range .Work.ConvYou}}
+      <li>
+        <span class="icon"><svg viewBox="0 0 16 16"><use href="#i-{{if eq .Kind "PR"}}pr{{else}}issue{{end}}"/></svg></span>
+        <div class="body">
+          <div class="title"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a><span class="pill {{lower .Kind}}">{{.Kind}}</span></div>
+          <div class="meta"><span class="repo">{{.Repo}}</span><span>#{{.Number}}</span>{{if .Why}}<span>{{.Why}}</span>{{end}}</div>
+          <div class="status"><span class="say{{if .Level}} {{.Level}}{{end}}">{{.Status}}</span>{{range .Notes}} <span class="say">{{.Text}}</span>{{end}}</div>
+          {{if .Quote}}<div class="quote"><b>{{.QuoteBy}}:</b> {{.Quote}}</div>{{end}}
+        </div>
+        <span class="when" title="Since {{.AgoTitle}}">{{.Ago}}</span>
+      </li>
+    {{end}}</ul>
+  </div>
+  {{end}}
+
+  {{if not .Work.YourMove}}<p class="nodata">Nothing is waiting on you right now.</p>{{end}}
+</div>
+<script>
+(function () {
+  {{template "theme-js"}}
+  {{template "nav-active-js"}}
+})();
+</script>
+</body>
+</html>{{end}}

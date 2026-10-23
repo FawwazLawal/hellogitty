@@ -8,11 +8,7 @@
 {{template "theme-head"}}
 <style>
 {{template "base-css"}}
-  .ybar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 20px;
-    background: var(--panel); border-bottom: 1px solid var(--rule); }
-  .ybar h1 { margin: 0; font-size: 17px; font-weight: 650; }
-  .back { font-size: 13px; color: var(--dim); }
-  .ybar .theme { margin-left: auto; }
+{{template "header-css"}}
   .ywrap { max-width: 980px; margin: 0 auto; padding: 18px 20px 40px; }
   .sub { margin: 0 0 18px; color: var(--dim); }
   .overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 0 0 24px; }
@@ -60,12 +56,7 @@
 </style>
 </head>
 <body>
-<header class="ybar">
-  <a class="back" href="/">Dashboard</a>
-  <h1>Your repositories</h1>
-  <span class="lbl">{{.Version}}</span>
-  <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
-</header>
+{{template "site-header" .}}
 <main class="ywrap">
   <p class="sub">Your pull requests, CI runs, releases and other activity in your own repositories.</p>
 
@@ -125,6 +116,7 @@
 <script>
 (function () {
   {{template "theme-js"}}
+  {{template "nav-active-js"}}
   var btns = document.querySelectorAll("[data-yf]"), items = document.querySelectorAll("#ylist .yitem"),
       q = document.getElementById("yq");
   if (!q) return;

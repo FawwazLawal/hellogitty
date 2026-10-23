@@ -1,0 +1,80 @@
+{{define "alert-watched-claimed"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Watched issue claimed · HelloGitty</title>
+{{template "theme-head"}}
+<style>
+{{template "base-css"}}
+{{template "header-css"}}
+  .cwrap { max-width: 980px; margin: 0 auto; padding: 18px 20px 40px; }
+  .sub { margin: 0 0 18px; color: var(--dim); }
+  .overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 0 0 24px; }
+  .ocard { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; text-align: center; }
+  .ocard .ov { font: 700 28px var(--mono); font-variant-numeric: tabular-nums; display: block; }
+  .ocard .ol { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .ocard .ov.zero { color: var(--dim); }
+  .ocard.warn { border-color: #dc2626; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ocard.warn { border-color: #f87171; } }
+  :root[data-theme="dark"] .ocard.warn { border-color: #f87171; }
+  .section { margin: 0 0 28px; }
+  .section h2 { margin: 0 0 10px; font-size: 15px; font-weight: 650; border-left: 3px solid var(--head-accent); padding-left: 10px; }
+  .wlist { list-style: none; padding: 0; margin: 0; }
+  .wlist li { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-bottom: 1px solid var(--rule);
+    transition: background .1s; }
+  .wlist li:hover { background: var(--raised); }
+  .wlist .body { flex: 1; min-width: 0; }
+  .wlist .title a { font-size: 14px; font-weight: 550; color: var(--text); text-decoration: none; }
+  .wlist .title a:hover { text-decoration: underline; }
+  .wlist .meta { font-size: 12px; color: var(--dim); margin-top: 3px; }
+  .wlist .claim { font-size: 12px; margin-top: 4px; color: #dc2626; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .wlist .claim { color: #f87171; } }
+  :root[data-theme="dark"] .wlist .claim { color: #f87171; }
+  .wlist .claim a { color: inherit; }
+  .wlist .when { font-size: 12px; color: var(--dim); white-space: nowrap; }
+  .nodata { color: var(--dim); padding: 20px; text-align: center; }
+  .badge { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 4px; font-weight: 600; }
+  .badge.claimed { background: #fee2e2; color: #dc2626; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .badge.claimed { background: #450a0a44; color: #f87171; } }
+  :root[data-theme="dark"] .badge.claimed { background: #450a0a44; color: #f87171; }
+  .hint { font-size: 12px; color: var(--dim); margin: 12px 0 0; }
+</style>
+</head>
+<body>
+{{template "site-header" .}}
+<div class="cwrap">
+  <p class="sub">Issues you are watching that someone else has claimed — they may be working on it already.</p>
+  <div class="overview">
+    <div class="ocard warn"><span class="ov">{{.ClaimedCount}}</span><span class="ol">Claimed</span></div>
+    <div class="ocard"><span class="ov">{{len .Watch}}</span><span class="ol">Total watched</span></div>
+  </div>
+
+  {{if .ClaimedWatch}}
+  <div class="section">
+    <h2>Claimed issues</h2>
+    <ul class="wlist">{{range .ClaimedWatch}}
+      <li>
+        <div class="body">
+          <div class="title"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Repo}}#{{.Number}} {{.Title}}</a> <span class="badge claimed">Claimed</span></div>
+          <div class="meta">{{.Repo}} · Issue #{{.Number}}</div>
+          {{if .ClaimDetail}}<div class="claim">{{if isURL .ClaimDetail}}<a href="{{.ClaimDetail}}" target="_blank" rel="noopener">See the claim →</a>{{else}}{{.ClaimDetail}}{{end}}</div>{{end}}
+        </div>
+        <span class="when">{{if .ChangedAt}}{{utc .ChangedAt}}{{end}}</span>
+      </li>
+    {{end}}</ul>
+    <p class="hint">Mark a claimed issue as Seen on the dashboard to quiet its alert until something changes.</p>
+  </div>
+  {{else}}
+  <p class="nodata">No watched issues have been claimed.</p>
+  {{end}}
+</div>
+<script>
+(function () {
+  {{template "theme-js"}}
+  {{template "nav-active-js"}}
+})();
+</script>
+</body>
+</html>{{end}}
