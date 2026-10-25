@@ -9,6 +9,7 @@
 <style>
 {{template "base-css"}}
 {{template "header-css"}}
+{{template "sort-css"}}
   .iwrap { max-width: 980px; margin: 0 auto; padding: 18px 20px 40px; }
   .sub { margin: 0 0 14px; color: var(--dim); }
   .isearch { position: relative; margin: 0 0 14px; }
@@ -26,17 +27,18 @@
     font: 14px var(--sans); background: var(--panel); color: var(--text); cursor: pointer; }
   .itable { width: 100%; table-layout: fixed; border-collapse: collapse; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
   .itable th, .itable td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
-  .itable th { font-size: 12px; font-weight: 600; color: var(--dim); background: var(--raised); }
+  .itable th { font-size: 12px; font-weight: 600; color: var(--dim); background: var(--raised); letter-spacing: 0.03em; text-transform: uppercase; }
   .itable .cnum { width: 60px; }
   .itable .clbl { width: 160px; }
   .itable .copn { width: 70px; }
   .itable .ceye { width: 40px; }
   .itable tr:last-child td { border-bottom: 0; }
+  .itable tbody tr:hover { background: var(--raised); }
   .itable td.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .itable td:nth-child(2) { overflow-wrap: break-word; word-break: break-word; }
   .itable td.opt, .itable th.opt { overflow: hidden; }
   .itable a { color: var(--text); }
-  .itable .rp { color: var(--dim); font-size: 12.5px; }
+  .itable .rp { color: var(--dim); font-size: 12px; }
   .tag { display: inline-block; font-size: 12px; padding: 1px 7px; border-radius: 4px; border: 1px solid var(--rule-hi); color: var(--dim); white-space: nowrap; margin: 1px 2px; }
   .tag.taken { color: var(--caution); border-color: color-mix(in srgb, var(--caution) 50%, transparent); }
   .empty { color: var(--dim); padding: 18px 0; }
@@ -74,8 +76,8 @@
   <p class="count">{{if .IssueQuery}}<span id="shown">{{len .Issues}}</span> of {{.IssueTotal}} results for "{{.IssueQuery}}"{{else}}<span id="shown">{{len .Issues}}</span> of {{.IssueTotal}} open issues{{end}} (page {{.IssuePg}} of {{.IssuePages}})</p>
   {{if .Issues}}
   <table class="itable">
-    <thead><tr><th class="cnum">#</th><th>Issue</th><th class="opt clbl">Labels</th><th class="opt copn">Opened</th>{{if .CanWatch}}<th class="ceye"></th>{{end}}</tr></thead>
-    <tbody id="issue-rows">{{range .Issues}}<tr data-s="{{.Search}}" data-repo="{{.Repo}}"><td class="num">{{.Number}}</td><td><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a><br><span class="rp">{{.Repo}}</span>{{if .Taken}} <span class="tag taken">{{.Taken}}</span>{{end}}</td><td class="opt">{{range .Labels}}<span class="tag">{{.}}</span>{{end}}</td><td class="num opt" title="{{.AgoTitle}}">{{.Ago}}</td>{{if $.CanWatch}}<td>{{eye .K .Watched}}</td>{{end}}</tr>{{end}}</tbody>
+    <thead><tr><th class="cnum" data-sort="num">#</th><th data-sort="text">Issue</th><th class="opt clbl">Labels</th><th class="opt copn" data-sort="text">Opened</th>{{if .CanWatch}}<th class="ceye"></th>{{end}}</tr></thead>
+    <tbody id="issue-rows">{{range .Issues}}<tr data-s="{{.Search}}" data-repo="{{.Repo}}"><td class="num">{{.Number}}</td><td><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a><br><span class="rp">{{.Repo}}</span>{{if .Taken}} <span class="tag taken">{{.Taken}}</span>{{end}}</td><td class="opt">{{range .Labels}}<span class="tag">{{.}}</span>{{end}}</td><td class="num opt" title="{{.AgoTitle}}" data-sv="{{.AgoTitle}}">{{.Ago}}</td>{{if $.CanWatch}}<td>{{eye .K .Watched}}</td>{{end}}</tr>{{end}}</tbody>
   </table>
   <nav class="pager" aria-label="Pagination">
     {{if .IssueHasPrev}}<a href="/issues?page={{.IssuePrevPage}}{{if .IssueQuery}}&amp;q={{.IssueQuery}}{{end}}">&larr; Previous</a>{{else}}<span class="off">&larr; Previous</span>{{end}}
@@ -88,6 +90,8 @@
   (function () {
     {{template "theme-js"}}
     {{template "nav-active-js"}}
+    {{template "sort-js"}}
+    initSort(".itable");
 
     var q = document.getElementById("iq");
     var tbody = document.getElementById("issue-rows");

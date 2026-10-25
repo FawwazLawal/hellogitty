@@ -9,18 +9,20 @@
 <style>
 {{template "base-css"}}
 {{template "header-css"}}
+{{template "sort-css"}}
   .lwrap { max-width: 980px; margin: 0 auto; padding: 18px 20px 40px; }
   .sub { margin: 0 0 14px; color: var(--dim); }
   .jump { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 18px; padding: 0; list-style: none; }
   .jump a { display: inline-flex; gap: 6px; align-items: baseline; padding: 4px 9px; border: 1px solid var(--rule-hi); border-radius: 6px;
-    font-size: 12.5px; color: var(--dim); text-decoration: none; }
+    font-size: 12px; color: var(--dim); text-decoration: none; }
   .jump a:hover { color: var(--text); background: var(--raised); }
   .jump a[aria-current="page"] { color: var(--text); border-color: var(--text); }
-  .jump b { font: 600 12.5px var(--mono); color: var(--text); }
+  .jump b { font: 600 13px var(--mono); color: var(--text); }
   .ltable { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
   .ltable th, .ltable td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
-  .ltable th { font-size: 12px; font-weight: 600; color: var(--dim); background: var(--head); }
+  .ltable th { font-size: 12px; font-weight: 600; color: var(--dim); background: var(--head); letter-spacing: 0.03em; text-transform: uppercase; }
   .ltable tr:last-child td { border-bottom: 0; }
+  .ltable tbody tr:hover { background: var(--raised); }
   .ltable td.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .ltable a { color: var(--text); }
   .ltable .own { color: var(--dim); }
@@ -44,14 +46,14 @@
   <ul class="jump" aria-label="Other lists">{{range .ListLinks}}<li><a href="{{.URL}}"{{if .Current}} aria-current="page"{{end}}>{{.Label}} <b>{{.Count}}</b></a></li>{{end}}</ul>
   {{if .ListPRs}}
   <table class="ltable">
-    <thead><tr><th>State</th><th>Pull request</th><th class="opt">Opened</th></tr></thead>
+    <thead><tr><th data-sort="text">State</th><th data-sort="text">Pull request</th><th class="opt" data-sort="text">Opened</th></tr></thead>
     <tbody>{{range .ListPRs}}<tr><td><span class="tag {{.State}}">{{.State}}</span></td><td><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a><br><span class="own">{{.Repo}} #{{.Number}}</span>{{if .NotesURL}} · <a href="{{.NotesURL}}" target="_blank">{{$.Labels.Notes}}</a>{{end}}</td><td class="num opt">{{.Opened}}</td></tr>{{end}}</tbody>
   </table>
   {{else if .ListRepos}}
   <table class="ltable">
-    <thead><tr><th>Repository</th><th>{{.Labels.Status}}</th><th class="num">Open</th><th class="num opt">Good first</th><th class="num opt">Last commit</th><th class="num opt">Turned down</th></tr></thead>
+    <thead><tr><th data-sort="text">Repository</th><th data-sort="text">{{.Labels.Status}}</th><th class="num" data-sort="num">Open</th><th class="num opt" data-sort="num">Good first</th><th class="num opt" data-sort="num">Last commit</th><th class="num opt" data-sort="num">Turned down</th></tr></thead>
     <tbody>{{range .ListRepos}}<tr><td><span class="light {{.Health}}" role="img" aria-label="{{lower .Health}}"></span><a href="{{.URL}}" target="_blank" rel="noopener"><span class="own">{{.Owner}}/</span>{{.Name}}</a>{{if .NotesURL}} · <a href="{{.NotesURL}}" target="_blank">{{$.Labels.Notes}}</a>{{end}}</td>
-      <td>{{if .Label}}{{.Label}}{{else}}<span class="own">—</span>{{end}}</td><td class="num">{{.Open}}</td><td class="num opt">{{.GFI}}</td><td class="num opt">{{if .AgeKnown}}{{.AgeDays}} d{{else}}—{{end}}</td><td class="num opt">{{.DeniedTotal}}</td></tr>{{end}}</tbody>
+      <td>{{if .Label}}{{.Label}}{{else}}<span class="own">—</span>{{end}}</td><td class="num">{{.Open}}</td><td class="num opt">{{.GFI}}</td><td class="num opt" data-sv="{{if .AgeKnown}}{{.AgeDays}}{{else}}99999{{end}}">{{if .AgeKnown}}{{.AgeDays}} d{{else}}—{{end}}</td><td class="num opt">{{.DeniedTotal}}</td></tr>{{end}}</tbody>
   </table>
   {{else}}<p class="empty">{{.ListEmpty}}</p>{{end}}
 </main>
@@ -59,6 +61,8 @@
   (function () {
     {{template "theme-js"}}
     {{template "nav-active-js"}}
+    {{template "sort-js"}}
+    initSort(".ltable");
   })();
 </script>
 </body>
