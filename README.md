@@ -359,4 +359,5 @@ always gives you the newest stable build. See [VERSIONING.md](VERSIONING.md) and
 
 ## License
 
-[MIT](LICENSE)
+[Business Source License 1.1](LICENSE) — free for non-commercial use. See
+[COMMERCIAL.md](COMMERCIAL.md) for commercial licensing.
