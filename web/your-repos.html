@@ -12,12 +12,17 @@
   .ywrap { max-width: 980px; margin: 0 auto; padding: 18px 20px 40px; }
   .sub { margin: 0 0 18px; color: var(--dim); }
   .overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 0 0 24px; }
-  .ocard { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; text-align: center; transition: border-color .12s; }
+  .ocard { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; text-align: center; transition: border-color .12s; text-decoration: none; color: inherit; }
+  .ocard:hover { border-color: var(--head-accent); background: var(--raised); }
+  .sort-btn { font: 12px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi); border-radius: 6px;
+    padding: 6px 10px; cursor: pointer; margin-left: auto; white-space: nowrap; }
+  .sort-btn:hover { color: var(--text); background: var(--raised); }
+  .sort-btn::after { content: " ↓"; }
   .ocard .ov { font: 700 28px var(--mono); font-variant-numeric: tabular-nums; display: block; }
   .ocard .ol { font-size: 12px; color: var(--dim); margin-top: 2px; }
   .ocard .ov.zero { color: var(--dim); }
   .section { margin: 0 0 28px; }
-  .section h2 { margin: 0 0 10px; font-size: 15px; font-weight: 650; border-left: 3px solid var(--head-accent); padding-left: 10px; }
+  .section h2 { margin: 0 0 10px; font-size: 14px; font-weight: 650; letter-spacing: 0.02em; border-left: 3px solid var(--head-accent); padding-left: 10px; }
   .yfilter { display: flex; gap: 6px; margin: 0 0 14px; }
   .yfilter button { font: 13px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
   .yfilter button:hover { color: var(--text); background: var(--raised); }
@@ -61,8 +66,8 @@
   <p class="sub">Your pull requests, CI runs, releases and other activity in your own repositories.</p>
 
   <div class="overview">
-    <div class="ocard"><span class="ov{{if not .Pipeline.Open}} zero{{end}}">{{.Pipeline.Open}}</span><span class="ol">Open PRs</span></div>
-    <div class="ocard"><span class="ov{{if not .Pipeline.Merged}} zero{{end}}">{{.Pipeline.Merged}}</span><span class="ol">Merged</span></div>
+    <a class="ocard" href="/list?prs=open"><span class="ov{{if not .Pipeline.Open}} zero{{end}}">{{.Pipeline.Open}}</span><span class="ol">Open PRs</span></a>
+    <a class="ocard" href="/list?prs=merged"><span class="ov{{if not .Pipeline.Merged}} zero{{end}}">{{.Pipeline.Merged}}</span><span class="ol">Merged</span></a>
     <div class="ocard"><span class="ov{{if not .ReposNew}} zero{{end}}">{{.ReposNew}}</span><span class="ol">Unread</span></div>
   </div>
 
@@ -74,6 +79,7 @@
       <button type="button" data-yf="PR" aria-pressed="false">Pull requests</button>
       <button type="button" data-yf="Issue" aria-pressed="false">Issues</button>
       <input type="search" class="search" id="yq" placeholder="Search…" autocomplete="off">
+      <button type="button" class="sort-btn" id="ysort">Newest</button>
     </div>
     <ul class="ylist" id="ylist">
       {{range .Work.You}}<li class="yitem" data-kind="{{.Kind}}" data-search="{{.Search}}">
@@ -137,6 +143,24 @@
     });
   });
   q.addEventListener("input", run);
+
+  var sortBtn = document.getElementById("ysort"), asc = false;
+  if (sortBtn) {
+    sortBtn.addEventListener("click", function () {
+      asc = !asc;
+      sortBtn.textContent = asc ? "Oldest" : "Newest";
+      document.querySelectorAll(".ylist").forEach(function (list) {
+        var arr = Array.from(list.children);
+        arr.sort(function (a, b) {
+          var ta = a.querySelector(".yago"), tb = b.querySelector(".yago");
+          var va = ta ? ta.title : "", vb = tb ? tb.title : "";
+          var cmp = va.localeCompare(vb);
+          return asc ? cmp : -cmp;
+        });
+        arr.forEach(function (li) { list.appendChild(li); });
+      });
+    });
+  }
 })();
 </script>
 </body>

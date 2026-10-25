@@ -93,7 +93,7 @@ func TestDashboardEmptyPipelineAndAlarms(t *testing.T) {
 		t.Fatalf("status %d\n%s", code, html)
 	}
 	for _, want := range []string{
-		`class="cell warn lit wide"`,                            // watched issue claimed, lit
+		`class="cell warn lit wide linked"`,                      // watched issue claimed, lit and clickable
 		`data-v="cw-watch-claimed">1<`,                          // with its count
 		`acme/rocket#1738`,                                      // named in the cell detail
 		`data-v="cw-repo-dormant">1<`,                           // dormant counted

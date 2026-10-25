@@ -12,12 +12,18 @@
   .wwrap { max-width: 980px; margin: 0 auto; padding: 18px 20px 40px; }
   .sub { margin: 0 0 18px; color: var(--dim); }
   .overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 0 0 24px; }
-  .ocard { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; text-align: center; transition: border-color .12s; }
+  .ocard { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; text-align: center; transition: border-color .12s; cursor: pointer; text-decoration: none; color: inherit; }
+  .ocard:hover { border-color: var(--head-accent); background: var(--raised); }
+  .ocard[aria-pressed="true"] { border-color: var(--head-accent); background: var(--raised); }
+  .sort-btn { font: 12px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi); border-radius: 6px;
+    padding: 6px 10px; cursor: pointer; margin-left: auto; white-space: nowrap; }
+  .sort-btn:hover { color: var(--text); background: var(--raised); }
+  .sort-btn::after { content: " ↓"; }
   .ocard .ov { font: 700 28px var(--mono); font-variant-numeric: tabular-nums; display: block; }
   .ocard .ol { font-size: 12px; color: var(--dim); margin-top: 2px; }
   .ocard .ov.zero { color: var(--dim); }
   .section { margin: 0 0 28px; }
-  .section h2 { margin: 0 0 10px; font-size: 15px; font-weight: 650; border-left: 3px solid var(--head-accent); padding-left: 10px; }
+  .section h2 { margin: 0 0 10px; font-size: 14px; font-weight: 650; letter-spacing: 0.02em; border-left: 3px solid var(--head-accent); padding-left: 10px; }
   .wfilter { display: flex; gap: 6px; margin: 0 0 14px; }
   .wfilter button { font: 13px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
   .wfilter button:hover { color: var(--text); background: var(--raised); }
@@ -58,10 +64,10 @@
   <p class="sub">All your pull requests and issues across GitHub, organized by status.</p>
 
   <div class="overview">
-    <div class="ocard"><span class="ov{{if not .Work.You}} zero{{end}}">{{len .Work.You}}</span><span class="ol">Your move</span></div>
-    <div class="ocard"><span class="ov{{if not .Work.Them}} zero{{end}}">{{len .Work.Them}}</span><span class="ol">Waiting</span></div>
-    <div class="ocard"><span class="ov{{if not .Work.Done}} zero{{end}}">{{len .Work.Done}}</span><span class="ol">Finished</span></div>
-    <div class="ocard"><span class="ov{{if not .DismissedWork}} zero{{end}}">{{len .DismissedWork}}</span><span class="ol">Dismissed</span></div>
+    <div class="ocard" data-activate="you" role="button" tabindex="0"><span class="ov{{if not .Work.You}} zero{{end}}">{{len .Work.You}}</span><span class="ol">Your move</span></div>
+    <div class="ocard" data-activate="them" role="button" tabindex="0"><span class="ov{{if not .Work.Them}} zero{{end}}">{{len .Work.Them}}</span><span class="ol">Waiting</span></div>
+    <div class="ocard" data-activate="done" role="button" tabindex="0"><span class="ov{{if not .Work.Done}} zero{{end}}">{{len .Work.Done}}</span><span class="ol">Finished</span></div>
+    <div class="ocard" data-activate="dismissed" role="button" tabindex="0"><span class="ov{{if not .DismissedWork}} zero{{end}}">{{len .DismissedWork}}</span><span class="ol">Dismissed</span></div>
   </div>
 
   <div class="wfilter" role="group" aria-label="Filter work">
@@ -71,6 +77,7 @@
     <button type="button" data-wf="done" aria-pressed="false">Finished</button>
     <button type="button" data-wf="dismissed" aria-pressed="false">Dismissed</button>
     <input type="search" class="search" id="wq" placeholder="Search…" autocomplete="off">
+    <button type="button" class="sort-btn" id="wsort">Newest</button>
   </div>
 
   {{if .Work.You}}
@@ -133,23 +140,59 @@
   {{template "nav-active-js"}}
   var btns = document.querySelectorAll("[data-wf]"), items = document.querySelectorAll(".witem"),
       q = document.getElementById("wq");
-  function run() {
-    var f = "all", words = (q ? q.value : "").toLowerCase().split(/\s+/).filter(Boolean);
+  function activeFilter() {
+    var f = "all";
     btns.forEach(function (b) { if (b.getAttribute("aria-pressed") === "true") f = b.dataset.wf; });
+    return f;
+  }
+  function run() {
+    var f = activeFilter(), words = (q ? q.value : "").toLowerCase().split(/\s+/).filter(Boolean);
     items.forEach(function (li) {
       var g = li.dataset.group, s = (li.dataset.search || "").toLowerCase();
       var groupOk = f === "all" || g === f;
       var searchOk = words.every(function (w) { return s.indexOf(w) >= 0; });
       li.hidden = !(groupOk && searchOk);
     });
+    document.querySelectorAll(".ocard[data-activate]").forEach(function (c) {
+      c.setAttribute("aria-pressed", c.dataset.activate === f ? "true" : "false");
+    });
+    document.querySelectorAll(".section").forEach(function (sec) {
+      var all = sec.querySelectorAll(".witem");
+      if (!all.length) return;
+      var anyVisible = Array.from(all).some(function (li) { return !li.hidden; });
+      sec.hidden = !anyVisible;
+    });
+  }
+  function activate(f) {
+    btns.forEach(function (x) { x.setAttribute("aria-pressed", x.dataset.wf === f ? "true" : "false"); });
+    run();
   }
   btns.forEach(function (b) {
-    b.addEventListener("click", function () {
-      btns.forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
-      b.setAttribute("aria-pressed", "true"); run();
-    });
+    b.addEventListener("click", function () { activate(b.dataset.wf); });
+  });
+  document.querySelectorAll(".ocard[data-activate]").forEach(function (c) {
+    c.addEventListener("click", function () { activate(c.dataset.activate); });
+    c.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activate(c.dataset.activate); } });
   });
   if (q) q.addEventListener("input", run);
+
+  var sortBtn = document.getElementById("wsort"), asc = false;
+  if (sortBtn) {
+    sortBtn.addEventListener("click", function () {
+      asc = !asc;
+      sortBtn.textContent = asc ? "Oldest" : "Newest";
+      document.querySelectorAll(".wlist").forEach(function (list) {
+        var arr = Array.from(list.children);
+        arr.sort(function (a, b) {
+          var ta = a.querySelector(".wago [title], .wago[title]"), tb = b.querySelector(".wago [title], .wago[title]");
+          var va = ta ? ta.title : "", vb = tb ? tb.title : "";
+          var cmp = va.localeCompare(vb);
+          return asc ? cmp : -cmp;
+        });
+        arr.forEach(function (li) { list.appendChild(li); });
+      });
+    });
+  }
 
   document.addEventListener("click", function (e) {
     var b = e.target.closest(".wrestore");

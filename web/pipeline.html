@@ -9,6 +9,7 @@
 <style>
 {{template "base-css"}}
 {{template "header-css"}}
+{{template "sort-css"}}
   .pwrap { max-width: 980px; margin: 0 auto; padding: 18px 20px 40px; }
   .sub { margin: 0 0 18px; color: var(--dim); }
   .overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 0 0 24px; }
@@ -19,11 +20,12 @@
   .ocard .ov.zero { color: var(--dim); }
   .rate { font: 700 28px var(--mono); color: var(--head-accent); }
   .section { margin: 0 0 24px; }
-  .section h2 { margin: 0 0 10px; font-size: 15px; font-weight: 650; border-left: 3px solid var(--head-accent); padding-left: 10px; }
+  .section h2 { margin: 0 0 10px; font-size: 14px; font-weight: 650; letter-spacing: 0.02em; border-left: 3px solid var(--head-accent); padding-left: 10px; }
   .ptable { width: 100%; table-layout: fixed; border-collapse: collapse; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
   .ptable th, .ptable td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
-  .ptable th { font-size: 12px; font-weight: 600; color: var(--dim); background: var(--head); }
+  .ptable th { font-size: 12px; font-weight: 600; color: var(--dim); background: var(--head); letter-spacing: 0.03em; text-transform: uppercase; }
   .ptable tr:last-child td { border-bottom: 0; }
+  .ptable tbody tr:hover { background: var(--raised); }
   .ptable .cnum { width: 60px; }
   .ptable .cst { width: 80px; }
   .ptable td.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
@@ -80,7 +82,7 @@
     </div>
     {{if .Pipeline.PRs}}
     <table class="ptable">
-      <thead><tr><th class="cnum">#</th><th>Pull request</th><th>Repository</th><th class="cst">State</th></tr></thead>
+      <thead><tr><th class="cnum" data-sort="num">#</th><th data-sort="text">Pull request</th><th data-sort="text">Repository</th><th class="cst" data-sort="text">State</th></tr></thead>
       <tbody id="pr-rows">{{range .Pipeline.All}}<tr data-state="{{.State}}"><td class="num">{{.Number}}</td><td><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a></td><td>{{.Repo}}</td><td><span class="tag {{.State}}">{{.State}}</span></td></tr>{{end}}</tbody>
     </table>
     {{else}}<p class="empty">No pull requests yet in tracked repositories.</p>{{end}}
@@ -90,6 +92,8 @@
 (function () {
   {{template "theme-js"}}
   {{template "nav-active-js"}}
+  {{template "sort-js"}}
+  initSort(".ptable");
   var btns = document.querySelectorAll("[data-pf]"), rows = document.querySelectorAll("#pr-rows tr[data-state]");
   btns.forEach(function (b) {
     b.addEventListener("click", function () {

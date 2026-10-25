@@ -5,7 +5,24 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
-Changes in the next publish.
+- **Clickable overview cards**: on Conversations, the "Needs your reply" and "Waiting on
+  others" cards activate the matching filter. On Your work, all four cards ("Your move",
+  "Waiting", "Finished", "Dismissed") do the same, and empty sections hide when their items
+  are filtered out. On Your repositories, "Open PRs" and "Merged" link to their pipeline
+  list pages.
+- **Sort toggle on list pages**: Conversations, Your work and Your repositories each have a
+  "Newest / Oldest" button that reverses every list section by date.
+- **Typography tightened**: fractional font sizes (11.5, 12.5, 13.5 px) consolidated to four
+  steps (12, 13, 14, 19 px). Uppercase labels get tracked letter-spacing. Panel and section
+  headings drop from 15 px to 14 px with 0.02 em spacing.
+- **Light-theme colour tokens**: `--caution-fill`, `--caution-ink`, `--warn-fill`, `--warn-ink`
+  and `--mascot-bg` now have proper light-mode values; alert cells no longer fall back to
+  dark-mode fills.
+- **Interactive polish**: table rows highlight on hover (Issues, List, Pipeline). Status badges,
+  alert cells and theme buttons transition smoothly. Empty alert cells get a dimmed border.
+  Linked cells use a raised background on hover instead of a brightness filter.
+- **Empty and no-data states**: `.nodata` is italic with more padding; `.empty` is consistent
+  across pages.
 
 ## v0.2.0 (8) · Black Bombay (baby) · 2026-10-23
 
