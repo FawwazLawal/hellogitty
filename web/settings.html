@@ -1,0 +1,277 @@
+{{define "settingspage"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Settings · HelloGitty</title>
+{{template "theme-head"}}
+<style>
+{{template "base-css"}}
+{{template "header-css"}}
+  .swrap { max-width: 780px; margin: 0 auto; padding: 18px 20px 40px; }
+  .swrap h1 { margin: 0 0 4px; font-size: 22px; font-weight: 700; }
+  .swrap .sub { color: var(--dim); font-size: 13px; margin: 0 0 22px; }
+  .sgroup { margin: 0 0 28px; }
+  .sgroup h2 { margin: 0 0 12px; font-size: 15px; font-weight: 650; letter-spacing: 0.02em;
+    border-left: 3px solid var(--head-accent); padding-left: 10px; }
+  .scard { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+  .srow { display: grid; grid-template-columns: 160px 1fr; gap: 8px; align-items: center;
+    padding: 12px 16px; border-bottom: 1px solid var(--rule); }
+  .srow:last-child { border-bottom: 0; }
+  .srow .slbl { font: 600 13px var(--sans); color: var(--dim); }
+  .srow .sval { font: 14px var(--mono); color: var(--text); word-break: break-all; }
+  .srow .sval.zero { color: var(--dim); font-style: italic; }
+  .srow .snote { font-size: 11px; color: var(--dim); margin-top: 2px; }
+
+  .srow select, .srow input[type="number"] { font: 13px var(--sans); color: var(--text); background: var(--bg);
+    border: 1px solid var(--rule-hi); border-radius: 6px; padding: 6px 10px; }
+  .srow select:hover, .srow input[type="number"]:hover { border-color: var(--text); }
+
+  .toggle-wrap { display: flex; align-items: center; gap: 10px; }
+  .toggle { position: relative; width: 40px; height: 22px; cursor: pointer; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle .slider { position: absolute; inset: 0; background: var(--rule-hi); border-radius: 22px; transition: background .2s; }
+  .toggle .slider::before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px;
+    background: var(--text); border-radius: 50%; transition: transform .2s; }
+  .toggle input:checked + .slider { background: var(--head-accent); }
+  .toggle input:checked + .slider::before { transform: translateX(18px); }
+
+  .theme-pick { display: flex; gap: 4px; }
+  .theme-pick button { font: 13px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
+    border-radius: 6px; padding: 6px 14px; cursor: pointer; }
+  .theme-pick button:hover { color: var(--text); background: var(--raised); }
+  .theme-pick button.active { color: var(--text); background: var(--raised); border-color: var(--head-accent); font-weight: 600; }
+
+  .clocks-list { display: flex; flex-direction: column; gap: 4px; }
+  .clock-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+  .clock-row .clabel { font: 13px var(--sans); color: var(--text); }
+  .clock-row .crm { font: 12px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
+    border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+  .clock-row .crm:hover { color: var(--warn); border-color: var(--warn); }
+  .no-clocks { font: 13px var(--sans); color: var(--dim); font-style: italic; }
+  .add-clock { font: 13px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
+    border-radius: 6px; padding: 6px 12px; cursor: pointer; margin-top: 6px; }
+  .add-clock:hover { color: var(--text); background: var(--raised); }
+  .clock-select { font: 13px var(--sans); color: var(--text); background: var(--bg); border: 1px solid var(--rule-hi);
+    border-radius: 6px; padding: 6px 10px; margin-top: 6px; }
+
+  .badge { display: inline-block; font: 600 11px var(--sans); color: var(--dim); background: var(--raised);
+    border: 1px solid var(--rule-hi); border-radius: 4px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; }
+
+  @media (max-width: 760px) {
+    .srow { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+{{template "site-header" .}}
+<script>
+{{template "nav-active-js"}}
+{{template "clock-js"}}
+</script>
+<div class="swrap">
+  <h1>Settings</h1>
+  <p class="sub">Dashboard preferences and server configuration.</p>
+
+  <div class="sgroup">
+    <h2>Appearance</h2>
+    <div class="scard">
+      <div class="srow">
+        <span class="slbl">Theme</span>
+        <div class="theme-pick" id="s-theme">
+          <button type="button" data-v="auto">Auto</button>
+          <button type="button" data-v="light">Light</button>
+          <button type="button" data-v="dark">Dark</button>
+        </div>
+      </div>
+      <div class="srow">
+        <span class="slbl">Layout preset</span>
+        <select id="s-layout">
+          <option value="everything">Everything</option>
+          <option value="contributor">Contributor</option>
+          <option value="maintainer">Maintainer</option>
+          <option value="program">Program</option>
+          <option value="focus">Focus</option>
+        </select>
+      </div>
+      <div class="srow">
+        <span class="slbl">Compact cells</span>
+        <div class="toggle-wrap">
+          <label class="toggle"><input type="checkbox" id="s-compact"><span class="slider"></span></label>
+          <span style="font-size:13px;color:var(--dim)">Shrink dashboard overview cells</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sgroup">
+    <h2>World clocks</h2>
+    <div class="scard">
+      <div class="srow" style="grid-template-columns:1fr">
+        <div id="s-clocks" class="clocks-list"></div>
+        <select id="s-clock-add" class="clock-select" style="display:none">
+          <option value="">Add a timezone…</option>
+        </select>
+        <button type="button" class="add-clock" id="s-clock-btn">+ Add clock</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sgroup">
+    <h2>Server configuration <span class="badge">read-only</span></h2>
+    <div class="scard">
+      <div class="srow">
+        <span class="slbl">Listen address</span>
+        <span class="sval">{{.ConfigListen}}</span>
+      </div>
+      <div class="srow">
+        <span class="slbl">Poll interval</span>
+        <span class="sval">{{.PollInterval}} min</span>
+      </div>
+      <div class="srow">
+        <span class="slbl">Database</span>
+        <span class="sval">{{.ConfigDatabase}}</span>
+      </div>
+      <div class="srow">
+        <span class="slbl">Snapshot</span>
+        <span class="sval">{{.ConfigSnapshot}}</span>
+      </div>
+      <div class="srow">
+        <span class="slbl">Repos file</span>
+        <span class="sval{{if not .ConfigReposFile}} zero{{end}}">{{if .ConfigReposFile}}{{.ConfigReposFile}}{{else}}not set{{end}}</span>
+      </div>
+      <div class="srow">
+        <span class="slbl">Inbox</span>
+        <span class="sval{{if not .ConfigInbox}} zero{{end}}">{{if .ConfigInbox}}{{.ConfigInbox}}{{else}}not set{{end}}</span>
+      </div>
+      <div class="srow">
+        <span class="slbl">Tracked repos</span>
+        <span class="sval">{{.RepoCount}}</span>
+      </div>
+      {{if .HasPipeline}}<div class="srow">
+        <span class="slbl">Pipeline targets</span>
+        <span class="sval">{{.TargetCount}}</span>
+      </div>{{end}}
+    </div>
+    <p style="font-size:12px;color:var(--dim);margin:8px 0 0">Server settings are defined in <code style="background:var(--raised);padding:1px 4px;border-radius:3px">hellogitty.json</code> and require a restart to take effect.</p>
+  </div>
+
+  <div class="sgroup">
+    <h2>About</h2>
+    <div class="scard">
+      <div class="srow">
+        <span class="slbl">Version</span>
+        <span class="sval">{{.Version}}</span>
+      </div>
+      <div class="srow">
+        <span class="slbl">GitHub API</span>
+        <span class="sval">{{if .APIKnown}}{{.APIUsed}} / {{.APILimit}} this hour ({{.APIPct}}%){{else}}no data yet{{end}}</span>
+      </div>
+      {{if .APIKnown}}<div class="srow">
+        <span class="slbl">API resets</span>
+        <span class="sval">{{.APIResetUTC}} UTC</span>
+      </div>{{end}}
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // Theme picker
+  var themePick = document.getElementById("s-theme");
+  var current = localStorage.getItem("hg-theme") || "auto";
+  themePick.querySelectorAll("button").forEach(function(b) {
+    if (b.dataset.v === current) b.classList.add("active");
+    b.addEventListener("click", function() {
+      themePick.querySelectorAll("button").forEach(function(x) { x.classList.remove("active"); });
+      b.classList.add("active");
+      localStorage.setItem("hg-theme", b.dataset.v);
+      document.documentElement.dataset.theme = b.dataset.v === "auto" ? "" : b.dataset.v;
+      if (b.dataset.v === "auto") document.documentElement.removeAttribute("data-theme");
+    });
+  });
+
+  // Layout preset
+  var layoutSel = document.getElementById("s-layout");
+  var savedLayout = localStorage.getItem("hg-layout") || "everything";
+  layoutSel.value = savedLayout;
+  layoutSel.addEventListener("change", function() {
+    localStorage.setItem("hg-layout", layoutSel.value);
+  });
+
+  // Compact cells toggle
+  var compactChk = document.getElementById("s-compact");
+  compactChk.checked = localStorage.getItem("hg-compact") === "1";
+  compactChk.addEventListener("change", function() {
+    localStorage.setItem("hg-compact", compactChk.checked ? "1" : "0");
+  });
+
+  // World clocks
+  var ZONES = [
+    {tz:"UTC",label:"UTC"},
+    {tz:"America/New_York",label:"EST — America/New York"},
+    {tz:"America/Chicago",label:"CST — America/Chicago"},
+    {tz:"America/Denver",label:"MST — America/Denver"},
+    {tz:"America/Los_Angeles",label:"PST — America/Los Angeles"},
+    {tz:"Europe/London",label:"GMT — Europe/London"},
+    {tz:"Europe/Paris",label:"CET — Europe/Paris"},
+    {tz:"Europe/Berlin",label:"CET — Europe/Berlin"},
+    {tz:"Asia/Tokyo",label:"JST — Asia/Tokyo"},
+    {tz:"Asia/Kolkata",label:"IST — Asia/Kolkata"},
+    {tz:"Australia/Sydney",label:"AEST — Australia/Sydney"},
+    {tz:"Pacific/Auckland",label:"NZST — Pacific/Auckland"},
+    {tz:"America/Sao_Paulo",label:"BRT — America/Sao Paulo"},
+    {tz:"Asia/Shanghai",label:"CST — Asia/Shanghai"}
+  ];
+  var KEY = "hellogitty-worldclocks";
+  function loadClocks() { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch(e) { return []; } }
+  function saveClocks(arr) { try { localStorage.setItem(KEY, JSON.stringify(arr)); } catch(e) {} }
+
+  var clocksDiv = document.getElementById("s-clocks");
+  var addBtn = document.getElementById("s-clock-btn");
+  var addSel = document.getElementById("s-clock-add");
+
+  function renderClocks() {
+    var clocks = loadClocks();
+    clocksDiv.innerHTML = "";
+    if (!clocks.length) {
+      var p = document.createElement("span"); p.className = "no-clocks"; p.textContent = "No world clocks added yet.";
+      clocksDiv.appendChild(p);
+      return;
+    }
+    clocks.forEach(function(c, i) {
+      var row = document.createElement("div"); row.className = "clock-row";
+      var lbl = document.createElement("span"); lbl.className = "clabel";
+      var z = ZONES.find(function(z) { return z.tz === c; });
+      lbl.textContent = z ? z.label : c;
+      var rm = document.createElement("button"); rm.type = "button"; rm.className = "crm"; rm.textContent = "Remove";
+      rm.addEventListener("click", function() {
+        var arr = loadClocks(); arr.splice(i, 1); saveClocks(arr); renderClocks();
+      });
+      row.appendChild(lbl); row.appendChild(rm); clocksDiv.appendChild(row);
+    });
+  }
+
+  // Populate add select
+  ZONES.forEach(function(z) {
+    var o = document.createElement("option"); o.value = z.tz; o.textContent = z.label;
+    addSel.appendChild(o);
+  });
+
+  addBtn.addEventListener("click", function() {
+    addSel.style.display = addSel.style.display === "none" ? "" : "none";
+  });
+  addSel.addEventListener("change", function() {
+    if (!addSel.value) return;
+    var clocks = loadClocks();
+    if (clocks.indexOf(addSel.value) === -1) { clocks.push(addSel.value); saveClocks(clocks); }
+    addSel.value = ""; addSel.style.display = "none";
+    renderClocks();
+  });
+
+  renderClocks();
+})();
+</script>
+</body>
+</html>{{end}}

@@ -52,6 +52,9 @@ var YourRepos string
 //go:embed work.html
 var Work string
 
+//go:embed settings.html
+var Settings string
+
 //go:embed alert-your-move.html
 var AlertYourMove string
 
