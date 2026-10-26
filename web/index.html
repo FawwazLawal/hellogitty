@@ -190,7 +190,8 @@
   .seg button[aria-pressed="true"] { color: var(--text); background: var(--raised); font-weight: 600; }
   .pick { display: inline-flex; align-items: center; gap: 6px; }
   .pick select { font: 13px var(--sans); color: var(--text); background: var(--bg); border: 1px solid var(--rule-hi); border-radius: 6px;
-    padding: 5px 8px; max-width: 260px; }
+    padding: 5px 8px; max-width: 260px; transition: border-color .12s, box-shadow .12s; }
+  .pick select.filtered { border-color: var(--caution); box-shadow: 0 0 0 1px var(--caution); font-weight: 600; }
   .check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
   .check input { accent-color: var(--caution); width: 15px; height: 15px; margin: 0; }
   .fcount { font-size: 12px; color: var(--dim); letter-spacing: 0.01em; }
@@ -198,6 +199,16 @@
     text-decoration: underline; text-decoration-color: var(--rule-hi); text-underline-offset: 3px; }
   .clear:hover { text-decoration-color: var(--text); }
   .toolbar .fcount { margin-left: auto; }
+  .filterpills { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 20px 0; padding: 0; }
+  .filterpills:empty { display: none; }
+  .fpill { display: inline-flex; align-items: center; gap: 4px; font: 600 12px/1 var(--sans); color: var(--caution-text); background: var(--caution-fill);
+    border: 1px solid color-mix(in srgb, var(--caution) 40%, transparent); border-radius: 999px; padding: 4px 8px 4px 10px; white-space: nowrap; }
+  .fpill .fpx { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; padding: 0; border: 0;
+    background: transparent; color: inherit; cursor: pointer; border-radius: 50%; font-size: 14px; line-height: 1; }
+  .fpill .fpx:hover { background: color-mix(in srgb, var(--caution) 25%, transparent); }
+  .fpill-clear { font: 12px var(--sans); color: var(--dim); background: transparent; border: 0; padding: 0; cursor: pointer;
+    text-decoration: underline; text-decoration-color: var(--rule-hi); text-underline-offset: 3px; }
+  .fpill-clear:hover { text-decoration-color: var(--text); color: var(--text); }
   .tbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 14px; border-bottom: 1px solid var(--rule); }
   /* Add a repository: a plain field and an outlined button, like the toolbar's own controls. */
   .addrepo { display: flex; gap: 6px; margin-left: auto; flex: 0 1 340px; min-width: 220px; }
@@ -454,6 +465,26 @@
   .itools select { padding: 5px 8px; border: 1px solid var(--rule-hi); border-radius: 5px;
     font: 13px var(--sans); background: var(--panel); color: var(--text); cursor: pointer; }
 
+  /* DevSecOps security panel */
+  .seclist { list-style: none; margin: 0; padding: 0; max-height: 380px; overflow-y: auto; }
+  .secrow { display: flex; gap: 10px; align-items: start; padding: 8px 14px; border-bottom: 1px solid var(--rule); }
+  .secrow:last-child { border-bottom: 0; }
+  .sevbadge { flex: none; font: 600 10px/1 var(--mono); letter-spacing: 0.04em; padding: 3px 6px; border-radius: 4px; text-transform: uppercase; white-space: nowrap; margin-top: 2px; }
+  .sev-critical { color: #fff; background: #d1242f; }
+  .sev-high { color: #fff; background: #cf6316; }
+  .sev-medium { color: var(--text); background: color-mix(in srgb, var(--caution) 25%, transparent); border: 1px solid color-mix(in srgb, var(--caution) 50%, transparent); }
+  .sev-low { color: var(--dim); background: var(--raised); border: 1px solid var(--rule-hi); }
+  .secbody { min-width: 0; flex: 1; }
+  .sect { font: 600 13px/1.3 var(--mono); color: var(--text); text-decoration: none; }
+  .sect:hover { text-decoration: underline; }
+  .secd { display: block; font-size: 12.5px; color: var(--dim); margin-top: 2px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .secdate { font-size: 11px; color: var(--dim); margin-top: 2px; display: block; }
+  .sectips { padding: 10px 14px 6px; border-top: 1px solid var(--rule); }
+  .sectips-h { font-size: 12px; font-weight: 650; color: var(--dim); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px; }
+  .stip { font-size: 13px; color: var(--text); margin: 0 0 6px; padding-left: 12px; border-left: 2px solid var(--nom); }
+  .stip:last-child { margin-bottom: 0; }
+  .secfoot { padding: 6px 14px 8px; margin: 0; font-size: 11px; color: var(--dim); border-top: 1px solid var(--rule); }
+
   /* PR totals and checks */
   .occ { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border-bottom: 1px solid var(--rule); }
   .occ > * { padding: 8px 4px 9px; text-align: center; border-right: 1px solid var(--rule); }
@@ -676,6 +707,9 @@
   .helpbtn { text-decoration: none; }
   .helpbtn + .layoutbtn { margin-left: 0; }
   .status.has-mascot .theme { margin-left: 0; }
+  .clock { font: 600 15px/1 var(--mono); color: var(--text); letter-spacing: 0.02em; font-variant-numeric: tabular-nums;
+    white-space: nowrap; user-select: none; cursor: default; }
+  .clock .clock-sec { font-size: 12px; color: var(--dim); }
   .quicknav { display: flex; flex-wrap: wrap; align-items: center; gap: 0;
     background: var(--panel); border-bottom: 1px solid var(--rule-hi); padding: 0 20px; }
   .quicknav a { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; font: 600 13px/1 var(--sans); color: var(--dim);
@@ -696,6 +730,7 @@
   <span class="item"><span class="lbl">Last check</span>{{if .LastPollUnix}}<span class="v" title="{{.LastPollUTC}} UTC">{{.LastPollUTC}} UTC</span>{{else}}<span class="v zero">not yet</span>{{end}}</span>
   <span class="item"><span class="lbl">GitHub API</span>{{if .APIKnown}}<span class="v"><span class="fig">{{.APIUsed}}</span> of <span class="fig">{{.APILimit}}</span> this hour</span><span class="gauge{{if ge .APIPct 90}} hot{{end}}" role="img" aria-label="{{.APIPct}} percent of the hourly quota used"><i style="width:{{.APIPct}}%"></i></span>{{else}}<span class="v zero">no data yet</span>{{end}}</span>
   <span class="item"><span class="v"><span class="fig">{{.RepoCount}}</span> repos{{if .HasPipeline}} · <span class="fig">{{.TargetCount}}</span> in the pipeline{{end}}</span></span>
+  <time class="clock" id="hg-clock" aria-live="off" title="Local time"></time>
   <a class="layoutbtn helpbtn" href="/help" title="Help (press ?)">Help</a>
   <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
 </header>
@@ -712,6 +747,22 @@
 {{end}}
 {{define "nav-active-js"}}
   (function(){var p=location.pathname;document.querySelectorAll(".quicknav a").forEach(function(a){if(a.getAttribute("href")===p)a.classList.add("active")})})();
+{{end}}
+{{define "clock-js"}}
+  (function(){
+    var el = document.getElementById("hg-clock");
+    if (!el) return;
+    function tick() {
+      var d = new Date();
+      var h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
+      var hh = (h < 10 ? "0" : "") + h, mm = (m < 10 ? "0" : "") + m, ss = (s < 10 ? "0" : "") + s;
+      el.textContent = hh + ":" + mm;
+      el.title = hh + ":" + mm + ":" + ss;
+      el.dateTime = d.toISOString();
+    }
+    tick();
+    setInterval(tick, 15000);
+  })();
 {{end}}
 {{define "feed-css"}}
   /* The eye: watch any issue. Outlined and dim until you watch it, then filled in Text. */
@@ -950,7 +1001,9 @@
   <span class="item"><span class="lbl">Last check</span>{{if .LastPollUnix}}<span class="v" id="pollage" data-since="{{.LastPollUnix}}" title="{{.LastPollUTC}} UTC">{{.LastPollUTC}} UTC</span>{{else}}<span class="v zero">not yet</span>{{end}}</span>
   <span class="item"><span class="lbl term" data-term="api" tabindex="0">GitHub API</span>{{if .APIKnown}}<span class="v"><span class="fig">{{.APIUsed}}</span> of <span class="fig">{{.APILimit}}</span> this hour</span><span class="gauge{{if ge .APIPct 90}} hot{{end}}" role="img" aria-label="{{.APIPct}} percent of the hourly quota used"><i style="width:{{.APIPct}}%"></i></span>{{else}}<span class="v zero">no data yet</span>{{end}}</span>
   <span class="item"><span class="v"><span class="fig">{{.RepoCount}}</span> repos{{if .HasPipeline}} · <span class="fig">{{.TargetCount}}</span> in the pipeline{{end}}</span></span>
+  <time class="clock" id="hg-clock" aria-live="off" title="Local time"></time>
   <a class="layoutbtn helpbtn" href="/help" title="Help (press ?)">Help</a>
+  <button type="button" class="layoutbtn" id="fold-all" title="Collapse all panels (c)">Collapse all</button>
   <button type="button" class="layoutbtn" id="layout-open" aria-haspopup="dialog">Layout</button>
   <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
   {{if .Mascot}}<div class="mascot" aria-hidden="true" data-routine="{{range $i, $c := .Mascot.Routine}}{{if $i}} {{end}}{{$c}}{{end}}" data-news="{{range $i, $c := .Mascot.News}}{{if $i}} {{end}}{{$c}}{{end}}"><video muted playsinline preload="none" poster="{{.Mascot.Rest}}" tabindex="-1"></video></div>{{end}}
@@ -988,6 +1041,7 @@
   <span class="fcount" id="f-count" aria-live="polite"></span>
   <button type="button" class="clear" id="f-clear" hidden>Clear filters</button>
 </section>
+<div class="filterpills" id="f-pills" aria-label="Active filters" role="status"></div>
 
 <div class="grid">
   <div class="main">
@@ -1176,6 +1230,30 @@
       {{else}}
       <p class="nodata"><b>No open issues</b> in tracked repositories.</p>
       {{end}}
+    </section>
+
+    <section class="panel" aria-labelledby="sec-h" data-module="security">
+      <h2 id="sec-h">DevSecOps <span class="lbl">CVEs &amp; tips</span></h2>
+      {{if .SecurityFeed.Error}}<p class="nodata"><b>Feed unavailable:</b> <span class="err">{{.SecurityFeed.Error}}</span></p>{{end}}
+      {{if .SecurityFeed.CVEs}}
+      <ul class="seclist">
+        {{range .SecurityFeed.CVEs}}<li class="secrow">
+          <span class="sevbadge sev-{{lower .Severity}}">{{.Severity}}</span>
+          <div class="secbody">
+            <a class="sect" href="{{.URL}}" target="_blank" rel="noopener">{{.ID}}</a>
+            <span class="secd">{{.Description}}</span>
+            <span class="secdate">{{.Published}}</span>
+          </div>
+        </li>{{end}}
+      </ul>
+      {{else if not .SecurityFeed.Error}}<p class="nodata">No high-severity CVEs published in the last 7 days.</p>{{end}}
+      {{if .SecurityFeed.Tips}}
+      <div class="sectips">
+        <h3 class="sectips-h">Tips for your workflow</h3>
+        {{range .SecurityFeed.Tips}}<p class="stip">{{.Text}}</p>{{end}}
+      </div>
+      {{end}}
+      {{if .SecurityFeed.FetchedAt}}<p class="secfoot">Updated {{.SecurityFeed.FetchedAt}}</p>{{end}}
     </section>
 
     <section class="panel" aria-labelledby="pl-h" data-module="pipeline">
@@ -1415,6 +1493,7 @@
 
     {{template "theme-js"}}
     {{template "nav-active-js"}}
+    {{template "clock-js"}}
 
     // Keep expanded sections open across the 5-minute reload.
     var openKey = "hellogitty-open", open = store(true, openKey) || [];
@@ -1686,12 +1765,12 @@
       }
       Object.keys(el).forEach(name); // before the grip and arrow join the headings
       var PRESETS = {
-        everything: { main: ["your-work", "conversations", "your-repos", "tracked"], rail: ["feed", "watched", "issues", "pipeline", "checks"], hidden: [], folded: [] },
-        contributor: { main: ["your-work", "conversations", "tracked", "your-repos"], rail: ["feed", "watched", "issues", "pipeline", "checks"], hidden: ["your-repos", "pipeline", "checks"], folded: ["tracked"] },
-        maintainer: { main: ["your-repos", "your-work", "conversations", "tracked"], rail: ["feed", "watched", "issues", "pipeline", "checks"], hidden: [], folded: ["conversations"] },
-        program: { main: ["tracked", "your-work", "conversations", "your-repos"], rail: ["pipeline", "feed", "watched", "issues", "checks"], hidden: ["your-repos"], folded: ["your-work", "conversations"] },
-        focus: { main: ["your-work", "conversations", "your-repos", "tracked"], rail: ["feed", "watched", "issues", "pipeline", "checks"],
-          hidden: ["toolbar", "feed", "conversations", "your-repos", "tracked", "watched", "issues", "pipeline", "checks", "work-them", "work-other", "work-done"], folded: [] }
+        everything: { main: ["your-work", "conversations", "your-repos", "tracked"], rail: ["feed", "watched", "issues", "security", "pipeline", "checks"], hidden: [], folded: [] },
+        contributor: { main: ["your-work", "conversations", "tracked", "your-repos"], rail: ["feed", "watched", "issues", "security", "pipeline", "checks"], hidden: ["your-repos", "pipeline", "checks"], folded: ["tracked"] },
+        maintainer: { main: ["your-repos", "your-work", "conversations", "tracked"], rail: ["feed", "watched", "issues", "security", "pipeline", "checks"], hidden: [], folded: ["conversations"] },
+        program: { main: ["tracked", "your-work", "conversations", "your-repos"], rail: ["pipeline", "feed", "watched", "issues", "security", "checks"], hidden: ["your-repos"], folded: ["your-work", "conversations"] },
+        focus: { main: ["your-work", "conversations", "your-repos", "tracked"], rail: ["feed", "watched", "issues", "security", "pipeline", "checks"],
+          hidden: ["toolbar", "feed", "conversations", "your-repos", "tracked", "watched", "issues", "security", "pipeline", "checks", "work-them", "work-other", "work-done"], folded: [] }
       };
       function copy(p, preset) { return { preset: preset, main: p.main.slice(), rail: p.rail.slice(), hidden: p.hidden.slice(), folded: p.folded.slice(), sizes: {} }; }
       // Keep only modules on this page, and give any new panel a place in its usual column.
@@ -1935,6 +2014,54 @@
         });
       });
       apply();
+
+      // Collapse / expand all panels and keyboard shortcuts.
+      var foldBtn = document.getElementById("fold-all");
+      function allPanelIds() {
+        return state.main.concat(state.rail).filter(function (id) { return el[id] && el[id].classList.contains("panel") && !has(state.hidden, id); });
+      }
+      function updateFoldBtn() {
+        if (!foldBtn) return;
+        var ids = allPanelIds(), allFolded = ids.length > 0 && ids.every(function (id) { return has(state.folded, id); });
+        foldBtn.textContent = allFolded ? "Expand all" : "Collapse all";
+        foldBtn.title = allFolded ? "Expand all panels (e)" : "Collapse all panels (c)";
+      }
+      if (foldBtn) {
+        updateFoldBtn();
+        foldBtn.addEventListener("click", function () {
+          var ids = allPanelIds(), allFolded = ids.every(function (id) { return has(state.folded, id); });
+          change(function () {
+            if (allFolded) state.folded = state.folded.filter(function (x) { return !el[x] || !el[x].classList.contains("panel"); });
+            else ids.forEach(function (id) { if (!has(state.folded, id)) state.folded.push(id); });
+          });
+          updateFoldBtn();
+        });
+      }
+      var origApply = apply;
+      apply = function () { origApply(); updateFoldBtn(); };
+
+      document.addEventListener("keydown", function (e) {
+        if (e.target.matches("input, textarea, select, [contenteditable]")) return;
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        var ids = allPanelIds();
+        if (e.key === "c") {
+          e.preventDefault();
+          change(function () { ids.forEach(function (id) { if (!has(state.folded, id)) state.folded.push(id); }); });
+          updateFoldBtn();
+        } else if (e.key === "e") {
+          e.preventDefault();
+          change(function () { state.folded = state.folded.filter(function (x) { return !el[x] || !el[x].classList.contains("panel"); }); });
+          updateFoldBtn();
+        } else if (e.key >= "1" && e.key <= "9") {
+          var idx = parseInt(e.key) - 1;
+          if (idx < ids.length) {
+            e.preventDefault();
+            var tid = ids[idx];
+            change(function () { state.folded = has(state.folded, tid) ? state.folded.filter(function (x) { return x !== tid; }) : state.folded.concat(tid); });
+            updateFoldBtn();
+          }
+        }
+      });
     })();
 
     // The view is remembered in this browser so the 5-minute reload keeps it.
@@ -2070,6 +2197,31 @@
         if (last && sorted.some(function (d) { return !pinned(d) && !d.hidden; })) last.classList.add("pinlast");
       }
 
+      var pills = document.getElementById("f-pills");
+      function pill(text, clearFn) {
+        var p = document.createElement("span"); p.className = "fpill"; p.textContent = text;
+        var x = document.createElement("button"); x.type = "button"; x.className = "fpx"; x.innerHTML = "&times;"; x.title = "Remove filter";
+        x.addEventListener("click", function () { clearFn(); apply(); });
+        p.appendChild(x); return p;
+      }
+      function renderPills() {
+        if (!pills) return;
+        pills.textContent = "";
+        if (view.q) pills.appendChild(pill("Search: " + view.q, function () { view.q = ""; }));
+        if (view.kind !== "all") pills.appendChild(pill(view.kind === "pr" ? "PRs only" : "Issues only", function () { view.kind = "all"; }));
+        if (view.scope) {
+          var scopeLabel = scope.selectedOptions[0] ? scope.selectedOptions[0].textContent : view.scope.slice(2);
+          pills.appendChild(pill("Repo: " + scopeLabel, function () { view.scope = ""; }));
+        }
+        if (view.mine) pills.appendChild(pill("Needs me only", function () { view.mine = false; }));
+        if (view.group && view.group !== "move") pills.appendChild(pill("Grouped by " + view.group, function () { view.group = "move"; }));
+        if (pills.children.length > 1) {
+          var btn = document.createElement("button"); btn.type = "button"; btn.className = "fpill-clear"; btn.textContent = "Clear all";
+          btn.addEventListener("click", function () { view.q = ""; view.kind = "all"; view.scope = ""; view.mine = false; view.group = "move"; apply(); });
+          pills.appendChild(btn);
+        }
+      }
+
       function apply() {
         q.value = view.q; scope.value = view.scope; mine.checked = view.mine; if (sortSel) sortSel.value = view.sort;
         document.querySelectorAll("[data-f-kind]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.fKind === view.kind ? "true" : "false"); });
@@ -2094,11 +2246,13 @@
         var tc = document.getElementById("tracked-count");
         if (tc) tc.textContent = repoShown !== repos.length ? repoShown + " of " + repos.length + " repositories" : "";
         clear.hidden = !active();
+        scope.classList.toggle("filtered", !!view.scope);
         if (qClear) qClear.hidden = !view.q;
         if (rqClear) rqClear.hidden = !(view.rq);
         // A filter that leaves the folded Finished list with matches opens it, so results aren't hidden.
         var done = document.querySelector('details.mv[data-key="work-done"]');
         if (done && active() && done.querySelector(".wi:not([hidden])")) done.open = true;
+        renderPills();
         save();
       }
 
