@@ -32,9 +32,9 @@
   .gauge { display: inline-block; width: 60px; height: 5px; background: var(--track); vertical-align: middle; border-radius: 3px; overflow: hidden; align-self: center; }
   .gauge i { display: block; height: 100%; background: var(--dim); }
   .gauge.hot i { background: var(--caution); }
-  .hclock { display: flex; flex-direction: column; align-items: center; gap: 1px; margin-left: auto; margin-right: auto; user-select: none; cursor: default; }
-  .hclock-time { font: 700 20px/1 var(--mono); color: var(--text); letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
-  .hclock-date { font: 500 11px/1 var(--sans); color: var(--dim); letter-spacing: 0.03em; text-transform: uppercase; }
+  .hclock { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-left: auto; margin-right: auto; user-select: none; cursor: default; }
+  .hclock-time { font: 700 32px/1 var(--mono); color: var(--text); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; transition: color .3s, text-shadow .3s; }
+  .hclock-date { font: 500 12px/1 var(--sans); color: var(--dim); letter-spacing: 0.05em; text-transform: uppercase; transition: color .3s; }
   .worldclocks { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 3px; }
   .worldclocks:empty { display: none; }
   .wclock { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; }
@@ -42,6 +42,44 @@
   .wclock-label { font: 500 10px/1 var(--sans); color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; }
   .wclock-rm { font: 11px/1 var(--sans); color: var(--dim); background: transparent; border: none; padding: 0 2px; cursor: pointer; opacity: 0; transition: opacity .12s; }
   .wclock:hover .wclock-rm { opacity: 1; }
+
+  /* Clock themes */
+  .hclock.clock-neon .hclock-time { color: #0ff; text-shadow: 0 0 7px #0ff, 0 0 20px #0ff, 0 0 42px #0099cc; }
+  .hclock.clock-neon .hclock-date { color: #0ff; opacity: .7; }
+
+  .hclock.clock-ember .hclock-time { color: #ff6b35; text-shadow: 0 0 8px rgba(255,107,53,.6), 0 0 24px rgba(255,60,0,.3); }
+  .hclock.clock-ember .hclock-date { color: #ff9966; }
+
+  .hclock.clock-matrix .hclock-time { color: #00ff41; text-shadow: 0 0 5px #00ff41, 0 0 15px rgba(0,255,65,.4); font-family: "Courier New", monospace; }
+  .hclock.clock-matrix .hclock-date { color: #00cc33; }
+
+  .hclock.clock-arctic .hclock-time { color: #88ccff; text-shadow: 0 0 10px rgba(136,204,255,.5); letter-spacing: 0.08em; }
+  .hclock.clock-arctic .hclock-date { color: #aaddff; }
+
+  .hclock.clock-sunset .hclock-time { background: linear-gradient(135deg, #ff6b6b, #ffa07a, #ffd93d); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .hclock.clock-sunset .hclock-date { color: #ffa07a; }
+
+  .hclock.clock-midnight .hclock-time { color: #c4b5fd; text-shadow: 0 0 12px rgba(196,181,253,.4), 0 0 30px rgba(139,92,246,.2); }
+  .hclock.clock-midnight .hclock-date { color: #a78bfa; }
+
+  .hclock.clock-terminal .hclock-time { color: #4ade80; font-family: "Courier New", monospace; letter-spacing: 0.1em; }
+  .hclock.clock-terminal .hclock-time::before { content: "> "; font-weight: 400; opacity: .5; }
+  .hclock.clock-terminal .hclock-date { color: #86efac; font-family: "Courier New", monospace; }
+
+  .hclock.clock-golden .hclock-time { background: linear-gradient(180deg, #ffd700, #b8860b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; filter: drop-shadow(0 1px 2px rgba(184,134,11,.3)); }
+  .hclock.clock-golden .hclock-date { color: #daa520; }
+
+  .hclock.clock-rose .hclock-time { color: #fb7185; text-shadow: 0 0 8px rgba(251,113,133,.4); }
+  .hclock.clock-rose .hclock-date { color: #fda4af; }
+
+  .hclock.clock-ocean .hclock-time { background: linear-gradient(135deg, #06b6d4, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .hclock.clock-ocean .hclock-date { color: #67e8f9; }
+
+  .hclock.clock-mono .hclock-time { color: var(--dim); font-weight: 400; letter-spacing: 0.12em; }
+  .hclock.clock-mono .hclock-date { color: var(--dim); opacity: .5; }
+
+  .hclock.clock-nixie .hclock-time { color: #ff8c42; text-shadow: 0 0 4px #ff8c42, 0 0 12px rgba(255,140,66,.5), 0 0 28px rgba(255,100,20,.3); font-weight: 400; letter-spacing: 0.06em; }
+  .hclock.clock-nixie .hclock-date { color: #ff8c42; opacity: .6; }
   .wclock-rm:hover { color: var(--text); }
   .wclock-add { font: 600 13px/1 var(--mono); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
     border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
@@ -557,7 +595,7 @@
     .status { padding: 8px 16px; gap: 4px 16px; }
     .status.has-mascot { padding-right: 16px; min-height: 0; position: static; }
     .telemetry { padding: 4px 16px 5px; gap: 3px 12px; }
-    .hclock-time { font-size: 16px; }
+    .hclock-time { font-size: 24px; }
     .mascot { position: static; order: 99; margin-left: auto; width: 177px; height: 60px; border-radius: 8px; }
     .theme { margin-left: 0; }
     .cw { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px 16px 0; }
@@ -742,9 +780,9 @@
   .helpbtn { text-decoration: none; }
   .helpbtn + .layoutbtn { margin-left: 0; }
   .status.has-mascot .theme { margin-left: 0; }
-  .hclock { display: flex; flex-direction: column; align-items: center; gap: 1px; margin-left: auto; margin-right: auto; user-select: none; cursor: default; }
-  .hclock-time { font: 700 20px/1 var(--mono); color: var(--text); letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
-  .hclock-date { font: 500 11px/1 var(--sans); color: var(--dim); letter-spacing: 0.03em; text-transform: uppercase; }
+  .hclock { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-left: auto; margin-right: auto; user-select: none; cursor: default; }
+  .hclock-time { font: 700 32px/1 var(--mono); color: var(--text); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; transition: color .3s, text-shadow .3s; }
+  .hclock-date { font: 500 12px/1 var(--sans); color: var(--dim); letter-spacing: 0.05em; text-transform: uppercase; transition: color .3s; }
   .worldclocks { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 3px; }
   .worldclocks:empty { display: none; }
   .wclock { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; }
@@ -752,6 +790,44 @@
   .wclock-label { font: 500 10px/1 var(--sans); color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; }
   .wclock-rm { font: 11px/1 var(--sans); color: var(--dim); background: transparent; border: none; padding: 0 2px; cursor: pointer; opacity: 0; transition: opacity .12s; }
   .wclock:hover .wclock-rm { opacity: 1; }
+
+  /* Clock themes */
+  .hclock.clock-neon .hclock-time { color: #0ff; text-shadow: 0 0 7px #0ff, 0 0 20px #0ff, 0 0 42px #0099cc; }
+  .hclock.clock-neon .hclock-date { color: #0ff; opacity: .7; }
+
+  .hclock.clock-ember .hclock-time { color: #ff6b35; text-shadow: 0 0 8px rgba(255,107,53,.6), 0 0 24px rgba(255,60,0,.3); }
+  .hclock.clock-ember .hclock-date { color: #ff9966; }
+
+  .hclock.clock-matrix .hclock-time { color: #00ff41; text-shadow: 0 0 5px #00ff41, 0 0 15px rgba(0,255,65,.4); font-family: "Courier New", monospace; }
+  .hclock.clock-matrix .hclock-date { color: #00cc33; }
+
+  .hclock.clock-arctic .hclock-time { color: #88ccff; text-shadow: 0 0 10px rgba(136,204,255,.5); letter-spacing: 0.08em; }
+  .hclock.clock-arctic .hclock-date { color: #aaddff; }
+
+  .hclock.clock-sunset .hclock-time { background: linear-gradient(135deg, #ff6b6b, #ffa07a, #ffd93d); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .hclock.clock-sunset .hclock-date { color: #ffa07a; }
+
+  .hclock.clock-midnight .hclock-time { color: #c4b5fd; text-shadow: 0 0 12px rgba(196,181,253,.4), 0 0 30px rgba(139,92,246,.2); }
+  .hclock.clock-midnight .hclock-date { color: #a78bfa; }
+
+  .hclock.clock-terminal .hclock-time { color: #4ade80; font-family: "Courier New", monospace; letter-spacing: 0.1em; }
+  .hclock.clock-terminal .hclock-time::before { content: "> "; font-weight: 400; opacity: .5; }
+  .hclock.clock-terminal .hclock-date { color: #86efac; font-family: "Courier New", monospace; }
+
+  .hclock.clock-golden .hclock-time { background: linear-gradient(180deg, #ffd700, #b8860b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; filter: drop-shadow(0 1px 2px rgba(184,134,11,.3)); }
+  .hclock.clock-golden .hclock-date { color: #daa520; }
+
+  .hclock.clock-rose .hclock-time { color: #fb7185; text-shadow: 0 0 8px rgba(251,113,133,.4); }
+  .hclock.clock-rose .hclock-date { color: #fda4af; }
+
+  .hclock.clock-ocean .hclock-time { background: linear-gradient(135deg, #06b6d4, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .hclock.clock-ocean .hclock-date { color: #67e8f9; }
+
+  .hclock.clock-mono .hclock-time { color: var(--dim); font-weight: 400; letter-spacing: 0.12em; }
+  .hclock.clock-mono .hclock-date { color: var(--dim); opacity: .5; }
+
+  .hclock.clock-nixie .hclock-time { color: #ff8c42; text-shadow: 0 0 4px #ff8c42, 0 0 12px rgba(255,140,66,.5), 0 0 28px rgba(255,100,20,.3); font-weight: 400; letter-spacing: 0.06em; }
+  .hclock.clock-nixie .hclock-date { color: #ff8c42; opacity: .6; }
   .wclock-rm:hover { color: var(--text); }
   .wclock-add { font: 600 13px/1 var(--mono); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
     border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
@@ -818,6 +894,10 @@
     var days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     function pad(n) { return (n < 10 ? "0" : "") + n; }
+    var CLOCK_KEY = "hellogitty-clock";
+    function clockPrefs() { try { return JSON.parse(localStorage.getItem(CLOCK_KEY)) || {}; } catch(e) { return {}; } }
+    var cp = clockPrefs();
+    if (cp.style && cp.style !== "default" && wrap) { wrap.classList.add("clock-" + cp.style); }
 
     var ZONES = [
       { tz: "UTC", label: "UTC" },
@@ -871,10 +951,23 @@
 
     function tick() {
       var d = new Date();
-      var hh = pad(d.getHours()), mm = pad(d.getMinutes()), ss = pad(d.getSeconds());
-      timeEl.textContent = hh + ":" + mm + ":" + ss;
-      if (dateEl) dateEl.textContent = days[d.getDay()] + ", " + months[d.getMonth()] + " " + d.getDate() + " " + d.getFullYear();
-      if (wrap) { wrap.title = hh + ":" + mm + ":" + ss; }
+      var p = clockPrefs();
+      var h = d.getHours(), mm = pad(d.getMinutes()), ss = pad(d.getSeconds());
+      var suffix = "";
+      if (p.format === "12h") {
+        suffix = h >= 12 ? " PM" : " AM";
+        h = h % 12 || 12;
+      }
+      var hh = pad(h);
+      var t = hh + ":" + mm;
+      if (p.seconds !== false) t += ":" + ss;
+      t += suffix;
+      timeEl.textContent = t;
+      if (dateEl) {
+        if (p.date === false) { dateEl.style.display = "none"; }
+        else { dateEl.style.display = ""; dateEl.textContent = days[d.getDay()] + ", " + months[d.getMonth()] + " " + d.getDate() + " " + d.getFullYear(); }
+      }
+      if (wrap) { wrap.title = t; }
       tickWorld();
     }
     tick();
