@@ -27,6 +27,10 @@ func (h *Handler) serveWorkPage(w http.ResponseWriter, r *http.Request) {
 	h.serveSubPage(w, r, h.WorkTemplate, "workpage")
 }
 
+func (h *Handler) serveSettingsPage(w http.ResponseWriter, r *http.Request) {
+	h.serveSubPage(w, r, h.SettingsTemplate, "settingspage")
+}
+
 func (h *Handler) serveAlertYourMove(w http.ResponseWriter, r *http.Request) {
 	h.serveSubPage(w, r, h.AlertYourMoveTemplate, "alert-your-move")
 }

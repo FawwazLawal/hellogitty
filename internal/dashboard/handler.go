@@ -103,9 +103,15 @@ type Handler struct {
 	AlertWatchedClosedTemplate  string
 	AlertCheckFailedTemplate    string
 	AlertRepoHealthTemplate     string
+	SettingsTemplate string
 	Guide        string
 	Screenshot   []byte
 	About        []AboutItem
+	ConfigListen    string
+	ConfigDatabase  string
+	ConfigSnapshot  string
+	ConfigReposFile string
+	ConfigInbox     string
 }
 
 type page struct {
@@ -147,6 +153,13 @@ type page struct {
 	Token        string // sent back with acknowledgements; see Handler.token
 	// Security panel: CVEs and tips.
 	SecurityFeed security.Feed
+
+	// Settings page: server config (read-only on the page).
+	ConfigListen    string
+	ConfigDatabase  string
+	ConfigSnapshot  string
+	ConfigReposFile string
+	ConfigInbox     string
 
 	// Issues panel: the most recent open issues across tracked repos.
 	Issues     []globalIssue
@@ -437,6 +450,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveWorkDismiss(w, r, false)
 	case r.URL.Path == "/work/restore":
 		h.serveWorkDismiss(w, r, true)
+	case r.URL.Path == "/settings":
+		h.serveSettingsPage(w, r)
 	case r.URL.Path == "/help":
 		h.serveHelp(w, r)
 	case r.URL.Path == "/help/screenshot.png" && len(h.Screenshot) > 0:
@@ -937,6 +952,12 @@ func (h *Handler) build() (*page, error) {
 	}
 
 	p.SecurityFeed = h.Source.Security()
+
+	p.ConfigListen = h.ConfigListen
+	p.ConfigDatabase = h.ConfigDatabase
+	p.ConfigSnapshot = h.ConfigSnapshot
+	p.ConfigReposFile = h.ConfigReposFile
+	p.ConfigInbox = h.ConfigInbox
 
 	return p, nil
 }
