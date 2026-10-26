@@ -13,7 +13,7 @@
   /* status line */
   .site-head { position: sticky; top: 0; z-index: 3; }
   .status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 22px;
-    padding: 10px 20px; background: var(--panel); border-bottom: 1px solid var(--rule-hi); }
+    padding: 10px 20px; background: var(--panel); border-bottom: 0; }
   .status.has-mascot { min-height: 80px; padding-right: 268px; }
   .mascot { position: absolute; right: 16px; bottom: 0; width: 236px; height: 80px; pointer-events: none;
     background: var(--mascot-bg); border-radius: 8px 8px 0 0; overflow: hidden; }
@@ -22,11 +22,19 @@
   .brand .ver { line-height: 1.2; white-space: nowrap; }
   .status h1 { margin: 0; font-size: 19px; line-height: 1.3; font-weight: 700; letter-spacing: -0.01em; }
   .ver .baby { font-style: italic; }
+  .telemetry { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px;
+    padding: 5px 20px 6px; background: var(--panel); border-bottom: 1px solid var(--rule-hi); }
+  .telemetry .item { display: flex; align-items: baseline; gap: 7px; }
+  .telemetry .v { font-size: 13px; line-height: 1.35; }
+  .telemetry .lbl { font-size: 11px; }
   .status .item { display: flex; align-items: baseline; gap: 7px; }
   .status .v { font-size: 14px; line-height: 1.35; }
-  .gauge { display: inline-block; width: 80px; height: 6px; background: var(--track); vertical-align: middle; border-radius: 3px; overflow: hidden; align-self: center; }
+  .gauge { display: inline-block; width: 60px; height: 5px; background: var(--track); vertical-align: middle; border-radius: 3px; overflow: hidden; align-self: center; }
   .gauge i { display: block; height: 100%; background: var(--dim); }
   .gauge.hot i { background: var(--caution); }
+  .hclock { display: flex; flex-direction: column; align-items: center; gap: 1px; margin-left: auto; margin-right: auto; user-select: none; cursor: default; }
+  .hclock-time { font: 700 20px/1 var(--mono); color: var(--text); letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
+  .hclock-date { font: 500 11px/1 var(--sans); color: var(--dim); letter-spacing: 0.03em; text-transform: uppercase; }
   /* Layout (ADR-002): the header button, the sheet, folded and hidden modules. */
 {{template "feed-css"}}
   .layoutbtn { margin-left: auto; font: 12px/1 var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
@@ -528,6 +536,8 @@
     .seg button { padding: 7px 9px; }
     .status { padding: 8px 16px; gap: 4px 16px; }
     .status.has-mascot { padding-right: 16px; min-height: 0; position: static; }
+    .telemetry { padding: 4px 16px 5px; gap: 3px 12px; }
+    .hclock-time { font-size: 16px; }
     .mascot { position: static; order: 99; margin-left: auto; width: 177px; height: 60px; border-radius: 8px; }
     .theme { margin-left: 0; }
     .cw { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px 16px 0; }
@@ -685,7 +695,7 @@
 {{define "header-css"}}
   .site-head { position: sticky; top: 0; z-index: 3; }
   .status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 22px;
-    padding: 10px 20px; background: var(--panel); border-bottom: 1px solid var(--rule-hi); }
+    padding: 10px 20px; background: var(--panel); border-bottom: 0; }
   .status.has-mascot { min-height: 80px; padding-right: 268px; }
   .mascot { position: absolute; right: 16px; bottom: 0; width: 236px; height: 80px; pointer-events: none;
     background: var(--mascot-bg); border-radius: 8px 8px 0 0; overflow: hidden; }
@@ -694,9 +704,14 @@
   .brand .ver { line-height: 1.2; white-space: nowrap; }
   .status h1 { margin: 0; font-size: 19px; line-height: 1.3; font-weight: 700; letter-spacing: -0.01em; }
   .ver .baby { font-style: italic; }
+  .telemetry { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px;
+    padding: 5px 20px 6px; background: var(--panel); border-bottom: 1px solid var(--rule-hi); }
+  .telemetry .item { display: flex; align-items: baseline; gap: 7px; }
+  .telemetry .v { font-size: 13px; line-height: 1.35; }
+  .telemetry .lbl { font-size: 11px; }
   .status .item { display: flex; align-items: baseline; gap: 7px; }
   .status .v { font-size: 14px; line-height: 1.35; }
-  .gauge { display: inline-block; width: 80px; height: 6px; background: var(--track); vertical-align: middle; border-radius: 3px; overflow: hidden; align-self: center; }
+  .gauge { display: inline-block; width: 60px; height: 5px; background: var(--track); vertical-align: middle; border-radius: 3px; overflow: hidden; align-self: center; }
   .gauge i { display: block; height: 100%; background: var(--dim); }
   .gauge.hot i { background: var(--caution); }
   .layoutbtn { margin-left: auto; font: 12px/1 var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
@@ -707,9 +722,9 @@
   .helpbtn { text-decoration: none; }
   .helpbtn + .layoutbtn { margin-left: 0; }
   .status.has-mascot .theme { margin-left: 0; }
-  .clock { font: 600 15px/1 var(--mono); color: var(--text); letter-spacing: 0.02em; font-variant-numeric: tabular-nums;
-    white-space: nowrap; user-select: none; cursor: default; }
-  .clock .clock-sec { font-size: 12px; color: var(--dim); }
+  .hclock { display: flex; flex-direction: column; align-items: center; gap: 1px; margin-left: auto; margin-right: auto; user-select: none; cursor: default; }
+  .hclock-time { font: 700 20px/1 var(--mono); color: var(--text); letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
+  .hclock-date { font: 500 11px/1 var(--sans); color: var(--dim); letter-spacing: 0.03em; text-transform: uppercase; }
   .quicknav { display: flex; flex-wrap: wrap; align-items: center; gap: 0;
     background: var(--panel); border-bottom: 1px solid var(--rule-hi); padding: 0 20px; }
   .quicknav a { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; font: 600 13px/1 var(--sans); color: var(--dim);
@@ -727,13 +742,18 @@
 <div class="site-head">
 <header class="status">
   <div class="brand"><h1>HelloGitty</h1><span class="lbl ver">{{.Version}}{{if .Baby}} <span class="baby">(baby)</span>{{end}}</span></div>
-  <span class="item"><span class="lbl">Last check</span>{{if .LastPollUnix}}<span class="v" title="{{.LastPollUTC}} UTC">{{.LastPollUTC}} UTC</span>{{else}}<span class="v zero">not yet</span>{{end}}</span>
-  <span class="item"><span class="lbl">GitHub API</span>{{if .APIKnown}}<span class="v"><span class="fig">{{.APIUsed}}</span> of <span class="fig">{{.APILimit}}</span> this hour</span><span class="gauge{{if ge .APIPct 90}} hot{{end}}" role="img" aria-label="{{.APIPct}} percent of the hourly quota used"><i style="width:{{.APIPct}}%"></i></span>{{else}}<span class="v zero">no data yet</span>{{end}}</span>
-  <span class="item"><span class="v"><span class="fig">{{.RepoCount}}</span> repos{{if .HasPipeline}} · <span class="fig">{{.TargetCount}}</span> in the pipeline{{end}}</span></span>
-  <time class="clock" id="hg-clock" aria-live="off" title="Local time"></time>
+  <div class="hclock" id="hg-clock" aria-live="off" title="Local time">
+    <span class="hclock-time" id="hg-clock-time"></span>
+    <span class="hclock-date" id="hg-clock-date"></span>
+  </div>
   <a class="layoutbtn helpbtn" href="/help" title="Help (press ?)">Help</a>
   <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
 </header>
+<div class="telemetry">
+  <span class="item"><span class="lbl">Last check</span>{{if .LastPollUnix}}<span class="v" title="{{.LastPollUTC}} UTC">{{.LastPollUTC}} UTC</span>{{else}}<span class="v zero">not yet</span>{{end}}</span>
+  <span class="item"><span class="lbl">GitHub API</span>{{if .APIKnown}}<span class="v"><span class="fig">{{.APIUsed}}</span> of <span class="fig">{{.APILimit}}</span> this hour</span><span class="gauge{{if ge .APIPct 90}} hot{{end}}" role="img" aria-label="{{.APIPct}} percent of the hourly quota used"><i style="width:{{.APIPct}}%"></i></span>{{else}}<span class="v zero">no data yet</span>{{end}}</span>
+  <span class="item"><span class="v"><span class="fig">{{.RepoCount}}</span> repos{{if .HasPipeline}} · <span class="fig">{{.TargetCount}}</span> in the pipeline{{end}}</span></span>
+</div>
 <nav class="quicknav" aria-label="Quick access">
   <a href="/"><svg viewBox="0 0 16 16"><path d="M2 6l6-4.5L14 6v7.5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6z"/><path d="M6 14.5V8h4v6.5"/></svg>Dashboard</a>
   <a href="/work"><svg viewBox="0 0 16 16"><path d="M3 2h10v12H3z"/><path d="M6 6h4M6 9h4M6 12h2"/></svg>Your work</a>
@@ -750,18 +770,22 @@
 {{end}}
 {{define "clock-js"}}
   (function(){
-    var el = document.getElementById("hg-clock");
-    if (!el) return;
+    var timeEl = document.getElementById("hg-clock-time");
+    var dateEl = document.getElementById("hg-clock-date");
+    var wrap = document.getElementById("hg-clock");
+    if (!timeEl) return;
+    var days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    function pad(n) { return (n < 10 ? "0" : "") + n; }
     function tick() {
       var d = new Date();
-      var h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
-      var hh = (h < 10 ? "0" : "") + h, mm = (m < 10 ? "0" : "") + m, ss = (s < 10 ? "0" : "") + s;
-      el.textContent = hh + ":" + mm;
-      el.title = hh + ":" + mm + ":" + ss;
-      el.dateTime = d.toISOString();
+      var hh = pad(d.getHours()), mm = pad(d.getMinutes()), ss = pad(d.getSeconds());
+      timeEl.textContent = hh + ":" + mm + ":" + ss;
+      if (dateEl) dateEl.textContent = days[d.getDay()] + ", " + months[d.getMonth()] + " " + d.getDate() + " " + d.getFullYear();
+      if (wrap) { wrap.title = hh + ":" + mm + ":" + ss; wrap.dateTime = d.toISOString(); }
     }
     tick();
-    setInterval(tick, 15000);
+    setInterval(tick, 1000);
   })();
 {{end}}
 {{define "feed-css"}}
@@ -998,16 +1022,21 @@
 <div class="site-head">
 <header class="status {{if .Mascot}}has-mascot{{end}}">
   <div class="brand"><h1>HelloGitty</h1><span class="lbl ver">{{.Version}}{{if .Baby}} <span class="baby">(baby)</span>{{end}}</span></div>
-  <span class="item"><span class="lbl">Last check</span>{{if .LastPollUnix}}<span class="v" id="pollage" data-since="{{.LastPollUnix}}" title="{{.LastPollUTC}} UTC">{{.LastPollUTC}} UTC</span>{{else}}<span class="v zero">not yet</span>{{end}}</span>
-  <span class="item"><span class="lbl term" data-term="api" tabindex="0">GitHub API</span>{{if .APIKnown}}<span class="v"><span class="fig">{{.APIUsed}}</span> of <span class="fig">{{.APILimit}}</span> this hour</span><span class="gauge{{if ge .APIPct 90}} hot{{end}}" role="img" aria-label="{{.APIPct}} percent of the hourly quota used"><i style="width:{{.APIPct}}%"></i></span>{{else}}<span class="v zero">no data yet</span>{{end}}</span>
-  <span class="item"><span class="v"><span class="fig">{{.RepoCount}}</span> repos{{if .HasPipeline}} · <span class="fig">{{.TargetCount}}</span> in the pipeline{{end}}</span></span>
-  <time class="clock" id="hg-clock" aria-live="off" title="Local time"></time>
+  <div class="hclock" id="hg-clock" aria-live="off" title="Local time">
+    <span class="hclock-time" id="hg-clock-time"></span>
+    <span class="hclock-date" id="hg-clock-date"></span>
+  </div>
   <a class="layoutbtn helpbtn" href="/help" title="Help (press ?)">Help</a>
   <button type="button" class="layoutbtn" id="fold-all" title="Collapse all panels (c)">Collapse all</button>
   <button type="button" class="layoutbtn" id="layout-open" aria-haspopup="dialog">Layout</button>
   <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
   {{if .Mascot}}<div class="mascot" aria-hidden="true" data-routine="{{range $i, $c := .Mascot.Routine}}{{if $i}} {{end}}{{$c}}{{end}}" data-news="{{range $i, $c := .Mascot.News}}{{if $i}} {{end}}{{$c}}{{end}}"><video muted playsinline preload="none" poster="{{.Mascot.Rest}}" tabindex="-1"></video></div>{{end}}
 </header>
+<div class="telemetry">
+  <span class="item"><span class="lbl">Last check</span>{{if .LastPollUnix}}<span class="v" id="pollage" data-since="{{.LastPollUnix}}" title="{{.LastPollUTC}} UTC">{{.LastPollUTC}} UTC</span>{{else}}<span class="v zero">not yet</span>{{end}}</span>
+  <span class="item"><span class="lbl term" data-term="api" tabindex="0">GitHub API</span>{{if .APIKnown}}<span class="v"><span class="fig">{{.APIUsed}}</span> of <span class="fig">{{.APILimit}}</span> this hour</span><span class="gauge{{if ge .APIPct 90}} hot{{end}}" role="img" aria-label="{{.APIPct}} percent of the hourly quota used"><i style="width:{{.APIPct}}%"></i></span>{{else}}<span class="v zero">no data yet</span>{{end}}</span>
+  <span class="item"><span class="v"><span class="fig">{{.RepoCount}}</span> repos{{if .HasPipeline}} · <span class="fig">{{.TargetCount}}</span> in the pipeline{{end}}</span></span>
+</div>
 
 <nav class="quicknav" aria-label="Quick access">
   <a href="/"><svg viewBox="0 0 16 16"><path d="M2 6l6-4.5L14 6v7.5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6z"/><path d="M6 14.5V8h4v6.5"/></svg>Dashboard</a>
