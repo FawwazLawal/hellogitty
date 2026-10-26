@@ -32,9 +32,9 @@
   .gauge { display: inline-block; width: 60px; height: 5px; background: var(--track); vertical-align: middle; border-radius: 3px; overflow: hidden; align-self: center; }
   .gauge i { display: block; height: 100%; background: var(--dim); }
   .gauge.hot i { background: var(--caution); }
-  .hclock { display: flex; flex-direction: column; align-items: center; gap: 1px; margin-left: auto; margin-right: auto; user-select: none; cursor: default; }
-  .hclock-time { font: 700 20px/1 var(--mono); color: var(--text); letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
-  .hclock-date { font: 500 11px/1 var(--sans); color: var(--dim); letter-spacing: 0.03em; text-transform: uppercase; }
+  .hclock { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-left: auto; margin-right: auto; user-select: none; cursor: default; }
+  .hclock-time { font: 700 32px/1 var(--mono); color: var(--text); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
+  .hclock-date { font: 500 12px/1 var(--sans); color: var(--dim); letter-spacing: 0.05em; text-transform: uppercase; }
   .worldclocks { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 3px; }
   .worldclocks:empty { display: none; }
   .wclock { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; }
@@ -557,7 +557,7 @@
     .status { padding: 8px 16px; gap: 4px 16px; }
     .status.has-mascot { padding-right: 16px; min-height: 0; position: static; }
     .telemetry { padding: 4px 16px 5px; gap: 3px 12px; }
-    .hclock-time { font-size: 16px; }
+    .hclock-time { font-size: 24px; }
     .mascot { position: static; order: 99; margin-left: auto; width: 177px; height: 60px; border-radius: 8px; }
     .theme { margin-left: 0; }
     .cw { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px 16px 0; }
@@ -742,9 +742,9 @@
   .helpbtn { text-decoration: none; }
   .helpbtn + .layoutbtn { margin-left: 0; }
   .status.has-mascot .theme { margin-left: 0; }
-  .hclock { display: flex; flex-direction: column; align-items: center; gap: 1px; margin-left: auto; margin-right: auto; user-select: none; cursor: default; }
-  .hclock-time { font: 700 20px/1 var(--mono); color: var(--text); letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
-  .hclock-date { font: 500 11px/1 var(--sans); color: var(--dim); letter-spacing: 0.03em; text-transform: uppercase; }
+  .hclock { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-left: auto; margin-right: auto; user-select: none; cursor: default; }
+  .hclock-time { font: 700 32px/1 var(--mono); color: var(--text); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
+  .hclock-date { font: 500 12px/1 var(--sans); color: var(--dim); letter-spacing: 0.05em; text-transform: uppercase; }
   .worldclocks { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 3px; }
   .worldclocks:empty { display: none; }
   .wclock { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; }
