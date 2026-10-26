@@ -278,6 +278,7 @@ func run() int {
 			ConfigSnapshot:  cfg.Snapshot,
 			ConfigReposFile: cfg.ReposFile,
 			ConfigInbox:     cfg.Inbox,
+			ConfigMaintain:  cfg.Maintain,
 		},
 		ReadHeaderTimeout: 10 * time.Second,
 	}

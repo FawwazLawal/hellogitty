@@ -206,6 +206,51 @@
     </div>
   </div>
 
+  {{if .RepoTools}}<div class="sgroup" id="s-repos-section">
+    <h2>Repositories</h2>
+    <div class="scard">
+      <div class="srow" style="grid-template-columns:1fr">
+        <span class="slbl" style="margin-bottom:6px">Add a repository</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="s-repo-input" placeholder="owner/name or GitHub URL"
+            style="flex:1;font:13px var(--mono);color:var(--text);background:var(--bg);border:1px solid var(--rule-hi);border-radius:6px;padding:7px 10px;">
+          <button type="button" id="s-repo-add" style="font:600 13px var(--sans);color:var(--text);background:var(--raised);border:1px solid var(--rule-hi);border-radius:6px;padding:7px 14px;cursor:pointer;white-space:nowrap">Track</button>
+        </div>
+        <span id="s-repo-msg" style="font-size:12px;margin-top:4px;display:none"></span>
+      </div>
+      <div class="srow" style="grid-template-columns:1fr">
+        <span class="slbl" style="margin-bottom:6px">Tracked repos <span style="font-weight:400;color:var(--dim)">({{.RepoCount}})</span></span>
+        <div id="s-repo-list" class="clocks-list">
+          {{range .Rows}}<div class="clock-row" data-repo="{{.Owner}}/{{.Name}}">
+            <span class="clabel" style="font:13px var(--mono)">{{.Owner}}/{{.Name}}</span>
+            <button type="button" class="crm s-repo-rm">Remove</button>
+          </div>{{end}}
+          {{if not .Rows}}<span class="no-clocks">No repositories tracked yet.</span>{{end}}
+        </div>
+      </div>
+      {{if .RemovedRepos}}<div class="srow" style="grid-template-columns:1fr">
+        <span class="slbl" style="margin-bottom:6px">Removed <span style="font-weight:400;color:var(--dim)">({{len .RemovedRepos}})</span></span>
+        <div id="s-repo-removed" class="clocks-list">
+          {{range .RemovedRepos}}<div class="clock-row" data-repo="{{.}}">
+            <span class="clabel" style="font:13px var(--mono);color:var(--dim)">{{.}}</span>
+            <button type="button" class="crm s-repo-readd" style="color:var(--head-accent);border-color:var(--head-accent)">Track again</button>
+          </div>{{end}}
+        </div>
+      </div>{{end}}
+    </div>
+    {{if .ConfigMaintain}}<div class="scard" style="margin-top:12px">
+      <div class="srow" style="grid-template-columns:1fr">
+        <span class="slbl" style="margin-bottom:6px">Maintain list <span class="badge">config file</span></span>
+        <div class="clocks-list">
+          {{range .ConfigMaintain}}<div class="clock-row">
+            <span class="clabel" style="font:13px var(--mono)">{{.}}</span>
+          </div>{{end}}
+        </div>
+        <span style="font-size:12px;color:var(--dim);margin-top:4px">Repos and orgs whose PRs appear under "Waiting on you". Edit in <code style="background:var(--raised);padding:1px 4px;border-radius:3px">hellogitty.json</code>.</span>
+      </div>
+    </div>{{end}}
+  </div>{{end}}
+
   <div class="sgroup">
     <h2>Server configuration <span class="badge">read-only</span></h2>
     <div class="scard">
@@ -425,6 +470,97 @@
       }
     });
     styleGrid.appendChild(swatch);
+  });
+})();
+
+// Repositories management
+(function() {
+  var TOKEN = "{{.Token}}";
+  var input = document.getElementById("s-repo-input");
+  var addBtn = document.getElementById("s-repo-add");
+  var msg = document.getElementById("s-repo-msg");
+  if (!input || !addBtn) return;
+
+  function flash(el, text, ok) {
+    el.textContent = text;
+    el.style.color = ok ? "var(--head-accent)" : "var(--warn)";
+    el.style.display = "";
+    clearTimeout(el._t);
+    el._t = setTimeout(function() { el.style.display = "none"; }, 3000);
+  }
+
+  function repoPost(url, repo, cb) {
+    var x = new XMLHttpRequest();
+    x.open("POST", url);
+    x.setRequestHeader("Content-Type", "application/json");
+    x.setRequestHeader("X-HelloGitty-Token", TOKEN);
+    x.onload = function() {
+      try { var d = JSON.parse(x.responseText); cb(null, d); }
+      catch(e) { cb(x.statusText || "request failed"); }
+    };
+    x.onerror = function() { cb("network error"); };
+    x.send(JSON.stringify({repo: repo}));
+  }
+
+  addBtn.addEventListener("click", function() {
+    var val = input.value.trim();
+    if (!val) return;
+    addBtn.disabled = true;
+    repoPost("/repos/add", val, function(err, d) {
+      addBtn.disabled = false;
+      if (err || (d && d.error)) {
+        flash(msg, err || d.error, false);
+        return;
+      }
+      flash(msg, "Added " + (d.repo || val), true);
+      input.value = "";
+      var list = document.getElementById("s-repo-list");
+      var empty = list.querySelector(".no-clocks");
+      if (empty) empty.remove();
+      var row = document.createElement("div");
+      row.className = "clock-row"; row.dataset.repo = d.repo || val;
+      row.innerHTML = '<span class="clabel" style="font:13px var(--mono)">' + (d.repo || val) + '</span>' +
+        '<button type="button" class="crm s-repo-rm">Remove</button>';
+      row.querySelector(".s-repo-rm").addEventListener("click", removeHandler);
+      list.appendChild(row);
+    });
+  });
+
+  input.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") addBtn.click();
+  });
+
+  function removeHandler() {
+    var row = this.closest(".clock-row");
+    var repo = row.dataset.repo;
+    repoPost("/repos/remove", repo, function(err, d) {
+      if (err || (d && d.error)) { flash(msg, err || d.error, false); return; }
+      row.remove();
+      flash(msg, "Removed " + repo, true);
+    });
+  }
+
+  document.querySelectorAll(".s-repo-rm").forEach(function(b) {
+    b.addEventListener("click", removeHandler);
+  });
+
+  document.querySelectorAll(".s-repo-readd").forEach(function(b) {
+    b.addEventListener("click", function() {
+      var row = this.closest(".clock-row");
+      var repo = row.dataset.repo;
+      repoPost("/repos/add", repo, function(err, d) {
+        if (err || (d && d.error)) { flash(msg, err || d.error, false); return; }
+        row.remove();
+        flash(msg, "Re-added " + (d.repo || repo), true);
+        var list = document.getElementById("s-repo-list");
+        var nr = document.createElement("div");
+        nr.className = "clock-row"; nr.dataset.repo = d.repo || repo;
+        nr.innerHTML = '<span class="clabel" style="font:13px var(--mono)">' + (d.repo || repo) + '</span>' +
+          '<button type="button" class="crm s-repo-rm">Remove</button>';
+        nr.querySelector(".s-repo-rm").addEventListener("click", removeHandler);
+        list.appendChild(nr);
+      });
+    });
   });
 })();
 </script>
