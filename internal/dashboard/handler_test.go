@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/FawwazLawal/hellogitty/internal/pipeline"
+	"github.com/FawwazLawal/hellogitty/internal/security"
 	"github.com/FawwazLawal/hellogitty/internal/store"
 	"github.com/FawwazLawal/hellogitty/internal/work"
 	"github.com/FawwazLawal/hellogitty/web"
@@ -30,6 +31,7 @@ func (f fakeSource) Reports() ([]store.RepoReport, error) { return f.reports, ni
 func (f fakeSource) Telemetry() Telemetry                 { return f.tel }
 func (f fakeSource) Pipeline() (*pipeline.State, error)   { return f.pipe, nil }
 func (f fakeSource) Work() (*work.Board, string)          { return f.board, f.workErr }
+func (f fakeSource) Security() security.Feed              { return security.Feed{} }
 
 // pipeFixture is a pipeline with rocket two stages in and lullaby one stage in.
 func pipeFixture(t *testing.T) *pipeline.State {

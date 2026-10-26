@@ -27,6 +27,7 @@ import (
 	"github.com/FawwazLawal/hellogitty/internal/notify"
 	"github.com/FawwazLawal/hellogitty/internal/overlap"
 	"github.com/FawwazLawal/hellogitty/internal/pipeline"
+	"github.com/FawwazLawal/hellogitty/internal/security"
 	"github.com/FawwazLawal/hellogitty/internal/poller"
 	"github.com/FawwazLawal/hellogitty/internal/snapshot"
 	"github.com/FawwazLawal/hellogitty/internal/store"
@@ -189,7 +190,8 @@ func run() int {
 	}
 	ov := &overlap.Watcher{GH: gh, Store: st}
 	checkOverlap := overlapChecker(ov, st, pl, pipe, board)
-	src := source{st: st, p: pl, gh: gh, pipe: pipe, board: board, feed: feed, ov: ov,
+	secCache := security.NewCache(30 * time.Minute)
+	src := source{st: st, p: pl, gh: gh, pipe: pipe, board: board, feed: feed, ov: ov, sec: secCache,
 		repoManager: repoManager{cfg: cfg, st: st, gh: gh, p: pl}}
 	writeInbox := inboxWriter(cfg.Path(cfg.Inbox), src)
 	snapPath := cfg.Path(cfg.Snapshot)
@@ -520,6 +522,7 @@ type source struct {
 	board       *work.Tracker
 	feed        *notify.Feed
 	ov          *overlap.Watcher
+	sec         *security.Cache
 	repoManager // adding and removing repositories from the dashboard
 }
 
@@ -554,6 +557,17 @@ func (s source) PageOpenIssues(since time.Time, offset, limit int) ([]store.Rece
 }
 func (s source) SearchOpenIssues(since time.Time, q string, offset, limit int) ([]store.RecentIssue, int, error) {
 	return s.st.SearchOpenIssues(since, q, offset, limit)
+}
+
+func (s source) Security() security.Feed {
+	s.sec.Refresh()
+	reports, _ := s.Reports()
+	var repos []string
+	for _, r := range reports {
+		repos = append(repos, r.Name)
+	}
+	s.sec.SetTips(security.GenerateTips(repos))
+	return s.sec.Get()
 }
 
 func (s source) Pipeline() (*pipeline.State, error) { return s.pipe.Get(context.Background()) }

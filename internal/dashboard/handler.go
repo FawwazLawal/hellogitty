@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/FawwazLawal/hellogitty/internal/pipeline"
+	"github.com/FawwazLawal/hellogitty/internal/security"
 	"github.com/FawwazLawal/hellogitty/internal/store"
 	"github.com/FawwazLawal/hellogitty/internal/work"
 )
@@ -70,6 +71,7 @@ type Source interface {
 	Telemetry() Telemetry
 	Pipeline() (*pipeline.State, error)
 	Work() (*work.Board, string)
+	Security() security.Feed
 }
 
 type Handler struct {
@@ -143,6 +145,9 @@ type page struct {
 	GlossaryJSON template.JS
 	Feed         feedView
 	Token        string // sent back with acknowledgements; see Handler.token
+	// Security panel: CVEs and tips.
+	SecurityFeed security.Feed
+
 	// Issues panel: the most recent open issues across tracked repos.
 	Issues     []globalIssue
 	IssueTotal int
@@ -930,6 +935,8 @@ func (h *Handler) build() (*page, error) {
 	for _, n := range failNames {
 		p.FailedRepos = append(p.FailedRepos, failedRepo{Name: n, Error: why[n]})
 	}
+
+	p.SecurityFeed = h.Source.Security()
 
 	return p, nil
 }
