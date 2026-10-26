@@ -5,6 +5,35 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (10) · Black Bombay (baby) · 2026-10-26
+
+Tag `v0.2.10`.
+
+- **Dashboard cockpit**: prominent date/time clock centered in the header, collapsible
+  panels, filter pills with clear-all, grid/list view toggle, and a DevSecOps security
+  panel showing recent CVEs and workflow tips.
+- **Multi-timezone clocks**: add world clocks from a searchable timezone picker; clocks
+  persist in localStorage and display city names with UTC offsets.
+- **Clock settings and 12 creative themes**: adjustable time format (12h/24h), seconds
+  toggle, date toggle, and 12 visual clock styles — Neon, Ember, Matrix, Arctic, Sunset,
+  Midnight, Terminal, Golden, Rosé, Ocean, Mono, Nixie — selectable from a swatch grid
+  on the Settings page.
+- **Settings page** (`/settings`): dashboard preferences and server configuration on a
+  dedicated page — appearance (theme, layout preset, compact cells), clock customisation,
+  world clocks, and read-only server config.
+- **Security headers**: dashboard responses include `X-Content-Type-Options`,
+  `X-Frame-Options`, and `Content-Security-Policy` headers.
+- **Privacy policy**: `PRIVACY.md` covering dashboard, Chrome extension, and OAuth exchange
+  server data flows.
+- **Telemetry relocated**: API rate, cycle stats, and poll timing moved from the header bar
+  to the page footer for a cleaner layout.
+- Fixed: filter pill text invisible in dark mode.
+- Fixed: timezone picker dropdown overflowing the page.
+
+## v0.2.0 (9) · Black Bombay (baby) · 2026-10-23
+
+Tag `v0.2.9`.
+
 - **Clickable overview cards**: on Conversations, the "Needs your reply" and "Waiting on
   others" cards activate the matching filter. On Your work, all four cards ("Your move",
   "Waiting", "Finished", "Dismissed") do the same, and empty sections hide when their items
