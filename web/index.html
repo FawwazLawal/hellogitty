@@ -35,6 +35,24 @@
   .hclock { display: flex; flex-direction: column; align-items: center; gap: 1px; margin-left: auto; margin-right: auto; user-select: none; cursor: default; }
   .hclock-time { font: 700 20px/1 var(--mono); color: var(--text); letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
   .hclock-date { font: 500 11px/1 var(--sans); color: var(--dim); letter-spacing: 0.03em; text-transform: uppercase; }
+  .worldclocks { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 3px; }
+  .worldclocks:empty { display: none; }
+  .wclock { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; }
+  .wclock-time { font: 600 13px/1 var(--mono); color: var(--text); font-variant-numeric: tabular-nums; }
+  .wclock-label { font: 500 10px/1 var(--sans); color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; }
+  .wclock-rm { font: 11px/1 var(--sans); color: var(--dim); background: transparent; border: none; padding: 0 2px; cursor: pointer; opacity: 0; transition: opacity .12s; }
+  .wclock:hover .wclock-rm { opacity: 1; }
+  .wclock-rm:hover { color: var(--text); }
+  .wclock-add { font: 600 13px/1 var(--mono); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
+    border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+  .wclock-add:hover { color: var(--text); background: var(--raised); }
+  .wclock-picker { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); z-index: 10;
+    background: var(--panel); border: 1px solid var(--rule-hi); border-radius: 8px; padding: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.35);
+    display: none; flex-direction: column; gap: 4px; min-width: 180px; }
+  .wclock-picker.open { display: flex; }
+  .wclock-picker button { font: 13px var(--sans); color: var(--text); background: transparent; border: none; padding: 6px 10px;
+    text-align: left; cursor: pointer; border-radius: 4px; }
+  .wclock-picker button:hover { background: var(--raised); }
   /* Layout (ADR-002): the header button, the sheet, folded and hidden modules. */
 {{template "feed-css"}}
   .layoutbtn { margin-left: auto; font: 12px/1 var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
@@ -725,6 +743,24 @@
   .hclock { display: flex; flex-direction: column; align-items: center; gap: 1px; margin-left: auto; margin-right: auto; user-select: none; cursor: default; }
   .hclock-time { font: 700 20px/1 var(--mono); color: var(--text); letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
   .hclock-date { font: 500 11px/1 var(--sans); color: var(--dim); letter-spacing: 0.03em; text-transform: uppercase; }
+  .worldclocks { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 3px; }
+  .worldclocks:empty { display: none; }
+  .wclock { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; }
+  .wclock-time { font: 600 13px/1 var(--mono); color: var(--text); font-variant-numeric: tabular-nums; }
+  .wclock-label { font: 500 10px/1 var(--sans); color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; }
+  .wclock-rm { font: 11px/1 var(--sans); color: var(--dim); background: transparent; border: none; padding: 0 2px; cursor: pointer; opacity: 0; transition: opacity .12s; }
+  .wclock:hover .wclock-rm { opacity: 1; }
+  .wclock-rm:hover { color: var(--text); }
+  .wclock-add { font: 600 13px/1 var(--mono); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
+    border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+  .wclock-add:hover { color: var(--text); background: var(--raised); }
+  .wclock-picker { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); z-index: 10;
+    background: var(--panel); border: 1px solid var(--rule-hi); border-radius: 8px; padding: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.35);
+    display: none; flex-direction: column; gap: 4px; min-width: 180px; }
+  .wclock-picker.open { display: flex; }
+  .wclock-picker button { font: 13px var(--sans); color: var(--text); background: transparent; border: none; padding: 6px 10px;
+    text-align: left; cursor: pointer; border-radius: 4px; }
+  .wclock-picker button:hover { background: var(--raised); }
   .quicknav { display: flex; flex-wrap: wrap; align-items: center; gap: 0;
     background: var(--panel); border-bottom: 1px solid var(--rule-hi); padding: 0 20px; }
   .quicknav a { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; font: 600 13px/1 var(--sans); color: var(--dim);
@@ -745,6 +781,10 @@
   <div class="hclock" id="hg-clock" aria-live="off" title="Local time">
     <span class="hclock-time" id="hg-clock-time"></span>
     <span class="hclock-date" id="hg-clock-date"></span>
+    <div class="worldclocks" id="hg-worldclocks" style="position:relative">
+      <button type="button" class="wclock-add" id="wclock-add" title="Add a timezone clock">+</button>
+      <div class="wclock-picker" id="wclock-picker"></div>
+    </div>
   </div>
   <a class="layoutbtn helpbtn" href="/help" title="Help (press ?)">Help</a>
   <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
@@ -773,19 +813,128 @@
     var timeEl = document.getElementById("hg-clock-time");
     var dateEl = document.getElementById("hg-clock-date");
     var wrap = document.getElementById("hg-clock");
+    var wcWrap = document.getElementById("hg-worldclocks");
+    var addBtn = document.getElementById("wclock-add");
+    var picker = document.getElementById("wclock-picker");
     if (!timeEl) return;
     var days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     function pad(n) { return (n < 10 ? "0" : "") + n; }
+
+    var ZONES = [
+      { tz: "UTC", label: "UTC" },
+      { tz: "America/New_York", label: "EST" },
+      { tz: "America/Chicago", label: "CST" },
+      { tz: "America/Denver", label: "MST" },
+      { tz: "America/Los_Angeles", label: "PST" },
+      { tz: "Europe/London", label: "GMT" },
+      { tz: "Europe/Paris", label: "CET" },
+      { tz: "Europe/Berlin", label: "CET" },
+      { tz: "Asia/Tokyo", label: "JST" },
+      { tz: "Asia/Shanghai", label: "CST (CN)" },
+      { tz: "Asia/Kolkata", label: "IST" },
+      { tz: "Australia/Sydney", label: "AEST" },
+      { tz: "Pacific/Auckland", label: "NZST" },
+      { tz: "America/Sao_Paulo", label: "BRT" }
+    ];
+
+    var KEY = "hellogitty-worldclocks";
+    function loadClocks() { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch(e) { return []; } }
+    function saveClocks(list) { try { localStorage.setItem(KEY, JSON.stringify(list)); } catch(e) {} }
+
+    function tzTime(tz) {
+      try {
+        var parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date());
+        var h = "", m = "";
+        parts.forEach(function(p) { if (p.type === "hour") h = p.value; if (p.type === "minute") m = p.value; });
+        return h + ":" + m;
+      } catch(e) { return "??:??"; }
+    }
+
+    function renderWorldClocks() {
+      if (!wcWrap) return;
+      var clocks = loadClocks();
+      wcWrap.querySelectorAll(".wclock").forEach(function(el) { el.remove(); });
+      clocks.forEach(function(c, i) {
+        var span = document.createElement("span");
+        span.className = "wclock";
+        span.innerHTML = '<span class="wclock-time" data-tz="' + c.tz + '">' + tzTime(c.tz) + '</span>' +
+          '<span class="wclock-label">' + c.label + '</span>' +
+          '<button type="button" class="wclock-rm" title="Remove" data-wci="' + i + '">×</button>';
+        wcWrap.insertBefore(span, addBtn);
+      });
+    }
+
+    function tickWorld() {
+      document.querySelectorAll(".wclock-time[data-tz]").forEach(function(el) {
+        el.textContent = tzTime(el.dataset.tz);
+      });
+    }
+
     function tick() {
       var d = new Date();
       var hh = pad(d.getHours()), mm = pad(d.getMinutes()), ss = pad(d.getSeconds());
       timeEl.textContent = hh + ":" + mm + ":" + ss;
       if (dateEl) dateEl.textContent = days[d.getDay()] + ", " + months[d.getMonth()] + " " + d.getDate() + " " + d.getFullYear();
-      if (wrap) { wrap.title = hh + ":" + mm + ":" + ss; wrap.dateTime = d.toISOString(); }
+      if (wrap) { wrap.title = hh + ":" + mm + ":" + ss; }
+      tickWorld();
     }
     tick();
     setInterval(tick, 1000);
+
+    if (addBtn && picker) {
+      function buildPicker() {
+        picker.innerHTML = "";
+        var current = loadClocks();
+        var used = {};
+        current.forEach(function(c) { used[c.tz] = true; });
+        var available = ZONES.filter(function(z) { return !used[z.tz]; });
+        if (!available.length) {
+          var p = document.createElement("span");
+          p.style.cssText = "padding:8px;color:var(--dim);font-size:13px";
+          p.textContent = "All timezones added";
+          picker.appendChild(p);
+          return;
+        }
+        available.forEach(function(z) {
+          var btn = document.createElement("button");
+          btn.type = "button";
+          btn.textContent = z.label + " — " + z.tz.replace(/_/g, " ");
+          btn.addEventListener("click", function() {
+            var list = loadClocks();
+            list.push({ tz: z.tz, label: z.label });
+            saveClocks(list);
+            renderWorldClocks();
+            picker.classList.remove("open");
+          });
+          picker.appendChild(btn);
+        });
+      }
+
+      addBtn.addEventListener("click", function(e) {
+        e.stopPropagation();
+        buildPicker();
+        picker.classList.toggle("open");
+      });
+
+      document.addEventListener("click", function(e) {
+        if (!picker.contains(e.target) && e.target !== addBtn) picker.classList.remove("open");
+      });
+    }
+
+    if (wcWrap) {
+      wcWrap.addEventListener("click", function(e) {
+        var rm = e.target.closest(".wclock-rm");
+        if (!rm) return;
+        var idx = parseInt(rm.dataset.wci, 10);
+        var list = loadClocks();
+        list.splice(idx, 1);
+        saveClocks(list);
+        renderWorldClocks();
+      });
+    }
+
+    renderWorldClocks();
   })();
 {{end}}
 {{define "feed-css"}}
@@ -1025,6 +1174,10 @@
   <div class="hclock" id="hg-clock" aria-live="off" title="Local time">
     <span class="hclock-time" id="hg-clock-time"></span>
     <span class="hclock-date" id="hg-clock-date"></span>
+    <div class="worldclocks" id="hg-worldclocks" style="position:relative">
+      <button type="button" class="wclock-add" id="wclock-add" title="Add a timezone clock">+</button>
+      <div class="wclock-picker" id="wclock-picker"></div>
+    </div>
   </div>
   <a class="layoutbtn helpbtn" href="/help" title="Help (press ?)">Help</a>
   <button type="button" class="layoutbtn" id="fold-all" title="Collapse all panels (c)">Collapse all</button>
