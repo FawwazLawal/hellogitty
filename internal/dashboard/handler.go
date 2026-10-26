@@ -322,7 +322,7 @@ func eye(key string, on bool) template.HTML {
 
 var funcs = template.FuncMap{
 	"eye":   eye,
-	"lower": strings.ToLower,
+	"lower": func(v any) string { return strings.ToLower(fmt.Sprint(v)) },
 	"upper": strings.ToUpper,
 	"isURL": func(s string) bool { return strings.HasPrefix(s, "https://") },
 	"utc": func(t *time.Time) string {
