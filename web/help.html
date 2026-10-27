@@ -20,14 +20,14 @@
   .hsearch kbd { position: absolute; right: 8px; font: 11px var(--mono); color: var(--dim); border: 1px solid var(--rule-hi); border-radius: 4px; padding: 0 5px; pointer-events: none; }
   .hsearch input:not(:placeholder-shown) + kbd { display: none; }
   .hsearch + .theme { margin-left: 0; }
-  .hgrid { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 28px; max-width: 1180px; margin: 0 auto; padding: 20px 20px 48px; }
+  .hgrid { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 28px; max-width: var(--w-grid); margin: 0 auto; padding: 20px 20px 48px; }
   .toc { position: sticky; top: 70px; align-self: start; max-height: calc(100vh - 90px); overflow: auto; font-size: 13px; }
   .toc h2 { margin: 0 0 8px; font-size: 12px; font-weight: 650; color: var(--dim); }
   .toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
   .toc a { display: block; padding: 4px 8px; border-radius: 4px; color: var(--dim); text-decoration: none; }
   .toc a:hover, .toc a[aria-current="true"] { color: var(--text); background: var(--raised); }
   .toc .sep { border-top: 1px solid var(--rule); margin: 6px 0; }
-  main.doc { min-width: 0; max-width: 76ch; }
+  main.doc { min-width: 0; max-width: var(--w-read); }
   .doc h2 { margin: 0 0 10px; font-size: 20px; font-weight: 650; scroll-margin-top: 70px; }
   .doc h3 { margin: 22px 0 8px; font-size: 15px; font-weight: 650; scroll-margin-top: 70px; }
   .doc p, .doc li { line-height: 1.6; }
