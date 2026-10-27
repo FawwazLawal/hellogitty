@@ -97,7 +97,7 @@ func TestPanelsAreModules(t *testing.T) {
 			t.Errorf("module %s missing", id)
 		}
 	}
-	for _, want := range []string{`<button type="button" class="layoutbtn" id="layout-open" aria-haspopup="dialog">Layout</button>`,
+	for _, want := range []string{`<button type="button" class="headbtn" id="layout-open" aria-haspopup="dialog">`,
 		`<dialog id="layout" class="sheet" aria-labelledby="layout-h">`, `data-preset="focus"`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("missing %s", want)
