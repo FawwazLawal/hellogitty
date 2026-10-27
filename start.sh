@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Starts HelloGitty in the background if it is not already running, then opens the dashboard.
+# Builds the latest code, restarts if the binary changed, and opens the dashboard.
 # macOS. It builds from the folder it lives in and reads hellogitty.json from that folder,
 # or the file named by HELLOGITTY_CONFIG.
 set -u
@@ -18,39 +18,56 @@ PORT="${PORT:-7340}"
 
 listening() { lsof -nP -iTCP:$PORT -sTCP:LISTEN >/dev/null 2>&1 }
 
+if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+  GITHUB_TOKEN="$(gh auth token 2>/dev/null)"
+fi
+if [[ -z "$GITHUB_TOKEN" ]]; then
+  echo "No GitHub token: set GITHUB_TOKEN or sign in with 'gh auth login'." >&2
+  exit 1
+fi
+export GITHUB_TOKEN
+
+# A checkout of a release tag stamps that version; anything else builds as "dev".
+VERSION="${HELLOGITTY_VERSION:-}"
+if [[ -z "$VERSION" && -d "$DIR/.git" ]]; then
+  VERSION="$(git -C "$DIR" describe --tags --exact-match 2>/dev/null)"
+fi
+LDFLAGS=""
+[[ -n "$VERSION" ]] && LDFLAGS="-X main.version=$VERSION"
+
+# Remember the old binary's checksum so we know if the build changed it.
+OLD_SUM=""
+[[ -f "$DIR/hellogitty" ]] && OLD_SUM="$(md5 -q "$DIR/hellogitty" 2>/dev/null)"
+
+cd "$DIR" || exit 1
+if ! go build -ldflags "$LDFLAGS" -o "$DIR/hellogitty" ./cmd/hellogitty >>"$DIR/hellogitty.log" 2>&1; then
+  echo "Build failed. See hellogitty.log in $DIR." >&2
+  exit 1
+fi
+
+NEW_SUM="$(md5 -q "$DIR/hellogitty" 2>/dev/null)"
+
+if listening; then
+  if [[ "$OLD_SUM" != "$NEW_SUM" ]]; then
+    # Binary changed — restart with the new build.
+    lsof -nP -iTCP:$PORT -sTCP:LISTEN -t 2>/dev/null | xargs kill 2>/dev/null
+    sleep 0.5
+  else
+    # Same binary, already running — just open.
+    open "http://localhost:$PORT"
+    exit 0
+  fi
+fi
+
+nohup "$DIR/hellogitty" -config "$CONFIG" >>"$DIR/hellogitty.log" 2>&1 </dev/null &
+
+for _ in {1..50}; do
+  listening && break
+  sleep 0.2
+done
 if ! listening; then
-  if [[ -z "${GITHUB_TOKEN:-}" ]]; then
-    GITHUB_TOKEN="$(gh auth token 2>/dev/null)"
-  fi
-  if [[ -z "$GITHUB_TOKEN" ]]; then
-    echo "No GitHub token: set GITHUB_TOKEN or sign in with 'gh auth login'." >&2
-    exit 1
-  fi
-  export GITHUB_TOKEN
-
-  # A checkout of a release tag stamps that version; anything else builds as "dev".
-  VERSION="${HELLOGITTY_VERSION:-}"
-  if [[ -z "$VERSION" && -d "$DIR/.git" ]]; then
-    VERSION="$(git -C "$DIR" describe --tags --exact-match 2>/dev/null)"
-  fi
-  LDFLAGS=""
-  [[ -n "$VERSION" ]] && LDFLAGS="-X main.version=$VERSION"
-
-  cd "$DIR" || exit 1
-  if ! go build -ldflags "$LDFLAGS" -o "$DIR/hellogitty" ./cmd/hellogitty >>"$DIR/hellogitty.log" 2>&1; then
-    echo "Build failed. See hellogitty.log in $DIR." >&2
-    exit 1
-  fi
-  nohup "$DIR/hellogitty" -config "$CONFIG" >>"$DIR/hellogitty.log" 2>&1 </dev/null &
-
-  for _ in {1..50}; do
-    listening && break
-    sleep 0.2
-  done
-  if ! listening; then
-    echo "HelloGitty did not start. See hellogitty.log in $DIR." >&2
-    exit 1
-  fi
+  echo "HelloGitty did not start. See hellogitty.log in $DIR." >&2
+  exit 1
 fi
 
 open "http://localhost:$PORT"
