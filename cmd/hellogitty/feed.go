@@ -53,6 +53,9 @@ func (s source) entries(now time.Time) ([]inbox.Entry, bool) {
 	} else {
 		entries = inbox.Sorted(append(entries, inbox.CrossRefEntries(refs)...))
 	}
+	if replies := s.p.CommentReplies(); len(replies) > 0 {
+		entries = inbox.Sorted(append(entries, inbox.CommentReplies(replies)...))
+	}
 	return entries, true
 }
 

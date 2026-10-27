@@ -30,9 +30,10 @@ const (
 	KindBot      = "pr_bot"        // a bot's open findings on a pull request you opened: one entry per pull request
 	KindNewIssue = "new_issue"     // a new issue plausibly yours to take, in a repository where you plan work
 	KindIssue    = "issue_comment" // a reply on an issue that is your move: one you opened or were assigned, or one that mentions you
-	KindOverlap  = "issue_overlap" // someone else is on an issue you plan to take: a PR, an assignee, a claim, a close
-	KindSimilar  = "issue_similar" // another PR's title shares the subject; only worth a look
-	KindCrossRef = "pr_cross_reference"
+	KindOverlap      = "issue_overlap"       // someone else is on an issue you plan to take: a PR, an assignee, a claim, a close
+	KindSimilar      = "issue_similar"       // another PR's title shares the subject; only worth a look
+	KindCrossRef     = "pr_cross_reference"
+	KindCommentReply = "issue_comment_reply" // someone replied to our comment on an issue
 )
 
 type Entry struct {
@@ -486,6 +487,34 @@ func CrossRefEntries(refs []store.CrossReference) []Entry {
 	return out
 }
 
+// CommentReplies converts replies to our issue comments into inbox entries.
+func CommentReplies(replies []store.CommentReply) []Entry {
+	var out []Entry
+	for _, r := range replies {
+		summary := oneLine(r.Body, 160)
+		if summary == "" {
+			summary = "Replied to your comment"
+		}
+		priority := ""
+		if maintainerAssoc[r.AuthorAssociation] {
+			priority = "high"
+		}
+		out = append(out, Entry{
+			ID:         "hg-" + slug(r.Repo) + "-" + strconv.Itoa(r.IssueNumber) + "-reply-" + strconv.FormatInt(r.CommentID, 10),
+			Kind:       KindCommentReply,
+			Repo:       r.Repo,
+			Number:     r.IssueNumber,
+			URL:        r.URL,
+			Actor:      r.Author,
+			OccurredAt: r.At.UTC(),
+			Summary:    summary,
+			Priority:   priority,
+		})
+	}
+	return out
+}
+
+var maintainerAssoc = map[string]bool{"OWNER": true, "MEMBER": true, "COLLABORATOR": true}
 // Sorted returns entries oldest first, the order the file keeps.
 func Sorted(entries []Entry) []Entry {
 	sortEntries(entries)

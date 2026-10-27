@@ -48,9 +48,10 @@ type Poller struct {
 	DeniedDetailLimit int
 	Now               func() time.Time
 
-	login  string
-	mu     sync.Mutex
-	status Status
+	login          string
+	mu             sync.Mutex
+	status         Status
+	commentReplies []store.CommentReply
 }
 
 // OurPR is a pull request the token's account opened in a tracked repo.
@@ -116,6 +117,9 @@ func (p *Poller) PollAll(ctx context.Context) error {
 		return fmt.Errorf("load targets: %w", err)
 	}
 	cycleStart, reqStart := time.Now(), p.GH.Requests()
+	p.mu.Lock()
+	p.commentReplies = nil
+	p.mu.Unlock()
 	p.resolveLogin(ctx) // claim detection skips your own comments, so know who you are first
 	errs := map[string]string{}
 	totals := map[string]IssueTotals{}
@@ -254,6 +258,7 @@ func (p *Poller) pollLooseWatches(ctx context.Context, targets []Target) {
 		log.Printf("poll: watched issues: %v", err)
 		return
 	}
+	looseRepos := map[string]store.WatchedIssue{}
 	for _, w := range all {
 		if ctx.Err() != nil {
 			return
@@ -264,6 +269,13 @@ func (p *Poller) pollLooseWatches(ctx context.Context, targets []Target) {
 		if err := p.checkWatch(ctx, w); err != nil {
 			log.Printf("watch %s/%s#%d: %v", w.Owner, w.Name, w.IssueNumber, err)
 		}
+		looseRepos[strings.ToLower(w.Owner+"/"+w.Name)] = w
+	}
+	for _, w := range looseRepos {
+		if ctx.Err() != nil {
+			return
+		}
+		p.pollCommentReplies(ctx, Target{Owner: w.Owner, Name: w.Name}, w.RepoID)
 	}
 }
 
@@ -452,6 +464,8 @@ func (p *Poller) pollRepo(ctx context.Context, t Target) (*IssueTotals, error) {
 		}
 	}
 
+	p.pollCommentReplies(ctx, t, repoID)
+
 	if err := p.pollPRs(ctx, t, repoID); err != nil {
 		return nil, fmt.Errorf("pull requests: %w", err)
 	}
@@ -504,6 +518,7 @@ func (p *Poller) issueRow(ctx context.Context, t Target, repoID int64, gi github
 				row.ClaimSignal, row.ClaimDetail = "closed_fixed", fixedBy
 			}
 		}
+		_ = p.Store.RemoveOurComment(repoID, gi.Number)
 		return row, nil
 	}
 	if len(gi.Assignees) > 0 {
@@ -520,6 +535,7 @@ func (p *Poller) issueRow(ctx context.Context, t Target, repoID int64, gi github
 		if c := findClaim(comments, since, p.login); c != nil {
 			row.ClaimSignal, row.ClaimDetail = "comment_claim", c.HTMLURL
 		}
+		p.recordOurComment(repoID, gi.Number, comments)
 	}
 	return row, nil
 }
@@ -604,6 +620,78 @@ func crossRefRepo(htmlURL string) string {
 		return parts[0] + "/" + parts[1]
 	}
 	return ""
+}
+
+func (p *Poller) recordOurComment(repoID int64, issueNumber int, comments []github.Comment) {
+	if p.login == "" {
+		return
+	}
+	var best github.Comment
+	found := false
+	for _, c := range comments {
+		if strings.EqualFold(c.User.Login, p.login) && (!found || c.ID > best.ID) {
+			best = c
+			found = true
+		}
+	}
+	if !found || best.CreatedAt == nil {
+		return
+	}
+	_ = p.Store.UpsertOurComment(store.OurComment{
+		RepoID:      repoID,
+		IssueNumber: issueNumber,
+		CommentID:   best.ID,
+		CommentedAt: *best.CreatedAt,
+	})
+}
+
+func (p *Poller) pollCommentReplies(ctx context.Context, t Target, repoID int64) {
+	ours, err := p.Store.OurComments(repoID)
+	if err != nil || len(ours) == 0 {
+		return
+	}
+	for _, oc := range ours {
+		if ctx.Err() != nil {
+			return
+		}
+		since := oc.CommentedAt
+		comments, err := p.GH.IssueComments(ctx, t.Owner, t.Name, oc.IssueNumber, &since)
+		if err != nil {
+			log.Printf("comment-replies %s/%s#%d: %v", t.Owner, t.Name, oc.IssueNumber, err)
+			continue
+		}
+		for _, c := range comments {
+			if c.ID <= oc.CommentID {
+				continue
+			}
+			if strings.EqualFold(c.User.Login, p.login) || c.User.IsBot() {
+				continue
+			}
+			at := time.Time{}
+			if c.CreatedAt != nil {
+				at = *c.CreatedAt
+			}
+			p.mu.Lock()
+			p.commentReplies = append(p.commentReplies, store.CommentReply{
+				Repo:              t.Owner + "/" + t.Name,
+				IssueNumber:       oc.IssueNumber,
+				CommentID:         c.ID,
+				Author:            c.User.Login,
+				AuthorAssociation: c.AuthorAssociation,
+				Body:              c.Body,
+				URL:               c.HTMLURL,
+				At:                at,
+			})
+			p.mu.Unlock()
+		}
+	}
+}
+
+// CommentReplies returns replies to our issue comments collected during the last poll cycle.
+func (p *Poller) CommentReplies() []store.CommentReply {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return append([]store.CommentReply(nil), p.commentReplies...)
 }
 
 func (p *Poller) pollPRs(ctx context.Context, t Target, repoID int64) error {
