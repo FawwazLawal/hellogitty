@@ -128,6 +128,7 @@ type headerInfo struct {
 	RepoCount    int
 	HasPipeline  bool
 	TargetCount  int
+	Mascot       *mascot
 }
 
 func (h *Handler) buildHeaderInfo() headerInfo {
@@ -138,6 +139,7 @@ func (h *Handler) buildHeaderInfo() headerInfo {
 		Version:   h.Version,
 		Baby:      h.Baby,
 		RepoCount: len(reports),
+		Mascot:    h.mascot(),
 	}
 	if pst != nil {
 		hi.HasPipeline = true
