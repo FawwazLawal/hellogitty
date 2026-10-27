@@ -69,7 +69,7 @@
 <main class="iwrap">
   <p class="sub">Open issues updated in the last {{.IssueWindow}} days, newest activity first.</p>
   <form class="isearch" method="get" action="/issues">
-    <label><span class="sr">Search issues</span><input type="search" name="q" id="iq" value="{{.IssueQuery}}" placeholder="Search by #number, repo, title or label… (press Enter to search across all pages)" autocomplete="off"></label>
+    <label><span class="sr">Search issues</span><input type="search" name="q" id="iq" value="{{.IssueQuery}}" placeholder="Search by #number, repo, title or label…" autocomplete="off"></label>
     <button type="button" class="qclear" aria-label="Clear search" title="Clear search"{{if not .IssueQuery}} hidden{{end}}>&times;</button>
     <select id="irf" aria-label="Filter by repository"><option value="">All repos</option></select>
   </form>
@@ -114,7 +114,12 @@
       });
     }
 
-    function filter() {
+    var canWatch = {{if .CanWatch}}true{{else}}false{{end}};
+    var debounceTimer = 0;
+    var lastQuery = "";
+    var originalRows = tbody ? tbody.innerHTML : "";
+
+    function filterLocal() {
       if (!q || !tbody) return;
       var words = q.value.toLowerCase().split(/\s+/).filter(Boolean);
       var repo = irf ? irf.value : "";
@@ -132,14 +137,85 @@
       if (shown) shown.textContent = vis;
       if (qclear) qclear.hidden = !q.value;
     }
+
+    function escH(s) { var d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+    function buildRow(gi) {
+      var labels = (gi.labels || []).map(function (l) { return '<span class="tag">' + escH(l) + '</span>'; }).join("");
+      var taken = gi.taken ? ' <span class="tag taken">' + escH(gi.taken) + '</span>' : "";
+      var eyeCell = "";
+      if (canWatch) {
+        var on = gi.watched;
+        var cls = "eye" + (on ? " on" : "");
+        var lbl = (on ? "Stop watching " : "Watch ") + escH(gi.k);
+        var ttl = on ? "Watching: you'll hear if someone claims it or it closes. Click to stop." : "Watch: hear if someone claims it or it closes";
+        eyeCell = '<td><button type="button" class="' + cls + '" data-watch="' + escH(gi.k) + '" aria-pressed="' + on +
+          '" aria-label="' + lbl + '" title="' + ttl + '"><svg viewBox="0 0 16 16" aria-hidden="true">' +
+          '<path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></svg></button></td>';
+      }
+      return '<tr data-s="' + escH(gi.search) + '" data-repo="' + escH(gi.repo) + '">' +
+        '<td class="num">' + gi.number + '</td>' +
+        '<td><a href="' + escH(gi.url) + '" target="_blank" rel="noopener">' + escH(gi.title) + '</a><br><span class="rp">' + escH(gi.repo) + '</span>' + taken + '</td>' +
+        '<td class="opt">' + labels + '</td>' +
+        '<td class="num opt" title="' + escH(gi.agoTitle) + '" data-sv="' + escH(gi.agoTitle) + '">' + escH(gi.ago) + '</td>' +
+        eyeCell + '</tr>';
+    }
+
+    function searchAjax(query) {
+      var repo = irf ? irf.value : "";
+      var url = "/issues?q=" + encodeURIComponent(query) + "&page=1";
+      fetch(url, { headers: { "Accept": "application/json" } })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (q.value.trim() !== query) return;
+          var issues = d.issues || [];
+          var html = issues.map(buildRow).join("");
+          tbody.innerHTML = html;
+          var vis = issues.length;
+          if (repo) {
+            tbody.querySelectorAll("tr[data-repo]").forEach(function (tr) {
+              var r = tr.getAttribute("data-repo") || "";
+              if (r !== repo) { tr.hidden = true; vis--; }
+            });
+          }
+          if (shown) shown.textContent = vis;
+          var countEl = document.querySelector(".count");
+          if (countEl) countEl.innerHTML = '<span id="shown">' + vis + '</span> of ' + d.total + ' results for "' + escH(query) + '" (page 1 of ' + d.pages + ')';
+          shown = document.getElementById("shown");
+          var pager = document.querySelector(".pager");
+          if (pager) pager.hidden = true;
+        })
+        .catch(function () {});
+    }
+
+    function onInput() {
+      if (qclear) qclear.hidden = !q.value;
+      var val = q.value.trim();
+      clearTimeout(debounceTimer);
+      if (!val) {
+        tbody.innerHTML = originalRows;
+        if (shown) shown.textContent = tbody.querySelectorAll("tr").length;
+        var countEl = document.querySelector(".count");
+        if (countEl) countEl.innerHTML = '<span id="shown">' + tbody.querySelectorAll("tr").length + '</span> of {{.IssueTotal}} open issues (page {{.IssuePg}} of {{.IssuePages}})';
+        shown = document.getElementById("shown");
+        var pager = document.querySelector(".pager");
+        if (pager) pager.hidden = false;
+        return;
+      }
+      filterLocal();
+      debounceTimer = setTimeout(function () { searchAjax(val); }, 300);
+    }
+
     if (q) {
-      q.addEventListener("input", filter);
+      q.addEventListener("input", onInput);
       if (qclear) qclear.addEventListener("click", function () {
-        if (location.search.indexOf("q=") >= 0) { location.href = "/issues"; return; }
-        q.value = ""; filter(); q.focus();
+        q.value = ""; onInput(); q.focus();
       });
     }
-    if (irf) irf.addEventListener("change", filter);
+    if (irf) irf.addEventListener("change", function () {
+      if (q && q.value.trim()) searchAjax(q.value.trim());
+      else filterLocal();
+    });
 
     // Eye toggle for watching issues
     var token = "{{.Token}}";

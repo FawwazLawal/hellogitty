@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"encoding/json"
 	"html/template"
 	"log"
 	"net/http"
@@ -147,6 +148,49 @@ func (h *Handler) serveIssues(w http.ResponseWriter, r *http.Request) {
 	p.IssueNextPage = pg + 1
 	p.IssueQuery = q
 	p.Issues = toGlobalIssues(items, h.now(), keys)
+
+	if strings.Contains(r.Header.Get("Accept"), "application/json") {
+		type jsonIssue struct {
+			Number   int      `json:"number"`
+			Title    string   `json:"title"`
+			URL      string   `json:"url"`
+			Repo     string   `json:"repo"`
+			Ago      string   `json:"ago"`
+			AgoTitle string   `json:"agoTitle"`
+			Labels   []string `json:"labels"`
+			Taken    string   `json:"taken,omitempty"`
+			Watched  bool     `json:"watched"`
+			K        string   `json:"k"`
+			Search   string   `json:"search"`
+		}
+		out := make([]jsonIssue, len(p.Issues))
+		for i, gi := range p.Issues {
+			out[i] = jsonIssue{
+				Number:   gi.Number,
+				Title:    gi.Title,
+				URL:      gi.URL,
+				Repo:     gi.Repo,
+				Ago:      gi.Ago,
+				AgoTitle: gi.AgoTitle,
+				Labels:   gi.Labels,
+				Taken:    gi.Taken,
+				Watched:  gi.Watched,
+				K:        gi.K,
+				Search:   gi.Search,
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-store")
+		json.NewEncoder(w).Encode(map[string]any{
+			"issues":   out,
+			"total":    total,
+			"page":     pg,
+			"pages":    pages,
+			"query":    q,
+			"canWatch": p.CanWatch,
+		})
+		return
+	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
