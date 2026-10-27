@@ -751,17 +751,23 @@
     }
 {{end}}
 {{define "header-css"}}
-  .site-head { position: sticky; top: 0; z-index: 3; }
-  .status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 22px;
-    padding: 10px 20px; background: var(--panel); border-bottom: 0; }
-  .status.has-mascot { min-height: 80px; padding-right: 268px; }
+  .site-head { position: sticky; top: 0; z-index: 3; background: var(--panel); }
+  .status { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+    padding: 12px 20px; background: var(--panel); }
+  .status.has-mascot { padding-right: 268px; }
   .mascot { position: absolute; right: 16px; bottom: 0; width: 236px; height: 80px; pointer-events: none;
     background: var(--mascot-bg); border-radius: 8px 8px 0 0; overflow: hidden; }
   .mascot video { display: block; width: 100%; height: 100%; object-fit: contain; mix-blend-mode: lighten; }
   .brand { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
   .brand .ver { line-height: 1.2; white-space: nowrap; }
-  .status h1 { margin: 0; font-size: 19px; line-height: 1.3; font-weight: 700; letter-spacing: -0.01em; }
+  .status h1 { margin: 0; font-size: 17px; line-height: 1.3; font-weight: 700; letter-spacing: -0.01em; }
   .ver .baby { font-style: italic; }
+  .head-right { display: flex; align-items: center; gap: 8px; justify-self: end; }
+  .head-right .theme { margin: 0; }
+  .headbtn { font: 12px/1 var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
+    border-radius: 6px; padding: 6px 10px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+  .headbtn:hover { color: var(--text); background: var(--raised); }
+  .headbtn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
   .telemetry { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px;
     padding: 0; }
   .telemetry .item { display: flex; align-items: baseline; gap: 7px; }
@@ -772,24 +778,15 @@
   .gauge { display: inline-block; width: 60px; height: 5px; background: var(--track); vertical-align: middle; border-radius: 3px; overflow: hidden; align-self: center; }
   .gauge i { display: block; height: 100%; background: var(--dim); }
   .gauge.hot i { background: var(--caution); }
-  .layoutbtn { margin-left: auto; font: 12px/1 var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
-    border-radius: 6px; padding: 6px 10px; cursor: pointer; }
-  .layoutbtn:hover { color: var(--text); background: var(--raised); }
-  .status.has-mascot .layoutbtn { margin-left: 0; }
-  .layoutbtn + .theme { margin-left: 0 !important; }
-  .helpbtn { text-decoration: none; }
-  .helpbtn + .layoutbtn { margin-left: 0; }
-  .status.has-mascot .theme { margin-left: 0; }
-  .hclock { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-left: auto; margin-right: auto; user-select: none; cursor: default; }
-  .hclock-time { font: 700 32px/1 var(--mono); color: var(--text); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; transition: color .3s, text-shadow .3s; }
-  .hclock-date { font: 500 12px/1 var(--sans); color: var(--dim); letter-spacing: 0.05em; text-transform: uppercase; transition: color .3s; }
+
+  .hclock { display: flex; flex-direction: column; align-items: center; gap: 2px; user-select: none; cursor: default; justify-self: center; }
+  .hclock-time { font: 700 28px/1 var(--mono); color: var(--text); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; transition: color .3s, text-shadow .3s; }
+  .hclock-date { font: 500 11px/1 var(--sans); color: var(--dim); letter-spacing: 0.05em; text-transform: uppercase; transition: color .3s; }
   .worldclocks { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 3px; }
   .worldclocks:empty { display: none; }
   .wclock { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; }
-  .wclock-time { font: 600 13px/1 var(--mono); color: var(--text); font-variant-numeric: tabular-nums; }
-  .wclock-label { font: 500 10px/1 var(--sans); color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; }
-  .wclock-rm { font: 11px/1 var(--sans); color: var(--dim); background: transparent; border: none; padding: 0 2px; cursor: pointer; opacity: 0; transition: opacity .12s; }
-  .wclock:hover .wclock-rm { opacity: 1; }
+  .wclock-time { font: 600 12px/1 var(--mono); color: var(--text); font-variant-numeric: tabular-nums; }
+  .wclock-label { font: 500 9px/1 var(--sans); color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; }
 
   /* Clock themes */
   .hclock.clock-neon .hclock-time { color: #0ff; text-shadow: 0 0 7px #0ff, 0 0 20px #0ff, 0 0 42px #0099cc; }
@@ -828,17 +825,18 @@
 
   .hclock.clock-nixie .hclock-time { color: #ff8c42; text-shadow: 0 0 4px #ff8c42, 0 0 12px rgba(255,140,66,.5), 0 0 28px rgba(255,100,20,.3); font-weight: 400; letter-spacing: 0.06em; }
   .hclock.clock-nixie .hclock-date { color: #ff8c42; opacity: .6; }
-  .wclock-rm:hover { color: var(--text); }
-  .wclock-add { font: 600 13px/1 var(--mono); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
-    border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
-  .wclock-add:hover { color: var(--text); background: var(--raised); }
-  .wclock-picker { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); z-index: 10;
-    background: var(--panel); border: 1px solid var(--rule-hi); border-radius: 8px; padding: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.35);
-    display: none; flex-direction: column; gap: 4px; min-width: 180px; max-height: 260px; overflow-y: auto; }
-  .wclock-picker.open { display: flex; }
-  .wclock-picker button { font: 13px var(--sans); color: var(--text); background: transparent; border: none; padding: 6px 10px;
-    text-align: left; cursor: pointer; border-radius: 4px; }
-  .wclock-picker button:hover { background: var(--raised); }
+
+  /* LED segment clock: thick blocky digits like a wall-mounted LED clock */
+  .hclock.clock-led .hclock-time { color: #fff; font-weight: 800; letter-spacing: 0.1em;
+    text-shadow: 0 0 6px rgba(255,255,255,.6), 0 0 18px rgba(255,255,255,.3); }
+  .hclock.clock-led .hclock-date { color: var(--head-accent); font-weight: 600; letter-spacing: 0.08em; }
+
+  /* Flip clock: retro split-flap style */
+  .hclock.clock-flip .hclock-time { color: #f5f0e8; font-weight: 700; letter-spacing: 0.14em;
+    background: #1a1a1a; padding: 4px 10px; border-radius: 4px; border: 1px solid #333;
+    box-shadow: 0 2px 8px rgba(0,0,0,.5); }
+  .hclock.clock-flip .hclock-date { color: #a09880; }
+
   .quicknav { display: flex; flex-wrap: wrap; align-items: center; gap: 0;
     background: var(--panel); border-bottom: 1px solid var(--rule-hi); padding: 0 20px; }
   .quicknav a { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; font: 600 13px/1 var(--sans); color: var(--dim);
@@ -846,6 +844,12 @@
   .quicknav a:hover { color: var(--text); background: var(--raised); }
   .quicknav a.active { color: var(--text); border-bottom-color: var(--head-accent); }
   .quicknav a svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  @media (max-width: 760px) {
+    .status { grid-template-columns: 1fr 1fr; }
+    .hclock { grid-column: 1 / -1; grid-row: 1; margin-bottom: 4px; }
+    .hclock-time { font-size: 22px; }
+    .quicknav { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+  }
   @media (prefers-reduced-motion: reduce) { .quicknav a { transition: none; } }
 {{end}}
 {{define "site-header"}}
@@ -859,13 +863,13 @@
   <div class="hclock" id="hg-clock" aria-live="off" title="Local time">
     <span class="hclock-time" id="hg-clock-time"></span>
     <span class="hclock-date" id="hg-clock-date"></span>
-    <div class="worldclocks" id="hg-worldclocks" style="position:relative">
-      <button type="button" class="wclock-add" id="wclock-add" title="Add a timezone clock">+</button>
-      <div class="wclock-picker" id="wclock-picker"></div>
-    </div>
+    <div class="worldclocks" id="hg-worldclocks"></div>
   </div>
-  <a class="layoutbtn helpbtn" href="/help" title="Help (press ?)">Help</a>
-  <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
+  <div class="head-right">
+    <a class="headbtn" href="/help" title="Help (press ?)"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M6 6a2 2 0 1 1 2.5 1.94V9.5"/><circle cx="8" cy="11.5" r=".5" fill="currentColor" stroke="none"/></svg>Help</a>
+    <a class="headbtn" href="/settings" title="Settings"><svg viewBox="0 0 16 16"><path d="M6.5 1.5h3l.4 2 1.4.8 1.9-.8 1.5 2.6-1.5 1.3v1.6l1.5 1.3-1.5 2.6-1.9-.8-1.4.8-.4 2h-3l-.4-2-1.4-.8-1.9.8L1.3 10.3l1.5-1.3V7.4L1.3 6.1l1.5-2.6 1.9.8 1.4-.8z"/><circle cx="8" cy="8.2" r="2"/></svg></a>
+    <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
+  </div>
 </header>
 <nav class="quicknav" aria-label="Quick access">
   <a href="/"><svg viewBox="0 0 16 16"><path d="M2 6l6-4.5L14 6v7.5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6z"/><path d="M6 14.5V8h4v6.5"/></svg>Dashboard</a>
@@ -888,8 +892,6 @@
     var dateEl = document.getElementById("hg-clock-date");
     var wrap = document.getElementById("hg-clock");
     var wcWrap = document.getElementById("hg-worldclocks");
-    var addBtn = document.getElementById("wclock-add");
-    var picker = document.getElementById("wclock-picker");
     if (!timeEl) return;
     var days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -918,7 +920,6 @@
 
     var KEY = "hellogitty-worldclocks";
     function loadClocks() { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch(e) { return []; } }
-    function saveClocks(list) { try { localStorage.setItem(KEY, JSON.stringify(list)); } catch(e) {} }
 
     function tzTime(tz) {
       try {
@@ -932,14 +933,15 @@
     function renderWorldClocks() {
       if (!wcWrap) return;
       var clocks = loadClocks();
-      wcWrap.querySelectorAll(".wclock").forEach(function(el) { el.remove(); });
-      clocks.forEach(function(c, i) {
+      wcWrap.innerHTML = "";
+      clocks.forEach(function(c) {
+        var tz = typeof c === "string" ? c : c.tz;
+        var label = typeof c === "string" ? c : (c.label || c.tz);
         var span = document.createElement("span");
         span.className = "wclock";
-        span.innerHTML = '<span class="wclock-time" data-tz="' + c.tz + '">' + tzTime(c.tz) + '</span>' +
-          '<span class="wclock-label">' + c.label + '</span>' +
-          '<button type="button" class="wclock-rm" title="Remove" data-wci="' + i + '">×</button>';
-        wcWrap.insertBefore(span, addBtn);
+        span.innerHTML = '<span class="wclock-time" data-tz="' + tz + '">' + tzTime(tz) + '</span>' +
+          '<span class="wclock-label">' + label + '</span>';
+        wcWrap.appendChild(span);
       });
     }
 
@@ -972,58 +974,6 @@
     }
     tick();
     setInterval(tick, 1000);
-
-    if (addBtn && picker) {
-      function buildPicker() {
-        picker.innerHTML = "";
-        var current = loadClocks();
-        var used = {};
-        current.forEach(function(c) { used[c.tz] = true; });
-        var available = ZONES.filter(function(z) { return !used[z.tz]; });
-        if (!available.length) {
-          var p = document.createElement("span");
-          p.style.cssText = "padding:8px;color:var(--dim);font-size:13px";
-          p.textContent = "All timezones added";
-          picker.appendChild(p);
-          return;
-        }
-        available.forEach(function(z) {
-          var btn = document.createElement("button");
-          btn.type = "button";
-          btn.textContent = z.label + " — " + z.tz.replace(/_/g, " ");
-          btn.addEventListener("click", function() {
-            var list = loadClocks();
-            list.push({ tz: z.tz, label: z.label });
-            saveClocks(list);
-            renderWorldClocks();
-            picker.classList.remove("open");
-          });
-          picker.appendChild(btn);
-        });
-      }
-
-      addBtn.addEventListener("click", function(e) {
-        e.stopPropagation();
-        buildPicker();
-        picker.classList.toggle("open");
-      });
-
-      document.addEventListener("click", function(e) {
-        if (!picker.contains(e.target) && e.target !== addBtn) picker.classList.remove("open");
-      });
-    }
-
-    if (wcWrap) {
-      wcWrap.addEventListener("click", function(e) {
-        var rm = e.target.closest(".wclock-rm");
-        if (!rm) return;
-        var idx = parseInt(rm.dataset.wci, 10);
-        var list = loadClocks();
-        list.splice(idx, 1);
-        saveClocks(list);
-        renderWorldClocks();
-      });
-    }
 
     renderWorldClocks();
   })();
@@ -1265,15 +1215,15 @@
   <div class="hclock" id="hg-clock" aria-live="off" title="Local time">
     <span class="hclock-time" id="hg-clock-time"></span>
     <span class="hclock-date" id="hg-clock-date"></span>
-    <div class="worldclocks" id="hg-worldclocks" style="position:relative">
-      <button type="button" class="wclock-add" id="wclock-add" title="Add a timezone clock">+</button>
-      <div class="wclock-picker" id="wclock-picker"></div>
-    </div>
+    <div class="worldclocks" id="hg-worldclocks"></div>
   </div>
-  <a class="layoutbtn helpbtn" href="/help" title="Help (press ?)">Help</a>
-  <button type="button" class="layoutbtn" id="fold-all" title="Collapse all panels (c)">Collapse all</button>
-  <button type="button" class="layoutbtn" id="layout-open" aria-haspopup="dialog">Layout</button>
-  <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
+  <div class="head-right">
+    <button type="button" class="headbtn" id="fold-all" title="Collapse all panels (c)"><svg viewBox="0 0 16 16"><path d="M2 4h12M2 8h12M2 12h12"/></svg>Collapse</button>
+    <button type="button" class="headbtn" id="layout-open" aria-haspopup="dialog"><svg viewBox="0 0 16 16"><rect x="1.5" y="1.5" width="13" height="13" rx="2"/><path d="M1.5 6h13M6 6v8.5"/></svg>Layout</button>
+    <a class="headbtn" href="/help" title="Help (press ?)"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M6 6a2 2 0 1 1 2.5 1.94V9.5"/><circle cx="8" cy="11.5" r=".5" fill="currentColor" stroke="none"/></svg>Help</a>
+    <a class="headbtn" href="/settings" title="Settings"><svg viewBox="0 0 16 16"><path d="M6.5 1.5h3l.4 2 1.4.8 1.9-.8 1.5 2.6-1.5 1.3v1.6l1.5 1.3-1.5 2.6-1.9-.8-1.4.8-.4 2h-3l-.4-2-1.4-.8-1.9.8L1.3 10.3l1.5-1.3V7.4L1.3 6.1l1.5-2.6 1.9.8 1.4-.8z"/><circle cx="8" cy="8.2" r="2"/></svg></a>
+    <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
+  </div>
   {{if .Mascot}}<div class="mascot" aria-hidden="true" data-routine="{{range $i, $c := .Mascot.Routine}}{{if $i}} {{end}}{{$c}}{{end}}" data-news="{{range $i, $c := .Mascot.News}}{{if $i}} {{end}}{{$c}}{{end}}"><video muted playsinline preload="none" poster="{{.Mascot.Rest}}" tabindex="-1"></video></div>{{end}}
 </header>
 
