@@ -112,6 +112,7 @@ type Handler struct {
 	ConfigSnapshot  string
 	ConfigReposFile string
 	ConfigInbox     string
+	ConfigMaintain  []string
 }
 
 type page struct {
@@ -160,6 +161,7 @@ type page struct {
 	ConfigSnapshot  string
 	ConfigReposFile string
 	ConfigInbox     string
+	ConfigMaintain  []string
 
 	// Issues panel: the most recent open issues across tracked repos.
 	Issues     []globalIssue
@@ -962,6 +964,7 @@ func (h *Handler) build() (*page, error) {
 	p.ConfigSnapshot = h.ConfigSnapshot
 	p.ConfigReposFile = h.ConfigReposFile
 	p.ConfigInbox = h.ConfigInbox
+	p.ConfigMaintain = h.ConfigMaintain
 
 	return p, nil
 }
