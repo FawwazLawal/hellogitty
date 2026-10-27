@@ -5,6 +5,22 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (13) · Black Bombay (baby) · 2026-10-27
+
+Tag `v0.2.13`.
+
+- **Layout config default**: the `layout` key in hellogitty.json sets the starting
+  dashboard layout for browsers that have not saved one. Accepts a preset name
+  (`{"preset": "contributor"}`) or an explicit module list. A browser's own saved
+  layout always takes priority.
+- **Copy layout button**: the Layout dialog gains a "Copy layout" button that
+  copies the current layout state as JSON, ready to paste into hellogitty.json.
+  ADR-002 modular dashboard step 2.
+- **Friendly error messages**: all user-facing error displays now show a
+  plain-language explanation with a resolution tip, with the raw error code in
+  parentheses. Covers GitHub API errors (502/503/504, timeouts, rate limits,
+  auth failures), pipeline command failures, and security feed errors.
+
 ## v0.2.0 (12) · Black Bombay (baby) · 2026-10-27
 
 Tag `v0.2.12`.
