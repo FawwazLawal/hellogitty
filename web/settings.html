@@ -151,6 +151,16 @@
   .clock-swatch[data-style="nixie"] .cs-time { color: #ff8c42; text-shadow: 0 0 4px #ff8c42, 0 0 12px rgba(255,140,66,.5); font-weight: 400; }
   .clock-swatch[data-style="nixie"] .cs-name { color: #ff8c42; opacity: .6; }
 
+  .clock-swatch[data-style="led"] { background: #0a0a0a; }
+  .clock-swatch[data-style="led"] .cs-time { color: #fff; font-weight: 800; letter-spacing: 0.1em;
+    text-shadow: 0 0 6px rgba(255,255,255,.6), 0 0 18px rgba(255,255,255,.3); }
+  .clock-swatch[data-style="led"] .cs-name { color: var(--head-accent); font-weight: 600; }
+
+  .clock-swatch[data-style="flip"] { background: #111; }
+  .clock-swatch[data-style="flip"] .cs-time { color: #f5f0e8; font-weight: 700; letter-spacing: 0.14em;
+    background: #1a1a1a; padding: 3px 8px; border-radius: 3px; border: 1px solid #333; }
+  .clock-swatch[data-style="flip"] .cs-name { color: #a09880; }
+
   .clock-select { font: 13px var(--sans); color: var(--text); background: var(--bg); border: 1px solid var(--rule-hi);
     border-radius: 8px; padding: 7px 12px; margin-top: 6px; width: 100%; }
 
@@ -189,10 +199,6 @@
     <a href="#clock" data-pane="pane-clock">
       <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/></svg>
       Clock
-    </a>
-    <a href="#worldclocks" data-pane="pane-worldclocks">
-      <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><ellipse cx="8" cy="8" rx="3" ry="6"/><path d="M2 8h12M3 4.5h10M3 11.5h10"/></svg>
-      World Clocks
     </a>
 
     <div class="nav-label">Data</div>
@@ -284,14 +290,10 @@
           <div class="clock-styles" id="s-clock-style"></div>
         </div>
       </div>
-    </div>
-
-    <!-- WORLD CLOCKS -->
-    <div class="spane" id="pane-worldclocks">
-      <h1>World Clocks</h1>
-      <p class="section-desc">Additional timezone clocks shown in the header.</p>
       <div class="scard">
         <div class="srow" style="grid-template-columns:1fr">
+          <span class="slbl" style="margin-bottom:8px">World clocks</span>
+          <p style="font-size:12px;color:var(--dim);margin:0 0 8px">Additional timezone clocks shown in the header.</p>
           <div id="s-clocks" class="item-list"></div>
           <select id="s-clock-add" class="clock-select" style="display:none">
             <option value="">Add a timezone…</option>
@@ -538,10 +540,11 @@
       return;
     }
     clocks.forEach(function(c, i) {
+      var tz = typeof c === "string" ? c : c.tz;
       var row = document.createElement("div"); row.className = "item-row";
       var lbl = document.createElement("span"); lbl.className = "ilabel";
-      var z = ZONES.find(function(z) { return z.tz === c; });
-      lbl.textContent = z ? z.label : c;
+      var z = ZONES.find(function(z) { return z.tz === tz; });
+      lbl.textContent = z ? z.label : tz;
       var rm = document.createElement("button"); rm.type = "button"; rm.className = "ibtn"; rm.textContent = "Remove";
       rm.addEventListener("click", function() {
         var arr = loadClocks(); arr.splice(i, 1); saveClocks(arr); renderClocks();
@@ -561,7 +564,10 @@
   addSel.addEventListener("change", function() {
     if (!addSel.value) return;
     var clocks = loadClocks();
-    if (clocks.indexOf(addSel.value) === -1) { clocks.push(addSel.value); saveClocks(clocks); }
+    var z = ZONES.find(function(z) { return z.tz === addSel.value; });
+    var shortLabel = z ? z.label.split(" — ")[0] : addSel.value;
+    var exists = clocks.some(function(c) { return (typeof c === "string" ? c : c.tz) === addSel.value; });
+    if (!exists) { clocks.push({ tz: addSel.value, label: shortLabel }); saveClocks(clocks); }
     addSel.value = ""; addSel.style.display = "none";
     renderClocks();
   });
@@ -612,7 +618,9 @@
     { id: "rose", name: "Rosé", desc: "Soft pink" },
     { id: "ocean", name: "Ocean", desc: "Deep sea gradient" },
     { id: "mono", name: "Mono", desc: "Minimal gray" },
-    { id: "nixie", name: "Nixie", desc: "Vintage tube glow" }
+    { id: "nixie", name: "Nixie", desc: "Vintage tube glow" },
+    { id: "led", name: "LED", desc: "Wall clock bright" },
+    { id: "flip", name: "Flip", desc: "Retro split-flap" }
   ];
 
   var styleGrid = document.getElementById("s-clock-style");
