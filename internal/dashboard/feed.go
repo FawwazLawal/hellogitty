@@ -156,11 +156,11 @@ func (h *Handler) serveFeedPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p := struct {
-		Version  string
+		headerInfo
 		Token    string
 		Feed     feedView
 		CanWatch bool
-	}{Version: h.Version, Token: h.token()}
+	}{headerInfo: h.buildHeaderInfo(), Token: h.token()}
 	if fs, ok := h.Source.(FeedSource); ok {
 		p.Feed = buildFeed(fs.Feed(), h.now())
 	}
