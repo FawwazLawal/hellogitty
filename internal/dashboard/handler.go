@@ -113,6 +113,8 @@ type Handler struct {
 	ConfigReposFile string
 	ConfigInbox     string
 	ConfigMaintain  []string
+	// LayoutDefault is the JSON-encoded layout config from hellogitty.json, or empty.
+	LayoutDefault string
 }
 
 // headerInfo carries the fields the shared site-header template expects.
@@ -217,6 +219,9 @@ type page struct {
 	ConfigReposFile string
 	ConfigInbox     string
 	ConfigMaintain  []string
+
+	// LayoutDefault is the JSON layout config from hellogitty.json, injected into the page JS.
+	LayoutDefault template.JS
 
 	// Issues panel: the most recent open issues across tracked repos.
 	Issues     []globalIssue
@@ -1020,6 +1025,7 @@ func (h *Handler) build() (*page, error) {
 	p.ConfigReposFile = h.ConfigReposFile
 	p.ConfigInbox = h.ConfigInbox
 	p.ConfigMaintain = h.ConfigMaintain
+	p.LayoutDefault = template.JS(h.LayoutDefault)
 
 	return p, nil
 }

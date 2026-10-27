@@ -39,9 +39,22 @@ type Config struct {
 	// Inbox optionally names a JSON file rewritten after every refresh with recent events on your
 	// own pull requests and watched issues, for scripts to pick up.
 	Inbox string `json:"inbox"`
+	// Layout sets the starting layout for browsers that have not saved one yet.
+	Layout *LayoutConfig `json:"layout,omitempty"`
 
 	Dir          string        `json:"-"`
 	PollInterval time.Duration `json:"-"`
+}
+
+// LayoutConfig is the "layout" key in hellogitty.json. Either Preset names one of the built-in
+// presets ("everything", "contributor", "maintainer", "program", "focus"), or Modules lists the
+// panels to show and their columns explicitly. When both are set, Preset wins.
+type LayoutConfig struct {
+	Preset  string          `json:"preset,omitempty"`
+	Main    []string        `json:"main,omitempty"`
+	Rail    []string        `json:"rail,omitempty"`
+	Hidden  []string        `json:"hidden,omitempty"`
+	Folded  []string        `json:"folded,omitempty"`
 }
 
 type Repo struct{ Owner, Name string }
