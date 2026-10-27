@@ -32,7 +32,7 @@ type helpTerm struct {
 }
 
 type helpPage struct {
-	Version   string
+	headerInfo
 	Title     string
 	Intro     template.HTML
 	IntroText string
@@ -84,7 +84,7 @@ func (h *Handler) serveHelp(w http.ResponseWriter, r *http.Request) {
 	}
 	pst, _ := h.Source.Pipeline()
 	doc := help.Render(h.Guide, guideLinks)
-	p := helpPage{Version: h.Version, Title: doc.Title, Intro: template.HTML(doc.Intro), // the renderer escapes all text
+	p := helpPage{headerInfo: h.buildHeaderInfo(), Title: doc.Title, Intro: template.HTML(doc.Intro),
 		IntroText: strings.ToLower(doc.Title)}
 	for _, s := range doc.Sections {
 		p.Sections = append(p.Sections, helpSection{ID: s.ID, Title: s.Title, Text: s.Text, HTML: template.HTML(s.HTML)})

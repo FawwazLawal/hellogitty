@@ -115,6 +115,59 @@ type Handler struct {
 	ConfigMaintain  []string
 }
 
+// headerInfo carries the fields the shared site-header template expects.
+type headerInfo struct {
+	Version      string
+	Baby         bool
+	LastPollUnix int64
+	LastPollUTC  string
+	APIKnown     bool
+	APIUsed      int
+	APILimit     int
+	APIPct       int
+	RepoCount    int
+	HasPipeline  bool
+	TargetCount  int
+}
+
+func (h *Handler) buildHeaderInfo() headerInfo {
+	tel := h.Source.Telemetry()
+	reports, _ := h.Source.Reports()
+	pst, _ := h.Source.Pipeline()
+	hi := headerInfo{
+		Version:   h.Version,
+		Baby:      h.Baby,
+		RepoCount: len(reports),
+	}
+	if pst != nil {
+		hi.HasPipeline = true
+		for _, r := range reports {
+			if pr, ok := pst.Repo(r.Owner, r.Name); ok && pr.Stage != "" {
+				hi.TargetCount++
+			}
+		}
+	}
+	lastPoll := tel.LastPoll
+	if lastPoll.IsZero() {
+		for _, r := range reports {
+			if r.LastPoll != nil && r.LastPoll.After(lastPoll) {
+				lastPoll = *r.LastPoll
+			}
+		}
+	}
+	if !lastPoll.IsZero() {
+		hi.LastPollUnix = lastPoll.Unix()
+		hi.LastPollUTC = lastPoll.UTC().Format("15:04:05Z")
+	}
+	if tel.RateLimit > 0 {
+		hi.APIKnown = true
+		hi.APIUsed = tel.RateLimit - tel.RateRemaining
+		hi.APILimit = tel.RateLimit
+		hi.APIPct = hi.APIUsed * 100 / tel.RateLimit
+	}
+	return hi
+}
+
 type page struct {
 	// RepoTools says repositories can be added and removed here; RemovedRepos are config-file
 	// repositories you removed, which can come back with one click.
