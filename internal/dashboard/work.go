@@ -27,8 +27,9 @@ type workRow struct {
 	Level    string // "caution", "ok" or ""
 	Personal string // a step only you can take, e.g. "Sign the CLA"
 	Labels   []string
-	Ago      string // "3 days"
-	AgoTitle string // exact UTC time
+	Ago       string // "3 days"
+	AgoTitle  string // exact UTC time
+	SinceUnix int64  // for client-side sorting by time
 	Value    string // what the change marker compares between reloads
 	Move     string // work.MoveYou, MoveThem or MoveDone, for grouping and filtering in the page
 	Search   string // lowercase text the page's search box matches against
@@ -127,7 +128,7 @@ func toRow(it work.Item, login string, now time.Time) workRow {
 		Key:  strings.ToLower(it.Repo) + "-" + strconv.Itoa(it.Number),
 		Kind: "Issue", Repo: it.Repo, Number: it.Number, Title: it.Title, URL: it.URL,
 		Why: why(it), Status: it.Status, Level: it.Level, Personal: it.Personal, Labels: it.Labels,
-		Ago: ago(now, it.Since), AgoTitle: it.Since.UTC().Format("2006-01-02 15:04Z"),
+		Ago: ago(now, it.Since), AgoTitle: it.Since.UTC().Format("2006-01-02 15:04Z"), SinceUnix: it.Since.Unix(),
 		Value: it.Move + "|" + it.Status + "|" + it.Personal,
 	}
 	if it.PR {

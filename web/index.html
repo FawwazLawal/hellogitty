@@ -270,6 +270,21 @@
   .trail .num { flex: none; font: 500 11.5px/16px var(--mono); }
   .none { margin: 0; padding: 4px 14px 14px; color: var(--dim); }
   .hint { margin: 0; padding: 0 14px 14px; color: var(--dim); font-size: 12px; }
+  .wsort { display: flex; gap: 2px; padding: 4px 14px 2px; }
+  .wsort button { background: none; border: 1px solid transparent; border-radius: 4px; padding: 2px 8px; font: 500 11.5px/16px var(--sans);
+    color: var(--dim); cursor: pointer; user-select: none; }
+  .wsort button:hover { color: var(--text); border-color: var(--rule); }
+  .wsort button.active { color: var(--text); border-color: var(--rule); }
+  .wsort button::after { content: ""; display: inline-block; width: 0; height: 0; margin-left: 4px;
+    border-left: 3px solid transparent; border-right: 3px solid transparent; vertical-align: middle; }
+  .wsort button.asc::after { border-top: 4px solid currentColor; }
+  .wsort button.desc::after { border-bottom: 4px solid currentColor; }
+  .thsort { cursor: pointer; user-select: none; position: relative; }
+  .thsort:hover { color: var(--text); }
+  .thsort::after { content: ""; display: inline-block; width: 0; height: 0; margin-left: 3px;
+    border-left: 3px solid transparent; border-right: 3px solid transparent; vertical-align: middle; }
+  .thsort.asc::after { border-bottom: 4px solid currentColor; }
+  .thsort.desc::after { border-top: 4px solid currentColor; }
 
   /* tracked repositories */
   .thead, .repo > summary { display: grid; grid-template-columns: 22px var(--row) 18px; align-items: center; column-gap: 8px; padding: 0 14px; }
@@ -1096,7 +1111,7 @@
     })();
 {{end}}
 {{define "peek"}}{{if .Lines}}<template class="peek"><div class="pk"><b class="pk-h">{{.Head}}</b><dl>{{range .Lines}}<dt>{{.Label}}</dt><dd{{if .Level}} class="{{.Level}}"{{end}}>{{range $i, $x := .Items}}{{if $i}}<br>{{end}}{{$x}}{{end}}</dd>{{end}}</dl></div></template>{{end}}{{end}}
-{{define "item"}}<li class="wi" data-k="{{.K}}" data-new="{{.New}}" data-v="w-{{.Key}}" data-val="{{.Value}}" data-kind="{{lower .Kind}}" data-repo="{{lower .Repo}}" data-name="{{.Repo}}" data-move="{{.Move}}"{{if .Personal}} data-personal{{end}} data-s="{{.Search}}">
+{{define "item"}}<li class="wi" data-k="{{.K}}" data-new="{{.New}}" data-v="w-{{.Key}}" data-val="{{.Value}}" data-kind="{{lower .Kind}}" data-repo="{{lower .Repo}}" data-name="{{.Repo}}" data-move="{{.Move}}"{{if .Personal}} data-personal{{end}} data-s="{{.Search}}" data-ts="{{.SinceUnix}}">
   <span class="dot {{.Attn}}" aria-hidden="true" data-term="dot"></span>
   <div>
     <a class="title" href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a>{{template "peek" .Peek}}
@@ -1155,6 +1170,7 @@
   <div class="main">
     <section class="panel" aria-labelledby="work-h" data-board data-module="your-work">
       <h2 id="work-h">Your work <span class="lbl">{{if .Work.Known}}Pull requests and issues @{{.Work.Login}} has out, anywhere on GitHub · updated {{.Work.FetchedAgo}}{{else}}Not fetched yet{{end}}</span><span class="nb" id="newcount"{{if not .WorkNew}} hidden{{end}}>{{.WorkNew}} new</span></h2>
+      {{if .Work.Known}}<div class="wsort" role="group" aria-label="Sort work items"><button type="button" data-wsort="name">Name</button><button type="button" data-wsort="updated" title="Sort by last update">Updated</button></div>{{end}}
       {{if not .Work.Known}}
       <p class="pad zero">{{if .Work.Err}}{{.Work.ErrF.Summary}} <small class="err">({{.Work.ErrF.Detail}})</small>{{else}}Loading your pull requests and issues. This takes a few seconds after HelloGitty starts; the page reloads on its own.{{end}}</p>
       {{else}}
@@ -1223,10 +1239,10 @@
         <button type="submit">Track</button></form>{{end}}</div>
       {{if .RepoTools}}<p class="addmsg" id="repo-add-msg" role="status" aria-live="polite" hidden></p>{{end}}
       <div class="thead">
-        <span></span><span class="lbl">Repository</span>
+        <span></span><span class="lbl thsort" data-rsort="name" role="button" tabindex="0">Repository</span>
         {{if .HasPipeline}}<span class="phead">{{range .Stages}}<span {{if $.HasTerm (print "p:" .Abbr)}}class="lbl term" data-term="p:{{.Abbr}}" tabindex="0" data-extra="{{.Name}}"{{else}}class="lbl" title="{{.Name}}"{{end}}>{{.Abbr}}</span>{{end}}</span>
-        <span {{if $.HasTerm (print "p:" .Labels.Status)}}class="lbl term" data-term="p:{{.Labels.Status}}" tabindex="0"{{else}}class="lbl"{{end}}>{{.Labels.Status}}</span>{{end}}<span class="lbl num term" data-term="col-open" tabindex="0">Open</span><span class="lbl num term" data-term="col-gfi" tabindex="0">Good first</span><span class="lbl num term" data-term="col-unassigned" tabindex="0">Unassigned</span>
-        <span class="lbl num term" data-term="col-commit" tabindex="0">Last commit</span><span class="lbl num term" data-term="col-watching" tabindex="0">Watching</span><span class="lbl num term" data-term="col-denied" tabindex="0">Turned down</span><span></span>
+        <span {{if $.HasTerm (print "p:" .Labels.Status)}}class="lbl term" data-term="p:{{.Labels.Status}}" tabindex="0"{{else}}class="lbl"{{end}}>{{.Labels.Status}}</span>{{end}}<span class="lbl num thsort" data-rsort="open" role="button" tabindex="0" data-term="col-open">Open</span><span class="lbl num thsort" data-rsort="gfi" role="button" tabindex="0" data-term="col-gfi">Good first</span><span class="lbl num thsort" data-rsort="unasgn" role="button" tabindex="0" data-term="col-unassigned">Unassigned</span>
+        <span class="lbl num thsort" data-rsort="commit" role="button" tabindex="0" data-term="col-commit">Last commit</span><span class="lbl num term" data-term="col-watching" tabindex="0">Watching</span><span class="lbl num thsort" data-rsort="denied" role="button" tabindex="0" data-term="col-denied">Turned down</span><span></span>
       </div>
       {{range .Rows}}{{$repoURL := .URL}}
       <details class="repo" data-new-ids="{{.NewIDs}}" data-key="repo-{{.Key}}" data-repo="{{.Key}}" data-name="{{.Owner}}/{{.Name}}" data-s="{{.Search}}" data-open="{{.Open}}" data-gfi="{{.GFI}}" data-unasgn="{{.Unassigned}}" data-age="{{if .AgeKnown}}{{.AgeDays}}{{else}}100000{{end}}" data-denied="{{.DeniedTotal}}">
@@ -2218,10 +2234,52 @@
       });
     })();
 
+    // Sort controls for the Your work panel: Finder-style toggleable headers.
+    (function () {
+      var btns = document.querySelectorAll(".wsort [data-wsort]");
+      if (!btns.length) return;
+      var lists = document.querySelectorAll("[data-board][data-module='your-work'] ul.items, [data-board][data-module='conversations'] ul.items");
+      function sortItems(key, dir) {
+        lists.forEach(function (ul) {
+          var items = Array.from(ul.querySelectorAll(":scope > .wi"));
+          items.sort(function (a, b) {
+            var va, vb, cmp;
+            if (key === "name") {
+              va = (a.dataset.name || "").toLowerCase();
+              vb = (b.dataset.name || "").toLowerCase();
+              cmp = va.localeCompare(vb, undefined, { numeric: true, sensitivity: "base" });
+            } else {
+              va = parseInt(a.dataset.ts) || 0;
+              vb = parseInt(b.dataset.ts) || 0;
+              cmp = va - vb;
+            }
+            return dir === "asc" ? cmp : -cmp;
+          });
+          items.forEach(function (li) { ul.appendChild(li); });
+        });
+      }
+      btns.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var key = btn.dataset.wsort;
+          var wasActive = btn.classList.contains("active");
+          var wasAsc = btn.classList.contains("asc");
+          btns.forEach(function (b) { b.classList.remove("active", "asc", "desc"); });
+          var dir;
+          if (!wasActive) {
+            dir = key === "updated" ? "desc" : "asc";
+          } else {
+            dir = wasAsc ? "desc" : "asc";
+          }
+          btn.classList.add("active", dir);
+          sortItems(key, dir);
+        });
+      });
+    })();
+
     // The view is remembered in this browser so the 5-minute reload keeps it.
     (function () {
       var viewKey = "hellogitty-view";
-      var view = { q: "", kind: "all", scope: "", mine: false, group: "move", sort: "default", rq: "", pins: [] };
+      var view = { q: "", kind: "all", scope: "", mine: false, group: "move", sort: "default", sortDir: "desc", rq: "", pins: [] };
       try { var saved = JSON.parse(localStorage.getItem(viewKey) || "null"); if (saved) for (var k in view) if (k in saved) view[k] = saved[k]; } catch (e) {}
       function save() { try { localStorage.setItem(viewKey, JSON.stringify(view)); } catch (e) {} }
 
@@ -2319,21 +2377,23 @@
       }
 
       function sortRepos() {
-        var key = view.sort, by = {
+        var key = view.sort, dir = view.sortDir === "asc" ? 1 : -1;
+        var extract = {
           name: function (d) { return d.dataset.repo; },
-          open: function (d) { return -Number(d.dataset.open); }, gfi: function (d) { return -Number(d.dataset.gfi); },
-          unasgn: function (d) { return -Number(d.dataset.unasgn); }, commit: function (d) { return Number(d.dataset.age); },
-          denied: function (d) { return -Number(d.dataset.denied); }
-        }[key];
+          open: function (d) { return Number(d.dataset.open); }, gfi: function (d) { return Number(d.dataset.gfi); },
+          unasgn: function (d) { return Number(d.dataset.unasgn); }, commit: function (d) { return -Number(d.dataset.age); },
+          denied: function (d) { return Number(d.dataset.denied); }
+        };
+        var by = extract[key];
         var parent = repos.length ? repos[0].parentNode : null, after = parent ? repos[repos.length - 1].nextSibling : null;
         var pins = view.pins || [], pinned = function (d) { return pins.indexOf(d.dataset.repo) !== -1; };
         var sorted = repos.slice().sort(function (a, b) {
-          // Pinned repositories first, in the order you pinned them; then the chosen sort.
           var pa = pins.indexOf(a.dataset.repo), pb = pins.indexOf(b.dataset.repo);
           if (pa !== -1 || pb !== -1) return pa === -1 ? 1 : pb === -1 ? -1 : pa - pb;
           if (!by) return a._order - b._order;
           var x = by(a), y = by(b);
-          return x < y ? -1 : x > y ? 1 : a._order - b._order;
+          var cmp = typeof x === "string" ? x.localeCompare(y, undefined, { numeric: true, sensitivity: "base" }) : x - y;
+          return cmp !== 0 ? cmp * dir : a._order - b._order;
         });
         var last = null;
         sorted.forEach(function (d) {
@@ -2378,6 +2438,11 @@
 
       function apply() {
         q.value = view.q; scope.value = view.scope; mine.checked = view.mine; if (sortSel) sortSel.value = view.sort;
+        document.querySelectorAll(".thsort").forEach(function (th) {
+          var on = th.dataset.rsort === view.sort;
+          th.classList.toggle("asc", on && view.sortDir === "asc");
+          th.classList.toggle("desc", on && view.sortDir === "desc");
+        });
         document.querySelectorAll("[data-f-kind]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.fKind === view.kind ? "true" : "false"); });
         document.querySelectorAll("[data-group]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.group === view.group ? "true" : "false"); });
         regroup();
@@ -2415,7 +2480,28 @@
       q.addEventListener("keydown", function (e) { if (e.key === "Escape") { view.q = ""; apply(); q.blur(); } });
       scope.addEventListener("change", function () { view.scope = scope.value; apply(); });
       mine.addEventListener("change", function () { view.mine = mine.checked; apply(); });
-      if (sortSel) sortSel.addEventListener("change", function () { view.sort = sortSel.value; apply(); });
+      if (sortSel) sortSel.addEventListener("change", function () {
+        view.sort = sortSel.value;
+        view.sortDir = view.sort === "name" ? "asc" : "desc";
+        apply();
+      });
+      document.querySelectorAll(".thsort").forEach(function (th) {
+        th.addEventListener("click", function (e) {
+          if (th.dataset.term && e.target !== th) return;
+          var key = th.dataset.rsort;
+          if (view.sort === key) {
+            view.sortDir = view.sortDir === "asc" ? "desc" : "asc";
+          } else {
+            view.sort = key;
+            view.sortDir = key === "name" ? "asc" : "desc";
+          }
+          if (sortSel) sortSel.value = view.sort;
+          apply();
+        });
+        th.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); th.click(); }
+        });
+      });
       var rq = document.getElementById("f-rq"), rtyping;
       if (rq) {
         rq.addEventListener("input", function () { clearTimeout(rtyping); rtyping = setTimeout(function () { view.rq = rq.value.trim(); apply(); }, 120); });
