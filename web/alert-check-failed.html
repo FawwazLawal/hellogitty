@@ -49,7 +49,7 @@
     <ul class="flist">{{range .FailedRepos}}
       <li>
         <div class="name"><a href="https://github.com/{{.Name}}" target="_blank" rel="noopener">{{.Name}}</a></div>
-        {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+        {{if .Error}}<div class="error">{{.Error}}{{if .ErrorRaw}} <small>({{.ErrorRaw}})</small>{{end}}</div>{{end}}
       </li>
     {{end}}</ul>
     <p class="hint">HelloGitty tries again on the next check. Hover the alert on the dashboard for the full error.</p>

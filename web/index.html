@@ -1156,7 +1156,7 @@
     <section class="panel" aria-labelledby="work-h" data-board data-module="your-work">
       <h2 id="work-h">Your work <span class="lbl">{{if .Work.Known}}Pull requests and issues @{{.Work.Login}} has out, anywhere on GitHub · updated {{.Work.FetchedAgo}}{{else}}Not fetched yet{{end}}</span><span class="nb" id="newcount"{{if not .WorkNew}} hidden{{end}}>{{.WorkNew}} new</span></h2>
       {{if not .Work.Known}}
-      <p class="pad zero">{{if .Work.Err}}Couldn't load your pull requests and issues: <span class="err">{{.Work.Err}}</span>{{else}}Loading your pull requests and issues. This takes a few seconds after HelloGitty starts; the page reloads on its own.{{end}}</p>
+      <p class="pad zero">{{if .Work.Err}}{{.Work.ErrF.Summary}} <small class="err">({{.Work.ErrF.Detail}})</small>{{else}}Loading your pull requests and issues. This takes a few seconds after HelloGitty starts; the page reloads on its own.{{end}}</p>
       {{else}}
       <div class="group mv">
         <h3><span class="term" data-term="group-you" tabindex="0">Your move</span> <span class="n{{if .Work.You}} hot{{end}}" data-v="work-you">{{len .Work.You}}</span></h3>
@@ -1175,7 +1175,7 @@
         <summary><span class="term" data-term="group-done">Finished</span> in the last 30 days <span class="n" data-v="work-done">{{len .Work.Done}}{{if .Work.DoneMore}}+{{end}}</span><span class="chev" aria-hidden="true"></span></summary>
         {{if .Work.Done}}<ul class="items">{{range .Work.Done}}{{template "item" .}}{{end}}</ul>{{if .Work.DoneMore}}<p class="hint">{{.Work.DoneMore}} more not shown.</p>{{end}}{{else}}<p class="none">Nothing merged or closed in the last 30 days.</p>{{end}}
       </details>
-      {{if .Work.Err}}<p class="pad err">The last refresh failed, so this is the previous list: {{.Work.Err}}</p>{{end}}
+      {{if .Work.Err}}<p class="pad err">The last refresh failed, so this is the previous list. {{.Work.ErrF.Summary}} <small>({{.Work.ErrF.Detail}})</small></p>{{end}}
       {{end}}
     </section>
 
@@ -1298,7 +1298,7 @@
       </details>
       {{end}}
       {{if .RemovedRepos}}<p class="removed pad">Stopped tracking here (your config file still lists them):{{range .RemovedRepos}} <button type="button" class="untrack" data-retrack="{{.}}">{{.}} · Track again</button>{{end}}</p>{{end}}
-      {{if .PipelineErr}}<p class="err pad">The pipeline command failed: {{.PipelineErr}}</p>{{end}}
+      {{if .PipelineErr}}<p class="err pad">{{.PipelineErrF.Summary}} <small>({{.PipelineErrF.Detail}})</small></p>{{end}}
     </section>
   </div>
 
@@ -1342,7 +1342,7 @@
 
     <section class="panel" aria-labelledby="sec-h" data-module="security">
       <h2 id="sec-h">DevSecOps <span class="lbl">CVEs &amp; tips</span></h2>
-      {{if .SecurityFeed.Error}}<p class="nodata"><b>Feed unavailable:</b> <span class="err">{{.SecurityFeed.Error}}</span></p>{{end}}
+      {{if .SecurityFeed.Error}}<p class="nodata">{{.SecurityErrF.Summary}} <small class="err">({{.SecurityErrF.Detail}})</small></p>{{end}}
       {{if .SecurityFeed.CVEs}}
       <ul class="seclist">
         {{range .SecurityFeed.CVEs}}<li class="secrow">
@@ -1375,11 +1375,11 @@
         <div><span class="lbl term" data-term="rate" tabindex="0">Rate</span><b class="{{if not .Pipeline.Rate}}zero{{end}}" data-v="pr-rate">{{if .Pipeline.Rate}}{{.Pipeline.Rate}}{{else}}—{{end}}</b></div>
       </div>
       {{if not .Pipeline.Known}}
-      <p class="nodata"><b>Not counted yet.</b> {{if .Pipeline.Err}}The last search failed: <span class="err">{{.Pipeline.Err}}</span>{{else}}Counted with the next check.{{end}}</p>
+      <p class="nodata"><b>Not counted yet.</b> {{if .Pipeline.Err}}{{.Pipeline.ErrF.Summary}} <small class="err">({{.Pipeline.ErrF.Detail}})</small>{{else}}Counted with the next check.{{end}}</p>
       {{else if not .Pipeline.Opened}}
       <p class="nodata"><b>No pull requests yet</b> in tracked repos. Rate is merged ÷ (merged + closed).</p>
       {{else}}
-      <p class="nodata">Rate is merged ÷ (merged + closed). Open ones don't count yet.{{if .Pipeline.Err}} The last search failed, so these are the previous numbers: <span class="err">{{.Pipeline.Err}}</span>{{end}}</p>
+      <p class="nodata">Rate is merged ÷ (merged + closed). Open ones don't count yet.{{if .Pipeline.Err}} The last search failed, so these are the previous numbers. {{.Pipeline.ErrF.Summary}} <small class="err">({{.Pipeline.ErrF.Detail}})</small>{{end}}</p>
       <ul class="prlist">{{range .Pipeline.PRs}}<li><span class="tag">{{.State}}</span><a class="t" href="{{.URL}}" target="_blank" rel="noopener">{{.Repo}}#{{.Number}} {{.Title}}</a>{{if .NotesURL}}<a href="{{.NotesURL}}" target="_blank">{{$.Labels.Notes}}</a>{{end}}</li>{{end}}</ul>
       {{end}}
     </section>

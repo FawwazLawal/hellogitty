@@ -49,6 +49,7 @@ type note struct{ Text, Level, Term string }
 type workView struct {
 	Known      bool
 	Err        string
+	ErrF       FriendlyErr
 	Login      string
 	Scope      string
 	FetchedAgo string
@@ -77,7 +78,7 @@ type workView struct {
 func (w workView) YourMove() int { return len(w.You) + len(w.InYou) + len(w.ConvYou) }
 
 func buildWork(b *work.Board, errText string, now time.Time) workView {
-	v := workView{Err: errText}
+	v := workView{Err: errText, ErrF: friendlyError(errText)}
 	if b == nil {
 		return v
 	}
