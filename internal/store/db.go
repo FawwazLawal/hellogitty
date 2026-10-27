@@ -110,12 +110,20 @@ CREATE TABLE IF NOT EXISTS cross_references (
     seen_at     DATETIME NOT NULL,
     PRIMARY KEY (our_repo, our_number, ref_repo, ref_number)
 );
+
+CREATE TABLE IF NOT EXISTS our_comments (
+    repo_id      INTEGER REFERENCES repos(id),
+    issue_number INTEGER NOT NULL,
+    comment_id   INTEGER NOT NULL,
+    commented_at DATETIME NOT NULL,
+    UNIQUE(repo_id, issue_number)
+);
 `
 
 // schemaVersion goes up whenever schema gains a table, so an existing database runs the schema
 // again; every statement in it is CREATE ... IF NOT EXISTS. 2 added first_seen and overlap; 3 added
-// ack; 4 added repo_choice; 5 added cross_references.
-const schemaVersion = 5
+// ack; 4 added repo_choice; 5 added cross_references; 6 added our_comments.
+const schemaVersion = 6
 
 type Store struct {
 	db *sql.DB
@@ -767,6 +775,61 @@ func (s *Store) AllWatches() ([]WatchedIssue, error) {
 func (s *Store) SetWatchStatus(id int64, status string, at time.Time) error {
 	_, err := s.db.Exec(`UPDATE watch_list SET status = ?, status_changed_at = ? WHERE id = ?`, status, ts(&at), id)
 	return err
+}
+
+// OurComment is an issue where the authenticated user posted a comment.
+type OurComment struct {
+	RepoID      int64
+	IssueNumber int
+	CommentID   int64
+	CommentedAt time.Time
+}
+
+func (s *Store) UpsertOurComment(c OurComment) error {
+	_, err := s.db.Exec(`INSERT INTO our_comments (repo_id, issue_number, comment_id, commented_at)
+		VALUES (?, ?, ?, ?)
+		ON CONFLICT(repo_id, issue_number) DO UPDATE SET
+			comment_id = excluded.comment_id, commented_at = excluded.commented_at
+		WHERE excluded.comment_id > our_comments.comment_id`,
+		c.RepoID, c.IssueNumber, c.CommentID, ts(&c.CommentedAt))
+	return err
+}
+
+func (s *Store) OurComments(repoID int64) ([]OurComment, error) {
+	rows, err := s.db.Query(`SELECT repo_id, issue_number, comment_id, commented_at
+		FROM our_comments WHERE repo_id = ?`, repoID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []OurComment
+	for rows.Next() {
+		var c OurComment
+		var at nullTime
+		if err := rows.Scan(&c.RepoID, &c.IssueNumber, &c.CommentID, &at); err != nil {
+			return nil, err
+		}
+		c.CommentedAt = at.t
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) RemoveOurComment(repoID int64, issueNumber int) error {
+	_, err := s.db.Exec(`DELETE FROM our_comments WHERE repo_id = ? AND issue_number = ?`, repoID, issueNumber)
+	return err
+}
+
+// CommentReply is someone replying to our comment on an issue.
+type CommentReply struct {
+	Repo              string
+	IssueNumber       int
+	CommentID         int64
+	Author            string
+	AuthorAssociation string
+	Body              string
+	URL               string
+	At                time.Time
 }
 
 // Report types are the read model shared by the snapshot writer and the dashboard.

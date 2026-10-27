@@ -67,6 +67,7 @@ var entryKinds = map[string][2]string{
 	inbox.KindLabel: {"pr", "Your PR"}, inbox.KindBot: {"pr", "Your PR"}, inbox.KindIssue: {"issue", "Your issue"},
 	inbox.KindWatched: {"watch", "Watched"}, inbox.KindOverlap: {"overlap", "Someone else"}, inbox.KindSimilar: {"overlap", "Worth a look"},
 	inbox.KindCrossRef: {"pr", "Cross-ref"},
+	inbox.KindCommentReply: {"issue", "Reply"},
 }
 
 // Build merges the sources into the feed, newest first. Each GitHub notification attaches to the

@@ -115,6 +115,7 @@ type Review struct {
 }
 
 type Comment struct {
+	ID                int64      `json:"id"`
 	Body              string     `json:"body"`
 	HTMLURL           string     `json:"html_url"`
 	CreatedAt         *time.Time `json:"created_at"`
