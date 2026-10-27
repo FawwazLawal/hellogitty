@@ -5,6 +5,21 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (11) · Black Bombay (baby) · 2026-10-26
+
+Tag `v0.2.11`.
+
+- **Unified header**: redesigned header with CSS grid layout — brand left, clock center,
+  controls right — consistent across all pages. Dashboard-specific controls (Collapse,
+  Layout) now sit alongside common header buttons with matching icon styling.
+- **Settings sidebar navigation**: macOS System Settings-style sidebar with categorised
+  sections (Preferences, Data, System), content panes, and localStorage/hash persistence.
+- **Repositories settings**: add/remove tracked repos directly from the Settings page,
+  view removed repos with re-add option, and display the maintain list from config.
+- **Two new clock styles**: LED (bright wall-clock glow) and Flip (retro split-flap).
+- **World clock management in Settings**: add and remove world clocks from the Clock
+  settings pane instead of the header dropdown, keeping the header clean.
+
 ## v0.2.0 (10) · Black Bombay (baby) · 2026-10-26
 
 Tag `v0.2.10`.
