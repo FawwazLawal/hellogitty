@@ -152,6 +152,9 @@ func (p *Poller) PollAll(ctx context.Context) error {
 	}
 	p.pollLooseWatches(ctx, targets)
 	prs, prErr := p.ourPRs(ctx, targets)
+	if prErr == nil {
+		p.pollCrossRefs(ctx, prs, targets)
+	}
 	// A repository removed while the cycle ran must not come back when it ends.
 	if now, err := p.Targets(); err == nil {
 		keep := map[string]bool{}
@@ -539,6 +542,68 @@ func (p *Poller) fixedBy(ctx context.Context, t Target, number int) (string, err
 		}
 	}
 	return "", nil
+}
+
+func (p *Poller) pollCrossRefs(ctx context.Context, prs []OurPR, targets []Target) {
+	tracked := map[string]bool{}
+	for _, t := range targets {
+		tracked[strings.ToLower(t.Owner+"/"+t.Name)] = true
+	}
+	now := p.now()
+	for _, pr := range prs {
+		if pr.State != "open" || !tracked[strings.ToLower(pr.Owner+"/"+pr.Name)] {
+			continue
+		}
+		events, err := p.GH.Timeline(ctx, pr.Owner, pr.Name, pr.Number)
+		if err != nil {
+			log.Printf("cross-refs %s/%s#%d: %v", pr.Owner, pr.Name, pr.Number, err)
+			continue
+		}
+		for _, e := range events {
+			if e.Event != "cross-referenced" || e.Source == nil || e.Source.Issue == nil || e.Source.Issue.PullRequest == nil {
+				continue
+			}
+			src := e.Source.Issue
+			refRepo := crossRefRepo(src.HTMLURL)
+			if refRepo == "" || !tracked[strings.ToLower(refRepo)] {
+				continue
+			}
+			if strings.EqualFold(refRepo, pr.Owner+"/"+pr.Name) && src.Number == pr.Number {
+				continue
+			}
+			author := ""
+			if src.User != nil {
+				author = src.User.Login
+			}
+			refAt := now
+			if src.CreatedAt != nil {
+				refAt = *src.CreatedAt
+			}
+			cr := store.CrossReference{
+				OurRepo:   pr.Owner + "/" + pr.Name,
+				OurNumber: pr.Number,
+				RefRepo:   refRepo,
+				RefNumber: src.Number,
+				RefTitle:  src.Title,
+				RefAuthor: author,
+				RefURL:    src.HTMLURL,
+				RefState:  strings.ToUpper(src.State),
+				RefAt:     refAt,
+				SeenAt:    now,
+			}
+			if err := p.Store.UpsertCrossReference(cr); err != nil {
+				log.Printf("cross-refs upsert: %v", err)
+			}
+		}
+	}
+}
+
+func crossRefRepo(htmlURL string) string {
+	parts := strings.Split(strings.TrimPrefix(htmlURL, "https://github.com/"), "/")
+	if len(parts) >= 2 {
+		return parts[0] + "/" + parts[1]
+	}
+	return ""
 }
 
 func (p *Poller) pollPRs(ctx context.Context, t Target, repoID int64) error {

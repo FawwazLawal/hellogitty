@@ -32,6 +32,7 @@ const (
 	KindIssue    = "issue_comment" // a reply on an issue that is your move: one you opened or were assigned, or one that mentions you
 	KindOverlap  = "issue_overlap" // someone else is on an issue you plan to take: a PR, an assignee, a claim, a close
 	KindSimilar  = "issue_similar" // another PR's title shares the subject; only worth a look
+	KindCrossRef = "pr_cross_reference"
 )
 
 type Entry struct {
@@ -449,6 +450,38 @@ func NewIssues(issues []store.RecentIssue, planning map[string]bool, now time.Ti
 		out = append(out, Entry{ID: "hg-" + slug(repo) + "-new-issues-" + strconv.Itoa(newest.Number), Kind: KindNewIssue,
 			Repo: repo, Number: newest.Number, URL: "https://github.com/" + repo + "/issues?q=is%3Aissue+is%3Aopen+no%3Aassignee+sort%3Acreated-desc",
 			OccurredAt: newest.CreatedAt.UTC(), Summary: summary})
+	}
+	return out
+}
+
+func CrossRefEntries(refs []store.CrossReference) []Entry {
+	var out []Entry
+	for _, cr := range refs {
+		summary := "Referenced by " + cr.RefRepo + "#" + strconv.Itoa(cr.RefNumber)
+		if cr.RefAuthor != "" {
+			summary += " from @" + cr.RefAuthor
+		}
+		if cr.RefTitle != "" {
+			summary += ": " + oneLine(cr.RefTitle, 120)
+		}
+		if cr.RefState != "" && cr.RefState != "OPEN" {
+			summary += " (" + strings.ToLower(cr.RefState) + ")"
+		}
+		id := "hg-" + slug(cr.OurRepo) + "-" + strconv.Itoa(cr.OurNumber) + "-xref-" + slug(cr.RefRepo) + "-" + strconv.Itoa(cr.RefNumber)
+		url := cr.RefURL
+		if url == "" {
+			url = "https://github.com/" + cr.OurRepo + "/pull/" + strconv.Itoa(cr.OurNumber)
+		}
+		out = append(out, Entry{
+			ID:         id,
+			Kind:       KindCrossRef,
+			Repo:       cr.OurRepo,
+			Number:     cr.OurNumber,
+			URL:        url,
+			Actor:      cr.RefAuthor,
+			OccurredAt: cr.RefAt.UTC(),
+			Summary:    summary,
+		})
 	}
 	return out
 }

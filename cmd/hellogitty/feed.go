@@ -48,6 +48,11 @@ func (s source) entries(now time.Time) ([]inbox.Entry, bool) {
 	} else {
 		entries = inbox.Sorted(append(entries, inbox.NewIssues(s.trackedOnly(issues), s.planning(reports), now)...))
 	}
+	if refs, err := s.st.CrossReferences(); err != nil {
+		log.Printf("inbox: cross-references left out: %v", err)
+	} else {
+		entries = inbox.Sorted(append(entries, inbox.CrossRefEntries(refs)...))
+	}
 	return entries, true
 }
 
