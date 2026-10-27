@@ -5,6 +5,23 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (12) · Black Bombay (baby) · 2026-10-27
+
+Tag `v0.2.12`.
+
+- **Issues search across all pages**: typing in the Issues search bar now queries
+  the full dataset via debounced AJAX, not just the current page's rows. The
+  `/issues` endpoint returns JSON when asked with `Accept: application/json`.
+- **Track comment replies**: poll for new comments on issues where we posted a
+  comment and surface them as `issue_comment_reply` inbox entries, priority high
+  when the commenter is a maintainer or owner.
+- **Track PR cross-references**: detect when PRs in watched repos reference our
+  open PRs and surface them as `pr_cross_reference` inbox entries via timeline
+  events.
+- **Composition audit**: unified site-header template shared across Dashboard,
+  Help, and Feed pages; standardised content widths with CSS tokens; fixed panel
+  header z-index stacking over the site header in Layout mode.
+
 ## v0.2.0 (11) · Black Bombay (baby) · 2026-10-26
 
 Tag `v0.2.11`.
