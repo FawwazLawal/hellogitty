@@ -183,6 +183,7 @@ type page struct {
 	Mascot       *mascot
 	HasPipeline  bool
 	PipelineErr  string
+	PipelineErrF FriendlyErr
 	Labels       pipeline.Labels
 	NowUTC       string
 	NowUnix      int64
@@ -210,7 +211,8 @@ type page struct {
 	Feed         feedView
 	Token        string // sent back with acknowledgements; see Handler.token
 	// Security panel: CVEs and tips.
-	SecurityFeed security.Feed
+	SecurityFeed  security.Feed
+	SecurityErrF  FriendlyErr
 
 	// Settings page: server config (read-only on the page).
 	ConfigListen    string
@@ -378,6 +380,7 @@ type pipelineView struct {
 	Rate                         string
 	Known                        bool
 	Err                          string
+	ErrF                         FriendlyErr
 	PRs                          []prRow
 	All                          []prRow // every one, for the list page; PRs is the panel's first ten
 }
@@ -612,6 +615,7 @@ func (h *Handler) build() (*page, error) {
 	}
 	if pErr != nil {
 		p.PipelineErr = pErr.Error()
+		p.PipelineErrF = pipelineError(p.PipelineErr)
 	}
 	if pst != nil {
 		p.Labels = pst.Labels
@@ -733,7 +737,7 @@ func (h *Handler) build() (*page, error) {
 	}
 
 	prsByRepo := map[string][]prRow{}
-	pl := pipelineView{Known: tel.PRsKnown, Err: tel.PRError}
+	pl := pipelineView{Known: tel.PRsKnown, Err: tel.PRError, ErrF: friendlyError(tel.PRError)}
 	for _, pr := range withBoardPRs(tel.OurPRs, board, reports) {
 		row := prRow{
 			Repo: pr.Owner + "/" + pr.Name, Title: pr.Title, URL: pr.URL, Number: pr.Number,
@@ -1018,6 +1022,7 @@ func (h *Handler) build() (*page, error) {
 	}
 
 	p.SecurityFeed = h.Source.Security()
+	p.SecurityErrF = securityError(p.SecurityFeed.Error)
 
 	p.ConfigListen = h.ConfigListen
 	p.ConfigDatabase = h.ConfigDatabase

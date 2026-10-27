@@ -178,7 +178,7 @@ func TestStaleAndPollFailLight(t *testing.T) {
 		PollInterval: time.Hour,
 	}
 	_, html := get(t, h, "/")
-	for _, want := range []string{`data-v="cw-poll-fail">2<`, `data-v="cw-data-stale">3 hours ago<`, `<b>Not counted yet.</b>`, `The last search failed`, `class="light UNKNOWN"`} {
+	for _, want := range []string{`data-v="cw-poll-fail">2<`, `data-v="cw-data-stale">3 hours ago<`, `<b>Not counted yet.</b>`, `Something went wrong`, `class="light UNKNOWN"`} {
 		if !strings.Contains(html, want) {
 			t.Errorf("missing %q", want)
 		}
@@ -342,7 +342,7 @@ func TestWorkBoardPanels(t *testing.T) {
 
 	src.workErr = "github graphql: boom"
 	_, html = get(t, handler(src), "/")
-	if !strings.Contains(html, "The last refresh failed, so this is the previous list: github graphql: boom") || !strings.Contains(html, "your work") {
+	if !strings.Contains(html, "The last refresh failed, so this is the previous list.") || !strings.Contains(html, "github graphql: boom") || !strings.Contains(html, "your work") {
 		t.Error("a failed refresh should say so and keep the previous board")
 	}
 }
