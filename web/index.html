@@ -1404,7 +1404,7 @@
   <p class="hint">Saved in this browser. Hidden panels still count in the alert cells.</p>
   <div class="seg presets" role="group" aria-label="Presets"><span class="seglbl">Preset</span><button type="button" data-preset="everything">Everything</button><button type="button" data-preset="contributor">Contributor</button><button type="button" data-preset="maintainer">Maintainer</button><button type="button" data-preset="program">Program</button><button type="button" data-preset="focus">Focus</button><button type="button" data-preset="custom" title="Your own layout: any change you make is kept here">Custom</button></div>
   <ol class="mods" id="layout-list"></ol>
-  <div class="sheet-foot"><button type="button" class="done" id="layout-done">Done</button></div>
+  <div class="sheet-foot"><button type="button" class="clear" id="layout-copy">Copy layout</button><button type="button" class="done" id="layout-done">Done</button></div>
 </dialog>
 <dialog id="confirm" class="sheet confirm" aria-labelledby="confirm-h" aria-describedby="confirm-b">
   <form method="dialog">
@@ -1862,8 +1862,10 @@
     // Layout (ADR-002). Every panel is a module you can show, hide, fold and move between the main
     // column and the side; presets set all of it at once. The server always renders the whole page,
     // so without a saved layout (or with storage blocked) you see everything. Saved per browser.
+    // The config file can set a starting layout for browsers that have not saved one yet.
     (function () {
       var key = "hellogitty-layout";
+      var configDefault = {{if .LayoutDefault}}{{.LayoutDefault}}{{else}}null{{end}};
       var main = document.querySelector(".grid > .main"), rail = document.querySelector(".grid > .rail"), grid = document.querySelector(".grid");
       var dialog = document.getElementById("layout"), list = document.getElementById("layout-list");
       if (!main || !rail || !dialog) return;
@@ -1905,7 +1907,19 @@
       var MINH = 120; // the smallest a resized panel gets: its heading and a few rows
       var state;
       try { state = JSON.parse(localStorage.getItem(key) || "null"); } catch (e) {}
-      state = normalize(state && state.main ? state : copy(PRESETS.everything, "everything"));
+      if (state && state.main) {
+        state = normalize(state);
+      } else if (configDefault) {
+        if (configDefault.preset && PRESETS[configDefault.preset]) {
+          state = normalize(copy(PRESETS[configDefault.preset], configDefault.preset));
+        } else if (configDefault.main || configDefault.rail) {
+          state = normalize({ preset: "custom", main: configDefault.main || [], rail: configDefault.rail || [], hidden: configDefault.hidden || [], folded: configDefault.folded || [], sizes: {} });
+        } else {
+          state = normalize(copy(PRESETS.everything, "everything"));
+        }
+      } else {
+        state = normalize(copy(PRESETS.everything, "everything"));
+      }
       function save() { try { localStorage.setItem(key, JSON.stringify(state)); } catch (e) {} }
       function has(arr, id) { return arr.indexOf(id) >= 0; }
       function filtersActive() {
@@ -2014,6 +2028,31 @@
         if (typeof dialog.showModal === "function") dialog.showModal(); else dialog.setAttribute("open", "");
       });
       document.getElementById("layout-done").addEventListener("click", function () { if (dialog.close) dialog.close(); else dialog.removeAttribute("open"); });
+      document.getElementById("layout-copy").addEventListener("click", function () {
+        var out = {};
+        if (state.preset !== "custom" && PRESETS[state.preset]) {
+          out.preset = state.preset;
+        } else {
+          out.main = state.main.slice();
+          out.rail = state.rail.slice();
+          if (state.hidden.length) out.hidden = state.hidden.slice();
+          if (state.folded.length) out.folded = state.folded.slice();
+        }
+        var text = JSON.stringify(out, null, 2);
+        var btn = this;
+        function done() { btn.textContent = "Copied!"; setTimeout(function () { btn.textContent = "Copy layout"; }, 1500); }
+        function fallback() {
+          var ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.left = "-9999px";
+          document.body.appendChild(ta); ta.select();
+          try { document.execCommand("copy"); done(); } catch (e) {}
+          document.body.removeChild(ta);
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, fallback);
+        } else {
+          fallback();
+        }
+      });
 
       // On the panels themselves: a grip to drag a panel to another place, an arrow to collapse or
       // expand it, and a handle along the bottom edge to make it shorter or taller.

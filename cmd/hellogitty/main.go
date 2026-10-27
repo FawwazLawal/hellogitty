@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -279,6 +280,7 @@ func run() int {
 			ConfigReposFile: cfg.ReposFile,
 			ConfigInbox:     cfg.Inbox,
 			ConfigMaintain:  cfg.Maintain,
+			LayoutDefault:   layoutDefaultJSON(cfg.Layout),
 		},
 		ReadHeaderTimeout: 10 * time.Second,
 	}
@@ -750,4 +752,15 @@ func issueNumbers(args []string) ([]int, error) {
 		out = append(out, n)
 	}
 	return out, nil
+}
+
+func layoutDefaultJSON(lc *config.LayoutConfig) string {
+	if lc == nil {
+		return ""
+	}
+	b, err := json.Marshal(lc)
+	if err != nil {
+		return ""
+	}
+	return string(b)
 }
