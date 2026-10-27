@@ -8,12 +8,9 @@
 {{template "theme-head"}}
 <style>
 {{template "base-css"}}
+{{template "header-css"}}
 {{template "feed-css"}}
   body { background: var(--panel); }
-  .fbar { position: sticky; top: 0; z-index: 2; display: flex; align-items: baseline; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap;
-    padding: 10px 14px; background: var(--panel); border-bottom: 1px solid var(--rule); }
-  .fbar h1 { margin: 0; font-size: 14px; font-weight: 650; letter-spacing: 0.02em; }
-  .fbar .lbl a { color: var(--dim); }
   .check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
   .check input { accent-color: var(--caution); width: 15px; height: 15px; margin: 0; }
   .clear { font: 13px var(--sans); color: var(--text); background: transparent; border: 0; padding: 0; cursor: pointer;
@@ -21,13 +18,15 @@
 </style>
 </head>
 <body>
-<header class="fbar"><h1>HelloGitty live <span class="lbl"><span id="feed-open">{{.Feed.Open}}</span> new</span></h1><span class="lbl">{{.Version}} · <a href="/" target="_blank" rel="noopener">Dashboard</a></span></header>
+{{template "site-header" .}}
 <ol class="feed tall" id="feed-list" data-token="{{.Token}}"{{if .CanWatch}} data-watch="1"{{end}} aria-live="polite">{{template "feed-rows" .Feed}}</ol>
 <p class="fnone" id="feed-none"{{if .Feed.Open}} hidden{{end}}>Nothing new. New issues, comments, reviews and notifications appear here as they happen.</p>
 <div class="ffoot"><label class="check"><input type="checkbox" id="feed-show"> Show acknowledged</label><button type="button" class="clear" id="feed-all">Acknowledge all</button><span id="feed-msg" class="sr" role="status"></span></div>
 <script>
   (function () {
     {{template "theme-js"}}
+    {{template "nav-active-js"}}
+    {{template "clock-js"}}
   })();
 {{template "feed-js"}}
 </script>
