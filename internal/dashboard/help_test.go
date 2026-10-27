@@ -44,7 +44,7 @@ func TestHelpPage(t *testing.T) {
 		t.Errorf("screenshot %d %q", code, body)
 	}
 	_, dash := get(t, h, "/")
-	if !strings.Contains(dash, `<a class="layoutbtn helpbtn" href="/help" title="Help (press ?)">Help</a>`) {
+	if !strings.Contains(dash, `<a class="headbtn" href="/help" title="Help (press ?)">`) {
 		t.Error("the dashboard header links to Help")
 	}
 }
