@@ -96,12 +96,26 @@ CREATE TABLE IF NOT EXISTS repo_choice (
     action      TEXT NOT NULL,
     chosen_at   DATETIME NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS cross_references (
+    our_repo    TEXT NOT NULL COLLATE NOCASE,
+    our_number  INTEGER NOT NULL,
+    ref_repo    TEXT NOT NULL COLLATE NOCASE,
+    ref_number  INTEGER NOT NULL,
+    ref_title   TEXT,
+    ref_author  TEXT,
+    ref_url     TEXT,
+    ref_state   TEXT,
+    ref_at      DATETIME NOT NULL,
+    seen_at     DATETIME NOT NULL,
+    PRIMARY KEY (our_repo, our_number, ref_repo, ref_number)
+);
 `
 
 // schemaVersion goes up whenever schema gains a table, so an existing database runs the schema
 // again; every statement in it is CREATE ... IF NOT EXISTS. 2 added first_seen and overlap; 3 added
-// ack; 4 added repo_choice.
-const schemaVersion = 4
+// ack; 4 added repo_choice; 5 added cross_references.
+const schemaVersion = 5
 
 type Store struct {
 	db *sql.DB
@@ -905,6 +919,81 @@ func HealthLabel(r Repo) string {
 		return "UNKNOWN"
 	}
 	return strings.ToUpper(r.Status)
+}
+
+type CrossReference struct {
+	OurRepo   string
+	OurNumber int
+	RefRepo   string
+	RefNumber int
+	RefTitle  string
+	RefAuthor string
+	RefURL    string
+	RefState  string
+	RefAt     time.Time
+	SeenAt    time.Time
+}
+
+func (s *Store) UpsertCrossReference(cr CrossReference) error {
+	_, err := s.db.Exec(`INSERT INTO cross_references
+		(our_repo, our_number, ref_repo, ref_number, ref_title, ref_author, ref_url, ref_state, ref_at, seen_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(our_repo, our_number, ref_repo, ref_number) DO UPDATE SET
+			ref_title = excluded.ref_title,
+			ref_author = excluded.ref_author,
+			ref_url = excluded.ref_url,
+			ref_state = excluded.ref_state`,
+		strings.ToLower(cr.OurRepo), cr.OurNumber,
+		strings.ToLower(cr.RefRepo), cr.RefNumber,
+		nullStr(cr.RefTitle), nullStr(cr.RefAuthor), nullStr(cr.RefURL), nullStr(cr.RefState),
+		ts(&cr.RefAt), ts(&cr.SeenAt))
+	return err
+}
+
+func (s *Store) CrossReferences() ([]CrossReference, error) {
+	rows, err := s.db.Query(`SELECT our_repo, our_number, ref_repo, ref_number,
+		COALESCE(ref_title,''), COALESCE(ref_author,''), COALESCE(ref_url,''), COALESCE(ref_state,''),
+		ref_at, seen_at FROM cross_references ORDER BY ref_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []CrossReference
+	for rows.Next() {
+		var cr CrossReference
+		var refAt, seenAt nullTime
+		if err := rows.Scan(&cr.OurRepo, &cr.OurNumber, &cr.RefRepo, &cr.RefNumber,
+			&cr.RefTitle, &cr.RefAuthor, &cr.RefURL, &cr.RefState, &refAt, &seenAt); err != nil {
+			return nil, err
+		}
+		cr.RefAt, cr.SeenAt = refAt.t, seenAt.t
+		out = append(out, cr)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) CrossReferencesForPR(repo string, number int) ([]CrossReference, error) {
+	rows, err := s.db.Query(`SELECT our_repo, our_number, ref_repo, ref_number,
+		COALESCE(ref_title,''), COALESCE(ref_author,''), COALESCE(ref_url,''), COALESCE(ref_state,''),
+		ref_at, seen_at FROM cross_references
+		WHERE our_repo = ? AND our_number = ? ORDER BY ref_at DESC`,
+		strings.ToLower(repo), number)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []CrossReference
+	for rows.Next() {
+		var cr CrossReference
+		var refAt, seenAt nullTime
+		if err := rows.Scan(&cr.OurRepo, &cr.OurNumber, &cr.RefRepo, &cr.RefNumber,
+			&cr.RefTitle, &cr.RefAuthor, &cr.RefURL, &cr.RefState, &refAt, &seenAt); err != nil {
+			return nil, err
+		}
+		cr.RefAt, cr.SeenAt = refAt.t, seenAt.t
+		out = append(out, cr)
+	}
+	return out, rows.Err()
 }
 
 func WatchLabel(status string) string {

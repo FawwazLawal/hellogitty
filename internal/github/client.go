@@ -122,18 +122,24 @@ type Comment struct {
 	User              User       `json:"user"`
 }
 
+type TimelineSource struct {
+	Number      int        `json:"number"`
+	Title       string     `json:"title"`
+	State       string     `json:"state"`
+	HTMLURL     string     `json:"html_url"`
+	CreatedAt   *time.Time `json:"created_at"`
+	User        *User      `json:"user"`
+	PullRequest *struct {
+		MergedAt *time.Time `json:"merged_at"`
+		HTMLURL  string     `json:"html_url"`
+	} `json:"pull_request"`
+}
+
 type TimelineEvent struct {
 	Event    string `json:"event"`
 	CommitID string `json:"commit_id"`
 	Source   *struct {
-		Issue *struct {
-			Number      int    `json:"number"`
-			HTMLURL     string `json:"html_url"`
-			PullRequest *struct {
-				MergedAt *time.Time `json:"merged_at"`
-				HTMLURL  string     `json:"html_url"`
-			} `json:"pull_request"`
-		} `json:"issue"`
+		Issue *TimelineSource `json:"issue"`
 	} `json:"source"`
 }
 
