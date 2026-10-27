@@ -26,22 +26,12 @@
     padding: 0; }
   .telemetry .item { display: flex; align-items: baseline; gap: 7px; }
   .telemetry .v { font-size: 13px; line-height: 1.35; }
-  .telemetry .lbl { font-size: 11px; }
+  .telemetry .lbl { font-size: 12px; }
   .status .item { display: flex; align-items: baseline; gap: 7px; }
   .status .v { font-size: 14px; line-height: 1.35; }
   .gauge { display: inline-block; width: 60px; height: 5px; background: var(--track); vertical-align: middle; border-radius: 3px; overflow: hidden; align-self: center; }
   .gauge i { display: block; height: 100%; background: var(--dim); }
   .gauge.hot i { background: var(--caution); }
-  .hclock { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-left: auto; margin-right: auto; user-select: none; cursor: default; }
-  .hclock-time { font: 700 32px/1 var(--mono); color: var(--text); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; transition: color .3s, text-shadow .3s; }
-  .hclock-date { font: 500 12px/1 var(--sans); color: var(--dim); letter-spacing: 0.05em; text-transform: uppercase; transition: color .3s; }
-  .worldclocks { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 3px; }
-  .worldclocks:empty { display: none; }
-  .wclock { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; }
-  .wclock-time { font: 600 13px/1 var(--mono); color: var(--text); font-variant-numeric: tabular-nums; }
-  .wclock-label { font: 500 10px/1 var(--sans); color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; }
-  .wclock-rm { font: 11px/1 var(--sans); color: var(--dim); background: transparent; border: none; padding: 0 2px; cursor: pointer; opacity: 0; transition: opacity .12s; }
-  .wclock:hover .wclock-rm { opacity: 1; }
 
   /* Clock themes */
   .hclock.clock-neon .hclock-time { color: #0ff; text-shadow: 0 0 7px #0ff, 0 0 20px #0ff, 0 0 42px #0099cc; }
@@ -238,7 +228,7 @@
   .toolbar input[type="search"]:focus { outline: 2px solid var(--text); outline-offset: 1px; }
   .toolbar input[type="search"]:not(:placeholder-shown) { border-color: var(--caution); box-shadow: 0 0 0 1px var(--caution); padding-right: 30px; }
   .toolbar input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
-  .toolbar kbd { position: absolute; right: 8px; font: 11px var(--mono); color: var(--dim); border: 1px solid var(--rule-hi);
+  .toolbar kbd { position: absolute; right: 8px; font: 12px var(--mono); color: var(--dim); border: 1px solid var(--rule-hi);
     border-radius: 4px; padding: 0 5px; pointer-events: none; }
   .toolbar input:not(:placeholder-shown) + kbd { display: none; }
   .toolbar .search label { display: contents; }
@@ -375,7 +365,7 @@
   .thead, .repo > summary { display: grid; grid-template-columns: 22px var(--row) 18px; align-items: center; column-gap: 8px; padding: 0 14px; }
   .thead { min-height: 34px; padding-top: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
   .thead .phead { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; }
-  .thead .phead span { font: 11px var(--mono); text-align: center; letter-spacing: -0.04em; }
+  .thead .phead span { font: 12px var(--mono); text-align: center; letter-spacing: -0.04em; }
   .thead .lbl { line-height: 1.25; }
   .num { text-align: right; }
   .repo { border-bottom: 1px solid var(--rule); }
@@ -772,7 +762,7 @@
     padding: 0; }
   .telemetry .item { display: flex; align-items: baseline; gap: 7px; }
   .telemetry .v { font-size: 13px; line-height: 1.35; }
-  .telemetry .lbl { font-size: 11px; }
+  .telemetry .lbl { font-size: 12px; }
   .status .item { display: flex; align-items: baseline; gap: 7px; }
   .status .v { font-size: 14px; line-height: 1.35; }
   .gauge { display: inline-block; width: 60px; height: 5px; background: var(--track); vertical-align: middle; border-radius: 3px; overflow: hidden; align-self: center; }
@@ -781,12 +771,12 @@
 
   .hclock { display: flex; flex-direction: column; align-items: center; gap: 2px; user-select: none; cursor: default; justify-self: center; }
   .hclock-time { font: 700 28px/1 var(--mono); color: var(--text); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; transition: color .3s, text-shadow .3s; }
-  .hclock-date { font: 500 11px/1 var(--sans); color: var(--dim); letter-spacing: 0.05em; text-transform: uppercase; transition: color .3s; }
+  .hclock-date { font: 500 12px/1 var(--sans); color: var(--dim); letter-spacing: 0.05em; text-transform: uppercase; transition: color .3s; }
   .worldclocks { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 3px; }
   .worldclocks:empty { display: none; }
   .wclock { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; }
   .wclock-time { font: 600 12px/1 var(--mono); color: var(--text); font-variant-numeric: tabular-nums; }
-  .wclock-label { font: 500 9px/1 var(--sans); color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; }
+  .wclock-label { font: 500 11px/1 var(--sans); color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; }
 
   /* Clock themes */
   .hclock.clock-neon .hclock-time { color: #0ff; text-shadow: 0 0 7px #0ff, 0 0 20px #0ff, 0 0 42px #0099cc; }
