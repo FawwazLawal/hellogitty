@@ -11,12 +11,12 @@
 {{template "header-css"}}
 
   /* Settings layout: macOS-style sidebar + content */
-  .settings-shell { display: flex; min-height: calc(100vh - 120px); }
+  .settings-shell { display: flex; min-height: calc(100vh - 86px); }
 
   .settings-nav {
     width: 220px; min-width: 220px; background: var(--panel);
     border-right: 1px solid var(--rule); padding: 16px 0;
-    position: sticky; top: 120px; height: calc(100vh - 120px); overflow-y: auto;
+    position: sticky; top: 86px; height: calc(100vh - 86px); overflow-y: auto;
   }
   .settings-nav .nav-label {
     font: 600 11px/1 var(--sans); color: var(--dim); text-transform: uppercase;
@@ -41,7 +41,7 @@
   .spane { display: none; }
   .spane.active { display: block; }
 
-  .scard { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; margin-bottom: 16px; }
+  .scard { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; margin-bottom: 16px; }
   .srow { display: grid; grid-template-columns: 160px 1fr; gap: 8px; align-items: center;
     padding: 14px 16px; border-bottom: 1px solid var(--rule); }
   .srow:last-child { border-bottom: 0; }
@@ -96,7 +96,7 @@
 
   .clock-styles { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
   .clock-swatch { display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 14px 10px 10px; border-radius: 10px; border: 2px solid var(--rule); background: var(--bg);
+    padding: 14px 10px 10px; border-radius: 8px; border: 2px solid var(--rule); background: var(--bg);
     cursor: pointer; transition: border-color .2s, box-shadow .2s; min-height: 68px; }
   .clock-swatch:hover { border-color: var(--dim); }
   .clock-swatch.active { border-color: var(--head-accent); box-shadow: 0 0 0 2px rgba(29,158,117,.25); }
