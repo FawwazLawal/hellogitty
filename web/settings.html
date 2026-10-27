@@ -9,23 +9,48 @@
 <style>
 {{template "base-css"}}
 {{template "header-css"}}
-  .swrap { max-width: 780px; margin: 0 auto; padding: 18px 20px 40px; }
-  .swrap h1 { margin: 0 0 4px; font-size: 22px; font-weight: 700; }
-  .swrap .sub { color: var(--dim); font-size: 13px; margin: 0 0 22px; }
-  .sgroup { margin: 0 0 28px; }
-  .sgroup h2 { margin: 0 0 12px; font-size: 15px; font-weight: 650; letter-spacing: 0.02em;
-    border-left: 3px solid var(--head-accent); padding-left: 10px; }
-  .scard { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+
+  /* Settings layout: macOS-style sidebar + content */
+  .settings-shell { display: flex; min-height: calc(100vh - 120px); }
+
+  .settings-nav {
+    width: 220px; min-width: 220px; background: var(--panel);
+    border-right: 1px solid var(--rule); padding: 16px 0;
+    position: sticky; top: 120px; height: calc(100vh - 120px); overflow-y: auto;
+  }
+  .settings-nav .nav-label {
+    font: 600 11px/1 var(--sans); color: var(--dim); text-transform: uppercase;
+    letter-spacing: 0.06em; padding: 10px 16px 6px; margin-top: 8px;
+  }
+  .settings-nav .nav-label:first-child { margin-top: 0; }
+  .settings-nav a {
+    display: flex; align-items: center; gap: 10px; padding: 8px 16px;
+    font: 500 13px/1.3 var(--sans); color: var(--dim); text-decoration: none;
+    border-radius: 8px; margin: 1px 8px; cursor: pointer; transition: background .12s, color .12s;
+  }
+  .settings-nav a:hover { background: var(--raised); color: var(--text); }
+  .settings-nav a.active { background: var(--head-accent); color: #000; font-weight: 600; }
+  .settings-nav a svg { width: 18px; height: 18px; fill: none; stroke: currentColor;
+    stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .settings-nav a.active svg { stroke: #000; }
+
+  .settings-body { flex: 1; min-width: 0; padding: 24px 32px 48px; max-width: 720px; }
+  .settings-body h1 { margin: 0 0 4px; font-size: 22px; font-weight: 700; }
+  .settings-body .section-desc { color: var(--dim); font-size: 13px; margin: 0 0 20px; }
+
+  .spane { display: none; }
+  .spane.active { display: block; }
+
+  .scard { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; margin-bottom: 16px; }
   .srow { display: grid; grid-template-columns: 160px 1fr; gap: 8px; align-items: center;
-    padding: 12px 16px; border-bottom: 1px solid var(--rule); }
+    padding: 14px 16px; border-bottom: 1px solid var(--rule); }
   .srow:last-child { border-bottom: 0; }
   .srow .slbl { font: 600 13px var(--sans); color: var(--dim); }
   .srow .sval { font: 14px var(--mono); color: var(--text); word-break: break-all; }
   .srow .sval.zero { color: var(--dim); font-style: italic; }
-  .srow .snote { font-size: 11px; color: var(--dim); margin-top: 2px; }
 
   .srow select, .srow input[type="number"] { font: 13px var(--sans); color: var(--text); background: var(--bg);
-    border: 1px solid var(--rule-hi); border-radius: 6px; padding: 6px 10px; }
+    border: 1px solid var(--rule-hi); border-radius: 8px; padding: 7px 12px; }
   .srow select:hover, .srow input[type="number"]:hover { border-color: var(--text); }
 
   .toggle-wrap { display: flex; align-items: center; gap: 10px; }
@@ -39,29 +64,39 @@
 
   .theme-pick { display: flex; gap: 4px; }
   .theme-pick button { font: 13px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
-    border-radius: 6px; padding: 6px 14px; cursor: pointer; }
+    border-radius: 8px; padding: 7px 16px; cursor: pointer; transition: all .15s; }
   .theme-pick button:hover { color: var(--text); background: var(--raised); }
   .theme-pick button.active { color: var(--text); background: var(--raised); border-color: var(--head-accent); font-weight: 600; }
 
-  .clocks-list { display: flex; flex-direction: column; gap: 4px; }
-  .clock-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
-  .clock-row .clabel { font: 13px var(--sans); color: var(--text); }
-  .clock-row .crm { font: 12px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
-    border-radius: 4px; padding: 2px 8px; cursor: pointer; }
-  .clock-row .crm:hover { color: var(--warn); border-color: var(--warn); }
-  .no-clocks { font: 13px var(--sans); color: var(--dim); font-style: italic; }
-  .add-clock { font: 13px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
-    border-radius: 6px; padding: 6px 12px; cursor: pointer; margin-top: 6px; }
-  .add-clock:hover { color: var(--text); background: var(--raised); }
-  .clock-select { font: 13px var(--sans); color: var(--text); background: var(--bg); border: 1px solid var(--rule-hi);
-    border-radius: 6px; padding: 6px 10px; margin-top: 6px; }
+  .item-list { display: flex; flex-direction: column; gap: 2px; }
+  .item-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+  .item-row .ilabel { font: 13px var(--sans); color: var(--text); flex: 1; }
+  .item-row .ilabel.mono { font-family: var(--mono); }
+  .item-row .ilabel.dim { color: var(--dim); }
+  .item-row .ibtn { font: 12px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
+    border-radius: 6px; padding: 3px 10px; cursor: pointer; transition: all .12s; }
+  .item-row .ibtn:hover { color: var(--warn); border-color: var(--warn); }
+  .item-row .ibtn.accent { color: var(--head-accent); border-color: var(--head-accent); }
+  .item-row .ibtn.accent:hover { color: var(--text); border-color: var(--text); }
+  .no-items { font: 13px var(--sans); color: var(--dim); font-style: italic; padding: 4px 0; }
+
+  .add-row { display: flex; gap: 8px; align-items: center; }
+  .add-row input[type="text"] { flex: 1; font: 13px var(--mono); color: var(--text); background: var(--bg);
+    border: 1px solid var(--rule-hi); border-radius: 8px; padding: 8px 12px; }
+  .add-row input[type="text"]::placeholder { color: var(--dim); }
+  .add-row input[type="text"]:focus { border-color: var(--head-accent); outline: none; }
+  .add-row button { font: 600 13px var(--sans); color: var(--text); background: var(--raised);
+    border: 1px solid var(--rule-hi); border-radius: 8px; padding: 8px 16px; cursor: pointer; white-space: nowrap; }
+  .add-row button:hover { background: var(--rule-hi); }
+
+  .flash-msg { font-size: 12px; margin-top: 6px; display: none; }
 
   .badge { display: inline-block; font: 600 11px var(--sans); color: var(--dim); background: var(--raised);
     border: 1px solid var(--rule-hi); border-radius: 4px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; }
 
   .clock-styles { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
   .clock-swatch { display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 14px 10px 10px; border-radius: 8px; border: 2px solid var(--rule); background: var(--bg);
+    padding: 14px 10px 10px; border-radius: 10px; border: 2px solid var(--rule); background: var(--bg);
     cursor: pointer; transition: border-color .2s, box-shadow .2s; min-height: 68px; }
   .clock-swatch:hover { border-color: var(--dim); }
   .clock-swatch.active { border-color: var(--head-accent); box-shadow: 0 0 0 2px rgba(29,158,117,.25); }
@@ -116,7 +151,23 @@
   .clock-swatch[data-style="nixie"] .cs-time { color: #ff8c42; text-shadow: 0 0 4px #ff8c42, 0 0 12px rgba(255,140,66,.5); font-weight: 400; }
   .clock-swatch[data-style="nixie"] .cs-name { color: #ff8c42; opacity: .6; }
 
+  .clock-select { font: 13px var(--sans); color: var(--text); background: var(--bg); border: 1px solid var(--rule-hi);
+    border-radius: 8px; padding: 7px 12px; margin-top: 6px; width: 100%; }
+
+  .config-note { font-size: 12px; color: var(--dim); margin: 8px 0 0; }
+  .config-note code { background: var(--raised); padding: 1px 4px; border-radius: 3px; }
+
   @media (max-width: 760px) {
+    .settings-shell { flex-direction: column; }
+    .settings-nav {
+      width: 100%; min-width: 100%; position: static; height: auto;
+      border-right: 0; border-bottom: 1px solid var(--rule);
+      display: flex; flex-wrap: wrap; gap: 2px; padding: 8px;
+    }
+    .settings-nav .nav-label { display: none; }
+    .settings-nav a { padding: 6px 12px; font-size: 12px; }
+    .settings-nav a svg { width: 14px; height: 14px; }
+    .settings-body { padding: 16px; }
     .srow { grid-template-columns: 1fr; }
   }
 </style>
@@ -127,190 +178,303 @@
 {{template "nav-active-js"}}
 {{template "clock-js"}}
 </script>
-<div class="swrap">
-  <h1>Settings</h1>
-  <p class="sub">Dashboard preferences and server configuration.</p>
 
-  <div class="sgroup">
-    <h2>Appearance</h2>
-    <div class="scard">
-      <div class="srow">
-        <span class="slbl">Theme</span>
-        <div class="theme-pick" id="s-theme">
-          <button type="button" data-v="auto">Auto</button>
-          <button type="button" data-v="light">Light</button>
-          <button type="button" data-v="dark">Dark</button>
+<div class="settings-shell">
+  <nav class="settings-nav" id="settings-nav">
+    <div class="nav-label">Preferences</div>
+    <a href="#appearance" class="active" data-pane="pane-appearance">
+      <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 2a6 6 0 0 1 0 12V2z" fill="currentColor" stroke="none"/></svg>
+      Appearance
+    </a>
+    <a href="#clock" data-pane="pane-clock">
+      <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/></svg>
+      Clock
+    </a>
+    <a href="#worldclocks" data-pane="pane-worldclocks">
+      <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><ellipse cx="8" cy="8" rx="3" ry="6"/><path d="M2 8h12M3 4.5h10M3 11.5h10"/></svg>
+      World Clocks
+    </a>
+
+    <div class="nav-label">Data</div>
+    {{if .RepoTools}}<a href="#repos" data-pane="pane-repos">
+      <svg viewBox="0 0 16 16"><path d="M2 3h12v10H2z"/><path d="M2 3l2-1.5h8L14 3"/><path d="M5 7h6M5 9.5h4"/></svg>
+      Repositories
+    </a>{{end}}
+    <a href="#polling" data-pane="pane-polling">
+      <svg viewBox="0 0 16 16"><path d="M2.5 12.5V6l3-2.5 3 4 2.5-3L14 7.5v5z"/><path d="M2.5 12.5h11.5"/></svg>
+      Polling &amp; API
+    </a>
+
+    <div class="nav-label">System</div>
+    <a href="#server" data-pane="pane-server">
+      <svg viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="5" rx="1"/><rect x="2" y="9" width="12" height="5" rx="1"/><circle cx="11" cy="4.5" r="1" fill="currentColor" stroke="none"/><circle cx="11" cy="11.5" r="1" fill="currentColor" stroke="none"/></svg>
+      Server
+    </a>
+    <a href="#about" data-pane="pane-about">
+      <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 7v4M8 5v.5"/></svg>
+      About
+    </a>
+  </nav>
+
+  <div class="settings-body">
+
+    <!-- APPEARANCE -->
+    <div class="spane active" id="pane-appearance">
+      <h1>Appearance</h1>
+      <p class="section-desc">Theme, layout and display preferences.</p>
+      <div class="scard">
+        <div class="srow">
+          <span class="slbl">Theme</span>
+          <div class="theme-pick" id="s-theme">
+            <button type="button" data-v="auto">Auto</button>
+            <button type="button" data-v="light">Light</button>
+            <button type="button" data-v="dark">Dark</button>
+          </div>
         </div>
-      </div>
-      <div class="srow">
-        <span class="slbl">Layout preset</span>
-        <select id="s-layout">
-          <option value="everything">Everything</option>
-          <option value="contributor">Contributor</option>
-          <option value="maintainer">Maintainer</option>
-          <option value="program">Program</option>
-          <option value="focus">Focus</option>
-        </select>
-      </div>
-      <div class="srow">
-        <span class="slbl">Compact cells</span>
-        <div class="toggle-wrap">
-          <label class="toggle"><input type="checkbox" id="s-compact"><span class="slider"></span></label>
-          <span style="font-size:13px;color:var(--dim)">Shrink dashboard overview cells</span>
+        <div class="srow">
+          <span class="slbl">Layout preset</span>
+          <select id="s-layout">
+            <option value="everything">Everything</option>
+            <option value="contributor">Contributor</option>
+            <option value="maintainer">Maintainer</option>
+            <option value="program">Program</option>
+            <option value="focus">Focus</option>
+          </select>
+        </div>
+        <div class="srow">
+          <span class="slbl">Compact cells</span>
+          <div class="toggle-wrap">
+            <label class="toggle"><input type="checkbox" id="s-compact"><span class="slider"></span></label>
+            <span style="font-size:13px;color:var(--dim)">Shrink dashboard overview cells</span>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="sgroup">
-    <h2>Clock</h2>
-    <div class="scard">
-      <div class="srow">
-        <span class="slbl">Time format</span>
-        <div class="theme-pick" id="s-clock-format">
-          <button type="button" data-v="24h">24-hour</button>
-          <button type="button" data-v="12h">12-hour</button>
+    <!-- CLOCK -->
+    <div class="spane" id="pane-clock">
+      <h1>Clock</h1>
+      <p class="section-desc">Time display, format and visual style.</p>
+      <div class="scard">
+        <div class="srow">
+          <span class="slbl">Time format</span>
+          <div class="theme-pick" id="s-clock-format">
+            <button type="button" data-v="24h">24-hour</button>
+            <button type="button" data-v="12h">12-hour</button>
+          </div>
+        </div>
+        <div class="srow">
+          <span class="slbl">Show seconds</span>
+          <div class="toggle-wrap">
+            <label class="toggle"><input type="checkbox" id="s-clock-seconds"><span class="slider"></span></label>
+            <span style="font-size:13px;color:var(--dim)">Display seconds in the clock</span>
+          </div>
+        </div>
+        <div class="srow">
+          <span class="slbl">Show date</span>
+          <div class="toggle-wrap">
+            <label class="toggle"><input type="checkbox" id="s-clock-date"><span class="slider"></span></label>
+            <span style="font-size:13px;color:var(--dim)">Display the date below the time</span>
+          </div>
         </div>
       </div>
-      <div class="srow">
-        <span class="slbl">Show seconds</span>
-        <div class="toggle-wrap">
-          <label class="toggle"><input type="checkbox" id="s-clock-seconds"><span class="slider"></span></label>
-          <span style="font-size:13px;color:var(--dim)">Display seconds in the clock</span>
+      <div class="scard">
+        <div class="srow" style="grid-template-columns:1fr">
+          <span class="slbl" style="margin-bottom:8px">Clock style</span>
+          <div class="clock-styles" id="s-clock-style"></div>
         </div>
-      </div>
-      <div class="srow">
-        <span class="slbl">Show date</span>
-        <div class="toggle-wrap">
-          <label class="toggle"><input type="checkbox" id="s-clock-date"><span class="slider"></span></label>
-          <span style="font-size:13px;color:var(--dim)">Display the date below the time</span>
-        </div>
-      </div>
-      <div class="srow" style="grid-template-columns:1fr">
-        <span class="slbl" style="margin-bottom:8px">Clock style</span>
-        <div class="clock-styles" id="s-clock-style"></div>
       </div>
     </div>
-  </div>
 
-  <div class="sgroup">
-    <h2>World clocks</h2>
-    <div class="scard">
-      <div class="srow" style="grid-template-columns:1fr">
-        <div id="s-clocks" class="clocks-list"></div>
-        <select id="s-clock-add" class="clock-select" style="display:none">
-          <option value="">Add a timezone…</option>
-        </select>
-        <button type="button" class="add-clock" id="s-clock-btn">+ Add clock</button>
+    <!-- WORLD CLOCKS -->
+    <div class="spane" id="pane-worldclocks">
+      <h1>World Clocks</h1>
+      <p class="section-desc">Additional timezone clocks shown in the header.</p>
+      <div class="scard">
+        <div class="srow" style="grid-template-columns:1fr">
+          <div id="s-clocks" class="item-list"></div>
+          <select id="s-clock-add" class="clock-select" style="display:none">
+            <option value="">Add a timezone…</option>
+          </select>
+          <button type="button" class="add-row" id="s-clock-btn" style="font:600 13px var(--sans);color:var(--dim);background:transparent;border:1px solid var(--rule-hi);border-radius:8px;padding:8px 14px;cursor:pointer;margin-top:8px;display:inline-block;width:auto">+ Add clock</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  {{if .RepoTools}}<div class="sgroup" id="s-repos-section">
-    <h2>Repositories</h2>
-    <div class="scard">
-      <div class="srow" style="grid-template-columns:1fr">
-        <span class="slbl" style="margin-bottom:6px">Add a repository</span>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input type="text" id="s-repo-input" placeholder="owner/name or GitHub URL"
-            style="flex:1;font:13px var(--mono);color:var(--text);background:var(--bg);border:1px solid var(--rule-hi);border-radius:6px;padding:7px 10px;">
-          <button type="button" id="s-repo-add" style="font:600 13px var(--sans);color:var(--text);background:var(--raised);border:1px solid var(--rule-hi);border-radius:6px;padding:7px 14px;cursor:pointer;white-space:nowrap">Track</button>
-        </div>
-        <span id="s-repo-msg" style="font-size:12px;margin-top:4px;display:none"></span>
-      </div>
-      <div class="srow" style="grid-template-columns:1fr">
-        <span class="slbl" style="margin-bottom:6px">Tracked repos <span style="font-weight:400;color:var(--dim)">({{.RepoCount}})</span></span>
-        <div id="s-repo-list" class="clocks-list">
-          {{range .Rows}}<div class="clock-row" data-repo="{{.Owner}}/{{.Name}}">
-            <span class="clabel" style="font:13px var(--mono)">{{.Owner}}/{{.Name}}</span>
-            <button type="button" class="crm s-repo-rm">Remove</button>
-          </div>{{end}}
-          {{if not .Rows}}<span class="no-clocks">No repositories tracked yet.</span>{{end}}
+    <!-- REPOSITORIES -->
+    {{if .RepoTools}}<div class="spane" id="pane-repos">
+      <h1>Repositories</h1>
+      <p class="section-desc">Manage tracked repositories and your maintain list.</p>
+      <div class="scard">
+        <div class="srow" style="grid-template-columns:1fr">
+          <span class="slbl" style="margin-bottom:6px">Add a repository</span>
+          <div class="add-row">
+            <input type="text" id="s-repo-input" placeholder="owner/name or GitHub URL">
+            <button type="button" id="s-repo-add">Track</button>
+          </div>
+          <span id="s-repo-msg" class="flash-msg"></span>
         </div>
       </div>
-      {{if .RemovedRepos}}<div class="srow" style="grid-template-columns:1fr">
-        <span class="slbl" style="margin-bottom:6px">Removed <span style="font-weight:400;color:var(--dim)">({{len .RemovedRepos}})</span></span>
-        <div id="s-repo-removed" class="clocks-list">
-          {{range .RemovedRepos}}<div class="clock-row" data-repo="{{.}}">
-            <span class="clabel" style="font:13px var(--mono);color:var(--dim)">{{.}}</span>
-            <button type="button" class="crm s-repo-readd" style="color:var(--head-accent);border-color:var(--head-accent)">Track again</button>
-          </div>{{end}}
+      <div class="scard">
+        <div class="srow" style="grid-template-columns:1fr">
+          <span class="slbl" style="margin-bottom:6px">Tracked repos <span style="font-weight:400;color:var(--dim)">({{.RepoCount}})</span></span>
+          <div id="s-repo-list" class="item-list">
+            {{range .Rows}}<div class="item-row" data-repo="{{.Owner}}/{{.Name}}">
+              <span class="ilabel mono">{{.Owner}}/{{.Name}}</span>
+              <button type="button" class="ibtn s-repo-rm">Remove</button>
+            </div>{{end}}
+            {{if not .Rows}}<span class="no-items">No repositories tracked yet.</span>{{end}}
+          </div>
+        </div>
+      </div>
+      {{if .RemovedRepos}}<div class="scard">
+        <div class="srow" style="grid-template-columns:1fr">
+          <span class="slbl" style="margin-bottom:6px">Removed <span style="font-weight:400;color:var(--dim)">({{len .RemovedRepos}})</span></span>
+          <div id="s-repo-removed" class="item-list">
+            {{range .RemovedRepos}}<div class="item-row" data-repo="{{.}}">
+              <span class="ilabel mono dim">{{.}}</span>
+              <button type="button" class="ibtn accent s-repo-readd">Track again</button>
+            </div>{{end}}
+          </div>
         </div>
       </div>{{end}}
-    </div>
-    {{if .ConfigMaintain}}<div class="scard" style="margin-top:12px">
-      <div class="srow" style="grid-template-columns:1fr">
-        <span class="slbl" style="margin-bottom:6px">Maintain list <span class="badge">config file</span></span>
-        <div class="clocks-list">
-          {{range .ConfigMaintain}}<div class="clock-row">
-            <span class="clabel" style="font:13px var(--mono)">{{.}}</span>
-          </div>{{end}}
+      {{if .ConfigMaintain}}<div class="scard">
+        <div class="srow" style="grid-template-columns:1fr">
+          <span class="slbl" style="margin-bottom:6px">Maintain list <span class="badge">config file</span></span>
+          <div class="item-list">
+            {{range .ConfigMaintain}}<div class="item-row">
+              <span class="ilabel mono">{{.}}</span>
+            </div>{{end}}
+          </div>
+          <p class="config-note">Repos and orgs whose PRs appear under "Waiting on you". Edit in <code>hellogitty.json</code>.</p>
         </div>
-        <span style="font-size:12px;color:var(--dim);margin-top:4px">Repos and orgs whose PRs appear under "Waiting on you". Edit in <code style="background:var(--raised);padding:1px 4px;border-radius:3px">hellogitty.json</code>.</span>
-      </div>
+      </div>{{end}}
     </div>{{end}}
-  </div>{{end}}
 
-  <div class="sgroup">
-    <h2>Server configuration <span class="badge">read-only</span></h2>
-    <div class="scard">
-      <div class="srow">
-        <span class="slbl">Listen address</span>
-        <span class="sval">{{.ConfigListen}}</span>
+    <!-- POLLING & API -->
+    <div class="spane" id="pane-polling">
+      <h1>Polling &amp; API</h1>
+      <p class="section-desc">GitHub polling frequency and API rate limit status.</p>
+      <div class="scard">
+        <div class="srow">
+          <span class="slbl">Poll interval</span>
+          <span class="sval">{{.PollInterval}} min</span>
+        </div>
+        {{if .LastPollUTC}}<div class="srow">
+          <span class="slbl">Last poll</span>
+          <span class="sval">{{.LastPollUTC}}</span>
+        </div>{{end}}
+        {{if .NextPollUTC}}<div class="srow">
+          <span class="slbl">Next poll</span>
+          <span class="sval">{{.NextPollUTC}}</span>
+        </div>{{end}}
       </div>
-      <div class="srow">
-        <span class="slbl">Poll interval</span>
-        <span class="sval">{{.PollInterval}} min</span>
+      <div class="scard">
+        <div class="srow">
+          <span class="slbl">GitHub API</span>
+          <span class="sval">{{if .APIKnown}}{{.APIUsed}} / {{.APILimit}} this hour ({{.APIPct}}%){{else}}no data yet{{end}}</span>
+        </div>
+        {{if .APIKnown}}<div class="srow">
+          <span class="slbl">API resets</span>
+          <span class="sval">{{.APIResetUTC}} UTC</span>
+        </div>{{end}}
       </div>
-      <div class="srow">
-        <span class="slbl">Database</span>
-        <span class="sval">{{.ConfigDatabase}}</span>
-      </div>
-      <div class="srow">
-        <span class="slbl">Snapshot</span>
-        <span class="sval">{{.ConfigSnapshot}}</span>
-      </div>
-      <div class="srow">
-        <span class="slbl">Repos file</span>
-        <span class="sval{{if not .ConfigReposFile}} zero{{end}}">{{if .ConfigReposFile}}{{.ConfigReposFile}}{{else}}not set{{end}}</span>
-      </div>
-      <div class="srow">
-        <span class="slbl">Inbox</span>
-        <span class="sval{{if not .ConfigInbox}} zero{{end}}">{{if .ConfigInbox}}{{.ConfigInbox}}{{else}}not set{{end}}</span>
-      </div>
-      <div class="srow">
-        <span class="slbl">Tracked repos</span>
-        <span class="sval">{{.RepoCount}}</span>
-      </div>
-      {{if .HasPipeline}}<div class="srow">
-        <span class="slbl">Pipeline targets</span>
-        <span class="sval">{{.TargetCount}}</span>
-      </div>{{end}}
+      <p class="config-note">Poll interval is defined in <code>hellogitty.json</code> and requires a restart to change.</p>
     </div>
-    <p style="font-size:12px;color:var(--dim);margin:8px 0 0">Server settings are defined in <code style="background:var(--raised);padding:1px 4px;border-radius:3px">hellogitty.json</code> and require a restart to take effect.</p>
-  </div>
 
-  <div class="sgroup">
-    <h2>About</h2>
-    <div class="scard">
-      <div class="srow">
-        <span class="slbl">Version</span>
-        <span class="sval">{{.Version}}</span>
+    <!-- SERVER -->
+    <div class="spane" id="pane-server">
+      <h1>Server</h1>
+      <p class="section-desc">Paths and addresses set at startup. Requires a restart to change.</p>
+      <div class="scard">
+        <div class="srow">
+          <span class="slbl">Listen address</span>
+          <span class="sval">{{.ConfigListen}}</span>
+        </div>
+        <div class="srow">
+          <span class="slbl">Database</span>
+          <span class="sval">{{.ConfigDatabase}}</span>
+        </div>
+        <div class="srow">
+          <span class="slbl">Snapshot</span>
+          <span class="sval">{{.ConfigSnapshot}}</span>
+        </div>
+        <div class="srow">
+          <span class="slbl">Repos file</span>
+          <span class="sval{{if not .ConfigReposFile}} zero{{end}}">{{if .ConfigReposFile}}{{.ConfigReposFile}}{{else}}not set{{end}}</span>
+        </div>
+        <div class="srow">
+          <span class="slbl">Inbox</span>
+          <span class="sval{{if not .ConfigInbox}} zero{{end}}">{{if .ConfigInbox}}{{.ConfigInbox}}{{else}}not set{{end}}</span>
+        </div>
+        <div class="srow">
+          <span class="slbl">Tracked repos</span>
+          <span class="sval">{{.RepoCount}}</span>
+        </div>
+        {{if .HasPipeline}}<div class="srow">
+          <span class="slbl">Pipeline targets</span>
+          <span class="sval">{{.TargetCount}}</span>
+        </div>{{end}}
       </div>
-      <div class="srow">
-        <span class="slbl">GitHub API</span>
-        <span class="sval">{{if .APIKnown}}{{.APIUsed}} / {{.APILimit}} this hour ({{.APIPct}}%){{else}}no data yet{{end}}</span>
-      </div>
-      {{if .APIKnown}}<div class="srow">
-        <span class="slbl">API resets</span>
-        <span class="sval">{{.APIResetUTC}} UTC</span>
-      </div>{{end}}
+      <p class="config-note">Server settings are defined in <code>hellogitty.json</code> and require a restart to take effect.</p>
     </div>
+
+    <!-- ABOUT -->
+    <div class="spane" id="pane-about">
+      <h1>About</h1>
+      <p class="section-desc">Version and build information.</p>
+      <div class="scard">
+        <div class="srow">
+          <span class="slbl">Version</span>
+          <span class="sval">{{.Version}}</span>
+        </div>
+        <div class="srow">
+          <span class="slbl">GitHub API</span>
+          <span class="sval">{{if .APIKnown}}{{.APIUsed}} / {{.APILimit}} this hour ({{.APIPct}}%){{else}}no data yet{{end}}</span>
+        </div>
+        {{if .APIKnown}}<div class="srow">
+          <span class="slbl">API resets</span>
+          <span class="sval">{{.APIResetUTC}} UTC</span>
+        </div>{{end}}
+      </div>
+    </div>
+
   </div>
 </div>
 
 <script>
 (function() {
+  // Sidebar navigation
+  var nav = document.getElementById("settings-nav");
+  var links = nav.querySelectorAll("a[data-pane]");
+  var panes = document.querySelectorAll(".spane");
+
+  function activate(id) {
+    links.forEach(function(l) { l.classList.toggle("active", l.dataset.pane === id); });
+    panes.forEach(function(p) { p.classList.toggle("active", p.id === id); });
+    try { localStorage.setItem("hg-settings-pane", id); } catch(e) {}
+  }
+
+  links.forEach(function(link) {
+    link.addEventListener("click", function(e) {
+      e.preventDefault();
+      activate(link.dataset.pane);
+      history.replaceState(null, "", link.getAttribute("href"));
+    });
+  });
+
+  // Restore last pane or use hash
+  var hash = location.hash.replace("#", "");
+  if (hash) {
+    var target = nav.querySelector('a[href="#' + hash + '"]');
+    if (target) activate(target.dataset.pane);
+  } else {
+    try {
+      var saved = localStorage.getItem("hg-settings-pane");
+      if (saved && document.getElementById(saved)) activate(saved);
+    } catch(e) {}
+  }
+
   // Theme picker
   var themePick = document.getElementById("s-theme");
   var current = localStorage.getItem("hg-theme") || "auto";
@@ -369,16 +533,16 @@
     var clocks = loadClocks();
     clocksDiv.innerHTML = "";
     if (!clocks.length) {
-      var p = document.createElement("span"); p.className = "no-clocks"; p.textContent = "No world clocks added yet.";
+      var p = document.createElement("span"); p.className = "no-items"; p.textContent = "No world clocks added yet.";
       clocksDiv.appendChild(p);
       return;
     }
     clocks.forEach(function(c, i) {
-      var row = document.createElement("div"); row.className = "clock-row";
-      var lbl = document.createElement("span"); lbl.className = "clabel";
+      var row = document.createElement("div"); row.className = "item-row";
+      var lbl = document.createElement("span"); lbl.className = "ilabel";
       var z = ZONES.find(function(z) { return z.tz === c; });
       lbl.textContent = z ? z.label : c;
-      var rm = document.createElement("button"); rm.type = "button"; rm.className = "crm"; rm.textContent = "Remove";
+      var rm = document.createElement("button"); rm.type = "button"; rm.className = "ibtn"; rm.textContent = "Remove";
       rm.addEventListener("click", function() {
         var arr = loadClocks(); arr.splice(i, 1); saveClocks(arr); renderClocks();
       });
@@ -386,7 +550,6 @@
     });
   }
 
-  // Populate add select
   ZONES.forEach(function(z) {
     var o = document.createElement("option"); o.value = z.tz; o.textContent = z.label;
     addSel.appendChild(o);
@@ -515,12 +678,12 @@
       flash(msg, "Added " + (d.repo || val), true);
       input.value = "";
       var list = document.getElementById("s-repo-list");
-      var empty = list.querySelector(".no-clocks");
+      var empty = list.querySelector(".no-items");
       if (empty) empty.remove();
       var row = document.createElement("div");
-      row.className = "clock-row"; row.dataset.repo = d.repo || val;
-      row.innerHTML = '<span class="clabel" style="font:13px var(--mono)">' + (d.repo || val) + '</span>' +
-        '<button type="button" class="crm s-repo-rm">Remove</button>';
+      row.className = "item-row"; row.dataset.repo = d.repo || val;
+      row.innerHTML = '<span class="ilabel mono">' + (d.repo || val) + '</span>' +
+        '<button type="button" class="ibtn s-repo-rm">Remove</button>';
       row.querySelector(".s-repo-rm").addEventListener("click", removeHandler);
       list.appendChild(row);
     });
@@ -531,7 +694,7 @@
   });
 
   function removeHandler() {
-    var row = this.closest(".clock-row");
+    var row = this.closest(".item-row");
     var repo = row.dataset.repo;
     repoPost("/repos/remove", repo, function(err, d) {
       if (err || (d && d.error)) { flash(msg, err || d.error, false); return; }
@@ -546,7 +709,7 @@
 
   document.querySelectorAll(".s-repo-readd").forEach(function(b) {
     b.addEventListener("click", function() {
-      var row = this.closest(".clock-row");
+      var row = this.closest(".item-row");
       var repo = row.dataset.repo;
       repoPost("/repos/add", repo, function(err, d) {
         if (err || (d && d.error)) { flash(msg, err || d.error, false); return; }
@@ -554,9 +717,9 @@
         flash(msg, "Re-added " + (d.repo || repo), true);
         var list = document.getElementById("s-repo-list");
         var nr = document.createElement("div");
-        nr.className = "clock-row"; nr.dataset.repo = d.repo || repo;
-        nr.innerHTML = '<span class="clabel" style="font:13px var(--mono)">' + (d.repo || repo) + '</span>' +
-          '<button type="button" class="crm s-repo-rm">Remove</button>';
+        nr.className = "item-row"; nr.dataset.repo = d.repo || repo;
+        nr.innerHTML = '<span class="ilabel mono">' + (d.repo || repo) + '</span>' +
+          '<button type="button" class="ibtn s-repo-rm">Remove</button>';
         nr.querySelector(".s-repo-rm").addEventListener("click", removeHandler);
         list.appendChild(nr);
       });
