@@ -5,6 +5,18 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (16) · Black Bombay (baby) · 2026-10-28
+
+Tag `v0.2.16`.
+
+- **Extension layout support (ADR-002 step 3)**: the extension popup defaults to
+  the Focus layout preset; the full-tab view honours saved layouts from
+  localStorage, matching the main dashboard.
+- **Test fixes**: updated dashboard tests for the new sortable column headers and
+  renamed "Turned down" column.
+- **Extension visual parity**: synced extension CSS, header grid, and pink theme
+  support with the latest dashboard (monitor/extension, non-git).
+
 ## v0.2.0 (15) · Black Bombay (baby) · 2026-10-28
 
 Tag `v0.2.15`.
