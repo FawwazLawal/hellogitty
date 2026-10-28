@@ -3,7 +3,6 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="refresh" content="300">
 <meta name="color-scheme" content="light dark">
 <title>HelloGitty</title>
 {{template "theme-head"}}
@@ -55,10 +54,14 @@
   .mod { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 8px 0; border-top: 1px solid var(--rule); }
   .mod.sub { padding-left: 24px; }
   .mod .check:first-child { flex: 1 1 180px; font-size: 14px; }
-  .mod select { font: 13px var(--sans); color: var(--text); background: var(--bg); border: 1px solid var(--rule-hi); border-radius: 6px; padding: 4px 8px; }
-  .mod button { font: 12px var(--sans); color: var(--text); background: transparent; border: 1px solid var(--rule-hi); border-radius: 4px;
-    padding: 4px 8px; cursor: pointer; }
-  .mod button:disabled { color: var(--dim); cursor: default; opacity: 0.55; }
+  .mod select { font: 13px var(--sans); color: var(--text); background: var(--bg); border: 1px solid var(--dim); border-radius: 6px; padding: 4px 8px; }
+  .mod button, .addrepo button, .untrack, .seenbtn {
+    font: 12px/1 var(--sans); color: var(--text); background: transparent; border: 1px solid var(--rule-hi);
+    border-radius: 4px; padding: 4px 8px; cursor: pointer; white-space: nowrap; }
+  .mod button:hover, .addrepo button:hover, .untrack:hover, .seenbtn:hover { background: var(--raised); }
+  .mod button:disabled, .addrepo button:disabled, .untrack:disabled, .seenbtn:disabled { color: var(--dim); cursor: default; opacity: 0.55; }
+  .mod button:focus-visible, .addrepo button:focus-visible, .untrack:focus-visible, .seenbtn:focus-visible {
+    outline: 2px solid var(--text); outline-offset: 1px; }
   .sheet button:focus-visible, .sheet select:focus-visible, .sheet input:focus-visible, .layoutbtn:focus-visible {
     outline: 2px solid var(--text); outline-offset: 2px; }
   .sheet-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px 16px; }
@@ -133,7 +136,7 @@
     background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; }
   .toolbar .search { position: relative; display: flex; align-items: center; flex: 0 1 320px; min-width: 200px; }
   .toolbar input[type="search"] { width: 100%; font: 14px/1.3 var(--sans); color: var(--text); background: var(--bg);
-    border: 1px solid var(--rule-hi); border-radius: 6px; padding: 6px 30px 6px 10px; }
+    border: 1px solid var(--dim); border-radius: 6px; padding: 6px 30px 6px 10px; }
   .toolbar input[type="search"]::placeholder { color: var(--dim); }
   .toolbar input[type="search"]:focus { outline: 2px solid var(--text); outline-offset: 1px; }
   .toolbar input[type="search"]:not(:placeholder-shown) { border-color: var(--caution); box-shadow: 0 0 0 1px var(--caution); padding-right: 30px; }
@@ -148,10 +151,11 @@
   .toolbar .qclear[hidden] { display: none; }
   .seg { display: inline-flex; align-items: center; border: 1px solid var(--rule-hi); border-radius: 6px; overflow: hidden; }
   .seg .seglbl { font-size: 12px; color: var(--dim); padding: 0 8px; border-right: 1px solid var(--rule-hi); align-self: stretch; display: flex; align-items: center; }
-  .seg button { font: 13px/1 var(--sans); color: var(--dim); background: transparent; border: 0; padding: 7px 10px; cursor: pointer; white-space: nowrap; }
-  .seg button + button { border-left: 1px solid var(--rule-hi); }
-  .seg button:hover { color: var(--text); background: var(--raised); }
-  .seg button[aria-pressed="true"] { color: var(--text); background: var(--raised); font-weight: 600; }
+  .seg button, .theme button { font: 13px/1 var(--sans); color: var(--dim); background: transparent; border: 0; cursor: pointer; white-space: nowrap; }
+  .seg button + button, .theme button + button { border-left: 1px solid var(--rule-hi); }
+  .seg button:hover, .theme button:hover { color: var(--text); background: var(--raised); }
+  .seg button[aria-pressed="true"], .theme button[aria-pressed="true"] { color: var(--text); background: var(--raised); font-weight: 600; }
+  .seg button { padding: 7px 10px; }
   .pick { display: inline-flex; align-items: center; gap: 6px; }
   .pick select { font: 13px var(--sans); color: var(--text); background: var(--bg); border: 1px solid var(--rule-hi); border-radius: 6px;
     padding: 5px 8px; max-width: 260px; transition: border-color .12s, box-shadow .12s; }
@@ -179,10 +183,7 @@
   .addrepo input { flex: 1; min-width: 0; font: 13px/1.3 var(--sans); color: var(--text); background: var(--bg);
     border: 1px solid var(--rule-hi); border-radius: 6px; padding: 5px 9px; }
   .addrepo input::placeholder { color: var(--dim); }
-  .addrepo button, .untrack { font: 12px/1 var(--sans); color: var(--text); background: transparent; border: 1px solid var(--rule-hi);
-    border-radius: 6px; padding: 6px 10px; cursor: pointer; white-space: nowrap; }
-  .addrepo button:hover, .untrack:hover { background: var(--raised); }
-  .addrepo button:disabled, .untrack:disabled { opacity: .6; cursor: default; }
+  .addrepo button, .untrack { border-radius: 6px; padding: 6px 10px; }
   .untrack { font-size: 12px; padding: 3px 8px; margin-left: 8px; color: var(--dim); }
   .addmsg { margin: 0; padding: 7px 14px; font-size: 13px; border-bottom: 1px solid var(--rule); }
   .addmsg.bad { color: var(--warn); }
@@ -277,8 +278,8 @@
   .wsort button.active { color: var(--text); border-color: var(--rule); }
   .wsort button::after { content: ""; display: inline-block; width: 0; height: 0; margin-left: 4px;
     border-left: 3px solid transparent; border-right: 3px solid transparent; vertical-align: middle; }
-  .wsort button.asc::after { border-top: 4px solid currentColor; }
-  .wsort button.desc::after { border-bottom: 4px solid currentColor; }
+  .wsort button.asc::after { border-bottom: 4px solid currentColor; }
+  .wsort button.desc::after { border-top: 4px solid currentColor; }
   .thsort { cursor: pointer; user-select: none; position: relative; }
   .thsort:hover { color: var(--text); }
   .thsort::after { content: ""; display: inline-block; width: 0; height: 0; margin-left: 3px;
@@ -419,10 +420,7 @@
   .wi:hover .wdismiss, .wdismiss:focus-visible { opacity: 1; }
   .wdismiss:hover { color: var(--text); }
   .wdismiss:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
-  .seenbtn { flex: none; margin-left: 6px; font: 12px/1 var(--sans); color: var(--text); background: transparent; border: 1px solid var(--rule-hi);
-    border-radius: 4px; padding: 3px 7px; cursor: pointer; }
-  .seenbtn:hover { background: var(--raised); }
-  .seenbtn:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+  .seenbtn { flex: none; margin-left: 6px; padding: 3px 7px; }
   .wl .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .wl .d { grid-column: 2; font-size: 12px; color: var(--dim); overflow-wrap: anywhere; }
 
@@ -660,11 +658,7 @@
   .num, .fig { font-family: var(--mono); font-variant-numeric: tabular-nums slashed-zero; font-size: 13px; }
   code { font: 13px var(--mono); color: var(--text); background: var(--raised); padding: 1px 5px; border-radius: 4px; }
   .theme { display: inline-flex; border: 1px solid var(--rule-hi); border-radius: 6px; overflow: hidden; margin-left: auto; }
-  .theme button { font: 12px/1 var(--sans); color: var(--dim); background: transparent; border: 0; padding: 6px 10px; cursor: pointer;
-    transition: color .12s, background .12s; }
-  .theme button + button { border-left: 1px solid var(--rule-hi); }
-  .theme button:hover { color: var(--text); background: var(--raised); }
-  .theme button[aria-pressed="true"] { color: var(--text); background: var(--raised); font-weight: 600; }
+  .theme button { font-size: 12px; padding: 6px 10px; transition: color .12s, background .12s; }
 {{end}}
 {{define "theme-js"}}
     // Theme: Auto follows the system; Light and Dark override it and are remembered.
@@ -700,9 +694,9 @@
   th[data-sort]::after { content: ""; display: inline-block; width: 0; height: 0; margin-left: 5px;
     vertical-align: middle; border-left: 3.5px solid transparent; border-right: 3.5px solid transparent;
     opacity: 0; transition: opacity .12s; }
-  th[data-sort]:hover::after { opacity: .3; border-top: 4px solid currentColor; }
-  th[data-sort][data-sort-dir="asc"]::after { opacity: 1; border-top: 4px solid currentColor; border-bottom: 0; }
-  th[data-sort][data-sort-dir="desc"]::after { opacity: 1; border-bottom: 4px solid currentColor; border-top: 0; }
+  th[data-sort]:hover::after { opacity: .3; border-bottom: 4px solid currentColor; }
+  th[data-sort][data-sort-dir="asc"]::after { opacity: 1; border-bottom: 4px solid currentColor; border-top: 0; }
+  th[data-sort][data-sort-dir="desc"]::after { opacity: 1; border-top: 4px solid currentColor; border-bottom: 0; }
 {{end}}
 {{define "sort-js"}}
     function initSort(sel) {
@@ -813,9 +807,11 @@
   .hclock.clock-nixie .hclock-date { color: #ff8c42; opacity: .6; }
 
   /* LED segment clock: thick blocky digits like a wall-mounted LED clock */
-  .hclock.clock-led .hclock-time { color: #fff; font-weight: 800; letter-spacing: 0.1em;
-    text-shadow: 0 0 6px rgba(255,255,255,.6), 0 0 18px rgba(255,255,255,.3); }
+  .hclock.clock-led .hclock-time { color: var(--text); font-weight: 800; letter-spacing: 0.1em;
+    text-shadow: 0 0 6px currentColor, 0 0 18px currentColor; }
   .hclock.clock-led .hclock-date { color: var(--head-accent); font-weight: 600; letter-spacing: 0.08em; }
+  :root[data-visual-theme="pink"] .hclock-time { color: var(--head-accent); text-shadow: 0 0 7px var(--head-accent), 0 0 20px rgba(255,105,180,.3); }
+  :root[data-visual-theme="pink"] .hclock-date { color: var(--head-accent); opacity: .7; }
 
   /* Flip clock: retro split-flap style */
   .hclock.clock-flip .hclock-time { color: #f5f0e8; font-weight: 700; letter-spacing: 0.14em;
@@ -830,6 +826,10 @@
   .quicknav a:hover { color: var(--text); background: var(--raised); }
   .quicknav a.active { color: var(--text); border-bottom-color: var(--head-accent); }
   .quicknav a svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  @media (max-width: 900px) {
+    .mascot { display: none; }
+    .status.has-mascot { padding-right: 20px; }
+  }
   @media (max-width: 760px) {
     .status { grid-template-columns: 1fr 1fr; }
     .hclock { grid-column: 1 / -1; grid-row: 1; margin-bottom: 4px; }
@@ -880,7 +880,21 @@
 </div>
 {{end}}
 {{define "nav-active-js"}}
-  (function(){var p=location.pathname;document.querySelectorAll(".quicknav a").forEach(function(a){if(a.getAttribute("href")===p)a.classList.add("active")})})();
+  (function(){
+    var links = Array.prototype.slice.call(document.querySelectorAll(".quicknav a"));
+    var p = location.pathname;
+    links.forEach(function (a, i) {
+      if (a.getAttribute("href") === p) a.classList.add("active");
+      a.addEventListener("keydown", function (e) {
+        var next;
+        if (e.key === "ArrowRight") next = links[(i + 1) % links.length];
+        else if (e.key === "ArrowLeft") next = links[(i - 1 + links.length) % links.length];
+        else return;
+        e.preventDefault();
+        next.focus();
+      });
+    });
+  })();
 {{end}}
 {{define "clock-js"}}
   (function(){
@@ -1696,6 +1710,28 @@
     {{template "theme-js"}}
     {{template "nav-active-js"}}
     {{template "clock-js"}}
+
+    // Smart 5-minute reload: defer while an input field has focus or contains text.
+    (function () {
+      var delay = 300000, timer = setTimeout(tryReload, delay);
+      function tryReload() {
+        var active = document.activeElement;
+        if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable)) {
+          active.addEventListener("blur", onBlur);
+          return;
+        }
+        var filled = document.querySelector('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"])');
+        if (filled && filled.value.trim()) {
+          filled.addEventListener("blur", onBlur);
+          return;
+        }
+        location.reload();
+      }
+      function onBlur(e) {
+        e.target.removeEventListener("blur", onBlur);
+        timer = setTimeout(tryReload, 500);
+      }
+    })();
 
     // Keep expanded sections open across the 5-minute reload.
     var openKey = "hellogitty-open", open = store(true, openKey) || [];
