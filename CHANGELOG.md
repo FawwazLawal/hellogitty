@@ -5,6 +5,24 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (18) · Black Bombay (baby) · 2026-10-28
+
+Tag `v0.2.18`.
+
+- **Mascot responsive**: mascot image hidden below 900px to prevent tab overlap.
+- **LED clock theme support**: clock text uses theme-aware colours; pink theme
+  gets its own clock tint in both light and dark modes.
+- **Sort arrow consistency**: all sort indicators use the same ▲ asc / ▼ desc
+  convention across Your Work and Tracked Repos.
+- **Input border contrast**: borders raised to at least 3:1 contrast in all themes.
+- **Settings fixes**: sidebar gap under header closed, aria-current on active tab,
+  dismiss button always visible, keyboard shortcut off-switch added.
+- **Accessibility**: field labels for screen readers, hover-only controls made
+  always reachable, arrow keys on repo tabs.
+- **Smart auto-reload**: page reload deferred while the user is typing in a field.
+- **Button CSS consolidation**: ~15 near-duplicate button styles merged into a
+  shared rule set.
+
 ## v0.2.0 (17) · Black Bombay (baby) · 2026-10-28
 
 Tag `v0.2.17`.
