@@ -164,6 +164,23 @@
   .clock-select { font: 13px var(--sans); color: var(--text); background: var(--bg); border: 1px solid var(--rule-hi);
     border-radius: 8px; padding: 7px 12px; margin-top: 6px; width: 100%; }
 
+  .visual-themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+  .vt-swatch { display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: 10px;
+    border: 2px solid var(--rule); cursor: pointer; transition: border-color .2s, box-shadow .2s; position: relative; overflow: hidden; }
+  .vt-swatch:hover { border-color: var(--dim); }
+  .vt-swatch.active { border-color: #ff69b4; box-shadow: 0 0 0 2px rgba(255,105,180,.3); }
+  .vt-swatch .vt-preview { display: flex; gap: 6px; align-items: center; }
+  .vt-swatch .vt-dot { width: 28px; height: 28px; border-radius: 50%; flex: none; }
+  .vt-swatch .vt-bars { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+  .vt-swatch .vt-bar { height: 4px; border-radius: 2px; }
+  .vt-swatch .vt-name { font: 600 13px var(--sans); }
+  .vt-swatch .vt-desc { font: 12px var(--sans); opacity: .7; }
+  .vt-swatch .vt-badge { position: absolute; top: 8px; right: 8px; font: 600 9px var(--sans); letter-spacing: 0.06em;
+    text-transform: uppercase; padding: 2px 6px; border-radius: 4px; }
+  .vt-none { border-style: dashed; }
+  .vt-none .vt-dot { border: 2px dashed var(--rule-hi); background: transparent; }
+  .vt-none .vt-bar { background: var(--rule-hi); }
+
   .config-note { font-size: 12px; color: var(--dim); margin: 8px 0 0; }
   .config-note code { background: var(--raised); padding: 1px 4px; border-radius: 3px; }
 
@@ -253,6 +270,13 @@
             <label class="toggle"><input type="checkbox" id="s-compact"><span class="slider"></span></label>
             <span style="font-size:13px;color:var(--dim)">Shrink dashboard overview cells</span>
           </div>
+        </div>
+      </div>
+      <div class="scard">
+        <div class="srow" style="grid-template-columns:1fr">
+          <span class="slbl" style="margin-bottom:8px">Visual theme <span style="font-weight:400;color:var(--dim);font-size:11px;letter-spacing:0.03em">LIMITED EDITION</span></span>
+          <p style="font-size:12px;color:var(--dim);margin:0 0 10px">Collaboration colour overlays that layer on top of Auto / Light / Dark. Pick one to transform the whole dashboard.</p>
+          <div class="visual-themes" id="s-visual-theme"></div>
         </div>
       </div>
     </div>
@@ -505,6 +529,59 @@
   compactChk.addEventListener("change", function() {
     localStorage.setItem("hg-compact", compactChk.checked ? "1" : "0");
   });
+
+  // Visual theme gallery
+  var VT_KEY = "hellogitty-visual-theme";
+  var VISUAL_THEMES = [
+    { id: "pink", name: "Pinky v1", desc: "Hot pink collaboration theme",
+      badge: "Limited", badgeBg: "#ff69b4", badgeColor: "#fff",
+      bg: "#21101a", dot: "#ff69b4", bar1: "#ff69b4", bar2: "#55304a", bar3: "#b88aa4",
+      nameCl: "#f5e0ec", descCl: "#b88aa4" }
+  ];
+  var vtGrid = document.getElementById("s-visual-theme");
+  if (vtGrid) {
+    var currentVT; try { currentVT = localStorage.getItem(VT_KEY) || ""; } catch(e) { currentVT = ""; }
+
+    function renderVT() {
+      vtGrid.innerHTML = "";
+      // "None" option
+      var none = document.createElement("div");
+      none.className = "vt-swatch vt-none" + (!currentVT ? " active" : "");
+      none.innerHTML = '<div class="vt-preview"><span class="vt-dot"></span><div class="vt-bars"><span class="vt-bar" style="width:80%"></span><span class="vt-bar" style="width:55%"></span></div></div><span class="vt-name">None</span><span class="vt-desc">Default dashboard colours</span>';
+      none.addEventListener("click", function() {
+        currentVT = "";
+        try { localStorage.removeItem(VT_KEY); } catch(e) {}
+        document.documentElement.removeAttribute("data-visual-theme");
+        var baby = document.querySelector(".baby");
+        if (baby) baby.textContent = "(baby)";
+        renderVT();
+      });
+      vtGrid.appendChild(none);
+
+      VISUAL_THEMES.forEach(function(vt) {
+        var sw = document.createElement("div");
+        sw.className = "vt-swatch" + (currentVT === vt.id ? " active" : "");
+        sw.style.background = vt.bg;
+        sw.innerHTML = '<div class="vt-preview"><span class="vt-dot" style="background:' + vt.dot + '"></span>' +
+          '<div class="vt-bars"><span class="vt-bar" style="width:80%;background:' + vt.bar1 + '"></span>' +
+          '<span class="vt-bar" style="width:60%;background:' + vt.bar2 + '"></span>' +
+          '<span class="vt-bar" style="width:45%;background:' + vt.bar3 + '"></span></div></div>' +
+          '<span class="vt-name" style="color:' + vt.nameCl + '">' + vt.name + '</span>' +
+          '<span class="vt-desc" style="color:' + vt.descCl + '">' + vt.desc + '</span>' +
+          (vt.badge ? '<span class="vt-badge" style="background:' + vt.badgeBg + ';color:' + vt.badgeColor + '">' + vt.badge + '</span>' : '');
+        sw.addEventListener("click", function() {
+          currentVT = vt.id;
+          try { localStorage.setItem(VT_KEY, vt.id); } catch(e) {}
+          document.documentElement.dataset.visualTheme = vt.id;
+          var baby = document.querySelector(".baby");
+          if (baby) baby.textContent = "(pinky v1)";
+          renderVT();
+        });
+        vtGrid.appendChild(sw);
+      });
+    }
+    renderVT();
+  }
 
   // World clocks
   var ZONES = [

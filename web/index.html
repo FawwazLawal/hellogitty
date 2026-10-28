@@ -545,6 +545,8 @@
 {{define "theme-head"}}<script>
   // Apply a saved theme before first paint; with none saved the page follows the system setting.
   try { var t = localStorage.getItem("hellogitty-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+  // Apply a saved visual (collaboration) theme before first paint.
+  try { var vt = localStorage.getItem("hellogitty-visual-theme"); if (vt) document.documentElement.dataset.visualTheme = vt; } catch (e) {}
 </script>{{end}}
 {{define "base-css"}}
   :root {
@@ -593,6 +595,42 @@
     --head: #f6f6f4; --head-dim: #62625d; --head-accent: #d08a12;
     --mascot-bg: #ffffff;
   }
+  /* Visual themes: collaboration overlays that layer on top of Auto/Light/Dark.
+     Pink (pinky v1) — dark variant */
+  :root[data-visual-theme="pink"] {
+    --nom: #ff69b4; --head-accent: #ff69b4;
+    --bg: #1a0a12; --panel: #21101a; --raised: #2d1624; --rule: #3d2233; --rule-hi: #55304a;
+    --text: #f5e0ec; --dim: #b88aa4; --track: #3a2030;
+    --caution: #ff85c8; --caution-text: #ff85c8; --warn: #ff5277;
+    --caution-fill: #ff69b4; --caution-ink: #1a0610; --warn-fill: #cc2255; --warn-ink: #ffffff;
+    --tag-fill: #3d1530; --tag-ink: #ffb3d9; --tag-rule: #66254d;
+    --head: #261220; --head-dim: #b88aa4;
+    --mascot-bg: #21101a;
+    color-scheme: dark;
+  }
+  /* Pink — light variant */
+  @media (prefers-color-scheme: light) {
+    :root[data-visual-theme="pink"]:not([data-theme="dark"]) {
+      --bg: #fff0f5; --panel: #ffffff; --raised: #ffe4ef; --rule: #f5c6d8; --rule-hi: #e8a0be;
+      --text: #3d0f24; --dim: #8c4468; --track: #f5d0e0;
+      --nom: #d6336c; --caution: #c9267a; --caution-text: #a01858; --warn: #c3271c;
+      --caution-fill: #ffe0ee; --caution-ink: #6a0030; --warn-fill: #fde8e6; --warn-ink: #8a1d13;
+      --tag-fill: #ffe0ee; --tag-ink: #8c1050; --tag-rule: #f0a0c8;
+      --head: #fff5f9; --head-dim: #8c4468; --head-accent: #d6336c;
+      --mascot-bg: #ffffff;
+      color-scheme: light;
+    }
+  }
+  :root[data-theme="light"][data-visual-theme="pink"] {
+    --bg: #fff0f5; --panel: #ffffff; --raised: #ffe4ef; --rule: #f5c6d8; --rule-hi: #e8a0be;
+    --text: #3d0f24; --dim: #8c4468; --track: #f5d0e0;
+    --nom: #d6336c; --caution: #c9267a; --caution-text: #a01858; --warn: #c3271c;
+    --caution-fill: #ffe0ee; --caution-ink: #6a0030; --warn-fill: #fde8e6; --warn-ink: #8a1d13;
+    --tag-fill: #ffe0ee; --tag-ink: #8c1050; --tag-rule: #f0a0c8;
+    --head: #fff5f9; --head-dim: #8c4468; --head-accent: #d6336c;
+    --mascot-bg: #ffffff;
+    color-scheme: light;
+  }
   * { box-sizing: border-box; }
   html { background: var(--bg); scrollbar-color: var(--rule-hi) var(--bg); }
   body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--sans); caret-color: var(--text);
@@ -633,6 +671,17 @@
       });
     });
     showTheme();
+
+    // Visual (collaboration) theme: a colour overlay on top of Auto/Light/Dark.
+    var VISUAL_THEMES = { pink: { label: "(pinky v1)" } };
+    function applyVisualTheme(id) {
+      if (id && VISUAL_THEMES[id]) root.dataset.visualTheme = id; else delete root.dataset.visualTheme;
+      try { if (id) localStorage.setItem("hellogitty-visual-theme", id); else localStorage.removeItem("hellogitty-visual-theme"); } catch (e) {}
+      var baby = document.querySelector(".baby");
+      if (baby) baby.textContent = (id && VISUAL_THEMES[id]) ? VISUAL_THEMES[id].label : "(baby)";
+    }
+    // Ensure the codename matches the loaded visual theme on page load.
+    (function () { var vt; try { vt = localStorage.getItem("hellogitty-visual-theme"); } catch (e) {} if (vt && VISUAL_THEMES[vt]) applyVisualTheme(vt); })();
 {{end}}
 {{define "sort-css"}}
   th[data-sort] { cursor: pointer; user-select: none; white-space: nowrap; letter-spacing: 0.02em; }
