@@ -604,25 +604,28 @@
     --mascot-bg: #ffffff;
   }
   /* Visual themes: collaboration overlays that layer on top of Auto/Light/Dark.
-     Pink (pinky v1) — dark variant */
+     Pink (pinky v2) — dark variant.
+     Status colours use a temperature gradient within the pink family:
+     cool blush (ok) → warm coral (caution) → deep magenta (danger). */
   :root[data-visual-theme="pink"] {
-    --nom: #ff69b4; --head-accent: #ff69b4;
+    --nom: #f5a8c8; --head-accent: #ff69b4;
     --bg: #1a0a12; --panel: #21101a; --raised: #2d1624; --rule: #3d2233; --rule-hi: #55304a;
     --text: #f5e0ec; --dim: #b88aa4; --track: #3a2030;
-    --caution: #ff85c8; --caution-text: #ff85c8; --warn: #ff5277;
-    --caution-fill: #ff69b4; --caution-ink: #1a0610; --warn-fill: #cc2255; --warn-ink: #ffffff;
+    --caution: #ff7a90; --caution-text: #ff7a90; --warn: #e6175d;
+    --caution-fill: #3d1820; --caution-ink: #ffd4dc; --warn-fill: #4d0a28; --warn-ink: #ffe0e8;
     --tag-fill: #3d1530; --tag-ink: #ffb3d9; --tag-rule: #66254d;
     --head: #261220; --head-dim: #b88aa4;
     --mascot-bg: #21101a;
     color-scheme: dark;
   }
-  /* Pink — light variant */
+  /* Pink (pinky v2) — light variant.
+     Same temperature gradient: dusty rose (ok) → vivid coral (caution) → deep magenta (danger). */
   @media (prefers-color-scheme: light) {
     :root[data-visual-theme="pink"]:not([data-theme="dark"]) {
       --bg: #fff0f5; --panel: #ffffff; --raised: #ffe4ef; --rule: #f5c6d8; --rule-hi: #e8a0be;
       --text: #3d0f24; --dim: #8c4468; --track: #f5d0e0;
-      --nom: #d6336c; --caution: #c9267a; --caution-text: #a01858; --warn: #c3271c;
-      --caution-fill: #ffe0ee; --caution-ink: #6a0030; --warn-fill: #fde8e6; --warn-ink: #8a1d13;
+      --nom: #b85580; --caution: #d6336c; --caution-text: #b52850; --warn: #9b0e42;
+      --caution-fill: #ffe4ed; --caution-ink: #7a0038; --warn-fill: #fcd0de; --warn-ink: #6a0028;
       --tag-fill: #ffe0ee; --tag-ink: #8c1050; --tag-rule: #f0a0c8;
       --head: #fff5f9; --head-dim: #8c4468; --head-accent: #d6336c;
       --mascot-bg: #ffffff;
@@ -632,8 +635,8 @@
   :root[data-theme="light"][data-visual-theme="pink"] {
     --bg: #fff0f5; --panel: #ffffff; --raised: #ffe4ef; --rule: #f5c6d8; --rule-hi: #e8a0be;
     --text: #3d0f24; --dim: #8c4468; --track: #f5d0e0;
-    --nom: #d6336c; --caution: #c9267a; --caution-text: #a01858; --warn: #c3271c;
-    --caution-fill: #ffe0ee; --caution-ink: #6a0030; --warn-fill: #fde8e6; --warn-ink: #8a1d13;
+    --nom: #b85580; --caution: #d6336c; --caution-text: #b52850; --warn: #9b0e42;
+    --caution-fill: #ffe4ed; --caution-ink: #7a0038; --warn-fill: #fcd0de; --warn-ink: #6a0028;
     --tag-fill: #ffe0ee; --tag-ink: #8c1050; --tag-rule: #f0a0c8;
     --head: #fff5f9; --head-dim: #8c4468; --head-accent: #d6336c;
     --mascot-bg: #ffffff;
@@ -681,7 +684,7 @@
     showTheme();
 
     // Visual (collaboration) theme: a colour overlay on top of Auto/Light/Dark.
-    var VISUAL_THEMES = { pink: { label: "(pinky v1)" } };
+    var VISUAL_THEMES = { pink: { label: "(pinky v2)" } };
     function applyVisualTheme(id) {
       if (id && VISUAL_THEMES[id]) root.dataset.visualTheme = id; else delete root.dataset.visualTheme;
       try { if (id) localStorage.setItem("hellogitty-visual-theme", id); else localStorage.removeItem("hellogitty-visual-theme"); } catch (e) {}
