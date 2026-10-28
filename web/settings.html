@@ -105,7 +105,7 @@
   .clock-swatch:hover { border-color: var(--dim); }
   .clock-swatch.active { border-color: var(--head-accent); box-shadow: 0 0 0 2px rgba(29,158,117,.25); }
   .clock-swatch .cs-time { font: 700 22px/1 var(--mono); font-variant-numeric: tabular-nums; margin-bottom: 4px; }
-  .clock-swatch .cs-name { font: 500 10px/1 var(--sans); color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .clock-swatch .cs-name { font: 500 11px/1 var(--sans); color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; }
 
   .clock-swatch[data-style="neon"] { background: #0a0a0a; }
   .clock-swatch[data-style="neon"] .cs-time { color: #0ff; text-shadow: 0 0 7px #0ff, 0 0 20px #0ff; }
@@ -179,7 +179,7 @@
   .vt-swatch .vt-bar { height: 4px; border-radius: 2px; }
   .vt-swatch .vt-name { font: 600 13px var(--sans); }
   .vt-swatch .vt-desc { font: 12px var(--sans); opacity: .7; }
-  .vt-swatch .vt-badge { position: absolute; top: 8px; right: 8px; font: 600 9px var(--sans); letter-spacing: 0.06em;
+  .vt-swatch .vt-badge { position: absolute; top: 8px; right: 8px; font: 600 11px var(--sans); letter-spacing: 0.06em;
     text-transform: uppercase; padding: 2px 6px; border-radius: 4px; }
   .vt-none { border-style: dashed; }
   .vt-none .vt-dot { border: 2px dashed var(--rule-hi); background: transparent; }
@@ -187,6 +187,17 @@
 
   .config-note { font-size: 12px; color: var(--dim); margin: 8px 0 0; }
   .config-note code { background: var(--raised); padding: 1px 4px; border-radius: 3px; }
+
+  .srow.full { grid-template-columns: 1fr; }
+  .slbl.spaced { margin-bottom: 8px; }
+  .slbl.spaced-sm { margin-bottom: 6px; }
+  .slbl .sub { font-weight: 400; color: var(--dim); }
+  .slbl .sub.tag { font-size: 11px; letter-spacing: 0.03em; }
+  .srow-desc { font-size: 12px; color: var(--dim); margin: 0 0 10px; }
+  .srow-desc.tight { margin-bottom: 8px; }
+  .s-add-btn { font: 600 13px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
+    border-radius: 8px; padding: 8px 14px; cursor: pointer; margin-top: 8px; display: inline-block; width: auto; }
+  .s-add-btn:hover { color: var(--text); border-color: var(--text); }
 
   @media (max-width: 760px) {
     .settings-shell { flex-direction: column; }
@@ -277,20 +288,20 @@
             <option value="focus">Focus</option>
             <option value="custom">Custom</option>
           </select>
-          <p class="srow-hint" id="s-layout-hint">Move, hide and fold single panels with Layout on the dashboard.</p>
+          <p class="srow-hint" id="s-layout-hint">Move, hide and collapse single panels with Layout on the dashboard.</p>
         </div>
         <div class="srow">
           <label class="slbl" for="s-shortcuts">Keyboard shortcuts</label>
           <div class="toggle-wrap">
             <label class="toggle"><input type="checkbox" id="s-shortcuts" aria-describedby="s-shortcuts-desc"><span class="slider" aria-hidden="true"></span></label>
-            <span class="toggle-desc" id="s-shortcuts-desc">One-key shortcuts: / search, ? help, c and e fold and unfold, 1–9 fold a panel</span>
+            <span class="toggle-desc" id="s-shortcuts-desc">One-key shortcuts: / search, ? help, c and e collapse and expand, 1–9 collapse a panel</span>
           </div>
         </div>
       </div>
       <div class="scard">
-        <div class="srow" style="grid-template-columns:1fr">
-          <span class="slbl" style="margin-bottom:8px">Visual theme <span style="font-weight:400;color:var(--dim);font-size:11px;letter-spacing:0.03em">LIMITED EDITION</span></span>
-          <p style="font-size:12px;color:var(--dim);margin:0 0 10px">Collaboration colour overlays that layer on top of Auto / Light / Dark. Pick one to transform the whole dashboard.</p>
+        <div class="srow full">
+          <span class="slbl spaced">Visual theme <span class="sub tag">LIMITED EDITION</span></span>
+          <p class="srow-desc">Collaboration colour overlays that layer on top of Auto / Light / Dark. Pick one to transform the whole dashboard.</p>
           <div class="visual-themes" id="s-visual-theme"></div>
         </div>
       </div>
@@ -324,20 +335,20 @@
         </div>
       </div>
       <div class="scard">
-        <div class="srow" style="grid-template-columns:1fr">
-          <span class="slbl" style="margin-bottom:8px">Clock style</span>
+        <div class="srow full">
+          <span class="slbl spaced">Clock style</span>
           <div class="clock-styles" id="s-clock-style"></div>
         </div>
       </div>
       <div class="scard">
-        <div class="srow" style="grid-template-columns:1fr">
-          <span class="slbl" style="margin-bottom:8px">World clocks</span>
-          <p style="font-size:12px;color:var(--dim);margin:0 0 8px">Additional timezone clocks shown in the header.</p>
+        <div class="srow full">
+          <span class="slbl spaced">World clocks</span>
+          <p class="srow-desc tight">Additional timezone clocks shown in the header.</p>
           <div id="s-clocks" class="item-list"></div>
-          <select id="s-clock-add" class="clock-select" aria-label="Time zone to add" style="display:none">
+          <select id="s-clock-add" class="clock-select" aria-label="Time zone to add" hidden>
             <option value="">Add a timezone…</option>
           </select>
-          <button type="button" class="add-row" id="s-clock-btn" style="font:600 13px var(--sans);color:var(--dim);background:transparent;border:1px solid var(--rule-hi);border-radius:8px;padding:8px 14px;cursor:pointer;margin-top:8px;display:inline-block;width:auto">+ Add clock</button>
+          <button type="button" class="s-add-btn" id="s-clock-btn">+ Add clock</button>
         </div>
       </div>
     </div>
@@ -347,8 +358,8 @@
       <h1>Repositories</h1>
       <p class="section-desc">Manage tracked repositories and your maintain list.</p>
       <div class="scard">
-        <div class="srow" style="grid-template-columns:1fr">
-          <label class="slbl" for="s-repo-input" style="margin-bottom:6px">Add a repository</label>
+        <div class="srow full">
+          <label class="slbl spaced-sm" for="s-repo-input">Add a repository</label>
           <div class="add-row">
             <input type="text" id="s-repo-input" placeholder="owner/name or GitHub URL">
             <button type="button" id="s-repo-add">Track</button>
@@ -357,8 +368,8 @@
         </div>
       </div>
       <div class="scard">
-        <div class="srow" style="grid-template-columns:1fr">
-          <span class="slbl" style="margin-bottom:6px">Tracked repos <span style="font-weight:400;color:var(--dim)">({{.RepoCount}})</span></span>
+        <div class="srow full">
+          <span class="slbl spaced-sm">Tracked repos <span class="sub">({{.RepoCount}})</span></span>
           <div id="s-repo-list" class="item-list">
             {{range .Rows}}<div class="item-row" data-repo="{{.Owner}}/{{.Name}}">
               <span class="ilabel mono">{{.Owner}}/{{.Name}}</span>
@@ -369,8 +380,8 @@
         </div>
       </div>
       {{if .RemovedRepos}}<div class="scard">
-        <div class="srow" style="grid-template-columns:1fr">
-          <span class="slbl" style="margin-bottom:6px">Removed <span style="font-weight:400;color:var(--dim)">({{len .RemovedRepos}})</span></span>
+        <div class="srow full">
+          <span class="slbl spaced-sm">Removed <span class="sub">({{len .RemovedRepos}})</span></span>
           <div id="s-repo-removed" class="item-list">
             {{range .RemovedRepos}}<div class="item-row" data-repo="{{.}}">
               <span class="ilabel mono dim">{{.}}</span>
@@ -380,8 +391,8 @@
         </div>
       </div>{{end}}
       {{if .ConfigMaintain}}<div class="scard">
-        <div class="srow" style="grid-template-columns:1fr">
-          <span class="slbl" style="margin-bottom:6px">Maintain list <span class="badge">config file</span></span>
+        <div class="srow full">
+          <span class="slbl spaced-sm">Maintain list <span class="badge">config file</span></span>
           <div class="item-list">
             {{range .ConfigMaintain}}<div class="item-row">
               <span class="ilabel mono">{{.}}</span>
@@ -670,7 +681,7 @@
   });
 
   addBtn.addEventListener("click", function() {
-    addSel.style.display = addSel.style.display === "none" ? "" : "none";
+    addSel.hidden = !addSel.hidden;
   });
   addSel.addEventListener("change", function() {
     if (!addSel.value) return;
@@ -679,7 +690,7 @@
     var shortLabel = z ? z.label.split(" — ")[0] : addSel.value;
     var exists = clocks.some(function(c) { return (typeof c === "string" ? c : c.tz) === addSel.value; });
     if (!exists) { clocks.push({ tz: addSel.value, label: shortLabel }); saveClocks(clocks); }
-    addSel.value = ""; addSel.style.display = "none";
+    addSel.value = ""; addSel.hidden = true;
     renderClocks();
   });
 
