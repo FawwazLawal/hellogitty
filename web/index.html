@@ -1228,11 +1228,7 @@
 
     <section class="panel{{if not .HasPipeline}} nopipe{{end}}" aria-labelledby="tracked-h" data-module="tracked">
       <h2 id="tracked-h">Tracked repositories<span class="nb" id="tracked-new" title="Unacknowledged items in the live feed about these repositories"{{if not .TrackedNew}} hidden{{end}}>{{.TrackedNew}} new in {{.TrackedNewRepos}} {{if eq .TrackedNewRepos 1}}repo{{else}}repos{{end}}</span> <span class="lbl legend"><span class="li" data-term="health-ACTIVE"><span class="light ACTIVE"></span>active</span> <span class="li" data-term="health-SLOW"><span class="light SLOW"></span>slowing</span> <span class="li" data-term="health-DORMANT"><span class="light DORMANT"></span>dormant</span> <span class="li" data-term="health-UNKNOWN"><span class="light UNKNOWN"></span>not checked</span>{{if .HasPipeline}} <span class="li" data-term="stage-done"><span class="sw done"></span>done</span> <span class="li" data-term="stage-current"><span class="sw current"></span>current</span> <span class="li" data-term="stage-failed"><span class="sw failed"></span>failed</span>{{end}}</span></h2>
-      <div class="tbar"><label class="pick"><span class="lbl">Sort</span><select id="f-sort">
-        <option value="default">{{if .HasPipeline}}Furthest stage first{{else}}Name{{end}}</option><option value="name">Name</option><option value="open">Most open issues</option>
-        <option value="gfi">Most good first issues</option><option value="unasgn">Most unassigned</option><option value="commit">Most recent commit</option><option value="denied">Most turned down</option>
-      </select></label>
-      <span class="rsearch"><label><span class="sr">Search tracked repositories</span><input type="search" id="f-rq" placeholder="Search repositories" autocomplete="off" spellcheck="false"></label><button type="button" class="qclear" aria-label="Clear search" title="Clear search" hidden>&times;</button></span>
+      <div class="tbar"><span class="rsearch"><label><span class="sr">Search tracked repositories</span><input type="search" id="f-rq" placeholder="Search repositories" autocomplete="off" spellcheck="false"></label><button type="button" class="qclear" aria-label="Clear search" title="Clear search" hidden>&times;</button></span>
       <span class="fcount" id="tracked-count"></span>
       {{if .RepoTools}}<form class="addrepo" id="repo-add" data-token="{{.Token}}" autocomplete="off"><label class="sr" for="repo-add-in">Add a repository to track</label>
         <input id="repo-add-in" type="text" placeholder="Add a repo: owner/name or GitHub link" spellcheck="false" required>
@@ -2284,7 +2280,7 @@
       function save() { try { localStorage.setItem(viewKey, JSON.stringify(view)); } catch (e) {} }
 
       var q = document.getElementById("f-q"), scope = document.getElementById("f-scope"), mine = document.getElementById("f-mine");
-      var sortSel = document.getElementById("f-sort"), count = document.getElementById("f-count"), clear = document.getElementById("f-clear");
+      var count = document.getElementById("f-count"), clear = document.getElementById("f-clear");
       if (!q) return;
       var items = Array.prototype.slice.call(document.querySelectorAll(".wi"));
       var watched = Array.prototype.slice.call(document.querySelectorAll(".wl li[data-repo]"));
@@ -2437,7 +2433,7 @@
       }
 
       function apply() {
-        q.value = view.q; scope.value = view.scope; mine.checked = view.mine; if (sortSel) sortSel.value = view.sort;
+        q.value = view.q; scope.value = view.scope; mine.checked = view.mine;
         document.querySelectorAll(".thsort").forEach(function (th) {
           var on = th.dataset.rsort === view.sort;
           th.classList.toggle("asc", on && view.sortDir === "asc");
@@ -2480,11 +2476,6 @@
       q.addEventListener("keydown", function (e) { if (e.key === "Escape") { view.q = ""; apply(); q.blur(); } });
       scope.addEventListener("change", function () { view.scope = scope.value; apply(); });
       mine.addEventListener("change", function () { view.mine = mine.checked; apply(); });
-      if (sortSel) sortSel.addEventListener("change", function () {
-        view.sort = sortSel.value;
-        view.sortDir = view.sort === "name" ? "asc" : "desc";
-        apply();
-      });
       document.querySelectorAll(".thsort").forEach(function (th) {
         th.addEventListener("click", function (e) {
           if (th.dataset.term && e.target !== th) return;
@@ -2495,7 +2486,6 @@
             view.sort = key;
             view.sortDir = key === "name" ? "asc" : "desc";
           }
-          if (sortSel) sortSel.value = view.sort;
           apply();
         });
         th.addEventListener("keydown", function (e) {
