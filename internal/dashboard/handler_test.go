@@ -108,7 +108,7 @@ func TestDashboardEmptyPipelineAndAlarms(t *testing.T) {
 		`class="light DORMANT"`, `class="gate ok"`, // health light and verdict
 		`<i class="done"></i><i class="done"></i><i class="current"></i>`, // rocket at select
 		`https://github.com/acme/rocket/pull/1756`,                        // denial links to its PR
-		`http-equiv="refresh" content="300"`,
+		`var delay = 300000`,
 	} {
 		if !strings.Contains(html, want) {
 			t.Errorf("missing %q", want)

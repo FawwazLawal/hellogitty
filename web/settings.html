@@ -11,12 +11,13 @@
 {{template "header-css"}}
 
   /* Settings layout: macOS-style sidebar + content */
-  .settings-shell { display: flex; min-height: calc(100vh - 86px); }
+  /* --head-h is the sticky site header's height, kept current by the script after it. */
+  .settings-shell { display: flex; min-height: calc(100vh - var(--head-h, 104px)); }
 
   .settings-nav {
     width: 220px; min-width: 220px; background: var(--panel);
     border-right: 1px solid var(--rule); padding: 16px 0;
-    position: sticky; top: 86px; height: calc(100vh - 86px); overflow-y: auto;
+    position: sticky; top: var(--head-h, 104px); height: calc(100vh - var(--head-h, 104px)); overflow-y: auto;
   }
   .settings-nav .nav-label {
     font: 600 11px/1 var(--sans); color: var(--dim); text-transform: uppercase;
@@ -208,6 +209,14 @@
 <script>
 {{template "nav-active-js"}}
 {{template "clock-js"}}
+// The header grows with world clocks and wrapping; the sidebar sticks right under it.
+(function () {
+  var head = document.querySelector(".site-head");
+  if (!head) return;
+  function fit() { document.documentElement.style.setProperty("--head-h", head.offsetHeight + "px"); }
+  fit();
+  if (window.ResizeObserver) new ResizeObserver(fit).observe(head); else window.addEventListener("resize", fit);
+})();
 </script>
 
 <div class="settings-shell">
@@ -270,6 +279,13 @@
           </select>
           <p class="srow-hint" id="s-layout-hint">Move, hide and fold single panels with Layout on the dashboard.</p>
         </div>
+        <div class="srow">
+          <label class="slbl" for="s-shortcuts">Keyboard shortcuts</label>
+          <div class="toggle-wrap">
+            <label class="toggle"><input type="checkbox" id="s-shortcuts" aria-describedby="s-shortcuts-desc"><span class="slider" aria-hidden="true"></span></label>
+            <span class="toggle-desc" id="s-shortcuts-desc">One-key shortcuts: / search, ? help, c and e fold and unfold, 1–9 fold a panel</span>
+          </div>
+        </div>
       </div>
       <div class="scard">
         <div class="srow" style="grid-template-columns:1fr">
@@ -318,7 +334,7 @@
           <span class="slbl" style="margin-bottom:8px">World clocks</span>
           <p style="font-size:12px;color:var(--dim);margin:0 0 8px">Additional timezone clocks shown in the header.</p>
           <div id="s-clocks" class="item-list"></div>
-          <select id="s-clock-add" class="clock-select" style="display:none">
+          <select id="s-clock-add" class="clock-select" aria-label="Time zone to add" style="display:none">
             <option value="">Add a timezone…</option>
           </select>
           <button type="button" class="add-row" id="s-clock-btn" style="font:600 13px var(--sans);color:var(--dim);background:transparent;border:1px solid var(--rule-hi);border-radius:8px;padding:8px 14px;cursor:pointer;margin-top:8px;display:inline-block;width:auto">+ Add clock</button>
@@ -332,7 +348,7 @@
       <p class="section-desc">Manage tracked repositories and your maintain list.</p>
       <div class="scard">
         <div class="srow" style="grid-template-columns:1fr">
-          <span class="slbl" style="margin-bottom:6px">Add a repository</span>
+          <label class="slbl" for="s-repo-input" style="margin-bottom:6px">Add a repository</label>
           <div class="add-row">
             <input type="text" id="s-repo-input" placeholder="owner/name or GitHub URL">
             <button type="button" id="s-repo-add">Track</button>
@@ -503,6 +519,14 @@
   // The theme picker carries data-theme-set, so the shared theme script (below) drives it and the
   // header switch together. Older builds kept these settings under keys nothing read.
   try { ["hg-theme", "hg-layout", "hg-compact"].forEach(function(k) { localStorage.removeItem(k); }); } catch(e) {}
+
+  // One-key shortcuts: on unless turned off here. theme-head reads the same key before paint.
+  var scChk = document.getElementById("s-shortcuts");
+  scChk.checked = document.documentElement.dataset.shortcuts !== "off";
+  scChk.addEventListener("change", function() {
+    if (scChk.checked) delete document.documentElement.dataset.shortcuts; else document.documentElement.dataset.shortcuts = "off";
+    try { if (scChk.checked) localStorage.removeItem("hellogitty-shortcuts"); else localStorage.setItem("hellogitty-shortcuts", "off"); } catch(e) {}
+  });
 
   // Layout preset: writes the dashboard's own layout state. PRESETS mirrors the table in the
   // dashboard's layout script; the dashboard fills in any panel missing here.
