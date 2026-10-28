@@ -533,7 +533,7 @@
   // Visual theme gallery
   var VT_KEY = "hellogitty-visual-theme";
   var VISUAL_THEMES = [
-    { id: "pink", name: "Pinky v1", desc: "Hot pink collaboration theme",
+    { id: "pink", name: "Pinky v2", desc: "Hot pink collaboration theme",
       badge: "Limited", badgeBg: "#ff69b4", badgeColor: "#fff",
       bg: "#21101a", dot: "#ff69b4", bar1: "#ff69b4", bar2: "#55304a", bar3: "#b88aa4",
       nameCl: "#f5e0ec", descCl: "#b88aa4" }
@@ -574,7 +574,7 @@
           try { localStorage.setItem(VT_KEY, vt.id); } catch(e) {}
           document.documentElement.dataset.visualTheme = vt.id;
           var baby = document.querySelector(".baby");
-          if (baby) baby.textContent = "(pinky v1)";
+          if (baby) baby.textContent = "(pinky v2)";
           renderVT();
         });
         vtGrid.appendChild(sw);
