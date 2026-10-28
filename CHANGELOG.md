@@ -5,6 +5,13 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (20) · Black Bombay (baby) · 2026-10-28
+
+Tag `v0.2.20`.
+
+- **CI workflow**: GitHub Actions build and test pipeline for the Go project —
+  `go build`, `go vet` on Ubuntu, `go test` on Ubuntu and macOS.
+
 ## v0.2.0 (19) · Black Bombay (baby) · 2026-10-28
 
 Tag `v0.2.19`.
