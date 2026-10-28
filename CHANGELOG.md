@@ -5,6 +5,18 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (14) · Black Bombay (baby) · 2026-10-28
+
+Tag `v0.2.14`.
+
+- **Finder-style sortable columns**: Your Work gets Name and Updated sort
+  buttons with toggleable asc/desc arrows. Tracked Repos column headers
+  (Repository, Open, Good first, Unassigned, Last commit, Turned down) are
+  clickable sort toggles that replace the old Sort dropdown.
+- **start.sh always rebuilds**: the launch script now runs `go build` on every
+  invocation and restarts only when the binary actually changed, so
+  double-clicking OSS Monitor always serves the latest code.
+
 ## v0.2.0 (13) · Black Bombay (baby) · 2026-10-27
 
 Tag `v0.2.13`.
