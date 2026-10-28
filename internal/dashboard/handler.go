@@ -131,6 +131,7 @@ type headerInfo struct {
 	HasPipeline  bool
 	TargetCount  int
 	Mascot       *mascot
+	IsDashboard  bool
 }
 
 func (h *Handler) buildHeaderInfo() headerInfo {
@@ -178,6 +179,7 @@ type page struct {
 	RepoTools    bool
 	RemovedRepos []string
 	CanWatch     bool // the eye can watch and unwatch issues
+	IsDashboard  bool // true only on the main dashboard page
 	Version      string
 	Baby         bool
 	Mascot       *mascot
@@ -581,6 +583,7 @@ func (h *Handler) serveDashboard(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "could not read dashboard data", http.StatusInternalServerError)
 		return
 	}
+	p.IsDashboard = true
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, p); err != nil {
 		log.Printf("dashboard: render: %v", err)

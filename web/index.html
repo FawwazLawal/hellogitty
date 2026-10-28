@@ -75,7 +75,7 @@
   .cell { border: 1px solid var(--rule-hi); background: var(--panel); padding: 9px 11px; min-height: 64px; border-radius: 6px;
     display: flex; flex-direction: column; gap: 4px; position: relative; transition: background .2s, border-color .2s; }
   .cell.empty { border-style: dashed; border-color: var(--rule); }
-  .cell.empty .leg { color: var(--track); }
+  .cell.empty .leg { color: var(--dim); }
   .cell.linked { cursor: pointer; }
   .cell.linked:hover { background: var(--raised); }
   .cell .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
@@ -532,6 +532,14 @@
     .mlbl { display: inline !important; margin-right: 4px; }
     .expand { padding-left: 14px; }
   }
+  @media (max-width: 480px) {
+    .cw { grid-template-columns: 1fr; padding: 8px 12px 0; }
+    .cell.wide { grid-column: span 1; }
+    .grid { padding: 8px 12px 16px; }
+    .toolbar { margin: 8px 12px 0; }
+    .wi .end { gap: 6px; }
+    body { overflow-x: hidden; }
+  }
   .m { display: contents; }
   .stg { display: none; }
   .mlbl { display: none; font: 12px var(--sans); color: var(--dim); letter-spacing: 0.02em; }
@@ -824,6 +832,14 @@
     .hclock { grid-column: 1 / -1; grid-row: 1; margin-bottom: 4px; }
     .hclock-time { font-size: 22px; }
     .quicknav { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+  }
+  @media (max-width: 480px) {
+    .status { grid-template-columns: 1fr auto; padding: 8px 12px; gap: 4px 8px; }
+    .hclock { display: none; }
+    .head-right { gap: 6px; }
+    .headbtn { padding: 5px 8px; font-size: 11px; }
+    .quicknav a { padding: 8px 10px; font-size: 12px; }
+    .quicknav a svg { width: 13px; height: 13px; }
   }
   @media (prefers-reduced-motion: reduce) { .quicknav a { transition: none; } }
 {{end}}
@@ -1186,10 +1202,10 @@
   </div>
 </li>{{end}}
 <script type="application/json" id="glossary">{{.GlossaryJSON}}</script>
-{{define "head-extra"}}
+{{define "head-extra"}}{{if .IsDashboard}}
     <button type="button" class="headbtn" id="fold-all" title="Collapse all panels (c)"><svg viewBox="0 0 16 16"><path d="M2 4h12M2 8h12M2 12h12"/></svg>Collapse</button>
     <button type="button" class="headbtn" id="layout-open" aria-haspopup="dialog"><svg viewBox="0 0 16 16"><rect x="1.5" y="1.5" width="13" height="13" rx="2"/><path d="M1.5 6h13M6 6v8.5"/></svg>Layout</button>
-{{end}}
+{{end}}{{end}}
 {{template "site-header" .}}
 
 <section class="cw" aria-label="Alerts" data-module="alerts" data-token="{{.Token}}">
@@ -1658,6 +1674,13 @@
       if (!c || e.target.closest(".cbtn") || e.target.closest("a")) return;
       location.href = c.dataset.link;
     });
+    cw.addEventListener("keydown", function (e) {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      var c = e.target.closest("[data-link]");
+      if (!c || e.target.closest(".cbtn") || e.target.closest("a")) return;
+      e.preventDefault();
+      location.href = c.dataset.link;
+    });
   })();
 </script>
 <script>
@@ -1905,8 +1928,18 @@
           .catch(function () { items.forEach(function (li, i) { li.dataset.ack = ids[i]; }); });
       }
       document.querySelectorAll("details.repo").forEach(function (d) {
-        d.querySelectorAll(".rtabs [data-tab]").forEach(function (b) {
+        var tabs = Array.prototype.slice.call(d.querySelectorAll(".rtabs [data-tab]"));
+        tabs.forEach(function (b, i) {
           b.addEventListener("click", function () { show(d, b.dataset.tab); });
+          b.addEventListener("keydown", function (e) {
+            var next;
+            if (e.key === "ArrowRight") next = tabs[(i + 1) % tabs.length];
+            else if (e.key === "ArrowLeft") next = tabs[(i - 1 + tabs.length) % tabs.length];
+            else return;
+            e.preventDefault();
+            next.focus();
+            show(d, next.dataset.tab);
+          });
         });
         // Only your own click counts as looking: a section reopened after the reload is not.
         var summary = d.querySelector("summary");
