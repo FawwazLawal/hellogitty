@@ -55,12 +55,12 @@
   .mod.sub { padding-left: 24px; }
   .mod .check:first-child { flex: 1 1 180px; font-size: 14px; }
   .mod select { font: 13px var(--sans); color: var(--text); background: var(--bg); border: 1px solid var(--dim); border-radius: 6px; padding: 4px 8px; }
-  .mod button, .addrepo button, .untrack, .seenbtn {
+  .mod button, .addrepo button, .untrack, .seenbtn, .fack, .nclear {
     font: 12px/1 var(--sans); color: var(--text); background: transparent; border: 1px solid var(--rule-hi);
     border-radius: 4px; padding: 4px 8px; cursor: pointer; white-space: nowrap; }
-  .mod button:hover, .addrepo button:hover, .untrack:hover, .seenbtn:hover { background: var(--raised); }
-  .mod button:disabled, .addrepo button:disabled, .untrack:disabled, .seenbtn:disabled { color: var(--dim); cursor: default; opacity: 0.55; }
-  .mod button:focus-visible, .addrepo button:focus-visible, .untrack:focus-visible, .seenbtn:focus-visible {
+  .mod button:hover, .addrepo button:hover, .untrack:hover, .seenbtn:hover, .fack:hover, .nclear:hover { background: var(--raised); }
+  .mod button:disabled, .addrepo button:disabled, .untrack:disabled, .seenbtn:disabled, .fack:disabled, .nclear:disabled { color: var(--dim); cursor: default; opacity: 0.55; }
+  .mod button:focus-visible, .addrepo button:focus-visible, .untrack:focus-visible, .seenbtn:focus-visible, .fack:focus-visible, .nclear:focus-visible {
     outline: 2px solid var(--text); outline-offset: 1px; }
   .sheet button:focus-visible, .sheet select:focus-visible, .sheet input:focus-visible, .layoutbtn:focus-visible {
     outline: 2px solid var(--text); outline-offset: 2px; }
@@ -412,10 +412,7 @@
   /* Seen: the same word, outlined instead of lit, so you know it's acknowledged but still true. */
   .st.CLAIMED.seen { background: transparent; color: var(--warn); border-color: color-mix(in srgb, var(--warn) 55%, transparent); font-weight: 400; }
   .st.CLOSED_FIXED.seen, .st.CLOSED_WONT.seen { background: transparent; color: var(--caution-text); border-color: color-mix(in srgb, var(--caution) 55%, transparent); font-weight: 400; }
-  .nclear { font: 12px/1 var(--sans); color: var(--text); background: transparent; border: 1px solid var(--rule-hi); border-radius: 4px;
-    padding: 3px 8px; cursor: pointer; }
-  .nclear:hover { background: var(--raised); }
-  .nclear:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+  .nclear { padding: 3px 8px; }
   .wdismiss { font: 13px/1 var(--sans); color: var(--dim); background: transparent; border: none; padding: 0 2px; cursor: pointer; }
   /* Hidden until the row is hovered or focused, only where a pointer can hover; touch keeps it shown. */
   @media (hover: hover) {
@@ -450,7 +447,7 @@
   .seclist { list-style: none; margin: 0; padding: 0; max-height: 380px; overflow-y: auto; }
   .secrow { display: flex; gap: 10px; align-items: start; padding: 8px 14px; border-bottom: 1px solid var(--rule); }
   .secrow:last-child { border-bottom: 0; }
-  .sevbadge { flex: none; font: 600 10px/1 var(--mono); letter-spacing: 0.04em; padding: 3px 6px; border-radius: 4px; text-transform: uppercase; white-space: nowrap; margin-top: 2px; }
+  .sevbadge { flex: none; font: 600 11px/1 var(--mono); letter-spacing: 0.04em; padding: 3px 6px; border-radius: 4px; text-transform: uppercase; white-space: nowrap; margin-top: 2px; }
   .sev-critical { color: #fff; background: #d1242f; }
   .sev-high { color: #fff; background: #cf6316; }
   .sev-medium { color: var(--text); background: color-mix(in srgb, var(--caution) 25%, transparent); border: 1px solid color-mix(in srgb, var(--caution) 50%, transparent); }
@@ -548,13 +545,9 @@
 </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="i-pr" viewBox="0 0 16 16"><circle cx="4" cy="3.5" r="1.75"/><circle cx="4" cy="12.5" r="1.75"/><circle cx="12" cy="12.5" r="1.75"/><path d="M4 5.25v5.5M12 10.75V6.5a2 2 0 0 0-2-2H7.5M9 3l-1.5 1.5L9 6"/></symbol>
-  <symbol id="i-issue" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="1.25"/></symbol>
-</svg>
 {{define "theme-head"}}<script>
   // Apply a saved theme before first paint; with none saved the page follows the system setting.
-  try { var t = localStorage.getItem("hellogitty-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+  try { var t = localStorage.getItem("hellogitty-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) document.documentElement.dataset.theme = "light"; } catch (e) {}
   // Apply a saved visual (collaboration) theme before first paint.
   try { var vt = localStorage.getItem("hellogitty-visual-theme"); if (vt) document.documentElement.dataset.visualTheme = vt; } catch (e) {}
   // One-key shortcuts (/, ?, c, e, 1-9) can be turned off in Settings; the handlers check this.
@@ -586,18 +579,6 @@
        The live feed fills its own small window. */
     --w-form: 720px; --w-list: 980px; --w-grid: 1200px; --w-read: 76ch;
   }
-  @media (prefers-color-scheme: light) {
-    :root:not([data-theme="dark"]) {
-      color-scheme: light;
-      --bg: #f3f3f1; --panel: #ffffff; --raised: #f1f1ee; --rule: #e2e2de; --rule-hi: #c9c9c4;
-      --text: #1c1c1d; --dim: #62625d; --track: #e3e3df;
-      --nom: #18803a; --caution: #d08a12; --caution-text: #8a5600; --warn: #c3271c;
-      --caution-fill: #fdf3d7; --caution-ink: #6a4500; --warn-fill: #fde8e6; --warn-ink: #8a1d13;
-      --tag-fill: #fbf0c4; --tag-ink: #6a5200; --tag-rule: #ecd88a;
-      --head: #f6f6f4; --head-dim: #62625d; --head-accent: #d08a12;
-      --mascot-bg: #ffffff;
-    }
-  }
   :root[data-theme="light"] {
     color-scheme: light;
     --bg: #f3f3f1; --panel: #ffffff; --raised: #f1f1ee; --rule: #e2e2de; --rule-hi: #c9c9c4;
@@ -625,18 +606,6 @@
   }
   /* Pink (pinky v2) — light variant.
      Same temperature gradient: dusty rose (ok) → vivid coral (caution) → deep magenta (danger). */
-  @media (prefers-color-scheme: light) {
-    :root[data-visual-theme="pink"]:not([data-theme="dark"]) {
-      --bg: #fff0f5; --panel: #ffffff; --raised: #ffe4ef; --rule: #f5c6d8; --rule-hi: #e8a0be;
-      --text: #3d0f24; --dim: #8c4468; --track: #f5d0e0;
-      --nom: #b85580; --caution: #d6336c; --caution-text: #b52850; --warn: #9b0e42;
-      --caution-fill: #ffe4ed; --caution-ink: #7a0038; --warn-fill: #fcd0de; --warn-ink: #6a0028;
-      --tag-fill: #ffe0ee; --tag-ink: #8c1050; --tag-rule: #f0a0c8;
-      --head: #fff5f9; --head-dim: #8c4468; --head-accent: #d6336c;
-      --mascot-bg: #ffffff;
-      color-scheme: light;
-    }
-  }
   :root[data-theme="light"][data-visual-theme="pink"] {
     --bg: #fff0f5; --panel: #ffffff; --raised: #ffe4ef; --rule: #f5c6d8; --rule-hi: #e8a0be;
     --text: #3d0f24; --dim: #8c4468; --track: #f5d0e0;
@@ -671,18 +640,19 @@
     // Theme: Auto follows the system; Light and Dark override it and are remembered.
     var root = document.documentElement, buttons = document.querySelectorAll("[data-theme-set]");
     function showTheme() {
-      var cur = root.dataset.theme || "auto";
+      var cur; try { cur = localStorage.getItem("hellogitty-theme"); } catch(x) {} cur = cur || "auto";
       buttons.forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.themeSet === cur ? "true" : "false"); });
     }
     buttons.forEach(function (b) {
       b.addEventListener("click", function () {
         var t = b.dataset.themeSet;
-        if (t === "auto") delete root.dataset.theme; else root.dataset.theme = t;
+        if (t === "auto") { if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) root.dataset.theme = "light"; else delete root.dataset.theme; } else root.dataset.theme = t;
         try { if (t === "auto") localStorage.removeItem("hellogitty-theme"); else localStorage.setItem("hellogitty-theme", t); } catch (e) {}
         showTheme();
       });
     });
     showTheme();
+    if (window.matchMedia) try { window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function(e) { var s; try { s = localStorage.getItem("hellogitty-theme"); } catch(x) {} if (!s) { if (e.matches) root.dataset.theme = "light"; else delete root.dataset.theme; } }); } catch(e) {}
 
     // Visual (collaboration) theme: a colour overlay on top of Auto/Light/Dark.
     var VISUAL_THEMES = { pink: { label: "(pinky v2)" } };
@@ -1032,8 +1002,7 @@
   .ftext { font-size: 13.5px; text-decoration: none; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
   .ftext:hover { text-decoration: underline; }
   .fmeta { display: flex; flex-wrap: wrap; gap: 0 8px; font-size: 12px; color: var(--dim); margin-top: 2px; }
-  .fack { font: 12px var(--sans); color: var(--text); background: transparent; border: 1px solid var(--rule-hi); border-radius: 4px; padding: 3px 8px; cursor: pointer; white-space: nowrap; }
-  .fack:hover { background: var(--raised); }
+  .fack { padding: 3px 8px; }
   .fr.acked .fack { color: var(--dim); border-color: transparent; cursor: default; }
   .fr.fresh { animation: fresh 2.4s ease-out; }
   @keyframes fresh { from { background: var(--raised); } to { background: transparent; } }
@@ -1227,7 +1196,7 @@
 </li>{{end}}
 <script type="application/json" id="glossary">{{.GlossaryJSON}}</script>
 {{define "head-extra"}}{{if .IsDashboard}}
-    <button type="button" class="headbtn" id="fold-all" title="Collapse all panels (c)"><svg viewBox="0 0 16 16"><path d="M2 4h12M2 8h12M2 12h12"/></svg>Collapse</button>
+    <button type="button" class="headbtn" id="fold-all" title="Collapse all panels (c)"><svg viewBox="0 0 16 16"><path d="M2 4h12M2 8h12M2 12h12"/></svg><span>Collapse</span></button>
     <button type="button" class="headbtn" id="layout-open" aria-haspopup="dialog"><svg viewBox="0 0 16 16"><rect x="1.5" y="1.5" width="13" height="13" rx="2"/><path d="M1.5 6h13M6 6v8.5"/></svg>Layout</button>
 {{end}}{{end}}
 {{template "site-header" .}}
@@ -2321,7 +2290,7 @@
       function updateFoldBtn() {
         if (!foldBtn) return;
         var ids = allPanelIds(), allFolded = ids.length > 0 && ids.every(function (id) { return has(state.folded, id); });
-        foldBtn.textContent = allFolded ? "Expand all" : "Collapse all";
+        var fl = foldBtn && foldBtn.querySelector("span"); if (fl) fl.textContent = allFolded ? "Expand all" : "Collapse all";
         foldBtn.title = allFolded ? "Expand all panels (e)" : "Collapse all panels (c)";
       }
       if (foldBtn) {
