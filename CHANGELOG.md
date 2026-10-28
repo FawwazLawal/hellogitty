@@ -5,6 +5,17 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (22) · Black Bombay (baby) · 2026-10-28
+
+Tag `v0.2.22`.
+
+- **CI badge**: build status badge added to README.
+- **Issue and PR templates**: bug report, feature request and pull request
+  templates for contributors.
+- **Security policy**: SECURITY.md with vulnerability reporting guidelines,
+  response timeline and security design overview.
+- **GitHub Releases**: release notes added for v0.2.15–21.
+
 ## v0.2.0 (21) · Black Bombay (baby) · 2026-10-28
 
 Tag `v0.2.21`.
