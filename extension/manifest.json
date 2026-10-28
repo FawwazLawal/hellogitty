@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "HelloGitty",
+  "version": "1.0.0",
+  "description": "Quick access to your HelloGitty dashboard",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "HelloGitty"
+  },
+  "permissions": [],
+  "host_permissions": [
+    "http://localhost:7340/*",
+    "http://127.0.0.1:7340/*"
+  ]
+}
