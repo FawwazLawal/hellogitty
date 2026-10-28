@@ -61,12 +61,15 @@
     background: var(--text); border-radius: 50%; transition: transform .2s; }
   .toggle input:checked + .slider { background: var(--head-accent); }
   .toggle input:checked + .slider::before { transform: translateX(18px); }
+  .toggle input:focus-visible + .slider { outline: 2px solid var(--text); outline-offset: 2px; }
+  .toggle-desc { font-size: 13px; color: var(--dim); }
+  .srow-hint { grid-column: 2; font-size: 12px; color: var(--dim); margin: 0; }
 
   .theme-pick { display: flex; gap: 4px; }
   .theme-pick button { font: 13px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
     border-radius: 8px; padding: 7px 16px; cursor: pointer; transition: all .15s; }
   .theme-pick button:hover { color: var(--text); background: var(--raised); }
-  .theme-pick button.active { color: var(--text); background: var(--raised); border-color: var(--head-accent); font-weight: 600; }
+  .theme-pick button.active, .theme-pick button[aria-pressed="true"] { color: var(--text); background: var(--raised); border-color: var(--head-accent); font-weight: 600; }
 
   .item-list { display: flex; flex-direction: column; gap: 2px; }
   .item-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
@@ -196,6 +199,7 @@
     .settings-nav a svg { width: 14px; height: 14px; }
     .settings-body { padding: 16px; }
     .srow { grid-template-columns: 1fr; }
+    .srow-hint { grid-column: 1; }
   }
 </style>
 </head>
@@ -247,29 +251,24 @@
       <p class="section-desc">Theme, layout and display preferences.</p>
       <div class="scard">
         <div class="srow">
-          <span class="slbl">Theme</span>
-          <div class="theme-pick" id="s-theme">
-            <button type="button" data-v="auto">Auto</button>
-            <button type="button" data-v="light">Light</button>
-            <button type="button" data-v="dark">Dark</button>
+          <span class="slbl" id="s-theme-lbl">Theme</span>
+          <div class="theme-pick" id="s-theme" role="group" aria-labelledby="s-theme-lbl">
+            <button type="button" data-theme-set="auto">Auto</button>
+            <button type="button" data-theme-set="light">Light</button>
+            <button type="button" data-theme-set="dark">Dark</button>
           </div>
         </div>
         <div class="srow">
-          <span class="slbl">Layout preset</span>
-          <select id="s-layout">
+          <label class="slbl" for="s-layout">Layout preset</label>
+          <select id="s-layout" autocomplete="off" aria-describedby="s-layout-hint">
             <option value="everything">Everything</option>
             <option value="contributor">Contributor</option>
             <option value="maintainer">Maintainer</option>
             <option value="program">Program</option>
             <option value="focus">Focus</option>
+            <option value="custom">Custom</option>
           </select>
-        </div>
-        <div class="srow">
-          <span class="slbl">Compact cells</span>
-          <div class="toggle-wrap">
-            <label class="toggle"><input type="checkbox" id="s-compact"><span class="slider"></span></label>
-            <span style="font-size:13px;color:var(--dim)">Shrink dashboard overview cells</span>
-          </div>
+          <p class="srow-hint" id="s-layout-hint">Move, hide and fold single panels with Layout on the dashboard.</p>
         </div>
       </div>
       <div class="scard">
@@ -294,17 +293,17 @@
           </div>
         </div>
         <div class="srow">
-          <span class="slbl">Show seconds</span>
+          <label class="slbl" for="s-clock-seconds">Show seconds</label>
           <div class="toggle-wrap">
-            <label class="toggle"><input type="checkbox" id="s-clock-seconds"><span class="slider"></span></label>
-            <span style="font-size:13px;color:var(--dim)">Display seconds in the clock</span>
+            <label class="toggle"><input type="checkbox" id="s-clock-seconds" aria-describedby="s-clock-seconds-desc"><span class="slider" aria-hidden="true"></span></label>
+            <span class="toggle-desc" id="s-clock-seconds-desc">Display seconds in the clock</span>
           </div>
         </div>
         <div class="srow">
-          <span class="slbl">Show date</span>
+          <label class="slbl" for="s-clock-date">Show date</label>
           <div class="toggle-wrap">
-            <label class="toggle"><input type="checkbox" id="s-clock-date"><span class="slider"></span></label>
-            <span style="font-size:13px;color:var(--dim)">Display the date below the time</span>
+            <label class="toggle"><input type="checkbox" id="s-clock-date" aria-describedby="s-clock-date-desc"><span class="slider" aria-hidden="true"></span></label>
+            <span class="toggle-desc" id="s-clock-date-desc">Display the date below the time</span>
           </div>
         </div>
       </div>
@@ -501,33 +500,44 @@
     } catch(e) {}
   }
 
-  // Theme picker
-  var themePick = document.getElementById("s-theme");
-  var current = localStorage.getItem("hg-theme") || "auto";
-  themePick.querySelectorAll("button").forEach(function(b) {
-    if (b.dataset.v === current) b.classList.add("active");
-    b.addEventListener("click", function() {
-      themePick.querySelectorAll("button").forEach(function(x) { x.classList.remove("active"); });
-      b.classList.add("active");
-      localStorage.setItem("hg-theme", b.dataset.v);
-      document.documentElement.dataset.theme = b.dataset.v === "auto" ? "" : b.dataset.v;
-      if (b.dataset.v === "auto") document.documentElement.removeAttribute("data-theme");
-    });
-  });
+  // The theme picker carries data-theme-set, so the shared theme script (below) drives it and the
+  // header switch together. Older builds kept these settings under keys nothing read.
+  try { ["hg-theme", "hg-layout", "hg-compact"].forEach(function(k) { localStorage.removeItem(k); }); } catch(e) {}
 
-  // Layout preset
+  // Layout preset: writes the dashboard's own layout state. PRESETS mirrors the table in the
+  // dashboard's layout script; the dashboard fills in any panel missing here.
+  var LAYOUT_KEY = "hellogitty-layout", LAYOUT_CUSTOM_KEY = "hellogitty-layout-custom";
+  var PRESETS = {
+    everything: { main: ["your-work", "conversations", "your-repos", "tracked"], rail: ["feed", "watched", "issues", "security", "pipeline", "checks"], hidden: [], folded: [] },
+    contributor: { main: ["your-work", "conversations", "tracked", "your-repos"], rail: ["feed", "watched", "issues", "security", "pipeline", "checks"], hidden: ["your-repos", "pipeline", "checks"], folded: ["tracked"] },
+    maintainer: { main: ["your-repos", "your-work", "conversations", "tracked"], rail: ["feed", "watched", "issues", "security", "pipeline", "checks"], hidden: [], folded: ["conversations"] },
+    program: { main: ["tracked", "your-work", "conversations", "your-repos"], rail: ["pipeline", "feed", "watched", "issues", "security", "checks"], hidden: ["your-repos"], folded: ["your-work", "conversations"] },
+    focus: { main: ["your-work", "conversations", "your-repos", "tracked"], rail: ["feed", "watched", "issues", "security", "pipeline", "checks"],
+      hidden: ["toolbar", "feed", "conversations", "your-repos", "tracked", "watched", "issues", "security", "pipeline", "checks", "work-them", "work-other", "work-done"], folded: [] }
+  };
+  var layoutDefault = {{if .LayoutDefault}}{{.LayoutDefault}}{{else}}null{{end}};
+  function readLayout(k) { try { var v = JSON.parse(localStorage.getItem(k) || "null"); return v && v.main ? v : null; } catch(e) { return null; } }
+  function layoutPreset() {
+    var st = readLayout(LAYOUT_KEY);
+    if (st) return PRESETS[st.preset] ? st.preset : "custom";
+    if (layoutDefault && layoutDefault.preset && PRESETS[layoutDefault.preset]) return layoutDefault.preset;
+    return layoutDefault && (layoutDefault.main || layoutDefault.rail) ? "custom" : "everything";
+  }
   var layoutSel = document.getElementById("s-layout");
-  var savedLayout = localStorage.getItem("hg-layout") || "everything";
-  layoutSel.value = savedLayout;
+  layoutSel.value = layoutPreset();
+  // Coming back from the dashboard (Back button, page cache), show what it saved meanwhile.
+  window.addEventListener("pageshow", function(e) { if (e.persisted) layoutSel.value = layoutPreset(); });
   layoutSel.addEventListener("change", function() {
-    localStorage.setItem("hg-layout", layoutSel.value);
-  });
-
-  // Compact cells toggle
-  var compactChk = document.getElementById("s-compact");
-  compactChk.checked = localStorage.getItem("hg-compact") === "1";
-  compactChk.addEventListener("change", function() {
-    localStorage.setItem("hg-compact", compactChk.checked ? "1" : "0");
+    var v = layoutSel.value, p = PRESETS[v], st;
+    if (p) {
+      st = { preset: v, main: p.main.slice(), rail: p.rail.slice(), hidden: p.hidden.slice(), folded: p.folded.slice(), sizes: {} };
+    } else {
+      // Custom is the layout last changed by hand; with none saved yet, keep the current one.
+      st = readLayout(LAYOUT_CUSTOM_KEY) || readLayout(LAYOUT_KEY);
+      if (!st) { p = PRESETS[layoutPreset()] || layoutDefault || PRESETS.everything; st = { main: (p.main || []).slice(), rail: (p.rail || []).slice(), hidden: (p.hidden || []).slice(), folded: (p.folded || []).slice(), sizes: {} }; }
+      st.preset = "custom";
+    }
+    try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(st)); } catch(e) {}
   });
 
   // Visual theme gallery
@@ -810,6 +820,11 @@
       });
     });
   });
+})();
+</script>
+<script>
+(function () {
+  {{template "theme-js"}}
 })();
 </script>
 </body>
