@@ -5,6 +5,17 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (15) · Black Bombay (baby) · 2026-10-28
+
+Tag `v0.2.15`.
+
+- **Pink collaboration theme (pinky v1)**: Settings panel gains a Visual Theme
+  gallery under Appearance. Selecting "Pinky v1" applies a pink colour overlay
+  that works in both light and dark modes and swaps the codename marker from
+  "(baby)" to "(pinky v1)". Limited-run easter egg, available for ~5-10 cycles.
+- **OSS Monitor desktop app rebuilt**: the .app now points at hellogitty-clone's
+  start.sh directly, so double-clicking always serves the latest dev build.
+
 ## v0.2.0 (14) · Black Bombay (baby) · 2026-10-28
 
 Tag `v0.2.14`.
