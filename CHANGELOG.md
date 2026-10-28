@@ -5,6 +5,21 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (19) · Black Bombay (baby) · 2026-10-28
+
+Tag `v0.2.19`.
+
+- **CSS consolidation**: colour custom-property definitions deduplicated from four
+  blocks to one per theme context; duplicate CSS rules and IDs removed.
+- **Collapse button fix**: icon state preserved correctly on toggle.
+- **Settings cleanup**: inline styles moved to CSS classes; wording aligned with
+  dashboard terminology.
+- **Type size floor**: minimum font-size raised to 11px across the board.
+- **Button CSS**: remaining near-duplicate button styles merged into the shared
+  bordered-button rule.
+- **Clock-add select toggle**: fixed JS bug where style.display conflicted with the
+  hidden attribute.
+
 ## v0.2.0 (18) · Black Bombay (baby) · 2026-10-28
 
 Tag `v0.2.18`.
