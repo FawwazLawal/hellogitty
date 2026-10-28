@@ -544,7 +544,7 @@
 </svg>
 {{define "theme-head"}}<script>
   // Apply a saved theme before first paint; with none saved the page follows the system setting.
-  try { var t = localStorage.getItem("hellogitty-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+  try { var t = localStorage.getItem("hellogitty-theme"); if (t === "light" || t === "dark" || t === "pink") document.documentElement.dataset.theme = t; } catch (e) {}
 </script>{{end}}
 {{define "base-css"}}
   :root {
@@ -572,7 +572,7 @@
     --w-form: 720px; --w-list: 980px; --w-grid: 1200px; --w-read: 76ch;
   }
   @media (prefers-color-scheme: light) {
-    :root:not([data-theme="dark"]) {
+    :root:not([data-theme="dark"]):not([data-theme="pink"]) {
       color-scheme: light;
       --bg: #f3f3f1; --panel: #ffffff; --raised: #f1f1ee; --rule: #e2e2de; --rule-hi: #c9c9c4;
       --text: #1c1c1d; --dim: #62625d; --track: #e3e3df;
@@ -592,6 +592,16 @@
     --tag-fill: #fbf0c4; --tag-ink: #6a5200; --tag-rule: #ecd88a;
     --head: #f6f6f4; --head-dim: #62625d; --head-accent: #d08a12;
     --mascot-bg: #ffffff;
+  }
+  :root[data-theme="pink"] {
+    color-scheme: dark;
+    --bg: #1a0a12; --panel: #21101a; --raised: #2d1624; --rule: #3d2233; --rule-hi: #55304a;
+    --text: #f5e0ec; --dim: #b88aa4; --track: #3a2030;
+    --nom: #ff69b4; --caution: #ff85c8; --caution-text: #ff85c8; --warn: #ff5277;
+    --caution-fill: #ff69b4; --caution-ink: #1a0610; --warn-fill: #cc2255; --warn-ink: #ffffff;
+    --tag-fill: #3d1530; --tag-ink: #ffb3d9; --tag-rule: #66254d;
+    --head: #261220; --head-dim: #b88aa4; --head-accent: #ff69b4;
+    --mascot-bg: #21101a;
   }
   * { box-sizing: border-box; }
   html { background: var(--bg); scrollbar-color: var(--rule-hi) var(--bg); }
@@ -795,7 +805,7 @@
     {{block "head-extra" .}}{{end}}
     <a class="headbtn" href="/help" title="Help (press ?)"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M6 6a2 2 0 1 1 2.5 1.94V9.5"/><circle cx="8" cy="11.5" r=".5" fill="currentColor" stroke="none"/></svg>Help</a>
     <a class="headbtn" href="/settings" title="Settings"><svg viewBox="0 0 16 16"><path d="M6.5 1.5h3l.4 2 1.4.8 1.9-.8 1.5 2.6-1.5 1.3v1.6l1.5 1.3-1.5 2.6-1.9-.8-1.4.8-.4 2h-3l-.4-2-1.4-.8-1.9.8L1.3 10.3l1.5-1.3V7.4L1.3 6.1l1.5-2.6 1.9.8 1.4-.8z"/><circle cx="8" cy="8.2" r="2"/></svg></a>
-    <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button></div>
+    <div class="theme" role="group" aria-label="Colour theme"><button type="button" data-theme-set="auto">Auto</button><button type="button" data-theme-set="light">Light</button><button type="button" data-theme-set="dark">Dark</button><button type="button" data-theme-set="pink">Pink</button></div>
   </div>
   {{if .Mascot}}<div class="mascot" aria-hidden="true" data-routine="{{range $i, $c := .Mascot.Routine}}{{if $i}} {{end}}{{$c}}{{end}}" data-news="{{range $i, $c := .Mascot.News}}{{if $i}} {{end}}{{$c}}{{end}}"><video muted playsinline preload="none" poster="{{.Mascot.Rest}}" tabindex="-1"></video></div>{{end}}
 </header>
