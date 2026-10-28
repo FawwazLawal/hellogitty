@@ -1,5 +1,7 @@
 # HelloGitty
 
+[![CI](https://github.com/FawwazLawal/hellogitty/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/FawwazLawal/hellogitty/actions/workflows/ci.yml?query=branch%3Adev)
+
 A local dashboard for your open source work. On one screen you can leave open all day it shows
 every pull request and issue you have out on GitHub, sorted by whose move it is, with the latest
 comment from the other side; what is waiting on you in repositories you maintain; and, for the
