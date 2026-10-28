@@ -86,7 +86,7 @@
 <body>
 {{template "site-header" .}}
 <div class="hsearch">
-  <label><span class="sr">Search help</span><input type="search" id="h-q" placeholder="Ask or search, e.g. how to add a repo" autocomplete="off" spellcheck="false"><kbd>/</kbd></label>
+  <label><span class="sr">Search help</span><input type="search" id="h-q" placeholder="Ask or search, e.g. how to add a repo" autocomplete="off" spellcheck="false"><kbd data-shortcut>/</kbd></label>
 </div>
 <div class="hgrid">
   <nav class="toc" aria-labelledby="toc-h">
@@ -275,6 +275,7 @@
     });
     document.addEventListener("keydown", function (e) {
       var t = (e.target && e.target.tagName) || "";
+      if (document.documentElement.dataset.shortcuts === "off") return;
       if (e.key === "/" && t !== "INPUT" && t !== "TEXTAREA" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); q.focus(); q.select(); }
     });
 

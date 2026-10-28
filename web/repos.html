@@ -54,7 +54,7 @@
 <main class="rwrap">
   <p class="sub">All repositories HelloGitty tracks, with health, issue counts and pipeline stage.</p>
   <div class="rtools">
-    <input type="search" id="rq" placeholder="Search repositories…" autocomplete="off">
+    <input type="search" id="rq" aria-label="Search tracked repositories" placeholder="Search repositories…" autocomplete="off">
     <select id="rf-health" aria-label="Filter by health"><option value="">All health</option><option value="ACTIVE">Active</option><option value="SLOW">Slowing</option><option value="DORMANT">Dormant</option><option value="UNKNOWN">Not checked</option></select>
     <select id="rf-sort" aria-label="Sort by"><option value="name">Name</option><option value="open">Most open issues</option><option value="gfi">Most good first issues</option><option value="commit">Most recent commit</option></select>
     <span class="count" id="rcount"></span>

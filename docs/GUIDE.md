@@ -518,8 +518,12 @@ lights.
 | **/** | Jump to the search box. |
 | **Esc** | In the search box: clear it. Anywhere else: close a hover card, or the Layout sheet. |
 | **?** | Open Help. |
+| **c** / **e** | On the dashboard: fold (collapse) or unfold (expand) every panel. |
+| **1**–**9** | On the dashboard: fold or unfold that panel, counting from the top. |
 | **Tab** | Move through rows, underlined words, chips and controls. A word with a dotted underline explains itself when it gets focus. |
 | **Enter** or **Space** | Open a row's title, press a button, open or close a tracked repository's details. |
+
+One-key shortcuts never fire while you type in a field. To turn them off (**/**, **?**, **c**, **e** and **1**–**9**), switch off **Keyboard shortcuts** in Settings, under Appearance.
 
 ---
 
