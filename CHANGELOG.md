@@ -5,6 +5,13 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (21) · Black Bombay (baby) · 2026-10-28
+
+Tag `v0.2.21`.
+
+- **Contributing guide**: CONTRIBUTING.md with setup instructions, development
+  workflow, code style and submission guidelines.
+
 ## v0.2.0 (20) · Black Bombay (baby) · 2026-10-28
 
 Tag `v0.2.20`.
