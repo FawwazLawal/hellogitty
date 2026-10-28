@@ -5,6 +5,20 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (17) · Black Bombay (baby) · 2026-10-28
+
+Tag `v0.2.17`.
+
+- **Pink theme status palette (pinky v2)**: status colours are now a distinct
+  pink-family temperature gradient — blush rose (ok), warm coral (caution),
+  deep magenta (danger) — readable at a glance in both pink-light and pink-dark.
+- **Settings panel fixes**: theme picker now persists correctly, Auto/Light/Dark
+  switch works on the Settings page, dead Layout preset and Compact cells
+  controls removed, all toggles have screen reader labels.
+- **Header/layout/keyboard**: Collapse and Layout buttons hidden on subpages
+  where they don't apply, phone-width horizontal scroll fixed, Enter/Space on
+  alert cells and arrow keys on repo tabs, empty alert cell contrast raised.
+
 ## v0.2.0 (16) · Black Bombay (baby) · 2026-10-28
 
 Tag `v0.2.16`.
