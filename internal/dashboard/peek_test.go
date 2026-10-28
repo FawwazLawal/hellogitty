@@ -75,7 +75,7 @@ func TestPageCarriesTheGlossaryAndPeeks(t *testing.T) {
 		`<script type="application/json" id="glossary">{`, `"p:PASS":{"label":"PASS","means":"Gate passed: safe to contribute."}`,
 		`<span class="gate ok" data-term="p:PASS">PASS</span>`, `data-term="p:GAT" tabindex="0" data-extra="gate">GAT</span>`,
 		`<template class="peek"><div class="pk"><b class="pk-h">Pull request · open</b>`, `<dt>Branch</dt><dd>fix/it → main</dd>`,
-		`<b class="pk-h">acme/rocket</b>`, `data-term="col-denied" tabindex="0">Turned down</span>`, `data-term="cell-your-move"`,
+		`<b class="pk-h">acme/rocket</b>`, `data-rsort="denied" role="button" tabindex="0" data-term="col-denied">Turned down</span>`, `data-term="cell-your-move"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("missing %s", want)

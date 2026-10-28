@@ -388,7 +388,8 @@ func TestToolbarAndFilterHooks(t *testing.T) {
 	h.Now = func() time.Time { return now }
 	_, html := get(t, h, "/")
 	for _, want := range []string{
-		`id="f-q"`, `data-f-kind="pr"`, `id="f-scope"`, `id="f-mine"`, `data-group="owner"`, `id="f-sort"`, // the controls
+		`id="f-q"`, `data-f-kind="pr"`, `id="f-scope"`, `id="f-mine"`, `data-group="owner"`, // the controls
+		`data-wsort="updated"`, `data-rsort="denied"`, // sorting is by column header; there is no Sort dropdown
 		`data-kind="pr" data-repo="acme/rocket" data-name="Acme/Rocket" data-move="you" data-personal`, // a work row's hooks
 		`data-s="fix launch acme/rocket #7 pr changes requested by @lead`,                              // its search text, lowercase
 		`needs-triage`,
