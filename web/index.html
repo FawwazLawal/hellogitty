@@ -179,12 +179,7 @@
   .wpill.you { background: color-mix(in srgb, var(--caution) 20%, transparent); color: var(--caution-text); }
   .wpill.them { background: var(--raised); color: var(--dim); }
   .wpill.done { background: color-mix(in srgb, var(--nom) 15%, transparent); color: var(--nom); }
-  .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; border: 1.5px solid var(--dim); }
-  .dot.caution { background: var(--caution); border-color: var(--caution); }
-  .dot.ok { background: var(--nom); border-color: var(--nom); }
-  /* The dot is attention: green = something new you haven't read, amber = read and your move,
-     hollow = read and nothing asked. GitHub's read state drives it; see /attention.json. */
-  .dot.new { background: var(--nom); border-color: var(--nom); }
+  .wi.attn > div > .title { font-weight: 700; }
   .newchip { font-size: 12px; line-height: 16px; font-weight: 650; color: var(--nom); border: 1px solid var(--nom); border-radius: 4px;
     padding: 1px 7px; white-space: nowrap; align-self: center; }
   .newcount { color: var(--nom); font-weight: 650; }
@@ -1692,9 +1687,9 @@
         var fresh = 0;
         rows.forEach(function (li) {
           var t = Number(li.dataset.new || 0), isNew = t > 0 && t > (seen[li.dataset.k] || 0);
-          var dot = li.querySelector(".dot"), chip = li.querySelector(".newchip");
-          dot.classList.toggle("new", isNew);
-          dot.classList.toggle("caution", !isNew && li.dataset.move === "you");
+          var chip = li.querySelector(".newchip");
+          // New activity reads as a bold title; the status pill already carries whose move it is.
+          li.classList.toggle("attn", isNew);
           if (chip) chip.hidden = !isNew;
           if (isNew) fresh++;
         });
