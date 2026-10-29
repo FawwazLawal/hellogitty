@@ -38,7 +38,8 @@ func Excerpt(body string, max int) string {
 	return strings.TrimRight(cut, " ,.;:") + "…"
 }
 
-// Ago says how long ago t was in words a person reads at a glance: "3 days ago".
+// Ago returns a human-readable timestamp for t relative to now: exact times for anything older
+// than an hour, relative words for the last few minutes.
 func Ago(now, t time.Time) string {
 	if t.IsZero() {
 		return "—"
@@ -49,16 +50,25 @@ func Ago(now, t time.Time) string {
 		return "just now"
 	case d < time.Hour:
 		return Plural(int(d/time.Minute), "min") + " ago"
-	case d < 24*time.Hour:
-		return Plural(int(d/time.Hour), "hour") + " ago"
-	case d < 14*24*time.Hour:
-		return Plural(int(d/(24*time.Hour)), "day") + " ago"
-	case d < 60*24*time.Hour:
-		return Plural(int(d/(7*24*time.Hour)), "week") + " ago"
-	case d < 365*24*time.Hour:
-		return Plural(int(d/(30*24*time.Hour)), "month") + " ago"
 	}
-	return Plural(int(d/(365*24*time.Hour)), "year") + " ago"
+	nowY, nowM, nowD := now.Date()
+	tY, tM, tD := t.Date()
+	hm := fmt.Sprintf("%02d:%02d", t.Hour(), t.Minute())
+	if nowY == tY && nowM == tM && nowD == tD {
+		return hm
+	}
+	yesterday := now.AddDate(0, 0, -1)
+	yY, yM, yD := yesterday.Date()
+	if tY == yY && tM == yM && tD == yD {
+		return "Yesterday " + hm
+	}
+	if d < 7*24*time.Hour {
+		return t.Weekday().String()[:3] + " " + hm
+	}
+	if nowY == tY {
+		return t.Format("Jan 2") + " " + hm
+	}
+	return t.Format("2006-01-02")
 }
 
 // Plural writes a count with its unit: "1 day", "3 days", "5 min".
