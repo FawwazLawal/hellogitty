@@ -232,7 +232,11 @@ Redundant or noise. These indicators currently exist and will be deleted.
 
 ### D4: Fix scroll hijacking
 
-- Remove `overflow: auto` from `.panel.sized` on the main dashboard. Panels expand to natural height; the page is the scroll container. (Principle P5.)
+- Remove the `max-height` + `overflow-y: auto` pairs that panels carry by default — `.seclist` (380px) and `.feed` (460px). These are the actual source of the hijack: the reader never asked for them, so a scroll gesture over such a panel is captured instead of moving the page. Panels expand to natural height; the page is the scroll container. (Principle P5.)
+- **Leave `.panel.sized` alone.** A panel only gets that class once the reader drags its resize handle, which pins an explicit height on it. That height is a deliberate choice, so the panel keeps `overflow: auto` and its sticky heading and toolbar, and scrolls inside the box the reader gave it. Scrolling a container the reader sized themselves is not hijacking.
+
+  > An earlier revision of this decision said to strip `overflow: auto` from `.panel.sized` too, conflating "scrolls by default" with "scrolls because the reader asked". Shipping that left resized panels with a fixed height and no scroll container, so any content past the drag height became unreachable. Corrected in PR #142.
+
 - On the dashboard, panels that would render very long (e.g., 50+ tracked repos) get a "Show all" toggle at 10 items, not overflow scroll.
 - Add `scroll-padding-top: 60px` to `<html>` to account for the sticky header.
 - Add `scroll-margin-block: 12px` to `.panel` elements for anchor-scroll breathing room.
