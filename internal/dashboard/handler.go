@@ -374,6 +374,34 @@ type prRow struct {
 	Number                  int
 	Opened                  string
 	NotesURL                string
+
+	// What the work board knows about an open pull request; empty when it is closed or the board
+	// does not have it.
+	ReviewDecision    string // APPROVED, CHANGES_REQUESTED, REVIEW_REQUIRED or ""
+	Checks            string // SUCCESS, FAILURE, ERROR, PENDING, EXPECTED or ""
+	Conflict, Draft   bool
+	UnresolvedThreads int  // unresolved review threads you have not answered yet
+	Requested         bool // a reviewer is still asked to review
+}
+
+// ChecksFailing reports a failed or errored check run.
+func (r prRow) ChecksFailing() bool { return r.Checks == "FAILURE" || r.Checks == "ERROR" }
+
+// Pending reports a pull request waiting on you: review threads to answer, changes to make or
+// checks to fix. A requested review waits on the reviewer, so it does not count.
+func (r prRow) Pending() bool {
+	return r.UnresolvedThreads > 0 || r.ReviewDecision == "CHANGES_REQUESTED" || r.ChecksFailing()
+}
+
+// withActions fills in what the board knows about an open pull request.
+func (r *prRow) withActions(it work.Item) {
+	r.ReviewDecision, r.Checks, r.Conflict, r.Draft = it.ReviewDecision, it.Checks, it.Conflict, it.Draft
+	r.Requested = len(it.Requested) > 0
+	for _, t := range it.Threads {
+		if !t.RepliedLast {
+			r.UnresolvedThreads++
+		}
+	}
 }
 
 type pipelineView struct {
@@ -385,6 +413,50 @@ type pipelineView struct {
 	ErrF                         FriendlyErr
 	PRs                          []prRow
 	All                          []prRow // every one, for the list page; PRs is the panel's first ten
+
+	// Open pull requests in each state that asks for action.
+	ReviewRequested, ChangesRequested, ChecksFailing, Approved, Conflicts, Drafts, Pending int
+
+	Repos []string // the repositories in All, sorted, for the page's filter
+}
+
+// countActions adds an open pull request to the action counts.
+func (pl *pipelineView) countActions(r prRow) {
+	if r.Requested {
+		pl.ReviewRequested++
+	}
+	switch r.ReviewDecision {
+	case "CHANGES_REQUESTED":
+		pl.ChangesRequested++
+	case "APPROVED":
+		pl.Approved++
+	}
+	if r.ChecksFailing() {
+		pl.ChecksFailing++
+	}
+	if r.Conflict {
+		pl.Conflicts++
+	}
+	if r.Draft {
+		pl.Drafts++
+	}
+	if r.Pending() {
+		pl.Pending++
+	}
+}
+
+// boardPRs indexes your pull requests on the work board by "owner/name#123", lowercased.
+func boardPRs(b *work.Board) map[string]work.Item {
+	out := map[string]work.Item{}
+	if b == nil {
+		return out
+	}
+	for _, it := range b.Sent {
+		if it.PR && it.Role == work.RoleAuthor {
+			out[strings.ToLower(it.Repo)+"#"+strconv.Itoa(it.Number)] = it
+		}
+	}
+	return out
 }
 
 // eye draws the watch toggle for an issue keyed "owner/name#123": an outlined eye, filled in when
@@ -741,6 +813,7 @@ func (h *Handler) build() (*page, error) {
 
 	prsByRepo := map[string][]prRow{}
 	pl := pipelineView{Known: tel.PRsKnown, Err: tel.PRError, ErrF: friendlyError(tel.PRError)}
+	onBoard, seenRepo := boardPRs(board), map[string]bool{}
 	for _, pr := range withBoardPRs(tel.OurPRs, board, reports) {
 		row := prRow{
 			Repo: pr.Owner + "/" + pr.Name, Title: pr.Title, URL: pr.URL, Number: pr.Number,
@@ -750,6 +823,14 @@ func (h *Handler) build() (*page, error) {
 			row.Opened = pr.CreatedAt.UTC().Format("2006-01-02")
 		}
 		key := strings.ToLower(row.Repo)
+		if it, ok := onBoard[key+"#"+strconv.Itoa(row.Number)]; ok && row.State == "Open" {
+			row.withActions(it)
+			pl.countActions(row)
+		}
+		if !seenRepo[key] {
+			seenRepo[key] = true
+			pl.Repos = append(pl.Repos, row.Repo)
+		}
 		prsByRepo[key] = append(prsByRepo[key], row)
 		pl.PRs = append(pl.PRs, row)
 		pl.Opened++
@@ -765,6 +846,7 @@ func (h *Handler) build() (*page, error) {
 	if decided := pl.Merged + pl.Closed; decided > 0 {
 		pl.Rate = fmt.Sprintf("%d%%", pl.Merged*100/decided)
 	}
+	sort.Slice(pl.Repos, func(i, j int) bool { return strings.ToLower(pl.Repos[i]) < strings.ToLower(pl.Repos[j]) })
 	pl.All = pl.PRs
 	if len(pl.PRs) > 10 {
 		pl.PRs = pl.PRs[:10]
