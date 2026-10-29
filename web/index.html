@@ -29,9 +29,12 @@
   .pfold[aria-expanded="false"] svg { transform: rotate(180deg); }
   .pgrip:hover, .pfold:hover { color: var(--text); background: color-mix(in srgb, var(--panel) 70%, transparent); border-color: var(--rule-hi); }
   .pgrip:focus-visible, .pfold:focus-visible, .presize:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
-  .panel.sized { overflow: visible; display: flex; flex-direction: column; }
-  .panel.sized > h2 { z-index: 3; }
-  .panel.sized > .tbar, .panel.sized > .thead { z-index: 2; background: var(--panel); }
+  /* A panel only gets .sized once the reader drags its resize handle, which pins an explicit
+     height on it. That height is theirs to keep, so the panel scrolls inside it and the heading
+     stays in view; the page keeps the scroll everywhere else. */
+  .panel.sized { overflow: auto; display: flex; flex-direction: column; }
+  .panel.sized > h2 { position: sticky; top: 0; z-index: 3; }
+  .panel.sized > .tbar, .panel.sized > .thead { position: sticky; z-index: 2; background: var(--panel); }
   .presize { position: sticky; bottom: 0; z-index: 3; height: 10px; margin-top: auto; cursor: ns-resize; touch-action: none; flex-shrink: 0; }
   .presize::after { content: ""; position: absolute; left: 50%; bottom: 3px; width: 36px; height: 3px; margin-left: -18px; border-radius: 2px;
     background: var(--rule-hi); opacity: 0; transition: opacity .12s ease-out; }
