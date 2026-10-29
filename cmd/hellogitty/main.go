@@ -31,6 +31,7 @@ import (
 	"github.com/FawwazLawal/hellogitty/internal/security"
 	"github.com/FawwazLawal/hellogitty/internal/poller"
 	"github.com/FawwazLawal/hellogitty/internal/snapshot"
+	"github.com/FawwazLawal/hellogitty/internal/unreplied"
 	"github.com/FawwazLawal/hellogitty/internal/store"
 	"github.com/FawwazLawal/hellogitty/internal/work"
 	"github.com/FawwazLawal/hellogitty/web"
@@ -195,6 +196,7 @@ func run() int {
 	src := source{st: st, p: pl, gh: gh, pipe: pipe, board: board, feed: feed, ov: ov, sec: secCache,
 		repoManager: repoManager{cfg: cfg, st: st, gh: gh, p: pl}}
 	writeInbox := inboxWriter(cfg.Path(cfg.Inbox), src)
+	writeUnreplied := unrepliedWriter(cfg.Path(cfg.Unreplied), board)
 	snapPath := cfg.Path(cfg.Snapshot)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -218,14 +220,13 @@ func run() int {
 
 	if *once {
 		failed := cycle()
-		if cfg.Inbox != "" {
-			if err := board.Refresh(ctx); err != nil {
-				log.Printf("work board: %v", err)
-				failed++
-			}
-			checkOverlap(ctx)
-			writeInbox()
+		if err := board.Refresh(ctx); err != nil {
+			log.Printf("work board: %v", err)
+			failed++
 		}
+		checkOverlap(ctx)
+		writeInbox()
+		writeUnreplied()
 		if failed > 0 {
 			return 1
 		}
@@ -327,6 +328,7 @@ func run() int {
 				checkOverlap(ctx)
 			}
 			writeInbox()
+			writeUnreplied()
 			select {
 			case <-ctx.Done():
 				return
@@ -341,6 +343,7 @@ func run() int {
 		for {
 			cycle()
 			writeInbox()
+			writeUnreplied()
 			select {
 			case <-ctx.Done():
 				return
@@ -418,6 +421,25 @@ func inboxWriter(path string, src source) func() {
 	}
 }
 
+func unrepliedWriter(path string, board *work.Tracker) func() {
+	var mu sync.Mutex
+	return func() {
+		mu.Lock()
+		defer mu.Unlock()
+		b, _ := board.Snapshot()
+		f := unreplied.Build(b)
+		if err := unreplied.Write(path, f); err != nil {
+			log.Printf("unreplied: %v", err)
+			return
+		}
+		var total int
+		for _, pr := range f.OurOpenPRs {
+			total += len(pr.UnrepliedThreads)
+		}
+		log.Printf("unreplied: %d PRs, %d threads written to %s", len(f.OurOpenPRs), total, path)
+	}
+}
+
 // aboutInstall lists the files and settings in use, for Help → About this install.
 func aboutInstall(cfg *config.Config) []dashboard.AboutItem {
 	optional := func(path string) string {
@@ -442,6 +464,7 @@ func aboutInstall(cfg *config.Config) []dashboard.AboutItem {
 		{Key: "Database", Value: cfg.Path(cfg.Database)},
 		{Key: "Snapshot file", Value: cfg.Path(cfg.Snapshot)},
 		{Key: "Inbox file", Value: optional(cfg.Inbox)},
+		{Key: "Unreplied file", Value: cfg.Path(cfg.Unreplied)},
 		{Key: "Pipeline command", Value: pipe},
 	}
 }

@@ -17,7 +17,8 @@ const (
 	DefaultListen   = "localhost:7340"
 	DefaultInterval = 60 * time.Minute
 	DefaultDatabase = "hellogitty.db"
-	DefaultSnapshot = "snapshot.json"
+	DefaultSnapshot  = "snapshot.json"
+	DefaultUnreplied = "unreplied.json"
 )
 
 // Config is the parsed settings file. Relative paths resolve against the file's own folder.
@@ -39,6 +40,9 @@ type Config struct {
 	// Inbox optionally names a JSON file rewritten after every refresh with recent events on your
 	// own pull requests and watched issues, for scripts to pick up.
 	Inbox string `json:"inbox"`
+	// Unreplied names the JSON file of unreplied review threads on your open PRs, rewritten after
+	// every work board refresh so scripts can read it without calling the API per PR.
+	Unreplied string `json:"unreplied"`
 	// Layout sets the starting layout for browsers that have not saved one yet.
 	Layout *LayoutConfig `json:"layout,omitempty"`
 
@@ -101,6 +105,9 @@ func (c *Config) finish() error {
 	}
 	if c.Snapshot == "" {
 		c.Snapshot = DefaultSnapshot
+	}
+	if c.Unreplied == "" {
+		c.Unreplied = DefaultUnreplied
 	}
 	c.PollInterval = DefaultInterval
 	if c.Interval != "" {
