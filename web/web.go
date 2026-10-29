@@ -73,5 +73,8 @@ var AlertRepoHealth string
 // Mascot holds the banner clips (kitten-routine-*.mp4, kitten-news-*.mp4) and the rest still
 // (rest.png) under mascot/.
 //
+//go:embed favicon.svg
+var Favicon []byte
+
 //go:embed mascot
 var Mascot embed.FS

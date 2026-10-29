@@ -499,7 +499,7 @@
 </style>
 </head>
 <body>
-{{define "theme-head"}}<script>
+{{define "theme-head"}}<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script>
   // Apply a saved theme before first paint; with none saved the page follows the system setting.
   try { var t = localStorage.getItem("hellogitty-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) document.documentElement.dataset.theme = "light"; } catch (e) {}
   // Apply a saved visual (collaboration) theme before first paint.

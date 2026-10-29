@@ -256,6 +256,7 @@ func run() int {
 			PollInterval: cfg.PollInterval,
 			Version:      versionLabel,
 			Baby:         versionBaby,
+			Favicon:      web.Favicon,
 			Mascot:       mascotFS,
 			HelpTemplate: web.Help,
 			FeedTemplate: web.Feed,
