@@ -5,6 +5,17 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (24) · Black Bombay (baby) · 2026-10-28
+
+Tag `v0.2.24`.
+
+- **Unreplied thread tracker**: new `internal/unreplied` package writes
+  `unreplied.json` after every board refresh, listing each open PR's review
+  threads where the configured user has not replied. Configurable output path.
+- **Dashboard toolbar removed**: the search bar, All/PRs/Issues filter,
+  Needs-me checkbox, and Group-by controls are removed from the dashboard —
+  dedicated Issues and PR Pipeline pages cover that functionality.
+
 ## v0.2.0 (23) · Black Bombay (baby) · 2026-10-28
 
 Tag `v0.2.23`.
