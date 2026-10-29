@@ -5,6 +5,16 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (26) · Black Bombay (baby) · 2026-10-29
+
+Tag `v0.2.26`.
+
+- **Inbox enrichment**: fixed bogus `0001-01-01` timestamps by making
+  `comment.CreatedAt` a `*time.Time` with zero-time fallbacks. Added
+  `schema_version`, `first_seen_at` and `age_hours` staleness indicators.
+  Entries now carry full `body`, `review_state`, `path` and
+  `author_association` fields.
+
 ## v0.2.0 (25) · Black Bombay (baby) · 2026-10-29
 
 Tag `v0.2.25`.
