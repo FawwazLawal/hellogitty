@@ -14,22 +14,22 @@
   .overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 0 0 24px; }
   .ocard { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; text-align: center; transition: border-color .12s; text-decoration: none; color: inherit; }
   .ocard:hover { border-color: var(--head-accent); background: var(--raised); }
-  .sort-btn { font: 12px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi); border-radius: 6px;
-    padding: 6px 10px; cursor: pointer; margin-left: auto; white-space: nowrap; }
-  .sort-btn:hover { color: var(--text); background: var(--raised); }
-  .sort-btn::after { content: " ↓"; }
   .ocard .ov { font: 700 28px var(--mono); font-variant-numeric: tabular-nums; display: block; }
   .ocard .ol { font-size: 12px; color: var(--dim); margin-top: 2px; }
   .ocard .ov.zero { color: var(--dim); }
-  .section { margin: 0 0 28px; }
-  .section h2 { margin: 0 0 10px; font-size: 14px; font-weight: 650; letter-spacing: 0.02em; border-left: 3px solid var(--head-accent); padding-left: 10px; }
-  .yfilter { display: flex; gap: 6px; margin: 0 0 14px; }
+  .yfilter { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
   .yfilter button { font: 13px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
   .yfilter button:hover { color: var(--text); background: var(--raised); }
   .yfilter button[aria-pressed="true"] { color: var(--text); background: var(--raised); font-weight: 600; border-color: var(--head-accent); }
   .yfilter .search { flex: 1; min-width: 160px; max-width: 300px; padding: 6px 10px; border: 1px solid var(--rule-hi); border-radius: 6px;
     font: 13px var(--sans); background: var(--panel); color: var(--text); }
   .yfilter .search::placeholder { color: var(--dim); }
+  .ycolhdr { display: flex; gap: 6px; margin: 0 0 8px; justify-content: flex-end; }
+  .ycolhdr button { font: 12px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi); border-radius: 6px;
+    padding: 5px 10px; cursor: pointer; white-space: nowrap; }
+  .ycolhdr button:hover { color: var(--text); background: var(--raised); }
+  .ycolhdr button.active { color: var(--text); font-weight: 600; border-color: var(--head-accent); }
+  .ycolhdr button .arrow { display: inline-block; margin-left: 3px; }
   .ytable { width: 100%; table-layout: fixed; border-collapse: collapse; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
   .ytable th, .ytable td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
   .ytable th { font-size: 12px; font-weight: 600; color: var(--dim); background: var(--head); }
@@ -48,8 +48,11 @@
   .yitem:last-child { border-radius: 0 0 8px 8px; }
   .yitem:only-child { border-radius: 8px; }
   .yitem:hover { background: var(--raised); }
-  .yitem .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; }
-  .yitem .dot.new { background: var(--head-accent); }
+  .wpill { font: 600 11px/1 var(--sans); padding: 3px 8px; border-radius: 4px; white-space: nowrap; text-align: center; width: 72px; display: inline-block; }
+  .wpill.you { background: color-mix(in srgb, var(--caution) 20%, transparent); color: var(--caution-text); }
+  .wpill.them { background: var(--raised); color: var(--dim); }
+  .wpill.done { background: color-mix(in srgb, var(--nom) 15%, transparent); color: var(--nom); }
+  .wpill.dismissed { background: var(--raised); color: var(--dim); font-style: italic; }
   .ytitle { font-size: 14px; font-weight: 500; }
   .ytitle a { color: var(--text); text-decoration: none; }
   .ytitle a:hover { text-decoration: underline; }
@@ -71,53 +74,38 @@
     <div class="ocard"><span class="ov{{if not .ReposNew}} zero{{end}}">{{.ReposNew}}</span><span class="ol">Unread</span></div>
   </div>
 
-  {{if .Work.You}}
-  <div class="section">
-    <h2>Your open work</h2>
-    <div class="yfilter" role="group" aria-label="Filter work">
-      <button type="button" data-yf="all" aria-pressed="true">All</button>
-      <button type="button" data-yf="PR" aria-pressed="false">Pull requests</button>
-      <button type="button" data-yf="Issue" aria-pressed="false">Issues</button>
-      <input type="search" class="search" id="yq" aria-label="Search your repositories" placeholder="Search…" autocomplete="off">
-      <button type="button" class="sort-btn" id="ysort">Newest</button>
-    </div>
-    <ul class="ylist" id="ylist">
-      {{range .Work.You}}<li class="yitem" data-kind="{{.Kind}}" data-search="{{.Search}}">
-        <span class="dot {{.Attn}}"></span>
-        <div><div class="ytitle"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a></div><div class="ymeta">{{.Repo}}#{{.Number}} · {{.Kind}}{{if .Status}} · {{.Status}}{{end}}{{if .Personal}} · {{.Personal}}{{end}}</div></div>
-        <span class="yago" title="{{.AgoTitle}}">{{.Ago}}</span>
-      </li>{{end}}
-    </ul>
+  <div class="yfilter" role="group" aria-label="Filter work">
+    <button type="button" data-yf="all" aria-pressed="true">All</button>
+    <button type="button" data-yf="PR" aria-pressed="false">Pull requests</button>
+    <button type="button" data-yf="Issue" aria-pressed="false">Issues</button>
+    <input type="search" class="search" id="yq" aria-label="Search your repositories" placeholder="Search…" autocomplete="off">
   </div>
-  {{end}}
 
-  {{if .Work.Done}}
-  <div class="section">
-    <h2>Recently finished</h2>
-    <ul class="ylist">
-      {{range .Work.Done}}<li class="yitem" data-kind="{{.Kind}}" data-search="{{.Search}}">
-        <span class="dot"></span>
-        <div><div class="ytitle"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a></div><div class="ymeta">{{.Repo}}#{{.Number}} · {{.Kind}}{{if .Status}} · {{.Status}}{{end}}</div></div>
-        <span class="yago" title="{{.AgoTitle}}">{{.Ago}}</span>
-      </li>{{end}}
-    </ul>
+  <div class="ycolhdr" role="group" aria-label="Sort columns">
+    <button type="button" data-ysort="status" class="active">Status<span class="arrow">↑</span></button>
+    <button type="button" data-ysort="updated">Updated</button>
+    <button type="button" data-ysort="repo">Repository</button>
   </div>
-  {{end}}
 
-  {{if .Work.RepoOther}}
-  <div class="section">
-    <h2>Repository activity</h2>
-    <ul class="ylist" id="yother">
-      {{range .Work.RepoOther}}<li class="yitem" data-search="{{.Title}} {{.Repo}}">
-        <span class="dot {{.Attn}}"></span>
-        <div><div class="ytitle"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a></div><div class="ymeta">{{.Repo}}{{if .Words}} · {{.Words}}{{end}}</div></div>
-        <span class="yago" title="{{.AgoTitle}}">{{.Ago}}</span>
-      </li>{{end}}
-    </ul>
-  </div>
-  {{end}}
-
-  {{if not (or .Work.You .Work.Done .Work.RepoOther)}}<p class="empty">Nothing here yet. Open a PR or issue in a tracked repository to see your work here.</p>{{end}}
+  {{if or .Work.You .Work.Done .Work.RepoOther}}
+  <ul class="ylist" id="ylist">
+    {{range .Work.You}}<li class="yitem" data-group="you" data-kind="{{.Kind}}" data-search="{{.Search}}" data-repo="{{.Repo}}">
+      <span class="wpill you">Your move</span>
+      <div><div class="ytitle"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a></div><div class="ymeta">{{.Repo}}#{{.Number}} · {{.Kind}}{{if .Status}} · {{.Status}}{{end}}{{if .Personal}} · {{.Personal}}{{end}}</div></div>
+      <span class="yago" title="{{.AgoTitle}}">{{.Ago}}</span>
+    </li>{{end}}
+    {{range .Work.Done}}<li class="yitem" data-group="done" data-kind="{{.Kind}}" data-search="{{.Search}}" data-repo="{{.Repo}}">
+      <span class="wpill done">Done</span>
+      <div><div class="ytitle"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a></div><div class="ymeta">{{.Repo}}#{{.Number}} · {{.Kind}}{{if .Status}} · {{.Status}}{{end}}</div></div>
+      <span class="yago" title="{{.AgoTitle}}">{{.Ago}}</span>
+    </li>{{end}}
+    {{range .Work.RepoOther}}<li class="yitem" data-group="activity" data-search="{{.Title}} {{.Repo}}" data-repo="{{.Repo}}">
+      <span class="wpill them">Activity</span>
+      <div><div class="ytitle"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a></div><div class="ymeta">{{.Repo}}{{if .Words}} · {{.Words}}{{end}}</div></div>
+      <span class="yago" title="{{.AgoTitle}}">{{.Ago}}</span>
+    </li>{{end}}
+  </ul>
+  {{else}}<p class="empty">Nothing here yet. Open a PR or issue in a tracked repository to see your work here.</p>{{end}}
 </main>
 <script>
 (function () {
@@ -126,12 +114,11 @@
     {{template "clock-js"}}
   var btns = document.querySelectorAll("[data-yf]"), items = document.querySelectorAll("#ylist .yitem"),
       q = document.getElementById("yq");
-  if (!q) return;
   function run() {
-    var f = "all", words = q.value.toLowerCase().split(/\s+/).filter(Boolean);
+    var f = "all", words = (q ? q.value : "").toLowerCase().split(/\s+/).filter(Boolean);
     btns.forEach(function (b) { if (b.getAttribute("aria-pressed") === "true") f = b.dataset.yf; });
     items.forEach(function (li) {
-      var k = li.dataset.kind, s = (li.dataset.search || "").toLowerCase();
+      var k = li.dataset.kind || "", s = (li.dataset.search || "").toLowerCase();
       var kindOk = f === "all" || k === f;
       var searchOk = words.every(function (w) { return s.indexOf(w) >= 0; });
       li.hidden = !(kindOk && searchOk);
@@ -143,25 +130,47 @@
       b.setAttribute("aria-pressed", "true"); run();
     });
   });
-  q.addEventListener("input", run);
+  if (q) q.addEventListener("input", run);
 
-  var sortBtn = document.getElementById("ysort"), asc = false;
-  if (sortBtn) {
-    sortBtn.addEventListener("click", function () {
-      asc = !asc;
-      sortBtn.textContent = asc ? "Oldest" : "Newest";
-      document.querySelectorAll(".ylist").forEach(function (list) {
-        var arr = Array.from(list.children);
-        arr.sort(function (a, b) {
-          var ta = a.querySelector(".yago"), tb = b.querySelector(".yago");
-          var va = ta ? ta.title : "", vb = tb ? tb.title : "";
-          var cmp = va.localeCompare(vb);
-          return asc ? cmp : -cmp;
-        });
-        arr.forEach(function (li) { list.appendChild(li); });
-      });
+  var statusOrder = { you: 0, done: 1, activity: 2 };
+  var sortBtns = document.querySelectorAll("[data-ysort]");
+  var list = document.getElementById("ylist");
+  var sortKey = "status", sortAsc = true;
+
+  function doSort() {
+    if (!list) return;
+    sortBtns.forEach(function (b) {
+      var active = b.dataset.ysort === sortKey;
+      b.classList.toggle("active", active);
+      var arrow = b.querySelector(".arrow");
+      if (active) {
+        if (!arrow) { arrow = document.createElement("span"); arrow.className = "arrow"; b.appendChild(arrow); }
+        arrow.textContent = sortAsc ? "↑" : "↓";
+      } else if (arrow) { arrow.remove(); }
     });
+    var arr = Array.from(list.children);
+    arr.sort(function (a, b) {
+      var cmp = 0;
+      if (sortKey === "status") {
+        cmp = (statusOrder[a.dataset.group] || 0) - (statusOrder[b.dataset.group] || 0);
+      } else if (sortKey === "updated") {
+        var ta = a.querySelector(".yago[title]"), tb = b.querySelector(".yago[title]");
+        cmp = (ta ? ta.title : "").localeCompare(tb ? tb.title : "");
+      } else if (sortKey === "repo") {
+        cmp = (a.dataset.repo || "").localeCompare(b.dataset.repo || "");
+      }
+      return sortAsc ? cmp : -cmp;
+    });
+    arr.forEach(function (li) { list.appendChild(li); });
   }
+
+  sortBtns.forEach(function (b) {
+    b.addEventListener("click", function () {
+      if (sortKey === b.dataset.ysort) { sortAsc = !sortAsc; }
+      else { sortKey = b.dataset.ysort; sortAsc = true; }
+      doSort();
+    });
+  });
 })();
 </script>
 </body>
