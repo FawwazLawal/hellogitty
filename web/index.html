@@ -175,7 +175,7 @@
   .items { list-style: none; margin: 0; padding: 0 0 6px; }
   .wi { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; column-gap: 12px; padding: 9px 14px; }
   .wi + .wi { border-top: 1px solid var(--rule); }
-  .wpill { font: 600 11px/1 var(--sans); padding: 3px 8px; border-radius: 4px; white-space: nowrap; text-align: center; width: 72px; display: inline-block; flex: none; }
+  .wpill { font: 600 11px/1 var(--sans); padding: 4px 8px; border-radius: 4px; white-space: nowrap; text-align: center; width: 72px; display: inline-block; flex: none; align-self: start; margin-top: 2px; }
   .wpill.you { background: color-mix(in srgb, var(--caution) 20%, transparent); color: var(--caution-text); }
   .wpill.them { background: var(--raised); color: var(--dim); }
   .wpill.done { background: color-mix(in srgb, var(--nom) 15%, transparent); color: var(--nom); }
@@ -231,7 +231,11 @@
   .trail .num { flex: none; font: 500 11.5px/16px var(--mono); }
   .none { margin: 0; padding: 4px 14px 14px; color: var(--dim); }
   .hint { margin: 0; padding: 0 14px 14px; color: var(--dim); font-size: 12px; }
-  .wsort { display: flex; gap: 2px; padding: 4px 14px 2px; }
+  /* The sort bar mirrors .wi so each label sits over the column it sorts: the title on the
+     left, the timestamp on the right where the row prints it. */
+  .wsort { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; column-gap: 12px; align-items: center; padding: 4px 14px 2px; }
+  .wsort > [data-wsort="name"] { grid-column: 2; justify-self: start; }
+  .wsort > [data-wsort="updated"] { grid-column: 3; justify-self: end; }
   .wsort button { background: none; border: 1px solid transparent; border-radius: 4px; padding: 2px 8px; font: 500 11.5px/16px var(--sans);
     color: var(--dim); cursor: pointer; user-select: none; }
   .wsort button:hover { color: var(--text); border-color: var(--rule); }
@@ -240,7 +244,9 @@
     border-left: 3px solid transparent; border-right: 3px solid transparent; vertical-align: middle; }
   .wsort button.asc::after { border-bottom: 4px solid currentColor; }
   .wsort button.desc::after { border-top: 4px solid currentColor; }
-  .triage-toggle { margin-left: auto; }
+  .panel > h2 > .triage-toggle { flex: none; background: none; border: 1px solid var(--rule); border-radius: 4px;
+    padding: 1px 8px; font: 500 11.5px/16px var(--sans); color: var(--head-dim); cursor: pointer; }
+  .panel > h2 > .triage-toggle:hover { color: var(--text); border-color: var(--rule-hi); }
   .triage-toggle::after { display: none; }
   .thsort { cursor: pointer; user-select: none; position: relative; }
   .thsort:hover { color: var(--text); }
@@ -475,6 +481,10 @@
     .grid { padding: 10px 16px 20px; }
     .wi { grid-template-columns: minmax(0, 1fr); }
     .wi > .wpill { display: none; }
+    /* The row stacks here, so the bar drops the pill column and keeps the two labels at the edges. */
+    .wsort { grid-template-columns: minmax(0, 1fr) auto; }
+    .wsort > [data-wsort="name"] { grid-column: 1; }
+    .wsort > [data-wsort="updated"] { grid-column: 2; }
     .wi .end { grid-column: 1; flex-direction: row; align-items: center; margin-top: 6px; }
     .trail { max-width: 75%; }
     .thead { display: none; }
@@ -1176,8 +1186,8 @@
 <div class="grid">
   <div class="main">
     <section class="panel" aria-labelledby="work-h" data-board data-module="your-work">
-      <h2 id="work-h">Your work{{if .Work.Known}} · <span data-v="work-you">{{len .Work.You}}</span> need you{{end}} <span class="lbl">{{if .Work.Known}}Pull requests and issues @{{.Work.Login}} has out, anywhere on GitHub · updated {{.Work.FetchedAgo}}{{else}}Not fetched yet{{end}}</span><span class="nb" id="newcount"{{if not .WorkNew}} hidden{{end}}>{{.WorkNew}} new</span></h2>
-      {{if .Work.Known}}<div class="wsort" role="group" aria-label="Sort work items"><button type="button" data-wsort="name">Name</button><button type="button" data-wsort="updated" title="Sort by last update">Updated</button><button type="button" class="triage-toggle" data-triage="your-work">Show all</button></div>{{end}}
+      <h2 id="work-h">Your work{{if .Work.Known}} · <span data-v="work-you">{{len .Work.You}}</span> need you{{end}} <span class="lbl">{{if .Work.Known}}Pull requests and issues @{{.Work.Login}} has out, anywhere on GitHub · updated {{.Work.FetchedAgo}}{{else}}Not fetched yet{{end}}</span><span class="nb" id="newcount"{{if not .WorkNew}} hidden{{end}}>{{.WorkNew}} new</span>{{if .Work.Known}}<button type="button" class="triage-toggle" data-triage="your-work">Show all</button>{{end}}</h2>
+      {{if .Work.Known}}<div class="wsort" role="group" aria-label="Sort work items"><button type="button" data-wsort="name">Name</button><button type="button" data-wsort="updated" title="Sort by last update">Updated</button></div>{{end}}
       {{if not .Work.Known}}
       <p class="pad zero">{{if .Work.Err}}{{.Work.ErrF.Summary}} <small class="err">({{.Work.ErrF.Detail}})</small>{{else}}Loading your pull requests and issues. This takes a few seconds after HelloGitty starts; the page reloads on its own.{{end}}</p>
       {{else}}
@@ -1190,14 +1200,12 @@
 
     {{if .Work.Known}}
     <section class="panel" aria-labelledby="conv-h" data-board data-module="conversations">
-      <h2 id="conv-h"><span class="term" data-term="conversations" tabindex="0">Conversations</span>{{if .Work.ConvYou}} · <span data-v="conv-you">{{len .Work.ConvYou}}</span> need you{{end}}{{if .ConvNew}}<span class="nb">{{.ConvNew}} new</span>{{end}} <span class="lbl">Issues and pull requests you joined but didn't open · <span data-v="conv-them">{{len .Work.ConvThem}}</span> quiet</span></h2>
-      <div class="wsort" role="group" aria-label="Filter conversations"><button type="button" class="triage-toggle" data-triage="conversations">Show all</button></div>
+      <h2 id="conv-h"><span class="term" data-term="conversations" tabindex="0">Conversations</span>{{if .Work.ConvYou}} · <span data-v="conv-you">{{len .Work.ConvYou}}</span> need you{{end}}{{if .ConvNew}}<span class="nb">{{.ConvNew}} new</span>{{end}} <span class="lbl">Issues and pull requests you joined but didn't open · <span data-v="conv-them">{{len .Work.ConvThem}}</span> quiet</span><button type="button" class="triage-toggle" data-triage="conversations">Show all</button></h2>
       {{if or .Work.ConvYou .Work.ConvThem}}<ul class="items" data-triage-list="conversations">{{range .Work.ConvYou}}{{template "item" .}}{{end}}{{range .Work.ConvThem}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nobody in a thread you joined is waiting on you.</p>{{end}}
     </section>
 
     <section class="panel" aria-labelledby="repos-h" data-board data-module="your-repos">
-      <h2 id="repos-h">Your repositories{{if .Work.InYou}} · <span data-v="work-inyou">{{len .Work.InYou}}</span> need you{{end}}{{if .ReposNew}}<span class="nb">{{.ReposNew}} new</span>{{end}} <span class="lbl">Pull requests, issues and notifications in {{.Work.Scope}} · <span data-v="work-inthem">{{len .Work.InThem}}</span> waiting on contributors</span></h2>
-      <div class="wsort" role="group" aria-label="Filter your repositories"><button type="button" class="triage-toggle" data-triage="your-repos">Show all</button></div>
+      <h2 id="repos-h">Your repositories{{if .Work.InYou}} · <span data-v="work-inyou">{{len .Work.InYou}}</span> need you{{end}}{{if .ReposNew}}<span class="nb">{{.ReposNew}} new</span>{{end}} <span class="lbl">Pull requests, issues and notifications in {{.Work.Scope}} · <span data-v="work-inthem">{{len .Work.InThem}}</span> waiting on contributors</span><button type="button" class="triage-toggle" data-triage="your-repos">Show all</button></h2>
       {{if or .Work.InYou .Work.InThem .Work.RepoOther}}<ul class="items" data-triage-list="your-repos">{{range .Work.InYou}}{{template "item" .}}{{end}}{{range .Work.InThem}}{{template "item" .}}{{end}}{{range .Work.RepoOther}}{{template "other" .}}{{end}}</ul>{{else}}<p class="none">No reviews requested and no unanswered issues.</p>{{end}}
       <p class="hint">Maintain repositories you don't own? List them under <code>"maintain"</code> in hellogitty.json.</p>
     </section>

@@ -70,3 +70,30 @@ func TestTriageTogglesHaveTheirLists(t *testing.T) {
 		}
 	}
 }
+
+// The sort bar is a column-header row: it mirrors the .wi grid so each label sits over the column
+// it sorts. The triage toggle is panel state rather than a column, so it belongs in the heading.
+// Putting it back in the bar pushes "Updated" off the timestamp column it labels.
+func TestSortBarHoldsOnlyColumnHeaders(t *testing.T) {
+	_, body := get(t, handler(fakeSource{board: workFixture(time.Now())}), "/")
+
+	bar := regexp.MustCompile(`(?s)<div class="wsort"[^>]*>(.*?)</div>`)
+	found := bar.FindAllStringSubmatch(body, -1)
+	if len(found) == 0 {
+		t.Fatal("no sort bar rendered")
+	}
+	for _, m := range found {
+		if strings.Contains(m[1], "triage-toggle") {
+			t.Error("triage toggle is back in the sort bar; it belongs in the panel heading")
+		}
+		if strings.TrimSpace(m[1]) == "" {
+			t.Error("an empty sort bar rendered; drop the element instead")
+		}
+	}
+	for _, key := range []string{"your-work", "conversations", "your-repos"} {
+		re := regexp.MustCompile(`(?s)<h2[^>]*>.*?data-triage="` + key + `".*?</h2>`)
+		if !re.MatchString(body) {
+			t.Errorf("triage toggle for %q is not in its panel heading", key)
+		}
+	}
+}
