@@ -255,6 +255,9 @@ function workPanels(st) {
       : "Loading your pull requests and issues. This takes a few seconds after you sign in; the page updates on its own."));
     return [work];
   }
+  work.append(el("div", { class: "wsort", role: "group", "aria-label": "Sort work items" },
+    el("button", { type: "button", "data-wsort": "name" }, "Name"),
+    el("button", { type: "button", "data-wsort": "updated", title: "Sort by last update" }, "Updated")));
   const own = (rows) => rows.filter((r) => !r.incoming);
   const theirs = (rows) => rows.filter((r) => r.incoming);
   const done = b.done.slice(0, FINISHED_SHOWN);

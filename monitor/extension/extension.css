@@ -21,6 +21,10 @@ body.view-popup { width: 440px; }
 }
 @media (max-width: 480px) { .cw .cell .cnt { white-space: normal; } }
 
+/* The dashboard uses .quicknav's bottom border to separate the header from content. The extension
+   has no quicknav, so the border sits on .status itself. */
+.status { border-bottom: 1px solid var(--rule-hi); }
+
 /* The dashboard's header puts its clock on a row of its own below 760px and splits brand and
    buttons into two equal columns. The extension has no clock: brand and buttons share the first
    row, and the telemetry (centre column) drops to a full-width row under them. */
