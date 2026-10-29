@@ -60,6 +60,7 @@ var glossary = map[string]Term{
 	"cell-repo-slow":     {"Repo slowing", "No commit for 31 to 90 days.", ""},
 	"cell-repo-flagged":  {"Repo flagged", "Your pipeline command marked these repositories for caution.", ""},
 	"cell-stage-failed":  {"Stage failed", "Your pipeline command reported a failed stage.", ""},
+	"cell-unresolved":    {"Unresolved threads", "Pull requests with review comments that haven't been resolved yet.", "Reply to each thread and mark it resolved, or ask the reviewer to resolve it."},
 	"cell-api-low":       {"API running low", "Under 10% of the hourly GitHub API quota remains.", "Checks slow down until the quota resets."},
 
 	// Tracked repositories
