@@ -18,36 +18,34 @@
   .ocard .ov { font: 700 28px var(--mono); font-variant-numeric: tabular-nums; display: block; }
   .ocard .ol { font-size: 12px; color: var(--dim); margin-top: 2px; }
   .ocard .ov.zero { color: var(--dim); }
-  .section { margin: 0 0 28px; }
-  .section h2 { margin: 0 0 10px; font-size: 14px; font-weight: 650; letter-spacing: 0.02em; border-left: 3px solid var(--head-accent); padding-left: 10px; }
-  .cfilter { display: flex; gap: 6px; margin: 0 0 14px; }
+  .cfilter { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 14px; }
   .cfilter button { font: 13px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
   .cfilter button:hover { color: var(--text); background: var(--raised); }
-  .sort-btn { font: 12px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi); border-radius: 6px;
-    padding: 6px 10px; cursor: pointer; margin-left: auto; white-space: nowrap; }
-  .sort-btn:hover { color: var(--text); background: var(--raised); }
-  .sort-btn::after { content: " ↓"; }
+  .csorts { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; }
+  .csorts .slbl { font-size: 12px; color: var(--dim); margin-right: 2px; }
+  .cfilter .csorts button { font-size: 12px; padding: 6px 10px; white-space: nowrap; }
+  .csorts button[data-dir="asc"]::after { content: " ↑"; }
+  .csorts button[data-dir="desc"]::after { content: " ↓"; }
   .cfilter button[aria-pressed="true"] { color: var(--text); background: var(--raised); font-weight: 600; border-color: var(--head-accent); }
   .cfilter .search { flex: 1; min-width: 160px; max-width: 300px; padding: 6px 10px; border: 1px solid var(--rule-hi); border-radius: 6px;
     font: 13px var(--sans); background: var(--panel); color: var(--text); }
   .cfilter .search::placeholder { color: var(--dim); }
   .clist { list-style: none; margin: 0; padding: 0; }
-  .citem { display: grid; grid-template-columns: auto 1fr auto; gap: 8px 12px; align-items: baseline; padding: 10px 14px;
+  .citem { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px 12px; align-items: baseline; padding: 10px 14px;
     border-bottom: 1px solid var(--rule); background: var(--panel); transition: background .1s; }
   .citem:first-child { border-radius: 8px 8px 0 0; border-top: 1px solid var(--rule); }
   .citem:last-child { border-radius: 0 0 8px 8px; }
   .citem:only-child { border-radius: 8px; }
   .citem:hover { background: var(--raised); }
-  .citem .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; }
-  .citem .dot.new { background: var(--head-accent); }
-  .citem .dot.caution { background: var(--caution); }
+  .cpill { font: 600 11px/1 var(--sans); padding: 3px 8px; border-radius: 4px; white-space: nowrap; text-align: center; width: 76px; display: inline-block; }
+  .cpill.you { background: color-mix(in srgb, var(--caution) 20%, transparent); color: var(--caution-text); }
+  .cpill.them { background: var(--raised); color: var(--dim); }
   .ctitle { font-size: 14px; font-weight: 500; }
+  .citem.attn .ctitle { font-weight: 700; }
   .ctitle a { color: var(--text); text-decoration: none; }
   .ctitle a:hover { text-decoration: underline; }
   .cmeta { font-size: 12px; color: var(--dim); margin-top: 2px; }
   .cago { font-size: 12px; color: var(--dim); white-space: nowrap; text-align: right; }
-  .tag { font-size: 11px; display: inline-block; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--rule-hi); color: var(--dim); margin-left: 6px; }
-  .tag.move { color: var(--caution-text); border-color: color-mix(in srgb, var(--caution) 50%, transparent); }
   .empty { color: var(--dim); padding: 40px 0; text-align: center; }
 
   /* View toggle */
@@ -62,13 +60,15 @@
   /* Grid view */
   .clist.grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
   .clist.grid-view .citem { grid-template-columns: 1fr; border: 1px solid var(--rule); border-radius: 8px; padding: 14px; gap: 6px; }
-  .clist.grid-view .citem .dot { position: absolute; top: 14px; right: 14px; margin: 0; }
-  .clist.grid-view .citem { position: relative; }
   .clist.grid-view .cago { text-align: left; margin-top: 4px; }
-  .clist.grid-view .ctitle { font-size: 15px; font-weight: 600; padding-right: 20px; }
+  .clist.grid-view .ctitle { font-size: 15px; font-weight: 600; }
+  .clist.grid-view .citem.attn .ctitle { font-weight: 700; }
   .clist.grid-view .cmeta { margin-top: 6px; }
 
   @media (max-width: 640px) { .overview { grid-template-columns: repeat(2, 1fr); } .clist.grid-view { grid-template-columns: 1fr; } }
+  /* On a phone the pill and the title share the row and the time moves under the title. */
+  @media (max-width: 480px) { .clist:not(.grid-view) .citem { grid-template-columns: auto minmax(0, 1fr); row-gap: 2px; }
+    .clist:not(.grid-view) .cago { grid-column: 2; text-align: left; } }
   @media (prefers-reduced-motion: reduce) { .citem, .ocard { transition: none; } }
 </style>
 </head>
@@ -83,34 +83,36 @@
     <div class="ocard"><span class="ov{{if not .ConvNew}} zero{{end}}">{{.ConvNew}}</span><span class="ol">Unread</span></div>
   </div>
 
-  <div class="section">
-    <h2>All conversations</h2>
-    <div class="cfilter" role="group" aria-label="Filter conversations">
-      <button type="button" data-cf="all" aria-pressed="true">All</button>
-      <button type="button" data-cf="you" aria-pressed="false">Needs me</button>
-      <button type="button" data-cf="them" aria-pressed="false">Waiting</button>
-      <input type="search" class="search" id="cq" aria-label="Search conversations" placeholder="Search…" autocomplete="off">
-      <button type="button" class="sort-btn" id="csort">Newest</button>
-      <div class="viewtoggle" role="group" aria-label="View mode">
-        <button type="button" data-view="list" aria-pressed="true" title="List view"><svg viewBox="0 0 16 16"><path d="M2 4h12M2 8h12M2 12h12"/></svg></button>
-        <button type="button" data-view="grid" aria-pressed="false" title="Grid view"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button>
-      </div>
+  <div class="cfilter" role="group" aria-label="Filter conversations">
+    <button type="button" data-cf="all" aria-pressed="true">All</button>
+    <button type="button" data-cf="you" aria-pressed="false">Needs me</button>
+    <button type="button" data-cf="them" aria-pressed="false">Waiting</button>
+    <input type="search" class="search" id="cq" aria-label="Search conversations" placeholder="Search…" autocomplete="off">
+    <div class="csorts" role="group" aria-label="Sort conversations">
+      <span class="slbl">Sort</span>
+      <button type="button" data-sort="status" aria-pressed="true" data-dir="asc">Status</button>
+      <button type="button" data-sort="updated" aria-pressed="false">Updated</button>
+      <button type="button" data-sort="repo" aria-pressed="false">Repository</button>
     </div>
-    {{if or .Work.ConvYou .Work.ConvThem}}
-    <ul class="clist" id="clist">
-      {{range .Work.ConvYou}}<li class="citem" data-group="you" data-search="{{.Search}}">
-        <span class="dot {{.Attn}}"></span>
-        <div><div class="ctitle"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a><span class="tag move">needs you</span></div><div class="cmeta">{{.Repo}}#{{.Number}}{{if .Why}} · {{.Why}}{{end}}</div></div>
-        <span class="cago" title="{{.AgoTitle}}">{{.Ago}}</span>
-      </li>{{end}}
-      {{range .Work.ConvThem}}<li class="citem" data-group="them" data-search="{{.Search}}">
-        <span class="dot {{.Attn}}"></span>
-        <div><div class="ctitle"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a></div><div class="cmeta">{{.Repo}}#{{.Number}}{{if .Why}} · {{.Why}}{{end}}</div></div>
-        <span class="cago" title="{{.AgoTitle}}">{{.Ago}}</span>
-      </li>{{end}}
-    </ul>
-    {{else}}<p class="empty">No conversations yet. Comment on or get mentioned in an issue or PR in a tracked repository to see it here.</p>{{end}}
+    <div class="viewtoggle" role="group" aria-label="View mode">
+      <button type="button" data-view="list" aria-pressed="true" title="List view"><svg viewBox="0 0 16 16"><path d="M2 4h12M2 8h12M2 12h12"/></svg></button>
+      <button type="button" data-view="grid" aria-pressed="false" title="Grid view"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button>
+    </div>
   </div>
+  {{if or .Work.ConvYou .Work.ConvThem}}
+  <ul class="clist" id="clist">
+    {{range .Work.ConvYou}}<li class="citem{{if or (eq .Attn "new") (eq .Attn "caution")}} attn{{end}}" data-group="you" data-repo="{{.Repo}}" data-since="{{.SinceUnix}}" data-search="{{.Search}}">
+      <span class="cpill you">Needs reply</span>
+      <div><div class="ctitle"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a></div><div class="cmeta">{{.Repo}}#{{.Number}}{{if .Why}} · {{.Why}}{{end}}</div></div>
+      <span class="cago" title="{{.AgoTitle}}">{{.Ago}}</span>
+    </li>{{end}}
+    {{range .Work.ConvThem}}<li class="citem{{if or (eq .Attn "new") (eq .Attn "caution")}} attn{{end}}" data-group="them" data-repo="{{.Repo}}" data-since="{{.SinceUnix}}" data-search="{{.Search}}">
+      <span class="cpill them">Waiting</span>
+      <div><div class="ctitle"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a></div><div class="cmeta">{{.Repo}}#{{.Number}}{{if .Why}} · {{.Why}}{{end}}</div></div>
+      <span class="cago" title="{{.AgoTitle}}">{{.Ago}}</span>
+    </li>{{end}}
+  </ul>
+  {{else}}<p class="empty">No conversations yet. Comment on or get mentioned in an issue or PR in a tracked repository to see it here.</p>{{end}}
 </main>
 <script>
 (function () {
@@ -149,21 +151,38 @@
   });
   if (q) q.addEventListener("input", run);
 
-  var sortBtn = document.getElementById("csort"), asc = false;
-  if (sortBtn && list) {
-    sortBtn.addEventListener("click", function () {
-      asc = !asc;
-      sortBtn.textContent = asc ? "Oldest" : "Newest";
-      var arr = Array.from(list.children);
-      arr.sort(function (a, b) {
-        var ta = a.querySelector(".cago"), tb = b.querySelector(".cago");
-        var va = ta ? ta.title : "", vb = tb ? tb.title : "";
-        var cmp = va.localeCompare(vb);
-        return asc ? cmp : -cmp;
-      });
-      arr.forEach(function (li) { list.appendChild(li); });
+  // Sorting: Status puts needs-reply first, Updated is newest first and Repository is A to Z.
+  // Clicking the active key flips its direction; within a tie the newest comes first.
+  var sortBtns = document.querySelectorAll("[data-sort]"), firstDir = { status: "asc", updated: "desc", repo: "asc" };
+  var rank = { you: 0, them: 1 }, sortKey = "status", sortDir = "asc";
+  function since(li) { return Number(li.dataset.since) || 0; }
+  function sortList() {
+    if (!list) return;
+    var flip = sortDir === "asc" ? 1 : -1;
+    var arr = Array.from(list.children);
+    arr.sort(function (a, b) {
+      var c = 0;
+      if (sortKey === "status") c = (rank[a.dataset.group] - rank[b.dataset.group]) * flip;
+      else if (sortKey === "repo") c = (a.dataset.repo || "").toLowerCase().localeCompare((b.dataset.repo || "").toLowerCase()) * flip;
+      else c = (since(a) - since(b)) * flip;
+      return c || since(b) - since(a);
+    });
+    arr.forEach(function (li) { list.appendChild(li); });
+    sortBtns.forEach(function (b) {
+      var on = b.dataset.sort === sortKey;
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+      if (on) b.dataset.dir = sortDir; else delete b.dataset.dir;
     });
   }
+  sortBtns.forEach(function (b) {
+    b.addEventListener("click", function () {
+      var k = b.dataset.sort;
+      sortDir = k === sortKey ? (sortDir === "asc" ? "desc" : "asc") : firstDir[k];
+      sortKey = k;
+      sortList();
+    });
+  });
+  sortList();
 
   // View toggle: list / grid
   var viewBtns = document.querySelectorAll("[data-view]");
