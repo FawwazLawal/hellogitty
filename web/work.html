@@ -15,22 +15,22 @@
   .ocard { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; text-align: center; transition: border-color .12s; cursor: pointer; text-decoration: none; color: inherit; }
   .ocard:hover { border-color: var(--head-accent); background: var(--raised); }
   .ocard[aria-pressed="true"] { border-color: var(--head-accent); background: var(--raised); }
-  .sort-btn { font: 12px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi); border-radius: 6px;
-    padding: 6px 10px; cursor: pointer; margin-left: auto; white-space: nowrap; }
-  .sort-btn:hover { color: var(--text); background: var(--raised); }
-  .sort-btn::after { content: " ↓"; }
   .ocard .ov { font: 700 28px var(--mono); font-variant-numeric: tabular-nums; display: block; }
   .ocard .ol { font-size: 12px; color: var(--dim); margin-top: 2px; }
   .ocard .ov.zero { color: var(--dim); }
-  .section { margin: 0 0 28px; }
-  .section h2 { margin: 0 0 10px; font-size: 14px; font-weight: 650; letter-spacing: 0.02em; border-left: 3px solid var(--head-accent); padding-left: 10px; }
-  .wfilter { display: flex; gap: 6px; margin: 0 0 14px; }
+  .wfilter { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
   .wfilter button { font: 13px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
   .wfilter button:hover { color: var(--text); background: var(--raised); }
   .wfilter button[aria-pressed="true"] { color: var(--text); background: var(--raised); font-weight: 600; border-color: var(--head-accent); }
   .wfilter .search { flex: 1; min-width: 160px; max-width: 300px; padding: 6px 10px; border: 1px solid var(--rule-hi); border-radius: 6px;
     font: 13px var(--sans); background: var(--panel); color: var(--text); }
   .wfilter .search::placeholder { color: var(--dim); }
+  .wcolhdr { display: flex; gap: 6px; margin: 0 0 8px; justify-content: flex-end; }
+  .wcolhdr button { font: 12px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi); border-radius: 6px;
+    padding: 5px 10px; cursor: pointer; white-space: nowrap; }
+  .wcolhdr button:hover { color: var(--text); background: var(--raised); }
+  .wcolhdr button.active { color: var(--text); font-weight: 600; border-color: var(--head-accent); }
+  .wcolhdr button .arrow { display: inline-block; margin-left: 3px; }
   .wlist { list-style: none; margin: 0; padding: 0; }
   .witem { display: grid; grid-template-columns: auto 1fr auto; gap: 8px 12px; align-items: baseline; padding: 10px 14px;
     border-bottom: 1px solid var(--rule); background: var(--panel); transition: background .1s; }
@@ -38,16 +38,18 @@
   .witem:last-child { border-radius: 0 0 8px 8px; }
   .witem:only-child { border-radius: 8px; }
   .witem:hover { background: var(--raised); }
-  .witem .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; }
-  .witem .dot.caution { background: var(--caution); }
-  .witem .dot.new { background: var(--head-accent); }
+  .wpill { font: 600 11px/1 var(--sans); padding: 3px 8px; border-radius: 4px; white-space: nowrap; text-align: center; width: 72px; display: inline-block; }
+  .wpill.you { background: color-mix(in srgb, var(--caution) 20%, transparent); color: var(--caution-text); }
+  .wpill.them { background: var(--raised); color: var(--dim); }
+  .wpill.done { background: color-mix(in srgb, var(--nom) 15%, transparent); color: var(--nom); }
+  .wpill.dismissed { background: var(--raised); color: var(--dim); font-style: italic; }
+  .witem.attn .wtitle { font-weight: 700; }
   .wtitle { font-size: 14px; font-weight: 500; }
   .wtitle a { color: var(--text); text-decoration: none; }
   .wtitle a:hover { text-decoration: underline; }
   .wmeta { font-size: 12px; color: var(--dim); margin-top: 2px; }
   .wago { font-size: 12px; color: var(--dim); white-space: nowrap; text-align: right; }
   .tag { font-size: 11px; display: inline-block; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--rule-hi); color: var(--dim); margin-left: 6px; }
-  .tag.you { color: var(--caution-text); border-color: color-mix(in srgb, var(--caution) 50%, transparent); }
   .tag.done { color: var(--nom); border-color: color-mix(in srgb, var(--nom) 50%, transparent); }
   .tag.dismissed { color: var(--dim); border-color: var(--rule-hi); font-style: italic; }
   .wrestore { font: 12px/1 var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi); border-radius: 4px;
@@ -77,62 +79,38 @@
     <button type="button" data-wf="done" aria-pressed="false">Finished</button>
     <button type="button" data-wf="dismissed" aria-pressed="false">Dismissed</button>
     <input type="search" class="search" id="wq" aria-label="Search your work" placeholder="Search…" autocomplete="off">
-    <button type="button" class="sort-btn" id="wsort">Newest</button>
   </div>
 
-  {{if .Work.You}}
-  <div class="section">
-    <h2>Your move</h2>
-    <ul class="wlist" id="wl-you">
-      {{range .Work.You}}<li class="witem" data-group="you" data-kind="{{.Kind}}" data-search="{{.Search}}">
-        <span class="dot {{.Attn}}"></span>
-        <div><div class="wtitle"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a><span class="tag you">your move</span></div><div class="wmeta">{{.Repo}}#{{.Number}} · {{.Kind}}{{if .Status}} · {{.Status}}{{end}}</div></div>
-        <span class="wago" title="{{.AgoTitle}}">{{.Ago}}</span>
-      </li>{{end}}
-    </ul>
+  <div class="wcolhdr" role="group" aria-label="Sort columns">
+    <button type="button" data-wsort="status" class="active">Status<span class="arrow">↑</span></button>
+    <button type="button" data-wsort="updated">Updated</button>
+    <button type="button" data-wsort="repo">Repository</button>
   </div>
-  {{end}}
 
-  {{if .Work.Them}}
-  <div class="section">
-    <h2>Waiting on others</h2>
-    <ul class="wlist" id="wl-them">
-      {{range .Work.Them}}<li class="witem" data-group="them" data-kind="{{.Kind}}" data-search="{{.Search}}">
-        <span class="dot {{.Attn}}"></span>
-        <div><div class="wtitle"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a></div><div class="wmeta">{{.Repo}}#{{.Number}} · {{.Kind}}{{if .Status}} · {{.Status}}{{end}}</div></div>
-        <span class="wago" title="{{.AgoTitle}}">{{.Ago}}</span>
-      </li>{{end}}
-    </ul>
-  </div>
-  {{end}}
-
-  {{if .Work.Done}}
-  <div class="section">
-    <h2>Finished</h2>
-    <ul class="wlist" id="wl-done">
-      {{range .Work.Done}}<li class="witem" data-group="done" data-kind="{{.Kind}}" data-search="{{.Search}}">
-        <span class="dot"></span>
-        <div><div class="wtitle"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a><span class="tag done">{{.Status}}</span></div><div class="wmeta">{{.Repo}}#{{.Number}} · {{.Kind}}</div></div>
-        <span class="wago" title="{{.AgoTitle}}">{{.Ago}}</span>
-      </li>{{end}}
-    </ul>
-  </div>
-  {{end}}
-
-  {{if .DismissedWork}}
-  <div class="section" id="ws-dismissed">
-    <h2>Dismissed</h2>
-    <ul class="wlist" id="wl-dismissed">
-      {{range .DismissedWork}}<li class="witem" data-group="dismissed" data-kind="{{.Kind}}" data-search="{{.Search}}" data-key="{{.K}}">
-        <span class="dot"></span>
-        <div><div class="wtitle"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a><span class="tag dismissed">dismissed</span></div><div class="wmeta">{{.Repo}}#{{.Number}} · {{.Kind}}{{if .Status}} · {{.Status}}{{end}}</div></div>
-        <span class="wago"><button type="button" class="wrestore" data-wrestore="{{.K}}">Restore</button><span title="{{.AgoTitle}}">{{.Ago}}</span></span>
-      </li>{{end}}
-    </ul>
-  </div>
-  {{end}}
-
-  {{if not (or .Work.You .Work.Them .Work.Done .DismissedWork)}}<p class="empty">Nothing here yet. Open a PR or issue to see your work here.</p>{{end}}
+  {{if or .Work.You .Work.Them .Work.Done .DismissedWork}}
+  <ul class="wlist" id="wl-all">
+    {{range .Work.You}}<li class="witem{{if or (eq .Attn "new") (eq .Attn "caution")}} attn{{end}}" data-group="you" data-kind="{{.Kind}}" data-search="{{.Search}}" data-repo="{{.Repo}}">
+      <span class="wpill you">Your move</span>
+      <div><div class="wtitle"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a></div><div class="wmeta">{{.Repo}}#{{.Number}} · {{.Kind}}{{if .Status}} · {{.Status}}{{end}}</div></div>
+      <span class="wago" title="{{.AgoTitle}}">{{.Ago}}</span>
+    </li>{{end}}
+    {{range .Work.Them}}<li class="witem{{if or (eq .Attn "new") (eq .Attn "caution")}} attn{{end}}" data-group="them" data-kind="{{.Kind}}" data-search="{{.Search}}" data-repo="{{.Repo}}">
+      <span class="wpill them">Waiting</span>
+      <div><div class="wtitle"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a></div><div class="wmeta">{{.Repo}}#{{.Number}} · {{.Kind}}{{if .Status}} · {{.Status}}{{end}}</div></div>
+      <span class="wago" title="{{.AgoTitle}}">{{.Ago}}</span>
+    </li>{{end}}
+    {{range .Work.Done}}<li class="witem" data-group="done" data-kind="{{.Kind}}" data-search="{{.Search}}" data-repo="{{.Repo}}">
+      <span class="wpill done">Done</span>
+      <div><div class="wtitle"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a><span class="tag done">{{.Status}}</span></div><div class="wmeta">{{.Repo}}#{{.Number}} · {{.Kind}}</div></div>
+      <span class="wago" title="{{.AgoTitle}}">{{.Ago}}</span>
+    </li>{{end}}
+    {{range .DismissedWork}}<li class="witem" data-group="dismissed" data-kind="{{.Kind}}" data-search="{{.Search}}" data-key="{{.K}}" data-repo="{{.Repo}}">
+      <span class="wpill dismissed">Dismissed</span>
+      <div><div class="wtitle"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a></div><div class="wmeta">{{.Repo}}#{{.Number}} · {{.Kind}}{{if .Status}} · {{.Status}}{{end}}</div></div>
+      <span class="wago"><button type="button" class="wrestore" data-wrestore="{{.K}}">Restore</button><span title="{{.AgoTitle}}">{{.Ago}}</span></span>
+    </li>{{end}}
+  </ul>
+  {{else}}<p class="empty">Nothing here yet. Open a PR or issue to see your work here.</p>{{end}}
 </main>
 <script>
 (function () {
@@ -157,12 +135,6 @@
     document.querySelectorAll(".ocard[data-activate]").forEach(function (c) {
       c.setAttribute("aria-pressed", c.dataset.activate === f ? "true" : "false");
     });
-    document.querySelectorAll(".section").forEach(function (sec) {
-      var all = sec.querySelectorAll(".witem");
-      if (!all.length) return;
-      var anyVisible = Array.from(all).some(function (li) { return !li.hidden; });
-      sec.hidden = !anyVisible;
-    });
   }
   function activate(f) {
     btns.forEach(function (x) { x.setAttribute("aria-pressed", x.dataset.wf === f ? "true" : "false"); });
@@ -177,23 +149,45 @@
   });
   if (q) q.addEventListener("input", run);
 
-  var sortBtn = document.getElementById("wsort"), asc = false;
-  if (sortBtn) {
-    sortBtn.addEventListener("click", function () {
-      asc = !asc;
-      sortBtn.textContent = asc ? "Oldest" : "Newest";
-      document.querySelectorAll(".wlist").forEach(function (list) {
-        var arr = Array.from(list.children);
-        arr.sort(function (a, b) {
-          var ta = a.querySelector(".wago [title], .wago[title]"), tb = b.querySelector(".wago [title], .wago[title]");
-          var va = ta ? ta.title : "", vb = tb ? tb.title : "";
-          var cmp = va.localeCompare(vb);
-          return asc ? cmp : -cmp;
-        });
-        arr.forEach(function (li) { list.appendChild(li); });
-      });
+  var statusOrder = { you: 0, them: 1, done: 2, dismissed: 3 };
+  var sortBtns = document.querySelectorAll("[data-wsort]");
+  var list = document.getElementById("wl-all");
+  var sortKey = "status", sortAsc = true;
+
+  function doSort() {
+    if (!list) return;
+    sortBtns.forEach(function (b) {
+      var active = b.dataset.wsort === sortKey;
+      b.classList.toggle("active", active);
+      var arrow = b.querySelector(".arrow");
+      if (active) {
+        if (!arrow) { arrow = document.createElement("span"); arrow.className = "arrow"; b.appendChild(arrow); }
+        arrow.textContent = sortAsc ? "↑" : "↓";
+      } else if (arrow) { arrow.remove(); }
     });
+    var arr = Array.from(list.children);
+    arr.sort(function (a, b) {
+      var cmp = 0;
+      if (sortKey === "status") {
+        cmp = (statusOrder[a.dataset.group] || 0) - (statusOrder[b.dataset.group] || 0);
+      } else if (sortKey === "updated") {
+        var ta = a.querySelector(".wago [title], .wago[title]"), tb = b.querySelector(".wago [title], .wago[title]");
+        cmp = (ta ? ta.title : "").localeCompare(tb ? tb.title : "");
+      } else if (sortKey === "repo") {
+        cmp = (a.dataset.repo || "").localeCompare(b.dataset.repo || "");
+      }
+      return sortAsc ? cmp : -cmp;
+    });
+    arr.forEach(function (li) { list.appendChild(li); });
   }
+
+  sortBtns.forEach(function (b) {
+    b.addEventListener("click", function () {
+      if (sortKey === b.dataset.wsort) { sortAsc = !sortAsc; }
+      else { sortKey = b.dataset.wsort; sortAsc = true; }
+      doSort();
+    });
+  });
 
   document.addEventListener("click", function (e) {
     var b = e.target.closest(".wrestore");
