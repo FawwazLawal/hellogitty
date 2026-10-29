@@ -56,6 +56,7 @@ func (s source) entries(now time.Time) ([]inbox.Entry, bool) {
 	if replies := s.p.CommentReplies(); len(replies) > 0 {
 		entries = inbox.Sorted(append(entries, inbox.CommentReplies(replies)...))
 	}
+	inbox.Enrich(entries, seen, now)
 	return entries, true
 }
 

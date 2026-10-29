@@ -26,15 +26,15 @@ fragment pr on PullRequest {
   labels(first: 10) { nodes { name } }
   reviewRequests(first: 5) { nodes { requestedReviewer { __typename ... on User { login } ... on Team { name } ... on Bot { login } ... on Mannequin { login } } } }
   latestOpinionatedReviews(first: 10) { nodes { author { ...who } state submittedAt } }
-  reviews(last: 1) { nodes { author { ...who } state body submittedAt url } }
-  comments(last: 3) { totalCount nodes { author { ...who } body createdAt url } }
+  reviews(last: 1) { nodes { author { ...who } state body submittedAt url authorAssociation } }
+  comments(last: 3) { totalCount nodes { author { ...who } body createdAt url authorAssociation } }
   commits(last: 1) { nodes { commit { oid committedDate statusCheckRollup { state } } } }
 }
 fragment detail on PullRequest {
-  botReviews: reviews(last: 10) { nodes { author { ...who } state body submittedAt url } }
+  botReviews: reviews(last: 10) { nodes { author { ...who } state body submittedAt url authorAssociation } }
   closingIssuesReferences(first: 5) { nodes { number repository { nameWithOwner } } }
   reviewThreads(first: 30) { nodes { isResolved isOutdated path
-    comments(first: 1) { nodes { author { ...who } body url createdAt } }
+    comments(first: 1) { nodes { author { ...who } body url createdAt authorAssociation } }
     latest: comments(last: 1) { nodes { author { ...who } } } } }
   checks: commits(last: 1) { nodes { commit {
     checkSuites(first: 20) { nodes { app { name } conclusion workflowRun { workflow { name } } } }
@@ -53,7 +53,7 @@ fragment issue on Issue {
   author { ...who }
   assignees(first: 5) { nodes { login } }
   labels(first: 10) { nodes { name } }
-  comments(last: 3) { totalCount nodes { author { ...who } body createdAt url } }
+  comments(last: 3) { totalCount nodes { author { ...who } body createdAt url authorAssociation } }
 }
 query($prsOpen: String!, $prsDone: String!, $issues: String!, $issuesDone: String!,
       $requested: String!, $reviewed: String!, $incoming: String!, $triage: String!) {
@@ -96,12 +96,20 @@ func automated(c comment) bool {
 }
 
 type comment struct {
-	Author    *actor     `json:"author"`
-	Body      string     `json:"body"`
-	CreatedAt time.Time  `json:"createdAt"`
-	URL       string     `json:"url"`
-	State     string     `json:"state"`
-	Submitted *time.Time `json:"submittedAt"`
+	Author             *actor     `json:"author"`
+	Body               string     `json:"body"`
+	CreatedAt          *time.Time `json:"createdAt"`
+	URL                string     `json:"url"`
+	State              string     `json:"state"`
+	Submitted          *time.Time `json:"submittedAt"`
+	AuthorAssociation  string     `json:"authorAssociation"`
+}
+
+func timeVal(t *time.Time) time.Time {
+	if t == nil {
+		return time.Time{}
+	}
+	return *t
 }
 
 type node struct {
@@ -393,7 +401,8 @@ func toItem(n node, role, login string) Item {
 		}
 		c := t.Comments.Nodes[0]
 		th := Thread{Author: c.Author.name(), Bot: c.Author.bot(), Body: strings.TrimSpace(c.Body),
-			URL: c.URL, Path: t.Path, Outdated: t.IsOutdated, At: c.CreatedAt}
+			URL: c.URL, Path: t.Path, Outdated: t.IsOutdated, At: timeVal(c.CreatedAt),
+			AuthorAssociation: c.AuthorAssociation}
 		if l := t.Latest.Nodes; len(l) > 0 {
 			th.RepliedLast = strings.EqualFold(l[0].Author.name(), login)
 		}
@@ -455,7 +464,7 @@ func toItem(n node, role, login string) Item {
 	for _, r := range n.BotReviews.Nodes {
 		if r.Author.bot() && r.Submitted != nil {
 			it.BotReviews = append(it.BotReviews, Activity{Author: r.Author.name(), Body: strings.TrimSpace(r.Body),
-				URL: r.URL, At: *r.Submitted, Review: r.State, Bot: true})
+				URL: r.URL, At: *r.Submitted, Review: r.State, Bot: true, AuthorAssociation: r.AuthorAssociation})
 		}
 	}
 	for _, r := range n.LatestOpinionatedReviews.Nodes {
@@ -538,19 +547,22 @@ func recent(n node, threads []Thread, login string) []Activity {
 	mine := func(a *actor) bool { return a.bot() || strings.EqualFold(a.name(), login) }
 	for _, c := range n.Comments.Nodes {
 		if !mine(c.Author) && !automated(c) {
-			out = append(out, Activity{Author: c.Author.name(), Body: strings.TrimSpace(c.Body), URL: c.URL, At: c.CreatedAt})
+			out = append(out, Activity{Author: c.Author.name(), Body: strings.TrimSpace(c.Body), URL: c.URL, At: timeVal(c.CreatedAt),
+				AuthorAssociation: c.AuthorAssociation})
 		}
 	}
 	for _, c := range n.Reviews.Nodes {
 		if mine(c.Author) || c.Submitted == nil || c.State == "PENDING" || (c.State == "COMMENTED" && strings.TrimSpace(c.Body) == "") {
 			continue
 		}
-		out = append(out, Activity{Author: c.Author.name(), Body: strings.TrimSpace(c.Body), URL: c.URL, At: *c.Submitted, Review: c.State})
+		out = append(out, Activity{Author: c.Author.name(), Body: strings.TrimSpace(c.Body), URL: c.URL, At: *c.Submitted, Review: c.State,
+			AuthorAssociation: c.AuthorAssociation})
 	}
 	// Review bots count here: their inline comments block a merge as surely as a person's.
 	for _, t := range threads {
 		if !strings.EqualFold(t.Author, login) {
-			out = append(out, Activity{Author: t.Author, Body: t.Body, URL: t.URL, At: t.At, Path: t.Path, Bot: t.Bot})
+			out = append(out, Activity{Author: t.Author, Body: t.Body, URL: t.URL, At: t.At, Path: t.Path, Bot: t.Bot,
+				AuthorAssociation: t.AuthorAssociation})
 		}
 	}
 	return out
@@ -564,7 +576,7 @@ func latest(n node) *Activity {
 		if automated(c) {
 			return
 		}
-		at := c.CreatedAt
+		at := timeVal(c.CreatedAt)
 		if review {
 			if c.Submitted == nil || (c.State == "COMMENTED" && strings.TrimSpace(c.Body) == "") || c.State == "PENDING" {
 				return
