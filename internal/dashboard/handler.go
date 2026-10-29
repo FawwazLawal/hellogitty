@@ -82,6 +82,7 @@ type Handler struct {
 	Version      string
 	// Baby marks a codename that has not graduated yet; the page sets it apart from the label.
 	Baby bool
+	Favicon []byte
 	// Mascot holds the banner clips and rest still; nil leaves the banner without a mascot.
 	Mascot fs.FS
 	Now    func() time.Time
@@ -540,6 +541,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.URL.Path == "/":
 		h.serveDashboard(w, r)
+	case r.URL.Path == "/favicon.svg" && len(h.Favicon) > 0:
+		w.Header().Set("Content-Type", "image/svg+xml")
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		w.Write(h.Favicon)
 	case strings.HasPrefix(r.URL.Path, "/mascot/") && h.Mascot != nil:
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		http.StripPrefix("/mascot/", http.FileServer(http.FS(h.Mascot))).ServeHTTP(w, r)
