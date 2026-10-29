@@ -5,6 +5,13 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (28) · Black Bombay (baby) · 2026-10-29
+
+Tag `v0.2.28`.
+
+- **Extension visual parity**: added header bottom border and work-sort
+  buttons to match the dashboard. Extension bumped to 0.2.27.
+
 ## v0.2.0 (27) · Black Bombay (baby) · 2026-10-29
 
 Tag `v0.2.27`.
