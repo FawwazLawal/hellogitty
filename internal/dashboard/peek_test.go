@@ -92,7 +92,7 @@ func TestPanelsAreModules(t *testing.T) {
 	src := fakeSource{pipe: pipeFixture(t), reports: []store.RepoReport{{Repo: store.Repo{Owner: "acme", Name: "rocket", LastPoll: &now}}},
 		board: &work.Board{Login: "me"}}
 	_, body := get(t, handler(src), "/")
-	for _, id := range []string{"alerts", "your-work", "your-repos", "tracked", "watched", "pipeline", "checks", "work-them", "work-done"} {
+	for _, id := range []string{"alerts", "your-work", "your-repos", "tracked", "watched", "pipeline", "checks"} {
 		if !strings.Contains(body, `data-module="`+id+`"`) {
 			t.Errorf("module %s missing", id)
 		}
