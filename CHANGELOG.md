@@ -5,6 +5,14 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (27) · Black Bombay (baby) · 2026-10-29
+
+Tag `v0.2.27`.
+
+- **Extension sync to v0.2.26**: Chrome extension bumped to 0.2.26. Toolbar
+  removed from board.js, dead CSS cleaned up in extension.css, build.sh check
+  fixed. Updated files copied to monitor/extension/.
+
 ## v0.2.0 (26) · Black Bombay (baby) · 2026-10-29
 
 Tag `v0.2.26`.
