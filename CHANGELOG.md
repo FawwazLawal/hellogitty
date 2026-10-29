@@ -5,6 +5,15 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (25) · Black Bombay (baby) · 2026-10-29
+
+Tag `v0.2.25`.
+
+- **PR Pipeline page**: renamed from "Pipeline" to "PR Pipeline", moved earlier
+  in the nav (after Your work). Six new action stat cards show review-requested,
+  changes-requested, checks-failing, approved, conflicts and draft counts.
+  New repo filter and pending-work filter added to the PR table.
+
 ## v0.2.0 (24) · Black Bombay (baby) · 2026-10-28
 
 Tag `v0.2.24`.
