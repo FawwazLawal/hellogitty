@@ -28,7 +28,7 @@ func TestWorkPeekShowsWhatTheRowHasNoRoomFor(t *testing.T) {
 	p := workPeek(it, "me", now, map[string][]store.Overlap{"o/r#7": {{Hard: true, Summary: "Another pull request cites this issue"}}})
 	got := lines(p)
 	want := map[string]string{
-		"Opened": "2026-10-19, 2 days ago", "Updated": "1 hour ago", "Checks": "Failed: lint · Running: build · 2 passed",
+		"Opened": "2026-10-19, Mon 12:00", "Updated": "11:00", "Checks": "Failed: lint · Running: build · 2 passed",
 		"Reviews": "Approved by @ann | Asked: @bob", "Branch": "fix/x → main", "Fixes": "#3, o/docs#9",
 		"Recent": "@ann: Looks good", "Someone else": "Another pull request cites this issue",
 	}

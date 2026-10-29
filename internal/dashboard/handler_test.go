@@ -169,16 +169,17 @@ func TestNothingWatchedIsNotAnAllClear(t *testing.T) {
 }
 
 func TestStaleAndPollFailLight(t *testing.T) {
-	now := time.Now()
+	now := time.Date(2026, 10, 29, 15, 0, 0, 0, time.UTC)
 	old := now.Add(-3 * time.Hour)
 	h := &Handler{
 		Template: web.Index,
 		Source: fakeSource{pipe: pipeFixture(t), tel: Telemetry{LastPoll: old, Errors: map[string]string{"gone/x": "github: 404"}, PRError: "search failed"},
 			reports: []store.RepoReport{{Repo: store.Repo{Owner: "gone", Name: "x"}}}},
 		PollInterval: time.Hour,
+		Now:          func() time.Time { return now },
 	}
 	_, html := get(t, h, "/")
-	for _, want := range []string{`data-v="cw-poll-fail">2<`, `data-v="cw-data-stale">3 hours ago<`, `<b>Not counted yet.</b>`, `Something went wrong`, `class="light UNKNOWN"`} {
+	for _, want := range []string{`data-v="cw-poll-fail">2<`, `data-v="cw-data-stale">12:00<`, `<b>Not counted yet.</b>`, `Something went wrong`, `class="light UNKNOWN"`} {
 		if !strings.Contains(html, want) {
 			t.Errorf("missing %q", want)
 		}
@@ -328,7 +329,7 @@ func TestWorkBoardPanels(t *testing.T) {
 		`Fix &lt;it&gt;`, // titles escaped
 		`<span class="say caution">Changes requested by @lead</span><span class="note caution" data-term="merge-conflict" tabindex="0">Merge conflict</span>`,
 		`>@lead</a>Please add a test. x</blockquote>`, // quote cleaned of markup, HTML and quoted replies
-		`2 days ago`, `3 hours ago`, `updated 2 min ago`,
+		`Sat 10:00`, `09:00`, `updated 2 min ago`,
 		`Pull requests, issues and notifications in repos owned by me`,
 		`Closed as completed`,
 	} {
