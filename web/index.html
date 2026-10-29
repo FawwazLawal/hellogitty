@@ -131,24 +131,6 @@
 
   [hidden] { display: none !important; }
 
-  /* filter and organize */
-  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 12px 20px 0; padding: 8px 10px;
-    background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; }
-  .toolbar .search { position: relative; display: flex; align-items: center; flex: 0 1 320px; min-width: 200px; }
-  .toolbar input[type="search"] { width: 100%; font: 14px/1.3 var(--sans); color: var(--text); background: var(--bg);
-    border: 1px solid var(--dim); border-radius: 6px; padding: 6px 30px 6px 10px; }
-  .toolbar input[type="search"]::placeholder { color: var(--dim); }
-  .toolbar input[type="search"]:focus { outline: 2px solid var(--text); outline-offset: 1px; }
-  .toolbar input[type="search"]:not(:placeholder-shown) { border-color: var(--caution); box-shadow: 0 0 0 1px var(--caution); padding-right: 30px; }
-  .toolbar input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
-  .toolbar kbd { position: absolute; right: 8px; font: 12px var(--mono); color: var(--dim); border: 1px solid var(--rule-hi);
-    border-radius: 4px; padding: 0 5px; pointer-events: none; }
-  .toolbar input:not(:placeholder-shown) + kbd { display: none; }
-  .toolbar .search label { display: contents; }
-  .toolbar .qclear { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; border: 0; background: transparent;
-    color: var(--caution); font: 15px/1 var(--sans); cursor: pointer; padding: 0; border-radius: 50%; z-index: 1; }
-  .toolbar .qclear:hover { background: var(--raised); }
-  .toolbar .qclear[hidden] { display: none; }
   .seg { display: inline-flex; align-items: center; border: 1px solid var(--rule-hi); border-radius: 6px; overflow: hidden; }
   .seg .seglbl { font-size: 12px; color: var(--dim); padding: 0 8px; border-right: 1px solid var(--rule-hi); align-self: stretch; display: flex; align-items: center; }
   .seg button, .theme button { font: 13px/1 var(--sans); color: var(--dim); background: transparent; border: 0; cursor: pointer; white-space: nowrap; }
@@ -156,29 +138,13 @@
   .seg button:hover, .theme button:hover { color: var(--text); background: var(--raised); }
   .seg button[aria-pressed="true"], .theme button[aria-pressed="true"] { color: var(--text); background: var(--raised); font-weight: 600; }
   .seg button { padding: 7px 10px; }
-  .pick { display: inline-flex; align-items: center; gap: 6px; }
-  .pick select { font: 13px var(--sans); color: var(--text); background: var(--bg); border: 1px solid var(--rule-hi); border-radius: 6px;
-    padding: 5px 8px; max-width: 260px; transition: border-color .12s, box-shadow .12s; }
-  .pick select.filtered { border-color: var(--caution); box-shadow: 0 0 0 1px var(--caution); font-weight: 600; }
   .check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
   .check input { accent-color: var(--caution); width: 15px; height: 15px; margin: 0; }
-  .fcount { font-size: 12px; color: var(--dim); letter-spacing: 0.01em; }
   .clear { font: 13px var(--sans); color: var(--text); background: transparent; border: 0; padding: 0; cursor: pointer;
     text-decoration: underline; text-decoration-color: var(--rule-hi); text-underline-offset: 3px; }
   .clear:hover { text-decoration-color: var(--text); }
-  .toolbar .fcount { margin-left: auto; }
-  .filterpills { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 20px 0; padding: 0; }
-  .filterpills:empty { display: none; }
-  .fpill { display: inline-flex; align-items: center; gap: 4px; font: 600 12px/1 var(--sans); color: var(--caution-ink); background: var(--caution-fill);
-    border: 1px solid color-mix(in srgb, var(--caution) 40%, transparent); border-radius: 999px; padding: 4px 8px 4px 10px; white-space: nowrap; }
-  .fpill .fpx { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; padding: 0; border: 0;
-    background: transparent; color: inherit; cursor: pointer; border-radius: 50%; font-size: 14px; line-height: 1; }
-  .fpill .fpx:hover { background: color-mix(in srgb, var(--caution) 25%, transparent); }
-  .fpill-clear { font: 12px var(--sans); color: var(--dim); background: transparent; border: 0; padding: 0; cursor: pointer;
-    text-decoration: underline; text-decoration-color: var(--rule-hi); text-underline-offset: 3px; }
-  .fpill-clear:hover { text-decoration-color: var(--text); color: var(--text); }
   .tbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 14px; border-bottom: 1px solid var(--rule); }
-  /* Add a repository: a plain field and an outlined button, like the toolbar's own controls. */
+  /* Add a repository: a plain field and an outlined button. */
   .addrepo { display: flex; gap: 6px; margin-left: auto; flex: 0 1 340px; min-width: 220px; }
   .addrepo input { flex: 1; min-width: 0; font: 13px/1.3 var(--sans); color: var(--text); background: var(--bg);
     border: 1px solid var(--rule-hi); border-radius: 6px; padding: 5px 9px; }
@@ -191,14 +157,6 @@
   .removed .untrack { margin: 4px 0 0 6px; }
   .movetag { display: none; font-size: 12px; color: var(--dim); }
   .movetag.you { color: var(--caution-text); font-weight: 600; }
-  .regrouped .movetag { display: inline; }
-  .regrouped .movetag::before { content: "· "; color: var(--dim); font-weight: 400; }
-  .regrouped > .mv { display: none; }
-  .rg > section { border-bottom: 1px solid var(--rule); }
-  .rg > section:last-child { border-bottom: 0; }
-  .rg h3 { margin: 0; padding: 12px 14px 4px; font-size: 13px; font-weight: 650; color: var(--dim); display: flex; align-items: baseline; gap: 8px; }
-  .rg h3 .who { color: var(--text); }
-  .fnone { margin: 0; padding: 4px 14px 14px; color: var(--dim); font-size: 13px; }
 
   /* work board */
   .group { border-bottom: 1px solid var(--rule); }
@@ -501,9 +459,6 @@
     .cell.wide { grid-column: span 2; }
   }
   @media (max-width: 760px) {
-    .toolbar { margin: 10px 16px 0; }
-    .toolbar .search { flex: 1 1 100%; }
-    .toolbar .fcount { margin-left: 0; }
     .seg .seglbl { display: none; }
     .seg button { padding: 7px 9px; }
     .status { padding: 8px 16px; gap: 4px 16px; }
@@ -535,7 +490,6 @@
     .cw { grid-template-columns: 1fr; padding: 8px 12px 0; }
     .cell.wide { grid-column: span 1; }
     .grid { padding: 8px 12px 16px; }
-    .toolbar { margin: 8px 12px 0; }
     .wi .end { gap: 6px; }
     body { overflow-x: hidden; }
   }
@@ -1213,16 +1167,6 @@
 {{end}}
 </section>
 
-<section class="toolbar" aria-label="Filter and organize" data-module="toolbar">
-  <span class="search"><label><span class="sr">Search</span><input type="search" id="f-q" placeholder="Search titles, repos, labels, people" autocomplete="off" spellcheck="false"><kbd data-shortcut title="Press / to search">/</kbd></label><button type="button" class="qclear" aria-label="Clear search" title="Clear search" hidden>&times;</button></span>
-  <div class="seg" role="group" aria-label="Show pull requests, issues or both"><button type="button" data-f-kind="all">All</button><button type="button" data-f-kind="pr">PRs</button><button type="button" data-f-kind="issue">Issues</button></div>
-  <label class="pick"><span class="sr">Organization or repository</span><select id="f-scope"><option value="">All organizations and repos</option></select></label>
-  <label class="check"><input type="checkbox" id="f-mine"> Needs me only</label>
-  <div class="seg" role="group" aria-label="Group your work by"><span class="seglbl">Group by</span><button type="button" data-group="move">Whose move</button><button type="button" data-group="repo">Repository</button><button type="button" data-group="owner">Organization</button></div>
-  <span class="fcount" id="f-count" aria-live="polite"></span>
-  <button type="button" class="clear" id="f-clear" hidden>Clear filters</button>
-</section>
-<div class="filterpills" id="f-pills" aria-label="Active filters" role="status"></div>
 
 <div class="grid">
   <div class="main">
@@ -1980,8 +1924,8 @@
       if (!main || !rail || !dialog) return;
       var el = {};
       document.querySelectorAll("[data-module]").forEach(function (m) { el[m.dataset.module] = m; });
-      var TOP = ["alerts", "toolbar"], SUB = ["work-them", "work-other", "work-done"];
-      var NAMES = { alerts: "Alerts", toolbar: "Filter toolbar", "work-them": "Waiting on others", "work-other": "Other notifications", "work-done": "Finished" };
+      var TOP = ["alerts"], SUB = ["work-them", "work-other", "work-done"];
+      var NAMES = { alerts: "Alerts", "work-them": "Waiting on others", "work-other": "Other notifications", "work-done": "Finished" };
       var named = {};
       function name(id) {
         if (NAMES[id]) return NAMES[id];
@@ -1996,7 +1940,7 @@
         maintainer: { main: ["your-repos", "your-work", "conversations", "tracked"], rail: ["feed", "watched", "issues", "security", "pipeline", "checks"], hidden: [], folded: ["conversations"] },
         program: { main: ["tracked", "your-work", "conversations", "your-repos"], rail: ["pipeline", "feed", "watched", "issues", "security", "checks"], hidden: ["your-repos"], folded: ["your-work", "conversations"] },
         focus: { main: ["your-work", "conversations", "your-repos", "tracked"], rail: ["feed", "watched", "issues", "security", "pipeline", "checks"],
-          hidden: ["toolbar", "feed", "conversations", "your-repos", "tracked", "watched", "issues", "security", "pipeline", "checks", "work-them", "work-other", "work-done"], folded: [] }
+          hidden: ["feed", "conversations", "your-repos", "tracked", "watched", "issues", "security", "pipeline", "checks", "work-them", "work-other", "work-done"], folded: [] }
       };
       function copy(p, preset) { return { preset: preset, main: p.main.slice(), rail: p.rail.slice(), hidden: p.hidden.slice(), folded: p.folded.slice(), sizes: {} }; }
       // Keep only modules on this page, and give any new panel a place in its usual column.
@@ -2034,16 +1978,12 @@
       }
       function save() { if (extPopup) return; try { localStorage.setItem(key, JSON.stringify(state)); } catch (e) {} }
       function has(arr, id) { return arr.indexOf(id) >= 0; }
-      function filtersActive() {
-        try { var v = JSON.parse(localStorage.getItem("hellogitty-view") || "null"); return !!(v && (v.q || (v.kind && v.kind !== "all") || v.scope || v.mine)); } catch (e) { return false; }
-      }
 
       function apply() {
         state.main.forEach(function (id) { main.appendChild(el[id]); });
         state.rail.forEach(function (id) { rail.appendChild(el[id]); });
         Object.keys(el).forEach(function (id) {
           var hide = has(state.hidden, id);
-          if (id === "toolbar" && hide && filtersActive()) hide = false; // never hide rows behind a filter you can't see
           el[id].classList.toggle("mod-hidden", hide);
           var folded = has(state.folded, id) && el[id].classList.contains("panel");
           el[id].classList.toggle("folded", folded);
@@ -2373,105 +2313,15 @@
       });
     })();
 
-    // The view is remembered in this browser so the 5-minute reload keeps it.
+    // Repo sorting, pinning, and repo search (view state persisted in this browser).
     (function () {
       var viewKey = "hellogitty-view";
-      var view = { q: "", kind: "all", scope: "", mine: false, group: "move", sort: "default", sortDir: "desc", rq: "", pins: [] };
+      var view = { sort: "default", sortDir: "desc", rq: "", pins: [] };
       try { var saved = JSON.parse(localStorage.getItem(viewKey) || "null"); if (saved) for (var k in view) if (k in saved) view[k] = saved[k]; } catch (e) {}
       function save() { try { localStorage.setItem(viewKey, JSON.stringify(view)); } catch (e) {} }
 
-      var q = document.getElementById("f-q"), scope = document.getElementById("f-scope"), mine = document.getElementById("f-mine");
-      var count = document.getElementById("f-count"), clear = document.getElementById("f-clear");
-      if (!q) return;
-      var items = Array.prototype.slice.call(document.querySelectorAll(".wi"));
-      var watched = Array.prototype.slice.call(document.querySelectorAll(".wl li[data-repo]"));
       var repos = Array.prototype.slice.call(document.querySelectorAll("details.repo[data-repo]"));
-      var boards = Array.prototype.slice.call(document.querySelectorAll("[data-board]"));
-      items.forEach(function (li, i) { li._home = li.parentNode; li._order = i; });
       repos.forEach(function (d, i) { d._order = i; });
-
-      // Owner and repository choices come from what is on the page.
-      var owners = {}, label = {};
-      document.querySelectorAll("[data-repo]").forEach(function (el) {
-        var r = el.dataset.repo, o = r.split("/")[0], name = el.dataset.name || r;
-        (owners[o] = owners[o] || {})[r] = true;
-        label[r] = label[r] || name; label[o] = label[o] || name.split("/")[0];
-      });
-      Object.keys(owners).sort().forEach(function (o) {
-        var g = document.createElement("optgroup"); g.label = label[o];
-        var all = document.createElement("option"); all.value = "o:" + o; all.textContent = label[o] + " (everything)"; g.appendChild(all);
-        Object.keys(owners[o]).sort().forEach(function (r) {
-          var opt = document.createElement("option"); opt.value = "r:" + r; opt.textContent = label[r]; g.appendChild(opt);
-        });
-        scope.appendChild(g);
-      });
-      if (view.scope && !scope.querySelector('option[value="' + view.scope.replace(/"/g, "") + '"]')) view.scope = "";
-
-      function inScope(repo) {
-        if (!view.scope) return true;
-        var v = view.scope.slice(2);
-        return view.scope[0] === "o" ? repo.indexOf(v + "/") === 0 : repo === v;
-      }
-      function textMatch(el) {
-        var words = view.q.toLowerCase().split(/\s+/).filter(Boolean), hay = el.dataset.s || "";
-        return words.every(function (w) { return hay.indexOf(w) !== -1; });
-      }
-      function workMatch(li) {
-        if (view.kind !== "all" && li.dataset.kind !== view.kind) return false;
-        if (view.mine && li.dataset.move !== "you") return false;
-        return inScope(li.dataset.repo) && textMatch(li);
-      }
-      function active() { return view.q || view.kind !== "all" || view.scope || view.mine; }
-
-      function regroup() {
-        boards.forEach(function (board) {
-          var old = board.querySelector(".rg");
-          if (old) old.remove();
-          var own = items.filter(function (li) { return board.contains(li._home); });
-          own.sort(function (a, b) { return a._order - b._order; }).forEach(function (li) { li._home.appendChild(li); });
-          board.classList.toggle("regrouped", view.group !== "move");
-          if (view.group === "move" || !own.length) return;
-          var groups = {}, keys = [], names = {};
-          own.forEach(function (li) {
-            var key = view.group === "owner" ? li.dataset.repo.split("/")[0] : li.dataset.repo;
-            var name = li.dataset.name || li.dataset.repo;
-            if (!groups[key]) { groups[key] = []; keys.push(key); names[key] = view.group === "owner" ? name.split("/")[0] : name; }
-            groups[key].push(li);
-          });
-          // Groups holding something that is your move come first, then by name.
-          keys.sort(function (a, b) {
-            var ya = groups[a].some(function (li) { return li.dataset.move === "you"; });
-            var yb = groups[b].some(function (li) { return li.dataset.move === "you"; });
-            return ya !== yb ? (ya ? -1 : 1) : (a < b ? -1 : a > b ? 1 : 0);
-          });
-          var box = document.createElement("div"); box.className = "rg";
-          keys.forEach(function (key) {
-            var sec = document.createElement("section"), h = document.createElement("h3"), ul = document.createElement("ul");
-            var who = document.createElement("span"); who.className = "who"; who.textContent = names[key];
-            var n = document.createElement("span"); n.className = "n";
-            h.appendChild(who); h.appendChild(n); ul.className = "items";
-            groups[key].forEach(function (li) { ul.appendChild(li); });
-            sec.appendChild(h); sec.appendChild(ul); box.appendChild(sec);
-          });
-          var tail = board.querySelector(".hint, .pad.err");
-          board.insertBefore(box, tail && tail.parentNode === board ? tail : null);
-        });
-      }
-
-      // Show visible / total on each list heading, and say so when filters empty a list.
-      function counts(container, list) {
-        var n = container.querySelector(":scope > h3 .n, :scope > summary .n");
-        var shown = list.filter(function (li) { return !li.hidden; }).length;
-        if (n) {
-          if (n._total === undefined) n._total = n.textContent;
-          n.textContent = active() && list.length ? shown + " of " + list.length : (container.closest(".rg") ? String(list.length) : n._total);
-        }
-        var none = container.querySelector(":scope > .fnone");
-        if (list.length && !shown) {
-          if (!none) { none = document.createElement("p"); none.className = "fnone"; none.textContent = "Nothing here matches the filters."; container.appendChild(none); }
-        } else if (none) none.remove();
-        if (container.tagName === "SECTION" && container.parentNode.classList.contains("rg")) container.hidden = active() && !shown;
-      }
 
       function sortRepos() {
         var key = view.sort, dir = view.sortDir === "asc" ? 1 : -1;
@@ -2508,75 +2358,27 @@
         if (last && sorted.some(function (d) { return !pinned(d) && !d.hidden; })) last.classList.add("pinlast");
       }
 
-      var pills = document.getElementById("f-pills");
-      function pill(text, clearFn) {
-        var p = document.createElement("span"); p.className = "fpill"; p.textContent = text;
-        var x = document.createElement("button"); x.type = "button"; x.className = "fpx"; x.innerHTML = "&times;"; x.title = "Remove filter";
-        x.addEventListener("click", function () { clearFn(); apply(); });
-        p.appendChild(x); return p;
-      }
-      function renderPills() {
-        if (!pills) return;
-        pills.textContent = "";
-        if (view.q) pills.appendChild(pill("Search: " + view.q, function () { view.q = ""; }));
-        if (view.kind !== "all") pills.appendChild(pill(view.kind === "pr" ? "PRs only" : "Issues only", function () { view.kind = "all"; }));
-        if (view.scope) {
-          var scopeLabel = scope.selectedOptions[0] ? scope.selectedOptions[0].textContent : view.scope.slice(2);
-          pills.appendChild(pill("Repo: " + scopeLabel, function () { view.scope = ""; }));
-        }
-        if (view.mine) pills.appendChild(pill("Needs me only", function () { view.mine = false; }));
-        if (view.group && view.group !== "move") pills.appendChild(pill("Grouped by " + view.group, function () { view.group = "move"; }));
-        if (pills.children.length > 1) {
-          var btn = document.createElement("button"); btn.type = "button"; btn.className = "fpill-clear"; btn.textContent = "Clear all";
-          btn.addEventListener("click", function () { view.q = ""; view.kind = "all"; view.scope = ""; view.mine = false; view.group = "move"; apply(); });
-          pills.appendChild(btn);
-        }
-      }
-
       function apply() {
-        q.value = view.q; scope.value = view.scope; mine.checked = view.mine;
         document.querySelectorAll(".thsort").forEach(function (th) {
           var on = th.dataset.rsort === view.sort;
           th.classList.toggle("asc", on && view.sortDir === "asc");
           th.classList.toggle("desc", on && view.sortDir === "desc");
         });
-        document.querySelectorAll("[data-f-kind]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.fKind === view.kind ? "true" : "false"); });
-        document.querySelectorAll("[data-group]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.group === view.group ? "true" : "false"); });
-        regroup();
-        var shown = 0;
-        items.forEach(function (li) { li.hidden = !workMatch(li); if (!li.hidden) shown++; });
-        watched.forEach(function (li) { li.hidden = !(inScope(li.dataset.repo) && textMatch(li) && (view.kind !== "pr")); });
         var repoShown = 0;
         var rwords = (view.rq || "").toLowerCase().split(/\s+/).filter(Boolean);
         repos.forEach(function (d) {
           var hay = (d.dataset.s || "") + " " + (d.dataset.name || "").toLowerCase();
           var found = rwords.every(function (w) { return hay.indexOf(w) !== -1; });
-          d.hidden = !(inScope(d.dataset.repo) && textMatch(d) && found); if (!d.hidden) repoShown++;
+          d.hidden = !found; if (!d.hidden) repoShown++;
         });
         if (rq) rq.value = view.rq || "";
-        document.querySelectorAll(".mv, .rg > section").forEach(function (c) {
-          counts(c, Array.prototype.slice.call(c.querySelectorAll(".wi")));
-        });
         sortRepos();
-        count.textContent = active() ? "Showing " + shown + " of " + items.length + " items" : "";
         var tc = document.getElementById("tracked-count");
         if (tc) tc.textContent = repoShown !== repos.length ? repoShown + " of " + repos.length + " repositories" : "";
-        clear.hidden = !active();
-        scope.classList.toggle("filtered", !!view.scope);
-        if (qClear) qClear.hidden = !view.q;
         if (rqClear) rqClear.hidden = !(view.rq);
-        // A filter that leaves the folded Finished list with matches opens it, so results aren't hidden.
-        var done = document.querySelector('details.mv[data-key="work-done"]');
-        if (done && active() && done.querySelector(".wi:not([hidden])")) done.open = true;
-        renderPills();
         save();
       }
 
-      var typing;
-      q.addEventListener("input", function () { clearTimeout(typing); typing = setTimeout(function () { view.q = q.value.trim(); apply(); }, 120); });
-      q.addEventListener("keydown", function (e) { if (e.key === "Escape") { view.q = ""; apply(); q.blur(); } });
-      scope.addEventListener("change", function () { view.scope = scope.value; apply(); });
-      mine.addEventListener("change", function () { view.mine = mine.checked; apply(); });
       document.querySelectorAll(".thsort").forEach(function (th) {
         th.addEventListener("click", function (e) {
           if (th.dataset.term && e.target !== th) return;
@@ -2598,11 +2400,8 @@
         rq.addEventListener("input", function () { clearTimeout(rtyping); rtyping = setTimeout(function () { view.rq = rq.value.trim(); apply(); }, 120); });
         rq.addEventListener("keydown", function (e) { if (e.key === "Escape") { view.rq = ""; apply(); rq.blur(); } });
       }
-      var qClear = q.closest(".search").querySelector(".qclear");
       var rqClear = rq ? rq.closest(".rsearch").querySelector(".qclear") : null;
-      if (qClear) qClear.addEventListener("click", function () { view.q = ""; apply(); q.focus(); });
       if (rqClear) rqClear.addEventListener("click", function () { view.rq = ""; apply(); rq.focus(); });
-      // Pin and unpin. The pin sits in the row's summary, so it must not open or close the row.
       document.addEventListener("click", function (e) {
         var b = e.target.closest(".pin[data-pin]");
         if (!b) return;
@@ -2611,13 +2410,9 @@
         if (i === -1) pins.push(k); else pins.splice(i, 1);
         view.pins = pins; apply(); b.focus();
       }, true);
-      document.querySelectorAll("[data-f-kind]").forEach(function (b) { b.addEventListener("click", function () { view.kind = b.dataset.fKind; apply(); }); });
-      document.querySelectorAll("[data-group]").forEach(function (b) { b.addEventListener("click", function () { view.group = b.dataset.group; apply(); }); });
-      clear.addEventListener("click", function () { view.q = ""; view.kind = "all"; view.scope = ""; view.mine = false; apply(); });
       document.addEventListener("keydown", function (e) {
         var t = e.target.tagName;
         if (document.documentElement.dataset.shortcuts === "off" || e.target.isContentEditable) return;
-        if (e.key === "/" && !e.shiftKey && t !== "INPUT" && t !== "SELECT" && t !== "TEXTAREA" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); q.focus(); }
         if ((e.key === "?" || (e.key === "/" && e.shiftKey)) && t !== "INPUT" && t !== "SELECT" && t !== "TEXTAREA" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); location.href = "/help"; }
       });
       apply();
