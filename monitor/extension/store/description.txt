@@ -1,0 +1,26 @@
+HelloGitty for Chrome puts your open GitHub pull requests and issues in one place, sorted into three lanes: Your move, Waiting on others and Finished. A toolbar badge shows how many items are waiting on you right now.
+
+The extension classifies each item by reading its timeline — reviews, comments, CI status, assignments — and deciding whose turn it is. The same classifier runs in the HelloGitty self-hosted dashboard, compiled to WebAssembly, so the two always agree.
+
+Three ways to use it:
+
+Popup — click the toolbar icon for a quick glance. Search and a "Needs me" filter let you zero in on what matters.
+
+Side panel — pin the board beside any tab. Same compact layout as the popup, always one click away.
+
+Full tab — opens a full-width board. If you run the HelloGitty dashboard locally, the tab redirects there instead so you get the complete experience.
+
+What it shows:
+- Pull requests you authored or are asked to review
+- Issues you opened, are assigned to, or were mentioned in
+- One-line status for each item ("Waiting for your review", "CI failing", "Approved — ready to merge", etc.)
+- How long each item has been in its current state
+
+Sign-in options:
+- Paste a GitHub personal access token
+- GitHub device flow (copy a short code, approve in the browser)
+- One-click OAuth when built with a GitHub App client ID
+
+The board refreshes every five minutes in the background. Only GitHub's API (GraphQL and notifications) is contacted — no analytics, no telemetry, no third-party services. All data stays in your browser.
+
+HelloGitty for Chrome is open source. The repository, build instructions and a privacy summary are at https://github.com/FawwazLawal/Hello_Gitty_Ext.

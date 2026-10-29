@@ -1,0 +1,118 @@
+/* HelloGitty for Chrome on top of dashboard.css, which build.sh lifts from web/index.html. Only
+   what the dashboard has no rule for lives here: popup width, the alert row with fewer cells,
+   buttons and fields, and the sign-in card. Colours are the dashboard's variables only, so light
+   and dark follow its theme switch. */
+
+/* The popup sizes to its content, so it asks for 440px. When Chrome's zoom makes that more than
+   the popup can show, the popup is narrower than 440 CSS px and the page fills it instead. */
+body.view-popup { width: 440px; }
+@media (max-width: 439.98px) { body.view-popup { width: auto; } }
+
+/* Four alert cells (Your move wide, then Check failed, Data is stale, API running low) fill one
+   row at the dashboard's 2:1 proportions. Narrow, Your move takes its own row and the three
+   small cells share the next, instead of the dashboard's 2- and 1-column steps for its 9. */
+.cw { grid-auto-flow: row; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); }
+.cw .cell.wide { grid-column: auto; }
+/* A value too long for a small cell ("5 hours ago", "320 left") moves under the label. */
+.cw .cell .head { flex-wrap: wrap; column-gap: 8px; row-gap: 2px; }
+@media (max-width: 760px) {
+  .cw { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cw .cell.wide { grid-column: 1 / -1; }
+}
+@media (max-width: 480px) { .cw .cell .cnt { white-space: normal; } }
+
+/* The dashboard's header puts its clock on a row of its own below 760px and splits brand and
+   buttons into two equal columns. The extension has no clock: brand and buttons share the first
+   row, and the telemetry (centre column) drops to a full-width row under them. */
+@media (max-width: 760px) {
+  .status { grid-template-columns: auto minmax(0, 1fr); }
+  .status .telemetry { grid-column: 1 / -1; grid-row: 2; padding: 0; }
+  .status .head-right { flex-wrap: wrap; justify-content: flex-end; }
+}
+
+/* Action buttons in the header use the dashboard's .headbtn class. On narrow views they stack
+   compactly in the .head-right flex row. */
+
+/* Buttons from the design system: Secondary (.btn), Primary (.btn.primary) and Quiet (.quiet). */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: 600 14px/20px var(--sans);
+  color: var(--text); background: transparent; border: 1px solid var(--rule-hi); border-radius: 6px; padding: 10px 16px; cursor: pointer; }
+.btn:hover { border-color: var(--dim); }
+.btn.primary { background: var(--caution-fill); border-color: var(--caution-fill); color: var(--caution-ink); }
+.btn.primary:hover { border-color: var(--caution-ink); }
+.btn.block { display: flex; width: 100%; }
+.btn .mark { width: 16px; height: 16px; flex: none; fill: currentColor; }
+.quiet { font: 14px/1.4 var(--sans); color: var(--dim); background: none; border: 0; padding: 0; cursor: pointer;
+  text-decoration: underline; text-decoration-color: currentColor; text-underline-offset: 3px; }
+.quiet:hover { color: var(--text); }
+
+.form .lbl { display: block; }
+.form input[type="text"] { width: 100%; font: 14px/1.3 var(--mono); color: var(--text); background: var(--bg);
+  border: 1px solid var(--rule-hi); border-radius: 6px; padding: 6px 10px; margin: 4px 0 8px; }
+.form input:focus { outline: 2px solid var(--text); outline-offset: 1px; }
+.form p.lbl { margin: 0 0 8px; }
+
+/* Sign-in: the brand and theme switch only, then one card. The grid header collapses to a
+   two-column layout (brand left, theme right) when the centre telemetry is empty. */
+/* 56px is a floor for the sign-in bar, which holds only the brand and the theme switch. Its content
+   is about 57px tall today, so the floor only matters if the brand gets smaller. */
+.signing-in .status { min-height: 56px; padding: 10px 16px; }
+.signing-in .telemetry { display: none; }
+.signing-in .status { grid-template-columns: 1fr auto; }
+.full.signing-in .status { padding: 10px 20px; }
+.signing-in .status .ver { font-size: 12px; }
+.grid.sg-grid { padding: 16px; gap: 24px; }
+.full .grid.sg-grid { grid-template-columns: 460px 320px; justify-content: center; padding: 48px 20px 24px; }
+@media (max-width: 860px) { .full .grid.sg-grid { grid-template-columns: minmax(0, 460px); } }
+.sg-grid .main { gap: 0; }
+.sg-grid .rail .panel { border-color: var(--rule); padding-bottom: 16px; }
+.sg-grid .rail .panel > h2 { border-bottom: 0; padding: 16px 16px 0; font-size: 15px; }
+.sg-grid .rail .pad { padding: 13px 16px 0; color: var(--dim); }
+.sg-grid #use-dashboard { font-weight: 400; text-decoration: underline; text-underline-offset: 3px; }
+
+.sg-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.sg-notice { margin: 0; padding: 10px 12px; border-radius: 6px; background: var(--caution-fill); color: var(--caution-ink);
+  font-weight: 600; font-size: 14px; line-height: 1.45; }
+.sg-card { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+/* The kitten is a rim light on black, drawn with mix-blend-mode: lighten, so its window stays dark
+   in every theme: on a light background lighten would turn the whole picture white. */
+.sg-mascot { height: 132px; background: #101011; overflow: hidden; }
+:root[data-visual-theme="pink"] .sg-mascot { background: #21101a; }
+.sg-mascot img { display: block; width: 100%; height: 100%; object-fit: contain; mix-blend-mode: lighten; }
+.sg-body { display: flex; flex-direction: column; gap: 14px; padding: 18px 20px 20px; }
+.sg-body p { margin: 0; }
+.sg-title { margin: 0; font-size: 20px; font-weight: 700; line-height: 1.25; }
+.sg-lede, .sg-dim { color: var(--dim); }
+.sg-h { margin: 0; font-size: 13px; font-weight: 650; color: var(--dim); }
+.sg-small { font-size: 12px; color: var(--dim); }
+.sg-help { font-size: 12.5px; line-height: 1.45; color: var(--dim); }
+.sg-rule { margin: 0; border: 0; border-top: 1px solid var(--rule); }
+.sg-links { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
+.sg-points { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 12.5px; color: var(--dim); }
+.sg-points li { display: flex; align-items: center; gap: 8px; }
+.sg-points li::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--dim); flex: none; }
+.sg-status { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.sg-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.sg-status.caution { color: var(--caution-text); }
+.sg-status.caution .sg-dot { background: var(--caution); }
+.sg-status.nom { color: var(--text); }
+.sg-status.nom .sg-dot { background: var(--nom); }
+.sg-fail { color: var(--warn); font-weight: 600; }
+.sg-errbox { margin: 0; padding: 8px 10px; border-radius: 4px; background: var(--raised); color: var(--dim);
+  font: 12.5px/1.4 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.sg-code { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 11px 12px 16px;
+  background: var(--raised); border: 1px solid var(--rule); border-radius: 6px; }
+.sg-code-text { font: 26px/1.3 var(--mono); letter-spacing: 2px; color: var(--text); overflow-wrap: anywhere; }
+.sg-wait { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sg-waiting { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--dim); }
+.sg-ring { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--dim); border-top-color: var(--text); flex: none;
+  animation: sg-spin 0.8s linear infinite; }
+@keyframes sg-spin { to { transform: rotate(360deg); } }
+.sg-form { display: flex; flex-direction: column; gap: 14px; }
+.sg-label { font-size: 13px; font-weight: 650; color: var(--text); margin-bottom: -6px; }
+.sg-field { width: 100%; font: 13px/1.3 var(--mono); color: var(--text); background: var(--bg); border: 1px solid var(--rule-hi);
+  border-radius: 6px; padding: 11px 12px; }
+.sg-field::placeholder { color: var(--dim); }
+.sg-field:focus { outline: 2px solid var(--text); outline-offset: 1px; }
+.sg-field.bad { border-color: var(--warn); }
+.sg-bad { font-size: 12.5px; color: var(--warn); }
+.sg-foot { margin: 0; font-size: 12px; line-height: 1.4; color: var(--dim); }
