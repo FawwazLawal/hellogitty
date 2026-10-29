@@ -14,6 +14,8 @@ func ts(h int) *time.Time {
 	return &t
 }
 
+func tp(t time.Time) *time.Time { return &t }
+
 func act(who string, h int) *Activity { return &Activity{Author: who, At: *ts(h), Body: "hi"} }
 
 func TestMyPRWhoseMove(t *testing.T) {
@@ -306,11 +308,11 @@ func TestAutomatedCommentsAreNotReplies(t *testing.T) {
 	at := time.Date(2026, 10, 20, 3, 2, 20, 0, time.UTC)
 	n := node{}
 	n.Comments.Nodes = []comment{
-		{Author: &actor{Login: "me"}, Body: "Here is the fix.", CreatedAt: at.Add(-time.Hour)},
+		{Author: &actor{Login: "me"}, Body: "Here is the fix.", CreatedAt: tp(at.Add(-time.Hour))},
 		// pbakaus/impeccable#1084: a policy check posting from the maintainer's own account.
-		{Author: &actor{Login: "pbakaus", Typename: "User"}, Body: "<!-- impeccable-pr-policy:v1:needs-decision -->\nThe automated policy check found...", CreatedAt: at},
+		{Author: &actor{Login: "pbakaus", Typename: "User"}, Body: "<!-- impeccable-pr-policy:v1:needs-decision -->\nThe automated policy check found...", CreatedAt: tp(at)},
 		// golang/go: Gerrit import notices come from gopherbot, a User account.
-		{Author: &actor{Login: "gopherbot", Typename: "User"}, Body: "This PR has been imported to Gerrit for code review.", CreatedAt: at.Add(time.Hour)},
+		{Author: &actor{Login: "gopherbot", Typename: "User"}, Body: "This PR has been imported to Gerrit for code review.", CreatedAt: tp(at.Add(time.Hour))},
 	}
 	if l := latest(n); l == nil || l.Author != "me" {
 		t.Errorf("the newest human comment is mine: %+v", l)

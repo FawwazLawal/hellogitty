@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -48,9 +49,19 @@ type Entry struct {
 	// Priority is "high" for what must never wait: your pull request closed without merging, or a
 	// label nobody has said is harmless. Absent otherwise.
 	Priority string `json:"priority,omitempty"`
+
+	Body              string     `json:"body,omitempty"`
+	ReviewState       string     `json:"review_state,omitempty"`
+	Path              string     `json:"path,omitempty"`
+	AuthorAssociation string     `json:"author_association,omitempty"`
+	FirstSeenAt       *time.Time `json:"first_seen_at,omitempty"`
+	AgeHours          float64    `json:"age_hours,omitempty"`
 }
 
+const SchemaVersion = 2
+
 type File struct {
+	SchemaVersion       int       `json:"schema_version"`
 	GeneratedAt         time.Time `json:"generated_at"`
 	PollIntervalMinutes int       `json:"poll_interval_minutes"`
 	Entries             []Entry   `json:"entries"`
@@ -76,7 +87,7 @@ func Build(b *work.Board, reports []store.RepoReport, seen FirstSeen) []Entry {
 					out = append(out, e)
 				}
 			}
-			if e, ok := issueEntry(it, b.Login); ok {
+			if e, ok := issueEntry(it, b.Login, seen); ok {
 				out = append(out, e)
 			}
 		}
@@ -156,6 +167,9 @@ func prEntries(it work.Item, login string, seen FirstSeen) []Entry {
 		if url == "" {
 			url = it.URL
 		}
+		if at.IsZero() {
+			at = seen(base + id)
+		}
 		return Entry{ID: base + id, Kind: kind, Repo: it.Repo, Number: it.Number, URL: url, Actor: actor, OccurredAt: at.UTC(), Summary: summary}
 	}
 	var out []Entry
@@ -203,7 +217,12 @@ func prEntries(it work.Item, login string, seen FirstSeen) []Entry {
 		if summary == "" {
 			summary = "Commented"
 		}
-		out = append(out, entry(eventID(a.URL), kind, a.URL, a.Author, a.At, summary))
+		e := entry(eventID(a.URL), kind, a.URL, a.Author, a.At, summary)
+		e.Body = a.Body
+		e.ReviewState = a.Review
+		e.Path = a.Path
+		e.AuthorAssociation = a.AuthorAssociation
+		out = append(out, e)
 	}
 
 	reviewed := false
@@ -521,9 +540,19 @@ func Sorted(entries []Entry) []Entry {
 	return entries
 }
 
+// Enrich sets staleness fields on every entry: FirstSeenAt is the first time HelloGitty noticed
+// the entry (stable across rewrites), and AgeHours is how old it is now.
+func Enrich(entries []Entry, seen FirstSeen, now time.Time) {
+	for i := range entries {
+		fs := seen(entries[i].ID)
+		entries[i].FirstSeenAt = &fs
+		entries[i].AgeHours = math.Round(now.Sub(fs).Hours()*10) / 10
+	}
+}
+
 // issueEntry reports the reply that made an issue your move. It goes when you answer, because the
 // issue stops being your move.
-func issueEntry(it work.Item, login string) (Entry, bool) {
+func issueEntry(it work.Item, login string, seen FirstSeen) (Entry, bool) {
 	if it.PR || it.Move != work.MoveYou || it.Last == nil || strings.EqualFold(it.Last.Author, login) {
 		return Entry{}, false
 	}
@@ -535,8 +564,16 @@ func issueEntry(it work.Item, login string) (Entry, bool) {
 	if url == "" {
 		url = it.URL
 	}
-	return Entry{ID: "hg-" + slug(it.Repo) + "-" + strconv.Itoa(it.Number) + "-" + eventID(it.Last.URL), Kind: KindIssue,
-		Repo: it.Repo, Number: it.Number, URL: url, Actor: it.Last.Author, OccurredAt: it.Last.At.UTC(), Summary: summary}, true
+	id := "hg-" + slug(it.Repo) + "-" + strconv.Itoa(it.Number) + "-" + eventID(it.Last.URL)
+	at := it.Last.At
+	if at.IsZero() {
+		at = seen(id)
+	}
+	e := Entry{ID: id, Kind: KindIssue, Repo: it.Repo, Number: it.Number, URL: url, Actor: it.Last.Author,
+		OccurredAt: at.UTC(), Summary: summary}
+	e.Body = it.Last.Body
+	e.AuthorAssociation = it.Last.AuthorAssociation
+	return e, true
 }
 
 func watchEntry(r store.RepoReport, w store.WatchReport, seen FirstSeen) (Entry, bool) {
@@ -675,6 +712,7 @@ func oneLine(body string, max int) string {
 // Write replaces path with f atomically: it writes a temporary file in the same directory and
 // renames it over the old one, so a reader sees either the previous file or the new one, never half.
 func Write(path string, f File) error {
+	f.SchemaVersion = SchemaVersion
 	if f.Entries == nil {
 		f.Entries = []Entry{}
 	}

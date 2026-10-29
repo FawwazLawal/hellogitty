@@ -44,13 +44,14 @@ type Check struct {
 
 // Thread is an unresolved review thread: an inline comment someone expects answered before merge.
 type Thread struct {
-	Author   string
-	Bot      bool
-	Body     string
-	URL      string
-	Path     string
-	At       time.Time
-	Outdated bool // the code it points at has changed since
+	Author            string
+	Bot               bool
+	Body              string
+	URL               string
+	Path              string
+	At                time.Time
+	Outdated          bool // the code it points at has changed since
+	AuthorAssociation string
 	// RepliedLast is set when the newest comment in the thread is yours: you answered and the
 	// reviewer has yet to resolve it.
 	RepliedLast bool
@@ -58,10 +59,11 @@ type Thread struct {
 
 // Activity is the most recent comment or review on an item from a person (bots are skipped).
 type Activity struct {
-	Author string
-	Body   string
-	URL    string
-	At     time.Time
+	Author            string
+	Body              string
+	URL               string
+	At                time.Time
+	AuthorAssociation string
 	// Review holds the review state (APPROVED, CHANGES_REQUESTED, COMMENTED) when the activity
 	// was a review rather than a comment.
 	Review string
