@@ -1179,11 +1179,11 @@
   <div class="main">
     <section class="panel" aria-labelledby="work-h" data-board data-module="your-work">
       <h2 id="work-h">Your work{{if .Work.Known}} · <span data-v="work-you">{{len .Work.You}}</span> need you{{end}} <span class="lbl">{{if .Work.Known}}Pull requests and issues @{{.Work.Login}} has out, anywhere on GitHub · updated {{.Work.FetchedAgo}}{{else}}Not fetched yet{{end}}</span><span class="nb" id="newcount"{{if not .WorkNew}} hidden{{end}}>{{.WorkNew}} new</span></h2>
-      {{if .Work.Known}}<div class="wsort" role="group" aria-label="Sort work items"><button type="button" data-wsort="name">Name</button><button type="button" data-wsort="updated" title="Sort by last update">Updated</button><button type="button" class="triage-toggle" id="triage-toggle">Show all</button></div>{{end}}
+      {{if .Work.Known}}<div class="wsort" role="group" aria-label="Sort work items"><button type="button" data-wsort="name">Name</button><button type="button" data-wsort="updated" title="Sort by last update">Updated</button><button type="button" class="triage-toggle" data-triage="your-work">Show all</button></div>{{end}}
       {{if not .Work.Known}}
       <p class="pad zero">{{if .Work.Err}}{{.Work.ErrF.Summary}} <small class="err">({{.Work.ErrF.Detail}})</small>{{else}}Loading your pull requests and issues. This takes a few seconds after HelloGitty starts; the page reloads on its own.{{end}}</p>
       {{else}}
-      {{if or .Work.You .Work.Them .Work.Other .Work.Done}}<ul class="items" id="work-items">{{range .Work.You}}{{template "item" .}}{{end}}{{range .Work.Them}}{{template "item" .}}{{end}}{{range .Work.Other}}{{template "other" .}}{{end}}{{range .Work.Done}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nothing is waiting on you.</p>{{end}}
+      {{if or .Work.You .Work.Them .Work.Other .Work.Done}}<ul class="items" data-triage-list="your-work">{{range .Work.You}}{{template "item" .}}{{end}}{{range .Work.Them}}{{template "item" .}}{{end}}{{range .Work.Other}}{{template "other" .}}{{end}}{{range .Work.Done}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nothing is waiting on you.</p>{{end}}
       {{if .Work.DoneMore}}<p class="hint">{{.Work.DoneMore}} more finished items not shown.</p>{{end}}
       {{if eq .Work.NotifyState "off"}}<p class="pad hint">New-activity dots are off: {{.Work.NotifyNote}}.</p>{{end}}
       {{if .Work.Err}}<p class="pad err">The last refresh failed, so this is the previous list. {{.Work.ErrF.Summary}} <small>({{.Work.ErrF.Detail}})</small></p>{{end}}
@@ -1192,31 +1192,15 @@
 
     {{if .Work.Known}}
     <section class="panel" aria-labelledby="conv-h" data-board data-module="conversations">
-      <h2 id="conv-h"><span class="term" data-term="conversations" tabindex="0">Conversations</span>{{if .ConvNew}}<span class="nb">{{.ConvNew}} new</span>{{end}} <span class="lbl">Issues and pull requests you joined but didn't open · {{len .Work.ConvYou}} ask something of you, {{len .Work.ConvThem}} quiet</span></h2>
-      <div class="group mv">
-        <h3><span class="term" data-term="group-convyou" tabindex="0">Asks something of you</span> <span class="n{{if .Work.ConvYou}} hot{{end}}" data-v="conv-you">{{len .Work.ConvYou}}</span></h3>
-        {{if .Work.ConvYou}}<ul class="items">{{range .Work.ConvYou}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nobody in a thread you joined is waiting on you.</p>{{end}}
-      </div>
-      <details class="group mv" data-key="conv-them">
-        <summary><span class="term" data-term="group-convthem">Quiet</span> <span class="n" data-v="conv-them">{{len .Work.ConvThem}}</span><span class="chev" aria-hidden="true"></span></summary>
-        {{if .Work.ConvThem}}<ul class="items">{{range .Work.ConvThem}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">No other open threads you joined.</p>{{end}}
-      </details>
+      <h2 id="conv-h"><span class="term" data-term="conversations" tabindex="0">Conversations</span>{{if .Work.ConvYou}} · <span data-v="conv-you">{{len .Work.ConvYou}}</span> need you{{end}}{{if .ConvNew}}<span class="nb">{{.ConvNew}} new</span>{{end}} <span class="lbl">Issues and pull requests you joined but didn't open · <span data-v="conv-them">{{len .Work.ConvThem}}</span> quiet</span></h2>
+      <div class="wsort" role="group" aria-label="Filter conversations"><button type="button" class="triage-toggle" data-triage="conversations">Show all</button></div>
+      {{if or .Work.ConvYou .Work.ConvThem}}<ul class="items" data-triage-list="conversations">{{range .Work.ConvYou}}{{template "item" .}}{{end}}{{range .Work.ConvThem}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nobody in a thread you joined is waiting on you.</p>{{end}}
     </section>
 
     <section class="panel" aria-labelledby="repos-h" data-board data-module="your-repos">
-      <h2 id="repos-h">Your repositories{{if .ReposNew}}<span class="nb">{{.ReposNew}} new</span>{{end}} <span class="lbl">Pull requests, issues and notifications in {{.Work.Scope}}</span></h2>
-      <div class="group mv">
-        <h3><span class="term" data-term="group-inyou" tabindex="0">Needs you</span> <span class="n{{if .Work.InYou}} hot{{end}}" data-v="work-inyou">{{len .Work.InYou}}</span></h3>
-        {{if .Work.InYou}}<ul class="items">{{range .Work.InYou}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">No reviews requested and no unanswered issues.</p>{{end}}
-      </div>
-      <div class="group mv">
-        <h3><span class="term" data-term="group-inthem" tabindex="0">Waiting on contributors</span> <span class="n" data-v="work-inthem">{{len .Work.InThem}}</span></h3>
-        {{if .Work.InThem}}<ul class="items">{{range .Work.InThem}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nothing waiting on a contributor.</p>{{end}}
-      </div>
-      {{if .Work.RepoOther}}<div class="group mv">
-        <h3><span class="term" data-term="group-repoother" tabindex="0">Notifications</span> <span class="n">{{len .Work.RepoOther}}</span></h3>
-        <ul class="items">{{range .Work.RepoOther}}{{template "other" .}}{{end}}</ul>
-      </div>{{end}}
+      <h2 id="repos-h">Your repositories{{if .Work.InYou}} · <span data-v="work-inyou">{{len .Work.InYou}}</span> need you{{end}}{{if .ReposNew}}<span class="nb">{{.ReposNew}} new</span>{{end}} <span class="lbl">Pull requests, issues and notifications in {{.Work.Scope}} · <span data-v="work-inthem">{{len .Work.InThem}}</span> waiting on contributors</span></h2>
+      <div class="wsort" role="group" aria-label="Filter your repositories"><button type="button" class="triage-toggle" data-triage="your-repos">Show all</button></div>
+      {{if or .Work.InYou .Work.InThem .Work.RepoOther}}<ul class="items" data-triage-list="your-repos">{{range .Work.InYou}}{{template "item" .}}{{end}}{{range .Work.InThem}}{{template "item" .}}{{end}}{{range .Work.RepoOther}}{{template "other" .}}{{end}}</ul>{{else}}<p class="none">No reviews requested and no unanswered issues.</p>{{end}}
       <p class="hint">Maintain repositories you don't own? List them under <code>"maintain"</code> in hellogitty.json.</p>
     </section>
     {{end}}
@@ -2306,27 +2290,31 @@
       });
     })();
 
-    // Triage default: show only your-move items until the user clicks "Show all".
+    // Triage default: each panel shows only your-move items until "Show all" is clicked.
     (function () {
-      var toggle = document.getElementById("triage-toggle");
-      var list = document.getElementById("work-items");
-      if (!toggle || !list) return;
-      var expanded = false;
-      function apply() {
-        var items = list.querySelectorAll(".wi");
-        var total = items.length, youCount = 0;
-        for (var i = 0; i < items.length; i++) {
-          var isYou = items[i].dataset.move === "you";
-          if (isYou) youCount++;
-          if (expanded) { items[i].removeAttribute("hidden"); }
-          else { if (!isYou) items[i].setAttribute("hidden", ""); else items[i].removeAttribute("hidden"); }
+      var toggles = document.querySelectorAll("[data-triage]");
+      if (!toggles.length) return;
+      toggles.forEach(function (toggle) {
+        var key = toggle.dataset.triage;
+        var list = document.querySelector('[data-triage-list="' + key + '"]');
+        if (!list) return;
+        var expanded = false;
+        function apply() {
+          var items = list.querySelectorAll(".wi");
+          var total = items.length, youCount = 0;
+          for (var i = 0; i < items.length; i++) {
+            var isYou = items[i].dataset.move === "you";
+            if (isYou) youCount++;
+            if (expanded) { items[i].removeAttribute("hidden"); }
+            else { if (!isYou) items[i].setAttribute("hidden", ""); else items[i].removeAttribute("hidden"); }
+          }
+          toggle.textContent = expanded ? "Show mine (" + youCount + ")" : "Show all (" + total + ")";
         }
-        toggle.textContent = expanded ? "Show mine (" + youCount + ")" : "Show all (" + total + ")";
-      }
-      apply();
-      toggle.addEventListener("click", function () {
-        expanded = !expanded;
         apply();
+        toggle.addEventListener("click", function () {
+          expanded = !expanded;
+          apply();
+        });
       });
     })();
 
