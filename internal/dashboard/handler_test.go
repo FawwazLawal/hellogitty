@@ -421,3 +421,53 @@ func TestCheckFailedSaysWhy(t *testing.T) {
 		}
 	}
 }
+
+func TestPipelinePageActionsAndFilters(t *testing.T) {
+	now := time.Now()
+	reports := []store.RepoReport{
+		{Repo: store.Repo{Owner: "acme", Name: "rocket", LastPoll: &now}},
+		{Repo: store.Repo{Owner: "sleepyco", Name: "lullaby", LastPoll: &now}},
+	}
+	board := &work.Board{Sent: []work.Item{
+		{PR: true, Role: work.RoleAuthor, Repo: "acme/rocket", Number: 1, State: "OPEN", ReviewDecision: "CHANGES_REQUESTED", Checks: "FAILURE",
+			Threads: []work.Thread{{Author: "rev"}, {Author: "rev", RepliedLast: true}}},
+		{PR: true, Role: work.RoleAuthor, Repo: "acme/rocket", Number: 2, State: "OPEN", ReviewDecision: "APPROVED", Requested: []string{"bob"}, Conflict: true},
+		{PR: true, Role: work.RoleAuthor, Repo: "sleepyco/lullaby", Number: 3, State: "OPEN", Draft: true, Checks: "ERROR"},
+		// Closed pull requests keep their last verdict, but nothing waits on it.
+		{PR: true, Role: work.RoleAuthor, Repo: "sleepyco/lullaby", Number: 4, State: "CLOSED", ReviewDecision: "CHANGES_REQUESTED"},
+	}}
+	h := &Handler{
+		Template: web.Index, PipelineTemplate: web.Pipeline, PollInterval: time.Hour,
+		Source: fakeSource{reports: reports, board: board, tel: Telemetry{LastPoll: now, PRsKnown: true, OurPRs: []PR{
+			{Owner: "acme", Name: "rocket", Number: 1, Title: "a", State: "open"},
+			{Owner: "acme", Name: "rocket", Number: 2, Title: "b", State: "open"},
+			{Owner: "sleepyco", Name: "lullaby", Number: 3, Title: "c", State: "open"},
+			{Owner: "sleepyco", Name: "lullaby", Number: 4, Title: "d", State: "closed"},
+		}}},
+	}
+	code, html := get(t, h, "/pipeline")
+	if code != 200 {
+		t.Fatalf("status %d", code)
+	}
+	html = strings.Join(strings.Fields(html), " ")
+	for _, want := range []string{
+		`<title>PR Pipeline · HelloGitty</title>`,
+		`>1</span><span class="ol">Review requested<`,
+		`>1</span><span class="ol">Changes requested<`,
+		`>2</span><span class="ol">Checks failing<`,
+		`>1</span><span class="ol">Approved<`,
+		`>1</span><span class="ol">Conflicts<`,
+		`>1</span><span class="ol">Draft<`,
+		`class="lit" title="Threads to answer, changes requested or checks failing">Pending<span class="pcount">2</span>`,
+		`<option value="acme/rocket">acme/rocket</option><option value="sleepyco/lullaby">sleepyco/lullaby</option>`,
+		`data-repo="acme/rocket" data-pending="1"><td class="num">1<`,
+		`data-repo="acme/rocket" data-pending="0"><td class="num">2<`,
+		`data-repo="sleepyco/lullaby" data-pending="1"><td class="num">3<`,
+		`data-repo="sleepyco/lullaby" data-pending="0"><td class="num">4<`,
+		`1 unresolved thread<`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+}

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>Pipeline · HelloGitty</title>
+<title>PR Pipeline · HelloGitty</title>
 {{template "theme-head"}}
 <style>
 {{template "base-css"}}
@@ -18,6 +18,13 @@
   .ocard .ov { font: 700 28px var(--mono); font-variant-numeric: tabular-nums; display: block; }
   .ocard .ol { font-size: 12px; color: var(--dim); margin-top: 2px; }
   .ocard .ov.zero { color: var(--dim); }
+  .actions { margin-top: -14px; }
+  .acard { border-top: 3px solid var(--rule-hi); }
+  .acard.caution { border-top-color: var(--caution); }
+  .acard.nom { border-top-color: var(--nom); }
+  .acard:hover { border-color: var(--rule); border-top-color: var(--rule-hi); background: var(--panel); }
+  .acard.caution:hover { border-top-color: var(--caution); }
+  .acard.nom:hover { border-top-color: var(--nom); }
   .rate { font: 700 28px var(--mono); color: var(--head-accent); }
   .section { margin: 0 0 24px; }
   .section h2 { margin: 0 0 10px; font-size: 14px; font-weight: 650; letter-spacing: 0.02em; border-left: 3px solid var(--head-accent); padding-left: 10px; }
@@ -35,7 +42,14 @@
   .tag.Closed { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, transparent); }
   .tag.Open, .tag.Draft { color: var(--caution-text); border-color: color-mix(in srgb, var(--caution) 50%, transparent); }
   .empty { color: var(--dim); padding: 40px 0; text-align: center; }
-  .pfilter { display: flex; gap: 6px; margin: 0 0 14px; }
+  .pflags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .tag.caution { color: var(--caution-text); border-color: color-mix(in srgb, var(--caution) 50%, transparent); }
+  .tag.nom { color: var(--nom); border-color: color-mix(in srgb, var(--nom) 50%, transparent); }
+  .pfilter { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 14px; }
+  .pfilter .pcount { font: 600 12px var(--mono); margin-left: 4px; }
+  .pfilter button.lit:not([aria-pressed="true"]) { color: var(--caution-text); border-color: var(--caution); }
+  .pfilter select { margin-left: auto; max-width: 100%; font: 13px var(--sans); color: var(--text); background: var(--panel); border: 1px solid var(--rule-hi); border-radius: 6px; padding: 6px 8px; cursor: pointer; }
+  .pfilter select:hover { background: var(--raised); }
   .pfilter button { font: 13px var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
   .pfilter button:hover { color: var(--text); background: var(--raised); }
   .pfilter button[aria-pressed="true"] { color: var(--text); background: var(--raised); font-weight: 600; border-color: var(--head-accent); }
@@ -53,7 +67,7 @@
 <body>
 {{template "site-header" .}}
 <main class="pwrap">
-  <p class="sub">Your pull requests in tracked repositories and the pipeline stages.</p>
+  <p class="sub">Your pull requests in tracked repositories, which ones need you, and the pipeline stages.</p>
 
   <div class="overview">
     <a class="ocard" href="/list?prs=opened"><span class="ov{{if not .Pipeline.Opened}} zero{{end}}">{{.Pipeline.Opened}}</span><span class="ol">Opened</span></a>
@@ -62,6 +76,17 @@
     <a class="ocard" href="/list?prs=closed"><span class="ov{{if not .Pipeline.Closed}} zero{{end}}">{{.Pipeline.Closed}}</span><span class="ol">Closed</span></a>
     <div class="ocard"><span class="ov{{if not .Pipeline.Rate}} zero{{end}}">{{if .Pipeline.Rate}}{{.Pipeline.Rate}}{{else}}—{{end}}</span><span class="ol">Merge rate</span></div>
   </div>
+
+  {{with .Pipeline}}
+  <div class="overview actions" aria-label="Open pull requests by what they wait on">
+    <div class="ocard acard" title="Open pull requests still waiting on a requested reviewer"><span class="ov{{if not .ReviewRequested}} zero{{end}}">{{.ReviewRequested}}</span><span class="ol">Review requested</span></div>
+    <div class="ocard acard caution"><span class="ov{{if not .ChangesRequested}} zero{{end}}">{{.ChangesRequested}}</span><span class="ol">Changes requested</span></div>
+    <div class="ocard acard caution"><span class="ov{{if not .ChecksFailing}} zero{{end}}">{{.ChecksFailing}}</span><span class="ol">Checks failing</span></div>
+    <div class="ocard acard nom"><span class="ov{{if not .Approved}} zero{{end}}">{{.Approved}}</span><span class="ol">Approved</span></div>
+    <div class="ocard acard caution"><span class="ov{{if not .Conflicts}} zero{{end}}">{{.Conflicts}}</span><span class="ol">Conflicts</span></div>
+    <div class="ocard acard"><span class="ov{{if not .Drafts}} zero{{end}}">{{.Drafts}}</span><span class="ol">Draft</span></div>
+  </div>
+  {{end}}
 
   {{if .HasPipeline}}
   <div class="section">
@@ -79,12 +104,25 @@
       <button type="button" data-pf="Open" aria-pressed="false">Open</button>
       <button type="button" data-pf="Merged" aria-pressed="false">Merged</button>
       <button type="button" data-pf="Closed" aria-pressed="false">Closed</button>
+      <button type="button" data-pf="pending" aria-pressed="false"{{if .Pipeline.Pending}} class="lit"{{end}} title="Threads to answer, changes requested or checks failing">Pending<span class="pcount">{{.Pipeline.Pending}}</span></button>
+      {{if gt (len .Pipeline.Repos) 1}}<select id="pf-repo" aria-label="Repository">
+        <option value="">All repositories</option>
+        {{range .Pipeline.Repos}}<option value="{{.}}">{{.}}</option>{{end}}
+      </select>{{end}}
     </div>
     {{if .Pipeline.PRs}}
     <table class="ptable">
       <thead><tr><th class="cnum" data-sort="num">#</th><th data-sort="text">Pull request</th><th data-sort="text">Repository</th><th class="cst" data-sort="text">State</th></tr></thead>
-      <tbody id="pr-rows">{{range .Pipeline.All}}<tr data-state="{{.State}}"><td class="num">{{.Number}}</td><td><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a></td><td>{{.Repo}}</td><td><span class="tag {{.State}}">{{.State}}</span></td></tr>{{end}}</tbody>
+      <tbody id="pr-rows">{{range .Pipeline.All}}<tr data-state="{{.State}}" data-repo="{{.Repo}}" data-pending="{{if .Pending}}1{{else}}0{{end}}"><td class="num">{{.Number}}</td><td><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a>{{if or .Pending .Requested .Conflict .Draft (eq .ReviewDecision "APPROVED")}}<div class="pflags">
+        {{- if eq .ReviewDecision "CHANGES_REQUESTED"}}<span class="tag caution">Changes requested</span>{{end}}
+        {{- if .ChecksFailing}}<span class="tag caution">Checks failing</span>{{end}}
+        {{- if .UnresolvedThreads}}<span class="tag caution">{{.UnresolvedThreads}} unresolved {{if eq .UnresolvedThreads 1}}thread{{else}}threads{{end}}</span>{{end}}
+        {{- if .Conflict}}<span class="tag caution">Conflict</span>{{end}}
+        {{- if .Requested}}<span class="tag">Review requested</span>{{end}}
+        {{- if eq .ReviewDecision "APPROVED"}}<span class="tag nom">Approved</span>{{end}}
+        {{- if .Draft}}<span class="tag">Draft</span>{{end}}</div>{{end}}</td><td>{{.Repo}}</td><td><span class="tag {{.State}}">{{.State}}</span></td></tr>{{end}}</tbody>
     </table>
+    <p class="empty" id="pr-none" hidden>No pull requests match these filters.</p>
     {{else}}<p class="empty">No pull requests yet in tracked repositories.</p>{{end}}
   </div>
 </main>
@@ -96,14 +134,25 @@
   {{template "sort-js"}}
   initSort(".ptable");
   var btns = document.querySelectorAll("[data-pf]"), rows = document.querySelectorAll("#pr-rows tr[data-state]");
+  var repo = document.getElementById("pf-repo"), none = document.getElementById("pr-none"), state = "all";
+  function apply() {
+    var r = repo ? repo.value : "", shown = 0;
+    rows.forEach(function (row) {
+      var ok = state === "all" || (state === "pending" ? row.dataset.pending === "1" : row.dataset.state === state);
+      row.hidden = !(ok && (!r || row.dataset.repo === r));
+      if (!row.hidden) shown++;
+    });
+    if (none) none.hidden = shown > 0;
+  }
   btns.forEach(function (b) {
     b.addEventListener("click", function () {
       btns.forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
       b.setAttribute("aria-pressed", "true");
-      var f = b.dataset.pf;
-      rows.forEach(function (r) { r.hidden = f !== "all" && r.dataset.state !== f; });
+      state = b.dataset.pf;
+      apply();
     });
   });
+  if (repo) repo.addEventListener("change", apply);
 })();
 </script>
 </body>
