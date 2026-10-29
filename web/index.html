@@ -170,8 +170,12 @@
   .group .n { font: 12px var(--mono); color: var(--dim); }
   .group h3 .n.hot { color: var(--caution-text); font-weight: 700; }
   .items { list-style: none; margin: 0; padding: 0 0 6px; }
-  .wi { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; column-gap: 12px; padding: 9px 14px; }
+  .wi { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; column-gap: 12px; padding: 9px 14px; }
   .wi + .wi { border-top: 1px solid var(--rule); }
+  .wpill { font: 600 11px/1 var(--sans); padding: 3px 8px; border-radius: 4px; white-space: nowrap; text-align: center; width: 72px; display: inline-block; flex: none; }
+  .wpill.you { background: color-mix(in srgb, var(--caution) 20%, transparent); color: var(--caution-text); }
+  .wpill.them { background: var(--raised); color: var(--dim); }
+  .wpill.done { background: color-mix(in srgb, var(--nom) 15%, transparent); color: var(--nom); }
   .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; border: 1.5px solid var(--dim); }
   .dot.caution { background: var(--caution); border-color: var(--caution); }
   .dot.ok { background: var(--nom); border-color: var(--nom); }
@@ -219,7 +223,7 @@
     font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; max-width: 78ch; }
   .wi blockquote a { color: var(--text); font-weight: 600; text-decoration: none; margin-right: 4px; }
   .wi blockquote a:hover { text-decoration: underline; }
-  .when { font-size: 12px; color: var(--dim); white-space: nowrap; padding-top: 2px; }
+  .when { font-size: 12px; color: var(--dim); white-space: nowrap; padding-top: 2px; font-variant-numeric: tabular-nums; }
   /* The repository trailer: a pale lemon pill closing each row, readable at a glance. Paler and
      greener than the amber that means "your move", so it never reads as a state. */
   .wi .end { display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; gap: 8px; min-width: 0; }
@@ -238,6 +242,8 @@
     border-left: 3px solid transparent; border-right: 3px solid transparent; vertical-align: middle; }
   .wsort button.asc::after { border-bottom: 4px solid currentColor; }
   .wsort button.desc::after { border-top: 4px solid currentColor; }
+  .triage-toggle { margin-left: auto; }
+  .triage-toggle::after { display: none; }
   .thsort { cursor: pointer; user-select: none; position: relative; }
   .thsort:hover { color: var(--text); }
   .thsort::after { content: ""; display: inline-block; width: 0; height: 0; margin-left: 3px;
@@ -469,8 +475,9 @@
     .theme { margin-left: 0; }
     .cw { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px 16px 0; }
     .grid { padding: 10px 16px 20px; }
-    .wi { grid-template-columns: 12px minmax(0, 1fr); }
-    .wi .end { grid-column: 2; flex-direction: row; align-items: center; margin-top: 6px; }
+    .wi { grid-template-columns: minmax(0, 1fr); }
+    .wi > .wpill { display: none; }
+    .wi .end { grid-column: 1; flex-direction: row; align-items: center; margin-top: 6px; }
     .trail { max-width: 75%; }
     .thead { display: none; }
     .legend { width: 100%; justify-content: flex-start; }
@@ -1124,7 +1131,7 @@
 {{end}}
 {{define "peek"}}{{if .Lines}}<template class="peek"><div class="pk"><b class="pk-h">{{.Head}}</b><dl>{{range .Lines}}<dt>{{.Label}}</dt><dd{{if .Level}} class="{{.Level}}"{{end}}>{{range $i, $x := .Items}}{{if $i}}<br>{{end}}{{$x}}{{end}}</dd>{{end}}</dl></div></template>{{end}}{{end}}
 {{define "item"}}<li class="wi" data-k="{{.K}}" data-new="{{.New}}" data-v="w-{{.Key}}" data-val="{{.Value}}" data-kind="{{lower .Kind}}" data-repo="{{lower .Repo}}" data-name="{{.Repo}}" data-move="{{.Move}}"{{if .Personal}} data-personal{{end}} data-s="{{.Search}}" data-ts="{{.SinceUnix}}">
-  <span class="dot {{.Attn}}" aria-hidden="true" data-term="dot"></span>
+  <span class="wpill {{.Move}}">{{if eq .Move "you"}}Your move{{else if eq .Move "them"}}Waiting{{else}}Done{{end}}</span>
   <div>
     <a class="title" href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a>{{template "peek" .Peek}}
     <div class="meta"><svg role="img" aria-label="{{if eq .Kind "PR"}}Pull request{{else}}Issue{{end}}"><use href="#i-{{if eq .Kind "PR"}}pr{{else}}issue{{end}}"/></svg><span>{{.Repo}}</span><span class="num">#{{.Number}}</span>{{if .Why}}<span>· {{.Why}}</span>{{end}}<span class="movetag {{.Move}}">{{if eq .Move "you"}}Your move{{else if eq .Move "them"}}Waiting on others{{else}}Finished{{end}}</span>{{range .Labels}}<span class="label">{{.}}</span>{{end}}</div>
@@ -1137,7 +1144,7 @@
   </div>
 </li>{{end}}
 {{define "other"}}<li class="wi" data-k="{{.Key}}" data-new="{{.New}}" data-kind="other" data-repo="{{lower .Repo}}" data-name="{{.Repo}}" data-move="{{.Move}}" data-s="{{lower .Title}} {{lower .Repo}} {{lower .Words}}">
-  <span class="dot {{.Attn}}" aria-hidden="true"></span>
+  <span class="wpill {{.Move}}">{{if eq .Move "you"}}Your move{{else if eq .Move "them"}}Waiting{{else}}Done{{end}}</span>
   <div>
     <a class="title" href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a>
     <div class="meta"><span>{{.Repo}}</span>{{if .Number}}<span class="num">#{{.Number}}</span>{{end}}<span>· GitHub notification</span></div>
@@ -1171,28 +1178,14 @@
 <div class="grid">
   <div class="main">
     <section class="panel" aria-labelledby="work-h" data-board data-module="your-work">
-      <h2 id="work-h">Your work <span class="lbl">{{if .Work.Known}}Pull requests and issues @{{.Work.Login}} has out, anywhere on GitHub · updated {{.Work.FetchedAgo}}{{else}}Not fetched yet{{end}}</span><span class="nb" id="newcount"{{if not .WorkNew}} hidden{{end}}>{{.WorkNew}} new</span></h2>
-      {{if .Work.Known}}<div class="wsort" role="group" aria-label="Sort work items"><button type="button" data-wsort="name">Name</button><button type="button" data-wsort="updated" title="Sort by last update">Updated</button></div>{{end}}
+      <h2 id="work-h">Your work{{if .Work.Known}} · <span data-v="work-you">{{len .Work.You}}</span> need you{{end}} <span class="lbl">{{if .Work.Known}}Pull requests and issues @{{.Work.Login}} has out, anywhere on GitHub · updated {{.Work.FetchedAgo}}{{else}}Not fetched yet{{end}}</span><span class="nb" id="newcount"{{if not .WorkNew}} hidden{{end}}>{{.WorkNew}} new</span></h2>
+      {{if .Work.Known}}<div class="wsort" role="group" aria-label="Sort work items"><button type="button" data-wsort="name">Name</button><button type="button" data-wsort="updated" title="Sort by last update">Updated</button><button type="button" class="triage-toggle" id="triage-toggle">Show all</button></div>{{end}}
       {{if not .Work.Known}}
       <p class="pad zero">{{if .Work.Err}}{{.Work.ErrF.Summary}} <small class="err">({{.Work.ErrF.Detail}})</small>{{else}}Loading your pull requests and issues. This takes a few seconds after HelloGitty starts; the page reloads on its own.{{end}}</p>
       {{else}}
-      <div class="group mv">
-        <h3><span class="term" data-term="group-you" tabindex="0">Your move</span> <span class="n{{if .Work.You}} hot{{end}}" data-v="work-you">{{len .Work.You}}</span></h3>
-        {{if .Work.You}}<ul class="items">{{range .Work.You}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nothing is waiting on you.</p>{{end}}
-      </div>
-      <div class="group mv" data-module="work-them">
-        <h3><span class="term" data-term="group-them" tabindex="0">Waiting on others</span> <span class="n" data-v="work-them">{{len .Work.Them}}</span></h3>
-        {{if .Work.Them}}<ul class="items">{{range .Work.Them}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nothing out for review or waiting on a reply.</p>{{end}}
-      </div>
-      {{if .Work.Other}}<div class="group mv" data-module="work-other">
-        <h3><span class="term" data-term="group-other" tabindex="0">Other notifications</span> <span class="n">{{len .Work.Other}}</span></h3>
-        <ul class="items">{{range .Work.Other}}{{template "other" .}}{{end}}</ul>
-      </div>{{end}}
+      {{if or .Work.You .Work.Them .Work.Other .Work.Done}}<ul class="items" id="work-items">{{range .Work.You}}{{template "item" .}}{{end}}{{range .Work.Them}}{{template "item" .}}{{end}}{{range .Work.Other}}{{template "other" .}}{{end}}{{range .Work.Done}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nothing is waiting on you.</p>{{end}}
+      {{if .Work.DoneMore}}<p class="hint">{{.Work.DoneMore}} more finished items not shown.</p>{{end}}
       {{if eq .Work.NotifyState "off"}}<p class="pad hint">New-activity dots are off: {{.Work.NotifyNote}}.</p>{{end}}
-      <details class="group mv" data-key="work-done" data-module="work-done">
-        <summary><span class="term" data-term="group-done">Finished</span> in the last 30 days <span class="n" data-v="work-done">{{len .Work.Done}}{{if .Work.DoneMore}}+{{end}}</span><span class="chev" aria-hidden="true"></span></summary>
-        {{if .Work.Done}}<ul class="items">{{range .Work.Done}}{{template "item" .}}{{end}}</ul>{{if .Work.DoneMore}}<p class="hint">{{.Work.DoneMore}} more not shown.</p>{{end}}{{else}}<p class="none">Nothing merged or closed in the last 30 days.</p>{{end}}
-      </details>
       {{if .Work.Err}}<p class="pad err">The last refresh failed, so this is the previous list. {{.Work.ErrF.Summary}} <small>({{.Work.ErrF.Detail}})</small></p>{{end}}
       {{end}}
     </section>
@@ -2310,6 +2303,30 @@
           btn.classList.add("active", dir);
           sortItems(key, dir);
         });
+      });
+    })();
+
+    // Triage default: show only your-move items until the user clicks "Show all".
+    (function () {
+      var toggle = document.getElementById("triage-toggle");
+      var list = document.getElementById("work-items");
+      if (!toggle || !list) return;
+      var expanded = false;
+      function apply() {
+        var items = list.querySelectorAll(".wi");
+        var total = items.length, youCount = 0;
+        for (var i = 0; i < items.length; i++) {
+          var isYou = items[i].dataset.move === "you";
+          if (isYou) youCount++;
+          if (expanded) { items[i].removeAttribute("hidden"); }
+          else { if (!isYou) items[i].setAttribute("hidden", ""); else items[i].removeAttribute("hidden"); }
+        }
+        toggle.textContent = expanded ? "Show mine (" + youCount + ")" : "Show all (" + total + ")";
+      }
+      apply();
+      toggle.addEventListener("click", function () {
+        expanded = !expanded;
+        apply();
       });
     })();
 

@@ -325,7 +325,7 @@ func TestWorkBoardPanels(t *testing.T) {
 	for _, want := range []string{
 		`Your move</span><span class="cnt" data-v="cw-your-move">2<`, // cell counts sent and incoming
 		`proj#7, tool#9`, // and names them
-		`data-v="work-you">1<`, `data-v="work-them">1<`, `data-v="work-inyou">1<`,
+		`data-v="work-you">1<`, `data-v="work-inyou">1<`,
 		`Fix &lt;it&gt;`, // titles escaped
 		`<span class="say caution">Changes requested by @lead</span><span class="note caution" data-term="merge-conflict" tabindex="0">Merge conflict</span>`,
 		`>@lead</a>Please add a test. x</blockquote>`, // quote cleaned of markup, HTML and quoted replies
