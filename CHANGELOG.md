@@ -5,6 +5,14 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (23) · Black Bombay (baby) · 2026-10-28
+
+Tag `v0.2.23`.
+
+- **Unresolved threads alert cell**: new alert cell lights up when any of your
+  open pull requests have unresolved review threads, with the count and PR names.
+  Glossary entry added. Also available in the Chrome extension.
+
 ## v0.2.0 (22) · Black Bombay (baby) · 2026-10-28
 
 Tag `v0.2.22`.
