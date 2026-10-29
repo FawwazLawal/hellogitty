@@ -965,6 +965,28 @@ func (h *Handler) build() (*page, error) {
 		moveCell.Value, moveCell.Empty = "not checked yet", true
 	}
 
+	var unresolvedNames []string
+	if board != nil {
+		for _, it := range board.Sent {
+			if !it.PR || it.State != "OPEN" {
+				continue
+			}
+			var open int
+			for _, t := range it.Threads {
+				if !t.RepliedLast {
+					open++
+				}
+			}
+			if open > 0 {
+				unresolvedNames = append(unresolvedNames, shortRepo(it.Repo)+"#"+strconv.Itoa(it.Number))
+			}
+		}
+	}
+	unresolvedCell := counter("unresolved", "Unresolved threads", len(unresolvedNames), "caution", unresolvedNames, false)
+	if !p.Work.Known {
+		unresolvedCell.Value, unresolvedCell.Empty = "not checked yet", true
+	}
+
 	failCell := counter("poll-fail", "Check failed", pollFail, "warn", failNames, false)
 	failCell.Link = "/alerts/check-failed"
 	if len(failWhy) > 0 {
@@ -977,6 +999,7 @@ func (h *Handler) build() (*page, error) {
 	p.Cells = []cell{
 		claimedCell,
 		moveCell,
+		unresolvedCell,
 		failCell,
 		{Key: "data-stale", Label: "Data is stale", Value: staleShown, Level: "warn", Lit: staleLit,
 			Title: "Lit when the last check of GitHub is more than 2 hours old."},
