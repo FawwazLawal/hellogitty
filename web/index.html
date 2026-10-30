@@ -254,7 +254,9 @@
   .wsort { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; column-gap: 12px; align-items: center; padding: 4px 14px 2px; }
   .wsort > [data-wsort="name"] { grid-column: 2; justify-self: start; }
   .wsort > [data-wsort="updated"] { grid-column: 3; justify-self: end; }
-  .wsort button { background: none; border: 1px solid transparent; border-radius: 4px; padding: 2px 8px; font: 500 11.5px/16px var(--sans);
+  /* Vertical padding here is the hit area, not the look: these were 22px tall against the
+     24px minimum. The text is unchanged. */
+  .wsort button { background: none; border: 1px solid transparent; border-radius: 4px; padding: 4px 8px; font: 500 11.5px/16px var(--sans);
     color: var(--dim); cursor: pointer; user-select: none; }
   .wsort button:hover { color: var(--text); border-color: var(--rule); }
   .wsort button.active { color: var(--text); border-color: var(--rule); }
@@ -263,10 +265,11 @@
   .wsort button.asc::after { border-bottom: 4px solid currentColor; }
   .wsort button.desc::after { border-top: 4px solid currentColor; }
   .panel > h2 > .triage-toggle { flex: none; background: none; border: 1px solid var(--rule); border-radius: 4px;
-    padding: 1px 8px; font: 500 11.5px/16px var(--sans); color: var(--head-dim); cursor: pointer; }
+    padding: 4px 8px; font: 500 11.5px/16px var(--sans); color: var(--head-dim); cursor: pointer; }
   .panel > h2 > .triage-toggle:hover { color: var(--text); border-color: var(--rule-hi); }
   .triage-toggle::after { display: none; }
-  .thsort { cursor: pointer; user-select: none; position: relative; }
+  /* 15px tall before: the whole row of column sorts sat under half the 24px minimum. */
+  .thsort { cursor: pointer; user-select: none; position: relative; padding-block: 6px; }
   .thsort:hover { color: var(--text); }
   .thsort::after { content: ""; display: inline-block; width: 0; height: 0; margin-left: 3px;
     border-left: 3px solid transparent; border-right: 3px solid transparent; vertical-align: middle; }
@@ -292,7 +295,7 @@
   .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .repo > summary > .name { display: flex; align-items: center; min-width: 0; }
   /* Pin: keeps a repository at the top of the list whatever the sort. Shows on hover until pinned. */
-  .pin { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 22px; height: 22px; margin-left: 4px; padding: 0;
+  .pin { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 24px; height: 24px; margin-left: 4px; padding: 0;
     color: var(--dim); background: transparent; border: 1px solid transparent; border-radius: 4px; cursor: pointer; }
   .pin svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linejoin: round; }
   .pin:hover { color: var(--text); border-color: var(--rule-hi); background: var(--panel); }
@@ -436,7 +439,7 @@
   .secrow:last-child { border-bottom: 0; }
   .sevbadge { flex: none; font: 600 11px/1 var(--mono); letter-spacing: 0.04em; padding: 3px 6px; border-radius: 4px; text-transform: uppercase; white-space: nowrap; margin-top: 2px; }
   .sev-critical { color: #fff; background: #d1242f; }
-  .sev-high { color: #fff; background: #cf6316; }
+  .sev-high { color: #fff; background: #b8550f; }
   .sev-medium { color: var(--text); background: color-mix(in srgb, var(--caution) 25%, transparent); border: 1px solid color-mix(in srgb, var(--caution) 50%, transparent); }
   .sev-low { color: var(--dim); background: var(--raised); border: 1px solid var(--rule-hi); }
   .secbody { min-width: 0; flex: 1; }
