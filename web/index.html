@@ -99,8 +99,12 @@
   .cell.wide .leg { font-size: 16px; }
   .cell .cnt { font: 13px var(--mono); color: var(--dim); white-space: nowrap; }
   .cell.empty .det { color: var(--dim); }
-  .cell.lit.warn { background: var(--warn-fill); border-color: var(--warn-fill); }
-  .cell.lit.caution { background: var(--caution-fill); border-color: var(--caution-fill); }
+  /* A lit cell is marked by its EDGE. Colouring the border with the fill made a lit cell
+     invisible in light mode, where --caution-fill measures 1.00:1 against the page: quiet
+     cells kept a 1.50:1 border and the lit one had none, so lit read as less important than
+     unlit. The edge also survives for anyone who cannot separate cream from white. */
+  .cell.lit.warn { background: var(--warn-fill); border-color: var(--warn); border-left: 4px solid var(--warn); }
+  .cell.lit.caution { background: var(--caution-fill); border-color: var(--caution); border-left: 4px solid var(--caution); }
   .cell.lit.warn .leg, .cell.lit.warn .cnt, .cell.lit.warn .det, .cell.lit.warn .more { color: var(--warn-ink); }
   .cell.lit.caution .leg, .cell.lit.caution .cnt, .cell.lit.caution .det, .cell.lit.caution .more { color: var(--caution-ink); }
   .cell.lit .cnt { font-size: 15px; font-weight: 700; }
@@ -152,7 +156,7 @@
   .seg button[aria-pressed="true"], .theme button[aria-pressed="true"] { color: var(--text); background: var(--raised); font-weight: 600; }
   .seg button { padding: 7px 10px; }
   .check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
-  .check input { accent-color: var(--caution); width: 15px; height: 15px; margin: 0; }
+  .check input { accent-color: var(--rule-hi); width: 15px; height: 15px; margin: 0; }
   .clear { font: 13px var(--sans); color: var(--text); background: transparent; border: 0; padding: 0; cursor: pointer;
     text-decoration: underline; text-decoration-color: var(--rule-hi); text-underline-offset: 3px; }
   .clear:hover { text-decoration-color: var(--text); }
@@ -306,7 +310,7 @@
   .rsearch input { width: 100%; font: 13px/1.3 var(--sans); color: var(--text); background: var(--bg); border: 1px solid var(--rule-hi);
     border-radius: 6px; padding: 5px 9px; }
   .rsearch input::placeholder { color: var(--dim); }
-  .rsearch input:not(:placeholder-shown) { border-color: var(--caution); box-shadow: 0 0 0 1px var(--caution); padding-right: 30px; }
+  .rsearch input:not(:placeholder-shown) { border-color: var(--rule-hi); box-shadow: 0 0 0 1px var(--rule-hi); padding-right: 30px; }
   .rsearch input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
   .rsearch label { display: contents; }
   .rsearch .qclear { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; border: 0;
@@ -344,8 +348,8 @@
   .name .own { color: var(--dim); }
   .light { width: 10px; height: 10px; border-radius: 50%; justify-self: center; border: 2px solid transparent; }
   .light.ACTIVE { background: var(--nom); }
-  .light.SLOW { border-color: var(--caution); }
-  .light.DORMANT { background: var(--caution); }
+  .light.SLOW { border-color: var(--ambient); }
+  .light.DORMANT { background: var(--ambient); }
   .light.UNKNOWN { border: 1.5px dashed var(--dim); }
   .phase { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; height: 10px; }
   .phase i { border: 1px solid var(--rule-hi); border-radius: 2px; }
@@ -361,7 +365,7 @@
   .age .bar { width: 44px; height: 5px; background: var(--track); border-radius: 3px; overflow: hidden; }
   .age > span:last-child { white-space: nowrap; font: 13px var(--mono); font-variant-numeric: tabular-nums; }
   .age .bar i { display: block; height: 100%; background: var(--dim); }
-  .age.old .bar i { background: var(--caution); }
+  .age.old .bar i { background: var(--ambient); }
   .expand { padding: 4px 14px 16px 46px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 6px 28px; }
   .expand h3 { margin: 12px 0 4px; font-size: 12px; font-weight: 650; color: var(--dim); letter-spacing: 0.03em; text-transform: uppercase; }
   .expand p, .expand ul { margin: 0; }
@@ -390,10 +394,11 @@
   .wl li:last-child { border-bottom: 0; }
   .st { font-size: 12px; padding: 1px 6px; text-align: center; align-self: start; border: 1px solid var(--rule-hi); border-radius: 4px; color: var(--nom); letter-spacing: 0.02em; transition: background .2s, color .2s, border-color .2s; }
   .st.CLAIMED { background: var(--warn-fill); border-color: var(--warn-fill); color: var(--warn-ink); font-weight: 600; }
-  .st.CLOSED_FIXED, .st.CLOSED_WONT { background: var(--caution-fill); border-color: var(--caution-fill); color: var(--caution-ink); font-weight: 600; }
+  /* Closed and resolved: done, not waiting on you. It wore the Your-move fill. */
+  .st.CLOSED_FIXED, .st.CLOSED_WONT { background: var(--raised); border-color: var(--rule-hi); color: var(--dim); font-weight: 600; }
   /* Seen: the same word, outlined instead of lit, so you know it's acknowledged but still true. */
   .st.CLAIMED.seen { background: transparent; color: var(--warn); border-color: color-mix(in srgb, var(--warn) 55%, transparent); font-weight: 400; }
-  .st.CLOSED_FIXED.seen, .st.CLOSED_WONT.seen { background: transparent; color: var(--caution-text); border-color: color-mix(in srgb, var(--caution) 55%, transparent); font-weight: 400; }
+  .st.CLOSED_FIXED.seen, .st.CLOSED_WONT.seen { background: transparent; color: var(--dim); border-color: var(--rule); font-weight: 400; }
   .nclear { padding: 3px 8px; }
   .wdismiss { font: 13px/1 var(--sans); color: var(--dim); background: transparent; border: none; padding: 0 2px; cursor: pointer; }
   /* Hidden until the row is hovered or focused, only where a pointer can hover; touch keeps it shown. */
@@ -545,7 +550,10 @@
     --nom: #4fc469; --caution: #e9aa3b; --caution-text: #e9aa3b; --warn: #ff5244;
     --caution-fill: #e9aa3b; --caution-ink: #160e02; --warn-fill: #c4271d; --warn-ink: #ffffff;
     --tag-fill: #2b2610; --tag-ink: #f3d36b; --tag-rule: #4a3f17;
-    --head: #141416; --head-dim: #9a9a96; --head-accent: #e9aa3b;
+    --head: #141416; --head-dim: #9a9a96; --head-accent: #5c5c64;
+    /* Ambient: a condition of the world rather than a task of yours — repository health,
+       age bars, quota gauges. Kept off the caution ramp so amber can mean one thing. */
+    --ambient: #6b7a8a;
     --mascot-bg: #101011;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
@@ -566,10 +574,11 @@
     color-scheme: light;
     --bg: #f3f3f1; --panel: #ffffff; --raised: #f1f1ee; --rule: #e2e2de; --rule-hi: #c9c9c4;
     --text: #1c1c1d; --dim: #62625d; --track: #e3e3df;
-    --nom: #18803a; --caution: #d08a12; --caution-text: #8a5600; --warn: #c3271c;
+    --nom: #18803a; --caution: #b87a0e; --caution-text: #8a5600; --warn: #c3271c;
     --caution-fill: #fdf3d7; --caution-ink: #6a4500; --warn-fill: #fde8e6; --warn-ink: #8a1d13;
     --tag-fill: #fbf0c4; --tag-ink: #6a5200; --tag-rule: #ecd88a;
-    --head: #f6f6f4; --head-dim: #62625d; --head-accent: #d08a12;
+    --head: #f6f6f4; --head-dim: #62625d; --head-accent: #b4b4ad;
+    --ambient: #55707f;
     --mascot-bg: #ffffff;
   }
   /* Visual themes: collaboration overlays that layer on top of Auto/Light/Dark.
@@ -782,7 +791,7 @@
   .status .v { font-size: 14px; line-height: 1.35; }
   .gauge { display: inline-block; width: 60px; height: 5px; background: var(--track); vertical-align: middle; border-radius: 3px; overflow: hidden; align-self: center; }
   .gauge i { display: block; height: 100%; background: var(--dim); }
-  .gauge.hot i { background: var(--caution); }
+  .gauge.hot i { background: var(--ambient); }
 
   .hclock { display: flex; flex-direction: column; align-items: center; gap: 2px; user-select: none; cursor: default; justify-self: center; }
   .hclock-time { font: 700 28px/1 var(--mono); color: var(--text); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; transition: color .3s, text-shadow .3s; }
