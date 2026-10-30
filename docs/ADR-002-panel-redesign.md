@@ -228,7 +228,12 @@ Redundant or noise. These indicators currently exist and will be deleted.
 | Draft tag (standalone) | Folded into status pill ("Draft") or Tier 2 peek. |
 | Approved tag on merged/closed PRs | No action possible. |
 
-**Staleness decay (Principle P8):** Any Tier 1 indicator that hasn't changed in 24+ hours gets reduced opacity (0.6). Hover restores full opacity. After 7 days with no change, it's visually identical to Tier 2 (shown on hover only). This prevents permanent amber badges that the user learns to ignore.
+**Staleness decay (Principle P8):** A Tier 1 indicator on a row that has not changed in 24+ hours drops to 0.6 opacity; after 7 days it drops to 0.45 and loses its amber border, so it reads as history rather than urgency. Hover or focus restores full strength. This stops permanent amber badges becoming wallpaper.
+
+Two notes on how this is implemented, both of which depart from an earlier draft of this decision:
+
+- **Decayed indicators are never hidden.** The draft said that after 7 days an indicator should become hover-only, like Tier 2. That is wrong: a PR whose checks have been failing for ten days still has failing checks, and a dashboard that stops saying so has stopped doing its job. Age should change how loudly something is said, not whether it is said at all. Two levels of dimming carry the same signal without withholding a fact the reader needs.
+- **Staleness is measured on the row, not the flag.** The draft assumed per-indicator change history. No such history exists in the data model, and inventing one would mean tracking every flag's transitions across polls. The row's own last-change time is the honest proxy: if nothing on an item has moved, neither has the reason its flag is lit.
 
 ### D4: Fix scroll hijacking
 

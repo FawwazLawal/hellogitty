@@ -168,20 +168,8 @@
   .addmsg.bad { color: var(--warn); }
   .removed { font-size: 13px; color: var(--dim); border-top: 1px solid var(--rule); }
   .removed .untrack { margin: 4px 0 0 6px; }
-  .movetag { display: none; font-size: 12px; color: var(--dim); }
-  .movetag.you { color: var(--caution-text); font-weight: 600; }
 
   /* work board */
-  .group { border-bottom: 1px solid var(--rule); }
-  .group:last-child { border-bottom: 0; }
-  .group > h3, .group > summary { margin: 0; padding: 12px 14px 4px; font-size: 13px; font-weight: 650; color: var(--dim);
-    display: flex; align-items: baseline; gap: 8px; }
-  .group > summary { cursor: pointer; list-style: none; padding-bottom: 10px; }
-  .group > summary::-webkit-details-marker { display: none; }
-  .group[open] > summary { padding-bottom: 4px; }
-  .group > summary .chev { margin-left: 2px; align-self: center; }
-  .group .n { font: 12px var(--mono); color: var(--dim); }
-  .group h3 .n.hot { color: var(--caution-text); font-weight: 700; }
   .items { list-style: none; margin: 0; padding: 0 0 6px; }
   .wi { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; column-gap: 12px; padding: 9px 14px; }
   .wi + .wi { border-top: 1px solid var(--rule); }
@@ -225,6 +213,17 @@
   .note { font-size: 12px; color: var(--dim); border: 1px solid var(--rule-hi); border-radius: 4px; padding: 0 6px; white-space: nowrap; }
   .note.caution { color: var(--caution-text); border-color: var(--caution); }
   .note.ok { color: var(--nom); border-color: var(--rule-hi); }
+  /* A flag nobody has acted on in a day stops shouting; after a week it reads as history rather
+     than urgency. It never disappears — a stale "checks failing" is still failing. Hover or focus
+     brings it back to full strength. */
+  .wi.stale .say.caution, .wi.stale .note.caution { opacity: .6; }
+  .wi.cold .say.caution, .wi.cold .note.caution { opacity: .45; }
+  .wi.cold .note.caution { border-color: var(--rule-hi); }
+  .wi.stale:hover .say.caution, .wi.stale:hover .note.caution,
+  .wi.stale:focus-within .say.caution, .wi.stale:focus-within .note.caution,
+  .wi.cold:hover .say.caution, .wi.cold:hover .note.caution,
+  .wi.cold:focus-within .say.caution, .wi.cold:focus-within .note.caution { opacity: 1; }
+  .wi.cold:hover .note.caution, .wi.cold:focus-within .note.caution { border-color: var(--caution); }
   .only { font-size: 12px; font-weight: 700; color: var(--caution-ink); background: var(--caution-fill); border-radius: 4px; padding: 0 6px; white-space: nowrap; align-self: center; }
   .label { font-size: 11.5px; color: var(--dim); background: var(--raised); border-radius: 4px; padding: 0 6px; white-space: nowrap; }
   .wi blockquote { margin: 6px 0 0; padding: 6px 10px; background: var(--raised); border-radius: 6px; color: var(--dim);
@@ -1153,11 +1152,11 @@
     })();
 {{end}}
 {{define "peek"}}{{if .Lines}}<template class="peek"><div class="pk"><b class="pk-h">{{.Head}}</b><dl>{{range .Lines}}<dt>{{.Label}}</dt><dd{{if .Level}} class="{{.Level}}"{{end}}>{{range $i, $x := .Items}}{{if $i}}<br>{{end}}{{$x}}{{end}}</dd>{{end}}</dl></div></template>{{end}}{{end}}
-{{define "item"}}<li class="wi" data-k="{{.K}}" data-new="{{.New}}" data-v="w-{{.Key}}" data-val="{{.Value}}" data-kind="{{lower .Kind}}" data-repo="{{lower .Repo}}" data-name="{{.Repo}}" data-move="{{.Move}}"{{if .Personal}} data-personal{{end}} data-s="{{.Search}}" data-ts="{{.SinceUnix}}">
+{{define "item"}}<li class="wi{{if .Stale}} {{.Stale}}{{end}}" data-k="{{.K}}" data-new="{{.New}}" data-v="w-{{.Key}}" data-val="{{.Value}}" data-kind="{{lower .Kind}}" data-repo="{{lower .Repo}}" data-name="{{.Repo}}" data-move="{{.Move}}"{{if .Personal}} data-personal{{end}} data-s="{{.Search}}" data-ts="{{.SinceUnix}}">
   <span class="wpill {{.Move}}">{{if eq .Move "you"}}Your move{{else if eq .Move "them"}}Waiting{{else}}Done{{end}}</span>
   <div>
     <a class="title" href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a>{{template "peek" .Peek}}
-    <div class="meta"><svg role="img" aria-label="{{if eq .Kind "PR"}}Pull request{{else}}Issue{{end}}"><use href="#i-{{if eq .Kind "PR"}}pr{{else}}issue{{end}}"/></svg><span>{{.Repo}}</span><span class="num">#{{.Number}}</span>{{if .Why}}<span>· {{.Why}}</span>{{end}}<span class="movetag {{.Move}}">{{if eq .Move "you"}}Your move{{else if eq .Move "them"}}Waiting on others{{else}}Finished{{end}}</span>{{range .Labels}}<span class="label">{{.}}</span>{{end}}</div>
+    <div class="meta"><svg role="img" aria-label="{{if eq .Kind "PR"}}Pull request{{else}}Issue{{end}}"><use href="#i-{{if eq .Kind "PR"}}pr{{else}}issue{{end}}"/></svg><span>{{.Repo}}</span><span class="num">#{{.Number}}</span>{{if .Why}}<span>· {{.Why}}</span>{{end}}{{range .Labels}}<span class="label">{{.}}</span>{{end}}</div>
     <div class="state"><span class="newchip" data-term="new" tabindex="0"{{if not .New}} hidden{{end}}>New{{if .NewWhat}} · {{.NewWhat}}{{end}}</span>{{if .Personal}}<span class="only" data-term="only-you" tabindex="0">Only you</span>{{end}}<span class="say{{if .Level}} {{.Level}}{{end}}">{{.Status}}</span>{{range .Notes}}<span class="note {{.Level}}"{{if .Term}} data-term="{{.Term}}" tabindex="0"{{end}}>{{.Text}}</span>{{end}}</div>
     {{if .Quote}}<blockquote>{{if .QuoteURL}}<a href="{{.QuoteURL}}" target="_blank" rel="noopener">{{.QuoteBy}}</a>{{else}}<b>{{.QuoteBy}}</b> {{end}}{{.Quote}}</blockquote>{{end}}
   </div>
@@ -1519,10 +1518,7 @@
       body: JSON.stringify({ key: b.dataset.nclear }) })
       .then(function (r) { return r.ok ? null : r.text().then(function (t) { return Promise.reject(t); }); })
       .then(function () {
-        var group = li.closest(".group"), n = group && group.querySelector("h3 .n");
         li.remove();
-        if (n) n.textContent = Math.max(0, (+n.textContent || 1) - 1);
-        if (group && !group.querySelector("li")) group.remove();
       })
       .catch(function (t) { b.disabled = false; b.textContent = "Try again"; b.title = String(t || "HelloGitty didn't answer"); });
   });
@@ -1537,15 +1533,8 @@
       body: JSON.stringify({ key: b.dataset.wdismiss }) })
       .then(function (r) { return r.ok ? null : r.text().then(function (t) { return Promise.reject(t); }); })
       .then(function () {
-        var group = li.closest(".group"), n = group && group.querySelector("h3 .n");
         li.style.transition = "opacity .2s"; li.style.opacity = "0";
-        setTimeout(function () {
-          li.remove();
-          if (n) n.textContent = Math.max(0, (+n.textContent || 1) - 1);
-          if (group && group.querySelector(".items") && !group.querySelector("li")) {
-            var none = group.querySelector(".none"); if (none) none.hidden = false;
-          }
-        }, 200);
+        setTimeout(function () { li.remove(); }, 200);
       })
       .catch(function (t) { b.disabled = false; b.title = String(t || "HelloGitty didn't answer"); });
   });

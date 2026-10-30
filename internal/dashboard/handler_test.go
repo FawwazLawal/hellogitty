@@ -95,7 +95,7 @@ func TestDashboardEmptyPipelineAndAlarms(t *testing.T) {
 		t.Fatalf("status %d\n%s", code, html)
 	}
 	for _, want := range []string{
-		`class="cell warn lit wide linked"`,                      // watched issue claimed, lit and clickable
+		`class="cell warn lit wide linked"`,                     // watched issue claimed, lit and clickable
 		`data-v="cw-watch-claimed">1<`,                          // with its count
 		`acme/rocket#1738`,                                      // named in the cell detail
 		`data-v="cw-repo-dormant">1<`,                           // dormant counted
@@ -394,7 +394,7 @@ func TestToolbarAndFilterHooks(t *testing.T) {
 		`data-s="fix launch acme/rocket #7 pr changes requested by @lead`,                              // its search text, lowercase
 		`needs-triage`,
 		`data-repo="acme/rocket" data-name="Acme/Rocket" data-s="acme/rocket active" data-open="12" data-gfi="3"`, // a tracked row's hooks
-		`<span class="movetag you">Your move</span>`,
+		`<span class="wpill you">Your move</span>`,                                                                // the pill, not the display:none movetag it replaced
 		`hellogitty-view`, // the view survives the reload
 	} {
 		if !strings.Contains(html, want) {

@@ -48,9 +48,14 @@ func TestDashboardDoesNotReferenceRemovedIndicators(t *testing.T) {
 	if strings.Contains(body, `class="dot`) {
 		t.Error(`a .dot element is back in the markup; the status pill replaced it`)
 	}
-	for _, ref := range []string{`querySelector(".dot")`, `querySelectorAll(".dot")`, `.dot {`, `.dot.`} {
+	// Every one of these named something the flattening deleted. A stylesheet rule for a class with
+	// no elements is dead weight; a script lookup for one is how the whole dashboard went down once.
+	for _, ref := range []string{
+		`querySelector(".dot")`, `querySelectorAll(".dot")`, `.dot {`, `.dot.`,
+		`.group `, `.group{`, `closest(".group")`, `movetag`, `.tag.you`,
+	} {
 		if strings.Contains(body, ref) {
-			t.Errorf("script or stylesheet still references removed .dot vocabulary: %q", ref)
+			t.Errorf("script or stylesheet still references removed vocabulary: %q", ref)
 		}
 	}
 }
@@ -95,5 +100,45 @@ func TestSortBarHoldsOnlyColumnHeaders(t *testing.T) {
 		if !re.MatchString(body) {
 			t.Errorf("triage toggle for %q is not in its panel heading", key)
 		}
+	}
+}
+
+// An amber flag on something nobody has touched in days should not read as loudly as one raised an
+// hour ago. The flags keep no history of their own, so the row's own last change drives this.
+func TestStaleRowsCarryTheirBucket(t *testing.T) {
+	now := time.Now()
+	for _, c := range []struct {
+		name string
+		age  time.Duration
+		want string
+	}{
+		{"fresh", time.Hour, ""},
+		{"just under a day", 23*time.Hour + 59*time.Minute, ""},
+		{"a day", 24 * time.Hour, "stale"},
+		{"just under a week", 7*24*time.Hour - time.Minute, "stale"},
+		{"a week", 7 * 24 * time.Hour, "cold"},
+		{"a month", 30 * 24 * time.Hour, "cold"},
+	} {
+		if got := staleness(now, now.Add(-c.age)); got != c.want {
+			t.Errorf("%s: staleness = %q, want %q", c.name, got, c.want)
+		}
+	}
+	if got := staleness(now, time.Time{}); got != "" {
+		t.Errorf("a row with no timestamp should not be called stale, got %q", got)
+	}
+}
+
+func TestStaleBucketReachesTheRow(t *testing.T) {
+	now := time.Now()
+	board := workFixture(now)
+	board.Sent[0].Since = now.Add(-10 * 24 * time.Hour) // cold
+	board.Sent[1].Since = now.Add(-2 * time.Hour)       // fresh
+	_, body := get(t, handler(fakeSource{board: board}), "/")
+
+	if !strings.Contains(body, `class="wi cold"`) {
+		t.Error("a row untouched for ten days did not reach the page as cold")
+	}
+	if strings.Count(body, `class="wi"`) == 0 {
+		t.Error("a row touched two hours ago should carry no staleness class")
 	}
 }
