@@ -36,8 +36,9 @@
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to main content</a>
 {{template "site-header" .}}
-<div class="cwrap">
+<main id="main" class="cwrap" tabindex="-1">
   <p class="sub">Repositories your pipeline has flagged for attention — the label and the stage come from the pipeline, so what to do about it is pipeline-specific.</p>
   <div class="overview">
     <div class="ocard caution"><span class="ov">{{len .FlaggedPipeline}}</span><span class="ol">{{if .Labels.Flagged}}{{.Labels.Flagged}}{{else}}Flagged{{end}}</span></div>
@@ -46,8 +47,8 @@
   </div>
 
   {{if .FlaggedPipeline}}
-  <div class="section">
-    <h2>Flagged repositories</h2>
+  <section class="section" aria-labelledby="rf-h">
+    <h2 id="rf-h">Flagged repositories</h2>
     <ul class="rlist">{{range .FlaggedPipeline}}
       <li>
         <div class="name"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Owner}}/{{.Name}}</a></div>
@@ -59,11 +60,11 @@
       <b>Why this lit.</b> The pipeline raised a flag on each listed repository. The flag's meaning is set by the pipeline itself, not by the dashboard.<br><br>
       <b>What to do.</b> Open the repository on GitHub and inspect the stage shown above — the pipeline's output for that stage names the gate and what it looked at. If the flag is a false positive the pipeline tool clears it; if it is real, address what the gate flagged and the pipeline will re-score on its next run.
     </div>
-  </div>
+  </section>
   {{else}}
   <p class="nodata">No pipeline repositories are flagged.</p>
   {{end}}
-</div>
+</main>
 <script>
 (function () {
   {{template "theme-js"}}

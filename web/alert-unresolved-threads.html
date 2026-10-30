@@ -41,8 +41,9 @@
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to main content</a>
 {{template "site-header" .}}
-<div class="cwrap">
+<main id="main" class="cwrap" tabindex="-1">
   <p class="sub">Open pull requests of yours with review comments the reviewer has yet to mark resolved — every unresolved thread still blocks a merge for the reviewers who gate on them.</p>
   <div class="overview">
     <div class="ocard caution"><span class="ov">{{len .UnresolvedPRs}}</span><span class="ol">Pull requests</span></div>
@@ -50,8 +51,8 @@
   </div>
 
   {{if .UnresolvedPRs}}
-  <div class="section">
-    <h2>Pull requests with open threads</h2>
+  <section class="section" aria-labelledby="ut-h">
+    <h2 id="ut-h">Pull requests with open threads</h2>
     {{range .UnresolvedPRs}}
     <div class="pr">
       <div class="title"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Repo}}#{{.Number}} {{.Title}}</a></div>
@@ -72,11 +73,11 @@
     <div class="recovery">
       <b>Clearing a thread.</b> Reply to the open comment, and if the reviewer agrees ask them to mark it resolved on GitHub — a reviewer can resolve any thread they can see, you can resolve your own. GitHub itself doesn't require resolved threads to merge, but a repository's branch protection or a reviewer's habit might. An <b>outdated</b> thread points at code the diff has since replaced; it is almost always safe to resolve.
     </div>
-  </div>
+  </section>
   {{else}}
   <p class="nodata">No unresolved review threads on your open pull requests.</p>
   {{end}}
-</div>
+</main>
 <script>
 (function () {
   {{template "theme-js"}}
