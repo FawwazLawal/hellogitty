@@ -15,34 +15,35 @@ const (
 )
 
 type workRow struct {
-	Key      string
-	Kind     string // "PR" or "Issue"
-	Repo     string
-	Number   int
-	Title    string
-	URL      string
-	Why      string // why it is on the board: "You opened it", "Assigned to you"
-	Status   string
-	Notes    []note
-	Level    string // "caution", "ok" or ""
-	Personal string // a step only you can take, e.g. "Sign the CLA"
-	Labels   []string
+	Key       string
+	Kind      string // "PR" or "Issue"
+	Repo      string
+	Number    int
+	Title     string
+	URL       string
+	Why       string // why it is on the board: "You opened it", "Assigned to you"
+	Status    string
+	Notes     []note
+	Level     string // "caution", "ok" or ""
+	Personal  string // a step only you can take, e.g. "Sign the CLA"
+	Labels    []string
 	Ago       string // "3 days"
 	AgoTitle  string // exact UTC time
 	SinceUnix int64  // for client-side sorting by time
-	Value    string // what the change marker compares between reloads
-	Move     string // work.MoveYou, MoveThem or MoveDone, for grouping and filtering in the page
-	Search   string // lowercase text the page's search box matches against
-	Quote    string
-	QuoteBy  string
-	QuoteURL string
-	K        string // "owner/name#123", matching notifications and the page's read marks
-	Attn     string // the dot: "new" (unread activity), "caution" (your move) or ""
-	New      int64  // when the newest unread notification on it arrived, unix seconds
-	NewWhat  string // what it says: "New comment", "CI failed: lint"
-	Peek     peek   // the hover card
-	Watched  bool   // on your watch list (the eye)
-	Eye      bool   // show the eye: an issue, on a page that can watch
+	Value     string // what the change marker compares between reloads
+	Move      string // work.MoveYou, MoveThem or MoveDone, for grouping and filtering in the page
+	Search    string // lowercase text the page's search box matches against
+	Quote     string
+	QuoteBy   string
+	QuoteURL  string
+	K         string // "owner/name#123", matching notifications and the page's read marks
+	Attn      string // "new" (unread activity), "caution" (your move) or ""
+	Stale     string // "" fresh, "stale" (24h+ untouched), "cold" (7d+): how loudly its flags should read
+	New       int64  // when the newest unread notification on it arrived, unix seconds
+	NewWhat   string // what it says: "New comment", "CI failed: lint"
+	Peek      peek   // the hover card
+	Watched   bool   // on your watch list (the eye)
+	Eye       bool   // show the eye: an issue, on a page that can watch
 }
 
 type note struct{ Text, Level, Term string }
@@ -123,12 +124,29 @@ func buildWork(b *work.Board, errText string, now time.Time) workView {
 	return v
 }
 
+// staleness says how long a row has sat untouched, so an amber flag nobody has acted on in days
+// stops competing with one raised an hour ago. Flags carry no history of their own, so the item's
+// last change is the honest signal: if nothing on it has moved, neither has the reason it is lit.
+func staleness(now, since time.Time) string {
+	if since.IsZero() {
+		return ""
+	}
+	switch d := now.Sub(since); {
+	case d >= 7*24*time.Hour:
+		return "cold"
+	case d >= 24*time.Hour:
+		return "stale"
+	}
+	return ""
+}
+
 func toRow(it work.Item, login string, now time.Time) workRow {
 	r := workRow{
 		Key:  strings.ToLower(it.Repo) + "-" + strconv.Itoa(it.Number),
 		Kind: "Issue", Repo: it.Repo, Number: it.Number, Title: it.Title, URL: it.URL,
 		Why: why(it), Status: it.Status, Level: it.Level, Personal: it.Personal, Labels: it.Labels,
 		Ago: ago(now, it.Since), AgoTitle: it.Since.UTC().Format("2006-01-02 15:04Z"), SinceUnix: it.Since.Unix(),
+		Stale: staleness(now, it.Since),
 		Value: it.Move + "|" + it.Status + "|" + it.Personal,
 	}
 	if it.PR {
