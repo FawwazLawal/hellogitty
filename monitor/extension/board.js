@@ -37,19 +37,34 @@ function el(tag, attrs, ...kids) {
   return e;
 }
 
-// ago follows the dashboard's wording: "3 days ago".
+// ago mirrors internal/help/text.go Ago: exact times after an hour, degraded gracefully by age.
 function ago(iso) {
-  const t = Date.parse(iso);
-  if (!t || t < 0) return "—";
-  const d = (Date.now() - t) / 1000;
-  const unit = (n, u) => `${n} ${u}${n === 1 || u === "min" ? "" : "s"} ago`;
+  const ts = Date.parse(iso);
+  if (!ts || ts < 0) return "—";
+  const t = new Date(ts), now = new Date();
+  const d = (now - t) / 1000;
   if (d < 60) return "just now";
-  if (d < 3600) return unit(Math.floor(d / 60), "min");
-  if (d < 86400) return unit(Math.floor(d / 3600), "hour");
-  if (d < 14 * 86400) return unit(Math.floor(d / 86400), "day");
-  if (d < 60 * 86400) return unit(Math.floor(d / (7 * 86400)), "week");
-  if (d < 365 * 86400) return unit(Math.floor(d / (30 * 86400)), "month");
-  return unit(Math.floor(d / (365 * 86400)), "year");
+  if (d < 3600) return Math.floor(d / 60) + " min ago";
+  const hm = String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0");
+  const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  if (sameDay(now, t)) return hm;
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+  if (sameDay(yesterday, t)) return "Yesterday " + hm;
+  if (d < 7 * 86400) return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][t.getDay()] + " " + hm;
+  if (now.getFullYear() === t.getFullYear()) {
+    return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][t.getMonth()] + " " + t.getDate() + " " + hm;
+  }
+  return t.getFullYear() + "-" + String(t.getMonth() + 1).padStart(2, "0") + "-" + String(t.getDate()).padStart(2, "0");
+}
+
+// staleness mirrors internal/dashboard/work.go staleness(): "" fresh, "stale" (24h+), "cold" (7d+).
+function staleness(iso) {
+  const ts = Date.parse(iso);
+  if (!ts) return "";
+  const d = (Date.now() - ts) / 1000;
+  if (d >= 7 * 86400) return "cold";
+  if (d >= 86400) return "stale";
+  return "";
 }
 
 // utc formats like the dashboard: "2026-10-20 13:04".
@@ -81,7 +96,7 @@ function svgIcon(kind) {
 
 // --- dashboard markup --------------------------------------------------------------------------
 
-const MOVE_TAG = { you: "Your move", them: "Waiting on others", done: "Finished" };
+const PILL = { you: "Your move", them: "Waiting", done: "Done" };
 
 // The glossary for hover help comes from the Go build through the stored board; without it no word
 // is marked as explainable (hide, don't fake).
@@ -113,10 +128,9 @@ function peekTemplate(p) {
   return t;
 }
 
-// item is the dashboard's {{define "item"}}. The dot is attention: green when a GitHub notification
-// about the row is unread, amber when it's your move, hollow otherwise. data-new is the unread
-// notification's time; the dashboard's script lights the dot, the New chip and the "N new" count
-// from it, and turns them off once the row is opened from the board.
+// item is the dashboard's {{define "item"}}. The .wpill at the row's left encodes whose move it is;
+// bold title (handled by dashboard.js from data-new) encodes new activity. .stale / .cold on the row
+// decay old amber flags per ADR-002 P8.
 function item(r, move) {
   const key = r.repo.toLowerCase() + "-" + r.number;
   const k = r.repo.toLowerCase() + "#" + r.number;
@@ -125,18 +139,19 @@ function item(r, move) {
     ...(r.labels || []), ...(r.notes || []).map((n) => n.text)];
   const href = safeURL(r.url);
   const qhref = safeURL(r.quoteURL);
+  const stale = staleness(r.since);
+  const since = Math.floor(Date.parse(r.since) / 1000) || 0;
   return el("li", {
-    class: "wi", "data-k": k, "data-new": fresh ? String(fresh.new) : "0", "data-v": "w-" + key, "data-val": move + "|" + r.status + "|" + (r.personal || ""),
+    class: "wi" + (stale ? " " + stale : ""), "data-k": k, "data-new": fresh ? String(fresh.new) : "0", "data-v": "w-" + key, "data-val": move + "|" + r.status + "|" + (r.personal || ""),
     "data-kind": r.kind.toLowerCase(), "data-repo": r.repo.toLowerCase(), "data-name": r.repo, "data-move": move,
-    "data-personal": !!r.personal, "data-s": words.map((w) => w || "").join(" ").toLowerCase(),
+    "data-personal": !!r.personal, "data-s": words.map((w) => w || "").join(" ").toLowerCase(), "data-ts": String(since),
   },
-    el("span", { class: "dot " + (move === "you" ? "caution" : ""), "aria-hidden": "true", ...term("dot") }),
+    el("span", { class: "wpill " + move }, PILL[move]),
     el("div", null,
       href ? el("a", { class: "title", href, target: "_blank", rel: "noopener" }, r.title) : el("span", { class: "title" }, r.title),
       peekTemplate(r.peek),
       el("div", { class: "meta" }, svgIcon(r.kind), el("span", null, r.repo), el("span", { class: "num" }, "#" + r.number),
         r.why ? el("span", null, "· " + r.why) : null,
-        el("span", { class: "movetag " + move }, MOVE_TAG[move]),
         (r.labels || []).map((l) => el("span", { class: "label" }, l))),
       el("div", { class: "state" },
         el("span", { class: "newchip", ...term("new", true), hidden: true }, fresh && fresh.what ? "New · " + fresh.what : "New"),
@@ -148,12 +163,6 @@ function item(r, move) {
       el("time", { class: "when", title: "Since " + utc(r.since) + "Z" }, ago(r.since)),
       el("span", { class: "trail", ...(known("pill") ? term("pill", false, r.repo + " #" + r.number) : { title: r.repo + " #" + r.number }) },
         el("span", { class: "rp" }, r.repo), el("span", { class: "num" }, "#" + r.number))));
-}
-
-function group(title, termId, key, rows, move, none, hot) {
-  return el("div", { class: "group mv" },
-    el("h3", null, termText(termId, title), " ", el("span", { class: "n" + (hot && rows.length ? " hot" : ""), "data-v": key }, String(rows.length))),
-    rows.length ? el("ul", { class: "items" }, rows.map((r) => item(r, move))) : el("p", { class: "none" }, none));
 }
 
 // counter is one alert cell, following the dashboard's counter(): the wide cell names three items,
@@ -245,35 +254,52 @@ function cells(st) {
 function workPanels(st) {
   const b = st.board;
   const login = st.auth.login || "you";
-  const work = el("section", { class: "panel", "aria-labelledby": "work-h", "data-board": true },
-    el("h2", { id: "work-h" }, "Your work ", el("span", { class: "lbl" },
-      b ? `Pull requests and issues @${login} has out, anywhere on GitHub · updated ${ago(b.fetchedAt)}` : "Not fetched yet"),
-      el("span", { class: "nb", id: "newcount", hidden: true })));
+  const own = (rows) => rows.filter((r) => !r.incoming);
+  const theirs = (rows) => rows.filter((r) => r.incoming);
+  const workHead = (yCount) => [
+    "Your work",
+    b ? [" · ", el("span", { "data-v": "work-you" }, String(yCount)), " need you"] : null,
+    " ",
+    el("span", { class: "lbl" }, b
+      ? `Pull requests and issues @${login} has out, anywhere on GitHub · updated ${ago(b.fetchedAt)}`
+      : "Not fetched yet"),
+    el("span", { class: "nb", id: "newcount", hidden: true }),
+    b ? el("button", { type: "button", class: "triage-toggle", "data-triage": "your-work" }, "Show all") : null,
+  ];
   if (!b) {
+    const work = el("section", { class: "panel", "aria-labelledby": "work-h", "data-board": true },
+      el("h2", { id: "work-h" }, workHead(0)));
     work.append(el("p", { class: "pad zero" }, st.error
       ? ["Couldn't load your pull requests and issues: ", el("span", { class: "err" }, st.error)]
       : "Loading your pull requests and issues. This takes a few seconds after you sign in; the page updates on its own."));
     return [work];
   }
-  work.append(el("div", { class: "wsort", role: "group", "aria-label": "Sort work items" },
-    el("button", { type: "button", "data-wsort": "name" }, "Name"),
-    el("button", { type: "button", "data-wsort": "updated", title: "Sort by last update" }, "Updated")));
-  const own = (rows) => rows.filter((r) => !r.incoming);
-  const theirs = (rows) => rows.filter((r) => r.incoming);
+  const ownYou = own(b.you), ownThem = own(b.them);
   const done = b.done.slice(0, FINISHED_SHOWN);
   const more = b.done.length - done.length;
-  work.append(
-    group("Your move", "group-you", "work-you", own(b.you), "you", "Nothing is waiting on you.", true),
-    group("Waiting on others", "group-them", "work-them", own(b.them), "them", "Nothing out for review or waiting on a reply.", false),
-    el("details", { class: "group mv", "data-key": "work-done" },
-      el("summary", null, termText("group-done", "Finished", false), " in the last 30 days ", el("span", { class: "n", "data-v": "work-done" }, done.length + (more > 0 ? "+" : "")), el("span", { class: "chev", "aria-hidden": "true" })),
-      done.length ? el("ul", { class: "items" }, done.map((r) => item(r, "done"))) : el("p", { class: "none" }, "Nothing merged or closed in the last 30 days."),
-      more > 0 ? el("p", { class: "hint" }, more + " more not shown.") : null),
+  const workRows = [...ownYou.map((r) => item(r, "you")), ...ownThem.map((r) => item(r, "them")), ...done.map((r) => item(r, "done"))];
+  const work = el("section", { class: "panel", "aria-labelledby": "work-h", "data-board": true },
+    el("h2", { id: "work-h" }, workHead(ownYou.length)),
+    el("div", { class: "wsort", role: "group", "aria-label": "Sort work items" },
+      el("button", { type: "button", "data-wsort": "name" }, "Name"),
+      el("button", { type: "button", "data-wsort": "updated", title: "Sort by last update" }, "Updated")),
+    workRows.length
+      ? el("ul", { class: "items", "data-triage-list": "your-work" }, workRows)
+      : el("p", { class: "none" }, "Nothing is waiting on you."),
+    more > 0 ? el("p", { class: "hint" }, more + " more finished not shown.") : null,
     st.error ? el("p", { class: "pad err" }, "The last refresh failed, so this is the previous list: " + st.error) : null);
+  const inYou = theirs(b.you), inThem = theirs(b.them);
+  const repoRows = [...inYou.map((r) => item(r, "you")), ...inThem.map((r) => item(r, "them"))];
   const repos = el("section", { class: "panel", "aria-labelledby": "repos-h", "data-board": true },
-    el("h2", { id: "repos-h" }, "Your repositories ", el("span", { class: "lbl" }, "Open pull requests and issues from others in " + b.scope)),
-    group("Needs you", "group-inyou", "work-inyou", theirs(b.you), "you", "No reviews requested and no unanswered issues.", true),
-    group("Waiting on contributors", "group-inthem", "work-inthem", theirs(b.them), "them", "Nothing waiting on a contributor.", false),
+    el("h2", { id: "repos-h" },
+      "Your repositories",
+      inYou.length ? [" · ", el("span", { "data-v": "work-inyou" }, String(inYou.length)), " need you"] : null,
+      " ",
+      el("span", { class: "lbl" }, "Open pull requests and issues from others in " + b.scope),
+      el("button", { type: "button", class: "triage-toggle", "data-triage": "your-repos" }, "Show all")),
+    repoRows.length
+      ? el("ul", { class: "items", "data-triage-list": "your-repos" }, repoRows)
+      : el("p", { class: "none" }, "No reviews requested and no unanswered issues."),
     el("p", { class: "hint" }, "Maintain repositories you don't own? Add them under Also maintain, below."));
   return [work, repos];
 }
