@@ -70,11 +70,14 @@
   @media (max-width: 480px) { .clist:not(.grid-view) .citem { grid-template-columns: auto minmax(0, 1fr); row-gap: 2px; }
     .clist:not(.grid-view) .cago { grid-column: 2; text-align: left; } }
   @media (prefers-reduced-motion: reduce) { .citem, .ocard { transition: none; } }
+  .skip-link { position: absolute; left: 8px; top: 8px; z-index: 1000; padding: 8px 12px; background: var(--panel); color: var(--text); border: 2px solid var(--text); border-radius: 6px; text-decoration: none; transform: translateY(-200%); }
+  .skip-link:focus { transform: translateY(0); }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to main content</a>
 {{template "site-header" .}}
-<main class="cwrap">
+<main id="main" class="cwrap" tabindex="-1">
   <p class="sub">Issues and pull requests you joined — commented on or were mentioned in — across tracked repositories.</p>
 
   <div class="overview">

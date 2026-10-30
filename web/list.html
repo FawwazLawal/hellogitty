@@ -37,11 +37,14 @@
     .lwrap { padding: 14px 16px 30px; }
     .ltable .opt { display: none; }
   }
+  .skip-link { position: absolute; left: 8px; top: 8px; z-index: 1000; padding: 8px 12px; background: var(--panel); color: var(--text); border: 2px solid var(--text); border-radius: 6px; text-decoration: none; transform: translateY(-200%); }
+  .skip-link:focus { transform: translateY(0); }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to main content</a>
 {{template "site-header" .}}
-<main class="lwrap">
+<main id="main" class="lwrap" tabindex="-1">
   <p class="sub">{{.ListSub}}</p>
   <ul class="jump" aria-label="Other lists">{{range .ListLinks}}<li><a href="{{.URL}}"{{if .Current}} aria-current="page"{{end}}>{{.Label}} <b>{{.Count}}</b></a></li>{{end}}</ul>
   {{if .ListPRs}}

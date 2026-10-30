@@ -213,9 +213,12 @@
     .srow { grid-template-columns: 1fr; }
     .srow-hint { grid-column: 1; }
   }
+  .skip-link { position: absolute; left: 8px; top: 8px; z-index: 1000; padding: 8px 12px; background: var(--panel); color: var(--text); border: 2px solid var(--text); border-radius: 6px; text-decoration: none; transform: translateY(-200%); }
+  .skip-link:focus { transform: translateY(0); }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to main content</a>
 {{template "site-header" .}}
 <script>
 {{template "nav-active-js"}}
@@ -263,11 +266,11 @@
     </a>
   </nav>
 
-  <div class="settings-body">
+  <main id="main" class="settings-body" tabindex="-1">
 
     <!-- APPEARANCE -->
-    <div class="spane active" id="pane-appearance">
-      <h1>Appearance</h1>
+    <div class="spane active" id="pane-appearance" aria-labelledby="pane-appearance-h">
+      <h1 id="pane-appearance-h">Appearance</h1>
       <p class="section-desc">Theme, layout and display preferences.</p>
       <div class="scard">
         <div class="srow">
@@ -308,8 +311,8 @@
     </div>
 
     <!-- CLOCK -->
-    <div class="spane" id="pane-clock">
-      <h1>Clock</h1>
+    <div class="spane" id="pane-clock" aria-labelledby="pane-clock-h">
+      <h1 id="pane-clock-h">Clock</h1>
       <p class="section-desc">Time display, format and visual style.</p>
       <div class="scard">
         <div class="srow">
@@ -354,8 +357,8 @@
     </div>
 
     <!-- REPOSITORIES -->
-    {{if .RepoTools}}<div class="spane" id="pane-repos">
-      <h1>Repositories</h1>
+    {{if .RepoTools}}<div class="spane" id="pane-repos" aria-labelledby="pane-repos-h">
+      <h1 id="pane-repos-h">Repositories</h1>
       <p class="section-desc">Manage tracked repositories and your maintain list.</p>
       <div class="scard">
         <div class="srow full">
@@ -404,8 +407,8 @@
     </div>{{end}}
 
     <!-- POLLING & API -->
-    <div class="spane" id="pane-polling">
-      <h1>Polling &amp; API</h1>
+    <div class="spane" id="pane-polling" aria-labelledby="pane-polling-h">
+      <h1 id="pane-polling-h">Polling &amp; API</h1>
       <p class="section-desc">GitHub polling frequency and API rate limit status.</p>
       <div class="scard">
         <div class="srow">
@@ -435,8 +438,8 @@
     </div>
 
     <!-- SERVER -->
-    <div class="spane" id="pane-server">
-      <h1>Server</h1>
+    <div class="spane" id="pane-server" aria-labelledby="pane-server-h">
+      <h1 id="pane-server-h">Server</h1>
       <p class="section-desc">Paths and addresses set at startup. Requires a restart to change.</p>
       <div class="scard">
         <div class="srow">
@@ -472,8 +475,8 @@
     </div>
 
     <!-- ABOUT -->
-    <div class="spane" id="pane-about">
-      <h1>About</h1>
+    <div class="spane" id="pane-about" aria-labelledby="pane-about-h">
+      <h1 id="pane-about-h">About</h1>
       <p class="section-desc">Version and build information.</p>
       <div class="scard">
         <div class="srow">
@@ -491,7 +494,7 @@
       </div>
     </div>
 
-  </div>
+  </main>
 </div>
 
 <script>

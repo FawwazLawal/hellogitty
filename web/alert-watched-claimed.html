@@ -40,11 +40,14 @@
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .badge.claimed { background: #450a0a44; color: #f87171; } }
   :root[data-theme="dark"] .badge.claimed { background: #450a0a44; color: #f87171; }
   .hint { font-size: 12px; color: var(--dim); margin: 12px 0 0; }
+  .skip-link { position: absolute; left: 8px; top: 8px; z-index: 1000; padding: 8px 12px; background: var(--panel); color: var(--text); border: 2px solid var(--text); border-radius: 6px; text-decoration: none; transform: translateY(-200%); }
+  .skip-link:focus { transform: translateY(0); }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to main content</a>
 {{template "site-header" .}}
-<div class="cwrap">
+<main id="main" class="cwrap" tabindex="-1">
   <p class="sub">Issues you are watching that someone else has claimed — they may be working on it already.</p>
   <div class="overview">
     <div class="ocard warn"><span class="ov">{{.ClaimedCount}}</span><span class="ol">Claimed</span></div>
@@ -52,8 +55,8 @@
   </div>
 
   {{if .ClaimedWatch}}
-  <div class="section">
-    <h2>Claimed issues</h2>
+  <section class="section" aria-labelledby="claimed-h">
+    <h2 id="claimed-h">Claimed issues</h2>
     <ul class="wlist">{{range .ClaimedWatch}}
       <li>
         <div class="body">
@@ -65,11 +68,11 @@
       </li>
     {{end}}</ul>
     <p class="hint">Mark a claimed issue as Seen on the dashboard to quiet its alert until something changes.</p>
-  </div>
+  </section>
   {{else}}
   <p class="nodata">No watched issues have been claimed.</p>
   {{end}}
-</div>
+</main>
 <script>
 (function () {
   {{template "theme-js"}}

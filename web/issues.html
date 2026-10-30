@@ -62,11 +62,14 @@
     .iwrap { padding: 14px 16px 30px; }
     .itable .opt { display: none; }
   }
+  .skip-link { position: absolute; left: 8px; top: 8px; z-index: 1000; padding: 8px 12px; background: var(--panel); color: var(--text); border: 2px solid var(--text); border-radius: 6px; text-decoration: none; transform: translateY(-200%); }
+  .skip-link:focus { transform: translateY(0); }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to main content</a>
 {{template "site-header" .}}
-<main class="iwrap">
+<main id="main" class="iwrap" tabindex="-1">
   <p class="sub">Open issues updated in the last {{.IssueWindow}} days, newest activity first.</p>
   <form class="isearch" method="get" action="/issues">
     <label><span class="sr">Search issues</span><input type="search" name="q" id="iq" value="{{.IssueQuery}}" placeholder="Search by #number, repo, title or label…" autocomplete="off"></label>

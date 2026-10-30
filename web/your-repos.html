@@ -61,11 +61,14 @@
   .empty { color: var(--dim); padding: 40px 0; text-align: center; }
   @media (max-width: 640px) { .overview { grid-template-columns: repeat(2, 1fr); } }
   @media (prefers-reduced-motion: reduce) { .yitem, .ocard { transition: none; } }
+  .skip-link { position: absolute; left: 8px; top: 8px; z-index: 1000; padding: 8px 12px; background: var(--panel); color: var(--text); border: 2px solid var(--text); border-radius: 6px; text-decoration: none; transform: translateY(-200%); }
+  .skip-link:focus { transform: translateY(0); }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to main content</a>
 {{template "site-header" .}}
-<main class="ywrap">
+<main id="main" class="ywrap" tabindex="-1">
   <p class="sub">Your pull requests, CI runs, releases and other activity in your own repositories.</p>
 
   <div class="overview">
