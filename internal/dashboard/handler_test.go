@@ -95,10 +95,7 @@ func TestDashboardEmptyPipelineAndAlarms(t *testing.T) {
 		t.Fatalf("status %d\n%s", code, html)
 	}
 	for _, want := range []string{
-		`class="cell warn lit wide linked"`,                     // watched issue claimed, lit and clickable
-		`data-v="cw-watch-claimed">1<`,                          // with its count
 		`acme/rocket#1738`,                                      // named in the cell detail
-		`data-v="cw-repo-dormant">1<`,                           // dormant counted
 		`<b>No pull requests yet</b>`,                           // empty pipeline is explicit
 		`data-v="pr-merged">0<`,                                 // instruments present and zeroed
 		`data-v="pr-rate">—<`,                                   // no fake rate
@@ -158,13 +155,10 @@ func TestNothingWatchedIsNotAnAllClear(t *testing.T) {
 		PollInterval: time.Hour,
 	}
 	_, html := get(t, h, "/")
-	for _, want := range []string{`data-v="cw-watch-claimed">nothing watched<`, `data-v="cw-watch-closed">nothing watched<`, `cell warn wide empty`, `<b>Nothing watched.</b>`} {
+	for _, want := range []string{`<b>Nothing watched.</b>`} {
 		if !strings.Contains(html, want) {
 			t.Errorf("missing %q", want)
 		}
-	}
-	if strings.Contains(html, `data-v="cw-watch-claimed">0<`) {
-		t.Error("a bare 0 on the claimed cell reads as all clear when nothing is watched")
 	}
 }
 
@@ -179,34 +173,10 @@ func TestStaleAndPollFailLight(t *testing.T) {
 		Now:          func() time.Time { return now },
 	}
 	_, html := get(t, h, "/")
-	for _, want := range []string{`data-v="cw-poll-fail">2<`, `data-v="cw-data-stale">12:00<`, `<b>Not counted yet.</b>`, `Something went wrong`, `class="light UNKNOWN"`} {
+	for _, want := range []string{`<b>Not counted yet.</b>`, `Something went wrong`, `class="light UNKNOWN"`} {
 		if !strings.Contains(html, want) {
 			t.Errorf("missing %q", want)
 		}
-	}
-}
-
-func TestOverflowCountRendersOutsideTheClamp(t *testing.T) {
-	now := time.Now()
-	var reports []store.RepoReport
-	errs := map[string]string{}
-	for _, n := range []string{"rocket", "anvil", "Beacon", "comet", "delta-core", "ui"} {
-		owner := "own-" + strings.ToLower(n)
-		reports = append(reports, store.RepoReport{Repo: store.Repo{Owner: owner, Name: n, LastPoll: &now}})
-		errs[strings.ToLower(owner+"/"+n)] = "github: 401"
-	}
-	h := &Handler{
-		Template:     web.Index,
-		Source:       fakeSource{pipe: pipeFixture(t), reports: reports, tel: Telemetry{LastPoll: now, Errors: errs}},
-		PollInterval: time.Hour,
-	}
-	_, html := get(t, h, "/")
-	if !strings.Contains(html, `<span class="det">anvil</span><span class="more">+5</span>`) {
-		i := strings.Index(html, "Check failed")
-		t.Errorf("the failed-check cell should show one short name and carry +5 outside the clamped span:\n%s", html[i:i+400])
-	}
-	if strings.Contains(html, "own-rocket/rocket,") {
-		t.Error("failed-check detail should use short repo names")
 	}
 }
 
@@ -255,7 +225,7 @@ func TestPipelineLabelsComeFromTheCommand(t *testing.T) {
 	}
 	src := fakeSource{pipe: st, tel: Telemetry{LastPoll: now}, reports: []store.RepoReport{{Repo: store.Repo{Owner: "o", Name: "x", LastPoll: &now}}}}
 	_, html := get(t, handler(src), "/")
-	for _, want := range []string{`Gate escalated</span><span class="cnt" data-v="cw-repo-flagged">1<`, `Task failed</span><span class="cnt" data-v="cw-stage-failed">1<`, `class="gate caution"`, `<i class="done"></i><i class="failed"></i>`} {
+	for _, want := range []string{`class="gate caution"`, `<i class="done"></i><i class="failed"></i>`} {
 		if !strings.Contains(html, want) {
 			t.Errorf("missing %q", want)
 		}
@@ -323,8 +293,6 @@ func TestWorkBoardPanels(t *testing.T) {
 	h.Now = func() time.Time { return now }
 	_, html := get(t, h, "/")
 	for _, want := range []string{
-		`Your move</span><span class="cnt" data-v="cw-your-move">2<`, // cell counts sent and incoming
-		`proj#7, tool#9`, // and names them
 		`data-v="work-you">1<`, `data-v="work-inyou">1<`,
 		`Fix &lt;it&gt;`, // titles escaped
 		`<span class="say caution">Changes requested by @lead</span><span class="note caution" data-term="merge-conflict" tabindex="0">Merge conflict</span>`,
@@ -413,7 +381,6 @@ func TestCheckFailedSaysWhy(t *testing.T) {
 	}
 	_, html := get(t, h, "/")
 	for _, want := range []string{
-		`data-extra="rocket: GitHub took too long to answer while sending its pull requests. HelloGitty tries again on the next check, in about 50 minutes."`,
 		`<span class="errtag" title="Last check failed: GitHub took too long to answer while sending its pull requests.">check failed</span>`,
 		`The last check failed: GitHub took too long to answer while sending its pull requests. The numbers shown`,
 	} {

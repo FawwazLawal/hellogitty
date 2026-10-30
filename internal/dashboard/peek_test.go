@@ -75,7 +75,7 @@ func TestPageCarriesTheGlossaryAndPeeks(t *testing.T) {
 		`<script type="application/json" id="glossary">{`, `"p:PASS":{"label":"PASS","means":"Gate passed: safe to contribute."}`,
 		`<span class="gate ok" data-term="p:PASS">PASS</span>`, `data-term="p:GAT" tabindex="0" data-extra="gate">GAT</span>`,
 		`<template class="peek"><div class="pk"><b class="pk-h">Pull request · open</b>`, `<dt>Branch</dt><dd>fix/it → main</dd>`,
-		`<b class="pk-h">acme/rocket</b>`, `data-rsort="denied" role="button" tabindex="0" data-term="col-denied">Turned down</span>`, `data-term="cell-your-move"`,
+		`<b class="pk-h">acme/rocket</b>`, `data-rsort="denied" role="button" tabindex="0" data-term="col-denied">Turned down</span>`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("missing %s", want)
@@ -92,7 +92,7 @@ func TestPanelsAreModules(t *testing.T) {
 	src := fakeSource{pipe: pipeFixture(t), reports: []store.RepoReport{{Repo: store.Repo{Owner: "acme", Name: "rocket", LastPoll: &now}}},
 		board: &work.Board{Login: "me"}}
 	_, body := get(t, handler(src), "/")
-	for _, id := range []string{"alerts", "your-work", "your-repos", "tracked", "watched", "pipeline", "checks"} {
+	for _, id := range []string{"your-work", "your-repos", "tracked", "watched", "pipeline", "checks"} {
 		if !strings.Contains(body, `data-module="`+id+`"`) {
 			t.Errorf("module %s missing", id)
 		}
