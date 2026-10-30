@@ -2,40 +2,52 @@ package dashboard
 
 import (
 	"reflect"
+	"sort"
 	"testing"
 )
 
 func TestApplyCleared(t *testing.T) {
-	cells := []cell{
-		counter("repo-dormant", "Repo dormant", 2, "caution", []string{"audioFlux", "fisher"}, false),
-		counter("watch-claimed", "Watched issue claimed", 1, "warn", []string{"SwiftFormat#2437"}, true),
-		counter("stage-failed", "Task failed", 1, "caution", []string{"fastapi"}, false),
-		{Key: "data-stale", Label: "Data is stale", Lit: true},
+	present := []clearedState{
+		{Key: "watch-claimed", Items: []string{"SwiftFormat#2437"}},                 // still lit; a cleared id for it stays
+		{Key: "watch-closed", Items: []string{"audioflux#120", "fastapi#999"}},      // one id is gone and will be forgotten
+		{Key: "data-stale", Items: []string{"anything"}},                            // not clearable; ignored
+		{Key: "stage-failed", Items: nil},                                           // every cleared id for the key is stale
 	}
 	cleared := map[string]bool{
-		ClearedID("watch-claimed", "SwiftFormat#2437"): true, // everything cleared: goes dark
-		ClearedID("repo-dormant", "audioflux"):         true, // one of two: stays lit for the new one
-		ClearedID("stage-failed", "meshery"):           true, // no longer failing: forgotten
+		ClearedID("watch-claimed", "SwiftFormat#2437"): true,
+		ClearedID("watch-closed", "audioflux#120"):     true,
+		ClearedID("watch-closed", "ghost#404"):         true, // not in present → forget
+		ClearedID("stage-failed", "meshery"):           true, // key not in present → forget
+		ClearedID("data-stale", "anything"):            true, // key not clearable → never considered
 	}
-	forget := applyCleared(cells, cleared, true)
 
-	if c := cells[1]; c.Lit || c.Cleared != 1 || c.Value != "0" || !c.Clearable {
-		t.Errorf("fully cleared cell: lit=%v cleared=%d value=%q clearable=%v", c.Lit, c.Cleared, c.Value, c.Clearable)
+	got := applyCleared(present, cleared, true)
+	sort.Strings(got)
+	want := []string{
+		ClearedID("stage-failed", "meshery"),
+		ClearedID("watch-closed", "ghost#404"),
 	}
-	if c := cells[0]; !c.Lit || c.Value != "1" || c.Detail != "fisher" || c.Cleared != 1 {
-		t.Errorf("partly cleared cell: lit=%v value=%q detail=%q cleared=%d", c.Lit, c.Value, c.Detail, c.Cleared)
+	sort.Strings(want)
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("applyCleared forget = %v, want %v", got, want)
 	}
-	if c := cells[2]; !c.Lit || c.Cleared != 0 || c.ItemsAttr != "fastapi" {
-		t.Errorf("uncleared cell changed: %+v", c)
+
+	// data-stale is not clearable, so a cleared id against it must survive the sweep.
+	if got := applyCleared(present, cleared, true); contains(got, ClearedID("data-stale", "anything")) {
+		t.Errorf("applyCleared swept a non-clearable key: %v", got)
 	}
-	if cells[3].Clearable {
-		t.Error("data-stale must not be clearable")
+
+	// Before the first check nothing is forgotten, however empty the states look.
+	if got := applyCleared(present, cleared, false); got != nil {
+		t.Errorf("applyCleared unsettled forget = %v, want nil", got)
 	}
-	if want := []string{ClearedID("stage-failed", "meshery")}; !reflect.DeepEqual(forget, want) {
-		t.Errorf("forget = %v, want %v", forget, want)
+}
+
+func contains(xs []string, x string) bool {
+	for _, s := range xs {
+		if s == x {
+			return true
+		}
 	}
-	// Before the first check nothing is forgotten, however empty the cells look.
-	if f := applyCleared([]cell{counter("stage-failed", "Task failed", 0, "caution", nil, false)}, cleared, false); len(f) != 0 {
-		t.Errorf("unsettled forget = %v", f)
-	}
+	return false
 }
