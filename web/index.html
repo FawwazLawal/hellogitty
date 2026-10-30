@@ -776,7 +776,7 @@
   .brand .ver { line-height: 1.2; white-space: nowrap; }
   .status h1 { margin: 0; font-size: 17px; line-height: 1.3; font-weight: 700; letter-spacing: -0.01em; }
   .ver .baby { font-style: italic; }
-  .head-right { display: flex; align-items: center; gap: 8px; justify-self: end; }
+  .head-right { display: flex; align-items: center; gap: 8px; justify-self: end; flex-wrap: wrap; justify-content: flex-end; }
   .head-right .theme { margin: 0; }
   .headbtn { font: 12px/1 var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
     border-radius: 6px; padding: 6px 10px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
@@ -865,15 +865,20 @@
     .status.has-mascot { padding-right: 20px; }
   }
   @media (max-width: 760px) {
-    .status { grid-template-columns: 1fr 1fr; }
+    /* minmax(0, …) lets these columns go narrower than their content. Without it the header
+       control cluster sized an auto column to its own 424px max-content width and pushed every
+       route sideways: 656px of scrollWidth in a 390px viewport on the dashboard, 476 elsewhere. */
+    .status { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
     .hclock { grid-column: 1 / -1; grid-row: 1; margin-bottom: 4px; }
     .hclock-time { font-size: 22px; }
     .quicknav { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
   }
   @media (max-width: 480px) {
-    .status { grid-template-columns: 1fr auto; padding: 8px 12px; gap: 4px 8px; }
+    .status { grid-template-columns: minmax(0, 1fr); padding: 8px 12px; gap: 4px 8px; }
     .hclock { display: none; }
-    .head-right { gap: 6px; }
+    /* Stacked under the name at this width, wrapping and reading left to right like everything
+       else on the page rather than hanging off the right edge. */
+    .head-right { gap: 6px; justify-self: stretch; justify-content: flex-start; }
     .headbtn { padding: 5px 8px; font-size: 11px; }
     .quicknav a { padding: 8px 10px; font-size: 12px; }
     .quicknav a svg { width: 13px; height: 13px; }
