@@ -1035,8 +1035,11 @@
   // The eye: watch or stop watching an issue from anywhere on the page. Every eye for the same issue
   // follows, and a short note says what happened.
   (function () {
-    var token = (document.querySelector("section.cw") || {}).dataset;
-    token = token ? token.token : "";
+    // Self-contained rather than borrowing the dashboard's helper: this define is also pulled
+    // by the standalone feed window, where that helper is not in scope. The feed list carries
+    // the token there; the grid carries it on the dashboard.
+    var tokenEl = document.querySelector("[data-token]");
+    var token = tokenEl ? tokenEl.dataset.token : "";
     var msg = null, timer = 0;
     function say(text, bad) {
       if (!msg) { msg = document.createElement("div"); msg.className = "eyemsg"; msg.setAttribute("role", "status"); document.body.appendChild(msg); }
@@ -1217,7 +1220,7 @@
 
 
 
-<div class="grid">
+<div class="grid" data-token="{{.Token}}">
   <div class="main">
     <section class="panel" aria-labelledby="work-h" data-board data-module="your-work">
       <h2 id="work-h">Your work{{if .Work.Known}} · <span data-v="work-you">{{len .Work.You}}</span> need you{{end}} <span class="lbl">{{if .Work.Known}}Pull requests and issues @{{.Work.Login}} has out, anywhere on GitHub · updated {{.Work.FetchedAgo}}{{else}}Not fetched yet{{end}}</span><span class="nb" id="newcount"{{if not .WorkNew}} hidden{{end}}>{{.WorkNew}} new</span>{{if .Work.Known}}<button type="button" class="triage-toggle" data-triage="your-work">Show all</button>{{end}}</h2>
@@ -1528,13 +1531,18 @@
   })();
 </script>
 <script>
+  // The page's CSRF token. It used to be read off the alerts section; that section is gone, so
+  // it is read from whichever element carries it and the readers do not care which.
+  function hgToken() { var e = document.querySelector("[data-token]"); return e ? e.dataset.token : ""; }
+</script>
+<script>
   // Clear on a GitHub notification row: it leaves now, and stays away until the thread changes.
   document.addEventListener("click", function (e) {
     var b = e.target.closest(".nclear");
     if (!b) return;
-    var cw = document.querySelector("section.cw"), li = b.closest("li");
+    var li = b.closest("li");
     b.disabled = true;
-    fetch("/notifications/clear", { method: "POST", headers: { "Content-Type": "application/json", "X-HelloGitty-Token": cw ? cw.dataset.token : "" },
+    fetch("/notifications/clear", { method: "POST", headers: { "Content-Type": "application/json", "X-HelloGitty-Token": hgToken() },
       body: JSON.stringify({ key: b.dataset.nclear }) })
       .then(function (r) { return r.ok ? null : r.text().then(function (t) { return Promise.reject(t); }); })
       .then(function () {
@@ -1547,9 +1555,9 @@
   document.addEventListener("click", function (e) {
     var b = e.target.closest(".wdismiss");
     if (!b) return;
-    var cw = document.querySelector("section.cw"), li = b.closest("li");
+    var li = b.closest("li");
     b.disabled = true;
-    fetch("/work/dismiss", { method: "POST", headers: { "Content-Type": "application/json", "X-HelloGitty-Token": cw ? cw.dataset.token : "" },
+    fetch("/work/dismiss", { method: "POST", headers: { "Content-Type": "application/json", "X-HelloGitty-Token": hgToken() },
       body: JSON.stringify({ key: b.dataset.wdismiss }) })
       .then(function (r) { return r.ok ? null : r.text().then(function (t) { return Promise.reject(t); }); })
       .then(function () {
@@ -1564,9 +1572,8 @@
   document.addEventListener("click", function (e) {
     var b = e.target.closest(".seenbtn");
     if (!b) return;
-    var cw = document.querySelector("section.cw");
-    b.disabled = true;
-    fetch("/cells/clear", { method: "POST", headers: { "Content-Type": "application/json", "X-HelloGitty-Token": cw ? cw.dataset.token : "" },
+        b.disabled = true;
+    fetch("/cells/clear", { method: "POST", headers: { "Content-Type": "application/json", "X-HelloGitty-Token": hgToken() },
       body: JSON.stringify({ key: b.dataset.seenCell, items: [b.dataset.seenItem] }) })
       .then(function (r) { if (!r.ok) return Promise.reject(r.status); location.reload(); })
       .catch(function () { b.disabled = false; b.textContent = "Try again"; });
