@@ -5,6 +5,38 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (31) · Black Bombay (baby) · 2026-10-29
+
+Tag `v0.2.31`.
+
+- **A second theme pack, with three appearances**: Muertos, a Halloween and Día
+  de los Muertos palette, selectable in Settings. Beside Light and Dark it adds
+  **AMOLED** — true black, offered only while a pack that defines it is active.
+  Violet carries the pack's identity and marigold is reserved for work that
+  needs doing, so the only warm light on the page is the thing waiting on you.
+- **A third appearance for the theme switch**: `data-theme` gains `amoled`, a
+  variant of dark and never of light. Its button is added by the shared theme
+  script rather than by each page, so every page gets it from one place, and a
+  pack without it falls back to the dark it varies.
+- **The side panel reaches it too.** The extension already rendered the matching
+  theme group, so the script it lifts from the dashboard offers AMOLED there
+  whenever the pack is on. Extension bumped to 0.2.30.
+- **Theme packs are documented**: `docs/THEME-PACKS.md` carries the five-step
+  recipe for authoring one, the rule that a pack may re-hue the status colours
+  but must keep their order and separation, and the build constraints that stop
+  the dashboard and the extension drifting apart.
+- **A test guards the two pack registries.** A pack is declared both in the
+  dashboard and in the Settings gallery, and nothing checked the two agreed, so
+  a pack could be selectable but unlabelled, or labelled but unpickable. It also
+  fails a pack missing its light or true-black block.
+- **Fixes**: the Settings picker labelled every pack "(pinky v2)" and drew its
+  active outline in pink whichever pack was chosen; AMOLED now also reaches the
+  Settings page's own theme control.
+- The ADR-002 implementation plan now matches what shipped, including dropping a
+  bullet that still told the reader to make the change that had broken resized
+  panels.
+- `unreplied.json` and the extension's `dist/` are no longer left untracked.
+
 ## v0.2.0 (30) · Black Bombay (baby) · 2026-10-29
 
 Tag `v0.2.30`.
