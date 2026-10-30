@@ -3,11 +3,14 @@ package security
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+	"unicode"
+	"unicode/utf8"
 )
 
 type Severity string
@@ -68,9 +71,19 @@ func (c *Cache) Refresh() {
 	feed := fetchNVD()
 
 	c.mu.Lock()
+	defer c.mu.Unlock()
+	// The tips describe the reader's own repositories and arrive by a different route, so a
+	// refresh of the CVE list must not carry them away with it.
+	feed.Tips = c.feed.Tips
+	// A failed fetch keeps whatever is already on screen and shows the error beside it, as the
+	// work board does. Blanking the panel on a blip tells the reader less than stale data would,
+	// and the fetch time stays as it was so they can see how old it is.
+	if feed.Error != "" && len(feed.CVEs) == 0 && len(c.feed.CVEs) > 0 {
+		feed.CVEs = c.feed.CVEs
+		feed.FetchedAt = c.feed.FetchedAt
+	}
 	c.feed = feed
 	c.last = time.Now()
-	c.mu.Unlock()
 }
 
 func (c *Cache) SetTips(tips []Tip) {
@@ -100,18 +113,24 @@ type nvdResponse struct {
 	} `json:"vulnerabilities"`
 }
 
+// nvdBase and nvdClient are variables so a test can point the fetch at a local server. Nothing
+// outside this package changes them.
+var (
+	nvdBase   = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+	nvdClient = &http.Client{Timeout: 15 * time.Second}
+)
+
 func fetchNVD() Feed {
 	now := time.Now().UTC()
 	start := now.Add(-7 * 24 * time.Hour).Format("2006-01-02T15:04:05.000")
 	end := now.Format("2006-01-02T15:04:05.000")
 
 	url := fmt.Sprintf(
-		"https://services.nvd.nist.gov/rest/json/cves/2.0?pubStartDate=%s&pubEndDate=%s&cvssV3Severity=HIGH&resultsPerPage=20",
-		start, end,
+		"%s?pubStartDate=%s&pubEndDate=%s&cvssV3Severity=HIGH&resultsPerPage=20",
+		nvdBase, start, end,
 	)
 
-	client := &http.Client{Timeout: 15 * time.Second}
-	resp, err := client.Get(url)
+	resp, err := nvdClient.Get(url)
 	if err != nil {
 		return Feed{Error: err.Error(), FetchedAt: now.Format(time.RFC3339)}
 	}
@@ -121,8 +140,14 @@ func fetchNVD() Feed {
 		return Feed{Error: fmt.Sprintf("NVD API returned %d", resp.StatusCode), FetchedAt: now.Format(time.RFC3339)}
 	}
 
+	return decodeFeed(resp.Body, now)
+}
+
+// decodeFeed turns an NVD response body into a feed: English description, a severity it
+// recognises, a plain date, sorted hardest-first and capped to what the panel shows.
+func decodeFeed(body io.Reader, now time.Time) Feed {
 	var data nvdResponse
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+	if err := json.NewDecoder(body).Decode(&data); err != nil {
 		return Feed{Error: err.Error(), FetchedAt: now.Format(time.RFC3339)}
 	}
 
@@ -135,8 +160,10 @@ func fetchNVD() Feed {
 				break
 			}
 		}
-		if len(desc) > 200 {
-			desc = desc[:197] + "..."
+		// Count runes, not bytes: slicing at a byte offset can land inside a multi-byte
+		// character and leave invalid UTF-8 for the page to render.
+		if utf8.RuneCountInString(desc) > 200 {
+			desc = string([]rune(desc)[:197]) + "..."
 		}
 
 		sev := High
@@ -188,22 +215,34 @@ func sevOrder(s Severity) int {
 	}
 }
 
+// langHints maps a whole token in a repository's owner or name to the ecosystem it implies.
+// Matching is on tokens rather than substrings, because a substring says very little: "tiangolo"
+// is not a Go project and neither is "django", though both contain "go". Advice for a language a
+// project does not use is worse than no advice, so a guess has to be a confident one.
+var langHints = map[string]string{
+	"go": "go", "golang": "go",
+	"node": "node", "nodejs": "node", "npm": "node", "js": "node", "javascript": "node",
+	"ts": "node", "typescript": "node",
+	"python": "python", "py": "python", "pip": "python", "django": "python", "flask": "python",
+	"rust": "rust", "cargo": "rust",
+}
+
+// repoTokens splits owner/name on anything that is not a letter or a digit, so
+// "dustin/go-humanize" yields "dustin", "go" and "humanize".
+func repoTokens(repo string) []string {
+	return strings.FieldsFunc(strings.ToLower(repo), func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
+	})
+}
+
 func GenerateTips(repos []string) []Tip {
 	var tips []Tip
 	langs := map[string]bool{}
 	for _, r := range repos {
-		r = strings.ToLower(r)
-		if strings.Contains(r, "go") || strings.HasSuffix(r, "-go") {
-			langs["go"] = true
-		}
-		if strings.Contains(r, "node") || strings.Contains(r, "npm") || strings.Contains(r, "js") || strings.Contains(r, "typescript") {
-			langs["node"] = true
-		}
-		if strings.Contains(r, "python") || strings.Contains(r, "pip") || strings.Contains(r, "django") || strings.Contains(r, "flask") {
-			langs["python"] = true
-		}
-		if strings.Contains(r, "rust") || strings.Contains(r, "cargo") {
-			langs["rust"] = true
+		for _, tok := range repoTokens(r) {
+			if lang, ok := langHints[tok]; ok {
+				langs[lang] = true
+			}
 		}
 	}
 
