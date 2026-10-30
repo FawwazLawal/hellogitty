@@ -42,8 +42,9 @@
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to main content</a>
 {{template "site-header" .}}
-<div class="cwrap">
+<main id="main" class="cwrap" tabindex="-1">
   <p class="sub">Repositories whose latest pipeline run failed at least one stage. Each row shows which stages passed, failed and are still running — the failure column tells you which step to look at first.</p>
   <div class="overview">
     <div class="ocard warn"><span class="ov">{{len .FailedPipeline}}</span><span class="ol">{{if .Labels.Failed}}{{.Labels.Failed}}{{else}}With failed stage{{end}}</span></div>
@@ -52,8 +53,8 @@
   </div>
 
   {{if .FailedPipeline}}
-  <div class="section">
-    <h2>Repositories with a failed stage</h2>
+  <section class="section" aria-labelledby="sf-h">
+    <h2 id="sf-h">Repositories with a failed stage</h2>
     <ul class="rlist">{{range .FailedPipeline}}
       <li>
         <div class="head">
@@ -70,11 +71,11 @@
       <b>Why this lit.</b> A stage in the pipeline reported failure on at least one tracked repository. The failing stage is the one marked red above; the rest of the row shows what passed, so a cascade is distinguishable from a single break.<br><br>
       <b>What to do.</b> Open the Actions tab linked on the row and find the latest run of the failing workflow — the error is in that run's logs. A transient failure (network, flaky test) usually clears itself when the next scheduled run passes; a real break needs a fix pushed and the workflow re-run.
     </div>
-  </div>
+  </section>
   {{else}}
   <p class="nodata">No pipeline stages are failing.</p>
   {{end}}
-</div>
+</main>
 <script>
 (function () {
   {{template "theme-js"}}

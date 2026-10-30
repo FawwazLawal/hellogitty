@@ -31,36 +31,37 @@
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to main content</a>
 {{template "site-header" .}}
-<div class="cwrap">
+<main id="main" class="cwrap" tabindex="-1">
   <p class="sub">The dashboard numbers are only as fresh as the last successful check of GitHub — this page shows when that was and what might be stopping the next one.</p>
 
   {{if or .LastPollUTC .NextPollUTC}}
-  <div class="section">
-    <h2>Check cycle</h2>
+  <section class="section" aria-labelledby="ds-cycle-h">
+    <h2 id="ds-cycle-h">Check cycle</h2>
     <ul class="facts">
       <li><span class="lbl">Last successful check</span><span class="val">{{if .LastPollUTC}}{{.LastPollUTC}}{{else}}none yet{{end}}</span></li>
       <li><span class="lbl">Next scheduled check</span><span class="val">{{if .NextPollUTC}}{{.NextPollUTC}}{{else}}unknown{{end}}</span></li>
       <li><span class="lbl">Poll interval</span><span class="val">{{if .PollInterval}}every {{.PollInterval}}s{{else}}not configured{{end}}</span></li>
       <li><span class="lbl">Repositories tracked</span><span class="val">{{.RepoCount}}</span></li>
     </ul>
-  </div>
+  </section>
   {{end}}
 
   {{if .FailedRepos}}
-  <div class="section">
-    <h2>What the last check could not reach</h2>
+  <section class="section" aria-labelledby="ds-fail-h">
+    <h2 id="ds-fail-h">What the last check could not reach</h2>
     <ul class="facts">{{range .FailedRepos}}
       <li><span class="lbl">{{.Name}}</span><span class="val">{{.Error}}</span></li>
     {{end}}</ul>
-  </div>
+  </section>
   {{end}}
 
   <div class="recovery">
     <b>Why this lit.</b> The last check of GitHub is more than two hours old. HelloGitty keeps the dashboard showing what it last fetched; a stale number is still accurate at the time it was gathered.<br><br>
     <b>What to do.</b> Most stale alerts clear themselves on the next poll — the dashboard refreshes automatically. If the counter does not move on refresh: check that your computer has network, then that your GitHub token is still valid (Settings <span class="val">&rarr;</span> Account). If a specific repository's check keeps failing, it will appear in <a href="/alerts/check-failed">Check failed</a>; a missing token or an expired one goes into the server log.
   </div>
-</div>
+</main>
 <script>
 (function () {
   {{template "theme-js"}}
