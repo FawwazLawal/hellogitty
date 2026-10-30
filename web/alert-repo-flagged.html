@@ -1,0 +1,75 @@
+{{define "alert-repo-flagged"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>{{if .Labels.Flagged}}{{.Labels.Flagged}}{{else}}Flagged{{end}} · HelloGitty</title>
+{{template "theme-head"}}
+<style>
+{{template "base-css"}}
+{{template "header-css"}}
+  .cwrap { max-width: var(--w-list); margin: 0 auto; padding: 18px 20px 40px; }
+  .sub { margin: 0 0 18px; color: var(--dim); }
+  .overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 0 0 24px; }
+  .ocard { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; text-align: center; }
+  .ocard .ov { font: 700 28px var(--mono); font-variant-numeric: tabular-nums; display: block; }
+  .ocard .ol { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .ocard .ov.zero { color: var(--dim); }
+  .ocard.caution { border-color: var(--head-accent); }
+  .section { margin: 0 0 28px; }
+  .section h2 { margin: 0 0 10px; font-size: 14px; font-weight: 650; letter-spacing: 0.02em; border-left: 3px solid var(--head-accent); padding-left: 10px; }
+  .rlist { list-style: none; padding: 0; margin: 0; }
+  .rlist li { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; padding: 12px;
+    border-bottom: 1px solid var(--rule); transition: background .1s; }
+  .rlist li:hover { background: var(--raised); }
+  .rlist .name { font-size: 14px; font-weight: 550; min-width: 0; }
+  .rlist .name a { color: var(--text); text-decoration: none; }
+  .rlist .name a:hover { text-decoration: underline; }
+  .rlist .label { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; letter-spacing: .02em;
+    background: var(--caution-fill); color: var(--caution-ink); text-transform: uppercase; }
+  .rlist .stage { font-size: 12px; color: var(--dim); font-family: var(--mono); }
+  .recovery { margin: 18px 0 0; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 8px;
+    background: var(--panel); font-size: 13px; color: var(--text); line-height: 1.5; }
+  .recovery b { font-weight: 650; }
+  .nodata { color: var(--dim); padding: 20px; text-align: center; }
+</style>
+</head>
+<body>
+{{template "site-header" .}}
+<div class="cwrap">
+  <p class="sub">Repositories your pipeline has flagged for attention — the label and the stage come from the pipeline, so what to do about it is pipeline-specific.</p>
+  <div class="overview">
+    <div class="ocard caution"><span class="ov">{{len .FlaggedPipeline}}</span><span class="ol">{{if .Labels.Flagged}}{{.Labels.Flagged}}{{else}}Flagged{{end}}</span></div>
+    <div class="ocard"><span class="ov">{{.TargetCount}}</span><span class="ol">In pipeline</span></div>
+    <div class="ocard"><span class="ov">{{.RepoCount}}</span><span class="ol">Tracked total</span></div>
+  </div>
+
+  {{if .FlaggedPipeline}}
+  <div class="section">
+    <h2>Flagged repositories</h2>
+    <ul class="rlist">{{range .FlaggedPipeline}}
+      <li>
+        <div class="name"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Owner}}/{{.Name}}</a></div>
+        <span class="stage">{{if .Stage}}stage: {{.Stage}}{{end}}</span>
+        <span class="label">{{if .Label}}{{.Label}}{{else}}flagged{{end}}</span>
+      </li>
+    {{end}}</ul>
+    <div class="recovery">
+      <b>Why this lit.</b> The pipeline raised a flag on each listed repository. The flag's meaning is set by the pipeline itself, not by the dashboard.<br><br>
+      <b>What to do.</b> Open the repository on GitHub and inspect the stage shown above — the pipeline's output for that stage names the gate and what it looked at. If the flag is a false positive the pipeline tool clears it; if it is real, address what the gate flagged and the pipeline will re-score on its next run.
+    </div>
+  </div>
+  {{else}}
+  <p class="nodata">No pipeline repositories are flagged.</p>
+  {{end}}
+</div>
+<script>
+(function () {
+  {{template "theme-js"}}
+  {{template "nav-active-js"}}
+    {{template "clock-js"}}
+})();
+</script>
+</body>
+</html>{{end}}
