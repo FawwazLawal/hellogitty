@@ -674,26 +674,30 @@
     // A pack that declares amoled offers a third appearance: true black, a variant of dark.
     // The button is added here rather than in every page's header, so one change covers them all.
     function amoledButton(on) {
-      var group = document.querySelector(".theme");
-      if (!group) return;
-      var btn = group.querySelector('[data-theme-set="amoled"]');
-      if (on && !btn) {
-        btn = document.createElement("button");
-        btn.type = "button"; btn.dataset.themeSet = "amoled"; btn.textContent = "AMOLED";
-        btn.title = "True black: dark with the ground switched off";
-        btn.addEventListener("click", function () {
-          root.dataset.theme = "amoled";
-          try { localStorage.setItem("hellogitty-theme", "amoled"); } catch (e) {}
-          showTheme();
-        });
-        group.appendChild(btn);
-      } else if (!on && btn) {
-        btn.remove();
-        // True black belongs to the pack, so losing the pack falls back to the dark it varies.
-        if (root.dataset.theme === "amoled") {
-          root.dataset.theme = "dark";
-          try { localStorage.setItem("hellogitty-theme", "dark"); } catch (e) {}
+      // Inject into every theme-picker group on the page: the one in the shared site-header
+      // (.theme) and the one on Settings > Appearance (.theme-pick). One change, every surface.
+      var groups = document.querySelectorAll(".theme, .theme-pick");
+      if (!groups.length) return;
+      groups.forEach(function (group) {
+        var btn = group.querySelector('[data-theme-set="amoled"]');
+        if (on && !btn) {
+          btn = document.createElement("button");
+          btn.type = "button"; btn.dataset.themeSet = "amoled"; btn.textContent = "AMOLED";
+          btn.title = "True black: dark with the ground switched off";
+          btn.addEventListener("click", function () {
+            root.dataset.theme = "amoled";
+            try { localStorage.setItem("hellogitty-theme", "amoled"); } catch (e) {}
+            showTheme();
+          });
+          group.appendChild(btn);
+        } else if (!on && btn) {
+          btn.remove();
         }
+      });
+      // True black belongs to the pack, so losing the pack falls back to the dark it varies.
+      if (!on && root.dataset.theme === "amoled") {
+        root.dataset.theme = "dark";
+        try { localStorage.setItem("hellogitty-theme", "dark"); } catch (e) {}
       }
       showTheme();
     }
