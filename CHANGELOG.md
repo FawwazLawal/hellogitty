@@ -5,6 +5,38 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (29) · Black Bombay (baby) · 2026-10-29
+
+Tag `v0.2.29`.
+
+- **Panel redesign (ADR-002)**: every panel list is one flat list with a status
+  pill on each row, replacing the micro-section headings ("Your move", "Waiting
+  on others", "Asks something of you") and the three-state colour dots. Covers
+  the Your work, Conversations and Your repositories pages and their dashboard
+  panels. A row reads in four fixed zones: status, title, repository, time.
+- **Exact timestamps**: `Ago()` returns the time itself rather than only a
+  relative phrase — `14:32` today, `Yesterday 09:15`, `Mon 09:15`,
+  `Oct 27 14:32`, then a full date for anything older. The ISO-8601 string
+  stays in the `title` attribute.
+- **Triage default**: dashboard panels open showing only what needs you, with a
+  `Show all (N)` toggle for the rest.
+- **Column sorting**: Status, Updated and Repository on the dedicated pages. On
+  the dashboard the sort labels now sit over the columns they sort, with the
+  timestamp label above the timestamps.
+- **Scrolling**: panels grow to their natural height and the page keeps the
+  scroll. A panel you resize yourself still scrolls inside the height you gave
+  it, heading pinned.
+- **Fixes**: resized panels had a fixed height but no scroll container, so
+  anything past the drag height was unreachable; a leftover `.dot` lookup threw
+  on every dashboard that had work to show, which silently killed panel
+  collapse, the layout dialog, resizing, sorting and the triage default; status
+  pills stretched to the full row height instead of drawing as pills.
+- **Quieter rows**: the end-of-row repository chip no longer uses the amber the
+  design reserves for work that needs doing.
+- **Favicon**: dark charcoal with amber brackets.
+- ADR-002 recording the research and decisions behind the redesign is now in
+  `docs/`.
+
 ## v0.2.0 (28) · Black Bombay (baby) · 2026-10-29
 
 Tag `v0.2.28`.
