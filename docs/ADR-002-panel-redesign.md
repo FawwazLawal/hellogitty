@@ -331,14 +331,19 @@ Multi-PR effort. Each PR is one coherent step, independently mergeable and testa
 | 2 | Flatten "Your work" page | #130 | Merged (#134) |
 | 3 | Flatten "Conversations" page | #131 | Merged (#135) |
 | 4 | Dashboard work panel + triage default | #132 | Merged (#136) |
-| 5 | Indicator cleanup + staleness decay | #133 | Open |
-| 6 | Remaining dashboard panels | #137 | Open |
-| 7 | "Your repositories" page | #138 | Open |
+| 5 | Indicator cleanup + staleness decay | #133 | Merged (#151) |
+| 6 | Remaining dashboard panels | #137 | Merged (#141) |
+| 7 | "Your repositories" page | #138 | Merged (#140) |
+| 8 | Extension side panel parity | #152 | Merged (#153) |
 
 PRs 6 and 7 were added after a post-merge audit of every template found two surfaces the original five-PR plan had missed: the dashboard's own Conversations and Your-repositories panels, and the standalone `web/your-repos.html` page. PR 4 was scoped to the dashboard work panel alone, so those panels kept the `.group` + `h3` pattern — including the "Asks something of you" micro-section that prompted this ADR.
 
+PR 8 was added once the extension side panel turned out to live in this repository rather than a separate one, which PR 5's own bullet list had assumed.
+
+Four corrective PRs ran alongside the plan and are not steps in it: #142 restored scrolling inside resized panels (see D4), #144 fixed a leftover `.dot` lookup that threw on every dashboard with work to show and took panel collapse, the layout dialog, resizing, sorting and the triage default down with it, #148 moved the sort labels over the columns they sort and stopped the status pill stretching the row (#147), and #149 took the reserved amber off the end-of-row repository chip.
+
 ### PR 1: Scroll fix + timestamp visibility
-- Remove `overflow: auto` from `.panel.sized`
+- Remove the default `max-height` + `overflow-y: auto` pairs from `.seclist` and `.feed`, and leave `.panel.sized` alone, per D4
 - Add scroll-padding/scroll-margin
 - Update `Ago()` helper in Go to return formatted string per D5
 - Surface exact timestamps as visible text in all panel rows
@@ -370,8 +375,8 @@ PRs 6 and 7 were added after a post-merge audit of every template found two surf
 - Remove deprecated CSS: `.dot`, `.group > h3`, section-related styles
 - Implement staleness decay: indicators older than 24h get reduced opacity
 - Verify no stale indicator logic in handler.go
-- Consider extension parity (separate PR in extension repo if needed)
-- **Files:** `web/index.html` (CSS), `internal/dashboard/handler.go` (staleness logic)
+- Extension parity deferred to its own PR, which became PR 8 below
+- **Files:** `web/index.html` (CSS), `internal/dashboard/work.go` (staleness logic)
 
 ### PR 6: Remaining dashboard panels
 - Flatten the Conversations panel (`Asks something of you` / `Quiet`)
@@ -386,6 +391,15 @@ PRs 6 and 7 were added after a post-merge audit of every template found two surf
 - Replace the Newest/Oldest toggle with three-axis column sorting (D6)
 - **Files:** `web/your-repos.html`
 
+### PR 8: Extension side panel parity
+- Drop the `.group` micro-sections and render one flat list per panel, in dashboard order
+- Replace the hidden `movetag` span with a `.wpill` as each row's first child
+- Port the tiered timestamp format from `internal/help` so both surfaces read the same
+- Mirror `staleness()` and apply `.stale` / `.cold` per row
+- Triage toggle in the panel `<h2>`, not the sort bar (#147)
+- No CSS of its own: `build.sh` lifts the dashboard's `<style>` block, so every rule the new markup needs is already there
+- **Files:** `monitor/extension/board.js`, `monitor/extension/manifest.json`
+
 ---
 
 ## 7. Consequences
@@ -399,7 +413,7 @@ PRs 6 and 7 were added after a post-merge audit of every template found two surf
 
 ### Negative
 - **Section headers gone.** Users who used "Your move" / "Waiting" headers as landmarks lose them. Mitigated by overview cards + filters providing equivalent navigation.
-- **Five PRs.** Significant template + CSS + handler changes. Mitigated by each PR touching a different page, enabling parallel execution.
+- **Eight PRs, plus four corrective ones.** Significant template + CSS + handler changes. Parallel execution worked where PRs touched different pages, but scoping PR 4 to one panel let two surfaces slip to PRs 6 and 7, and two defects reached `dev` before a running page with real work on it was driven in a browser.
 - **Staleness decay is a new concept.** Needs tuning after deployment — the 24h/7d thresholds may need adjustment.
 
 ---
