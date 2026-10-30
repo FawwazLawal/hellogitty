@@ -11,13 +11,23 @@ import (
 	"github.com/FawwazLawal/hellogitty/internal/github"
 )
 
-// One request fetches the whole board: eight searches as aliases of a single GraphQL query. Only
-// your own open pull requests carry the expensive detail (review threads, every check by name);
-// measured on a live board a refresh costs 28 points (11 without the detail) of GitHub's 5,000-point
-// GraphQL hour, so about 340 points an hour at one refresh every five minutes.
-const boardQuery = `
-fragment who on Actor { login __typename }
-fragment pr on PullRequest {
+// The board draws from eight searches. They used to ride in one request as aliases of a single
+// GraphQL query, which was cheap in points but ran them against one shared resource budget:
+// when it tipped over, GitHub returned the rows and silently nulled expensive nested fields
+// — one error per casualty, 167 on a worked example — including the statusCheckRollup that tells
+// the user whether checks passed. Each search alone, with the same page sizes and fragments,
+// returns the same rows with zero errors.
+//
+// So the server sends one request per search. The board is reassembled from eight responses.
+// Request / Decode are the extension's single-request contract and keep the old shape; the
+// extension still hits the shared budget until it is updated in a follow-up.
+//
+// Fragments the board queries compose. Each fragment is a complete `fragment X on T { ... }`
+// definition. A sub-query includes only the fragments its one search spreads, because GraphQL
+// rejects a query that defines a fragment it doesn't use.
+const fragWho = `fragment who on Actor { login __typename }`
+
+const fragPR = `fragment pr on PullRequest {
   number title url state isDraft createdAt updatedAt closedAt
   repository { nameWithOwner }
   author { ...who }
@@ -29,8 +39,9 @@ fragment pr on PullRequest {
   reviews(last: 1) { nodes { author { ...who } state body submittedAt url authorAssociation } }
   comments(last: 3) { totalCount nodes { author { ...who } body createdAt url authorAssociation } }
   commits(last: 1) { nodes { commit { oid committedDate statusCheckRollup { state } } } }
-}
-fragment detail on PullRequest {
+}`
+
+const fragDetail = `fragment detail on PullRequest {
   botReviews: reviews(last: 10) { nodes { author { ...who } state body submittedAt url authorAssociation } }
   closingIssuesReferences(first: 5) { nodes { number repository { nameWithOwner } } }
   reviewThreads(first: 30) { nodes { isResolved isOutdated path
@@ -41,20 +52,57 @@ fragment detail on PullRequest {
     statusCheckRollup { contexts(first: 40) { nodes { __typename
       ... on CheckRun { name status conclusion title completedAt }
       ... on StatusContext { context state description createdAt } } } } } } }
-}
-fragment mine on PullRequest {
+}`
+
+const fragMine = `fragment mine on PullRequest {
   events: timelineItems(last: 10, itemTypes: [CLOSED_EVENT, LABELED_EVENT]) { nodes { __typename
     ... on ClosedEvent { createdAt actor { login } }
     ... on LabeledEvent { createdAt actor { login } label { name } } } }
-}
-fragment issue on Issue {
+}`
+
+const fragIssue = `fragment issue on Issue {
   number title url state stateReason createdAt updatedAt closedAt
   repository { nameWithOwner }
   author { ...who }
   assignees(first: 5) { nodes { login } }
   labels(first: 10) { nodes { name } }
   comments(last: 3) { totalCount nodes { author { ...who } body createdAt url authorAssociation } }
+}`
+
+// boardSearches names each search in the board, its page size, the fragments its nodes carry,
+// and the fragment definitions those spreads reach. The order is the one the UI's assemble()
+// walks, so sub-responses can be merged in place without reorder.
+var boardSearches = []struct {
+	Name  string   // the data alias and the variable name
+	First int      // search page size
+	Body  string   // fragment spreads in the node selection
+	Frags []string // fragment definitions the spreads reach, transitively
+}{
+	{"prsOpen", 50, "...pr ...detail ...mine", []string{fragWho, fragPR, fragDetail, fragMine}},
+	{"prsDone", 20, "...pr ...mine", []string{fragWho, fragPR, fragMine}},
+	{"issues", 40, "...issue", []string{fragWho, fragIssue}},
+	{"issuesDone", 10, "...issue", []string{fragWho, fragIssue}},
+	{"requested", 20, "...pr", []string{fragWho, fragPR}},
+	{"reviewed", 20, "...pr", []string{fragWho, fragPR}},
+	{"incoming", 30, "...pr", []string{fragWho, fragPR}},
+	{"triage", 30, "...issue", []string{fragWho, fragIssue}},
 }
+
+// subQuery is the self-contained GraphQL body for one search. It declares only the variable
+// that search reads and asks GitHub for the rate-limit cost of this request, so the sum across
+// the eight calls is the refresh's real cost.
+func subQuery(name string, first int, body string, frags []string) string {
+	return strings.Join(frags, "\n") + fmt.Sprintf(
+		`
+query($%s: String!) {
+  %s: search(type: ISSUE, query: $%s, first: %d) { nodes { __typename %s } }
+  rateLimit { cost remaining }
+}`, name, name, name, first, body)
+}
+
+// boardQuery is the all-in-one query Request() still returns to the Chrome extension. It is kept
+// in step with the per-search queries by using the same fragments and page sizes.
+const boardQuery = fragWho + "\n" + fragPR + "\n" + fragDetail + "\n" + fragMine + "\n" + fragIssue + `
 query($prsOpen: String!, $prsDone: String!, $issues: String!, $issuesDone: String!,
       $requested: String!, $reviewed: String!, $incoming: String!, $triage: String!) {
   prsOpen:    search(type: ISSUE, query: $prsOpen, first: 50)    { nodes { __typename ...pr ...detail ...mine } }
@@ -314,13 +362,55 @@ func queries(login string, maintain []string, since time.Time) (map[string]any, 
 func fetch(ctx context.Context, gh *github.Client, login string, maintain []string, since time.Time) (*Board, error) {
 	vars, label := queries(login, maintain, since)
 	var data boardData
-	err := gh.GraphQL(ctx, boardQuery, vars, &data)
-	if err != nil && len(data.PRsOpen.Nodes)+len(data.Issues.Nodes)+len(data.Incoming.Nodes) == 0 {
-		return nil, err
+	var msgs []string
+	for _, s := range boardSearches {
+		var sub boardData
+		q := subQuery(s.Name, s.First, s.Body, s.Frags)
+		v := map[string]any{s.Name: vars[s.Name]}
+		// A failed sub-request still leaves the other seven useful, so the board is partial, not
+		// absent. The errors are collected and returned so a caller can log them.
+		if err := gh.GraphQL(ctx, q, v, &sub); err != nil {
+			msgs = append(msgs, fmt.Sprintf("%s: %s", s.Name, err.Error()))
+		}
+		mergeSubData(&data, &sub, s.Name)
+	}
+	if len(data.PRsOpen.Nodes)+len(data.Issues.Nodes)+len(data.Incoming.Nodes) == 0 && len(msgs) > 0 {
+		return nil, &github.GraphQLError{Messages: msgs}
 	}
 	b := assemble(&data, login, maintain, label)
 	b.Cost, b.Remaining = data.RateLimit.Cost, data.RateLimit.Remaining
-	return b, err
+	if len(msgs) > 0 {
+		return b, &github.GraphQLError{Messages: msgs}
+	}
+	return b, nil
+}
+
+// mergeSubData copies the one populated search field, and the rate-limit totals, from a sub-
+// response into the aggregate. remaining comes from the last call that reported one, so it
+// reflects the state after the whole refresh; cost is summed across calls.
+func mergeSubData(dst, src *boardData, name string) {
+	switch name {
+	case "prsOpen":
+		dst.PRsOpen = src.PRsOpen
+	case "prsDone":
+		dst.PRsDone = src.PRsDone
+	case "issues":
+		dst.Issues = src.Issues
+	case "issuesDone":
+		dst.IssuesDone = src.IssuesDone
+	case "requested":
+		dst.Requested = src.Requested
+	case "reviewed":
+		dst.Reviewed = src.Reviewed
+	case "incoming":
+		dst.Incoming = src.Incoming
+	case "triage":
+		dst.Triage = src.Triage
+	}
+	dst.RateLimit.Cost += src.RateLimit.Cost
+	if src.RateLimit.Remaining != 0 {
+		dst.RateLimit.Remaining = src.RateLimit.Remaining
+	}
 }
 
 // assemble turns the raw searches into the two lists, dropping duplicates. An item in a
