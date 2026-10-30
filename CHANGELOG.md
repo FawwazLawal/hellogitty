@@ -5,6 +5,28 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (32) · Black Bombay (baby) · 2026-10-30
+
+Tag `v0.2.32`.
+
+- **The board knows its check status again.** The eight searches behind Your work rode in a single
+  GraphQL request and shared one resource budget. When it ran out, GitHub did not reject the
+  query — it returned the rows and quietly nulled the expensive fields, so a pull request with
+  failing checks showed no check status at all, which reads exactly like one that has no CI.
+  Measured on a real board: 175 of those errors in a single response, and a check state present on
+  **1 item out of 79**. Each search now goes in its own request: no errors, check state on **33 of
+  79**, at the same cost per refresh.
+- **The security panel keeps what it has.** A blip at the CVE feed used to blank it. It now keeps
+  the last good list and shows the error beside it, as the work board does, and leaves the fetch
+  time alone so stale data cannot read as fresh.
+- **Smaller fixes in the same panel**: a refresh no longer discards the per-repository tips; long
+  descriptions are cut by rune rather than by byte, so they cannot break a character in half; and
+  the language tips match whole words, so a repository called `tiangolo` is no longer told to run
+  `govulncheck` and `django` is no longer told to run it as well as `pip-audit`.
+- **First tests for `internal/security`**, covering the parse, the severity order, the cap, the
+  cache's hold-off and the tip generator. The parse is now reachable from a test at all, which it
+  was not before.
+
 ## v0.2.0 (31) · Black Bombay (baby) · 2026-10-29
 
 Tag `v0.2.31`.
