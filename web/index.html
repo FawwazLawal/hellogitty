@@ -2041,12 +2041,20 @@
         }
         return null;
       }
+      var PRESET_LABELS = { everything: "Everything", contributor: "Contributor", maintainer: "Maintainer", program: "Program", focus: "Focus" };
+      function presetLabel(name) {
+        if (PRESET_LABELS[name]) return PRESET_LABELS[name];
+        if (typeof name === "string" && name.indexOf("user:") === 0) return name.slice(5);
+        return null;
+      }
       function updateResetBtn() {
         var btn = document.getElementById("layout-reset");
         if (!btn) return;
         var base = state.base || state.preset;
         var def = presetDefaults(base);
+        var label = presetLabel(base);
         btn.disabled = !def || stateEq(state, def);
+        btn.textContent = label ? "Reset to " + label : "Reset";
       }
       function change(fn) {
         var base = state.base || state.preset;
