@@ -87,52 +87,6 @@
   .sheet .done { font: 600 13px var(--sans); color: var(--text); background: var(--raised); border: 1px solid var(--rule-hi); border-radius: 6px;
     padding: 7px 14px; cursor: pointer; }
   /* alert panel */
-  .cw { display: grid; grid-auto-flow: column; grid-template-columns: 2fr 2fr; grid-auto-columns: minmax(0, 1fr); gap: 8px; padding: 14px 20px 0; }
-  .cell { border: 1px solid var(--rule-hi); background: var(--panel); padding: 9px 11px; min-height: 64px; border-radius: 6px;
-    display: flex; flex-direction: column; gap: 4px; position: relative; transition: background .2s, border-color .2s; }
-  .cell.empty { border-style: dashed; border-color: var(--rule); }
-  .cell.empty .leg { color: var(--dim); }
-  .cell.linked { cursor: pointer; }
-  .cell.linked:hover { background: var(--raised); }
-  .cell .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-  .cell .leg { font-size: 13px; line-height: 1.3; font-weight: 600; color: var(--dim); letter-spacing: 0.01em; }
-  .cell.wide .leg { font-size: 16px; }
-  .cell .cnt { font: 13px var(--mono); color: var(--dim); white-space: nowrap; }
-  .cell.empty .det { color: var(--dim); }
-  /* A lit cell is marked by its EDGE. Colouring the border with the fill made a lit cell
-     invisible in light mode, where --caution-fill measures 1.00:1 against the page: quiet
-     cells kept a 1.50:1 border and the lit one had none, so lit read as less important than
-     unlit. The edge also survives for anyone who cannot separate cream from white. */
-  .cell.lit.warn { background: var(--warn-fill); border-color: var(--warn); border-left: 4px solid var(--warn); }
-  .cell.lit.caution { background: var(--caution-fill); border-color: var(--caution); border-left: 4px solid var(--caution); }
-  .cell.lit.warn .leg, .cell.lit.warn .cnt, .cell.lit.warn .det, .cell.lit.warn .more { color: var(--warn-ink); }
-  .cell.lit.caution .leg, .cell.lit.caution .cnt, .cell.lit.caution .det, .cell.lit.caution .more { color: var(--caution-ink); }
-  .cell.lit .cnt { font-size: 15px; font-weight: 700; }
-  .cell .det { font-size: 12px; line-height: 1.45; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box;
-    -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-  .cell .detrow { display: flex; align-items: flex-start; gap: 6px; }
-  .cell .detrow .det { flex: 1; min-width: 0; }
-  .cell .more { font-size: 12px; font-weight: 700; white-space: nowrap; }
-  /* Clear: "I've seen these". Drawn in the cell's own ink so it sits quietly on the fill. */
-  .cbtn { flex: none; align-self: flex-end; font: 600 12px/1 var(--sans); color: inherit; background: transparent; cursor: pointer;
-    border: 1px solid color-mix(in srgb, currentColor 45%, transparent); border-radius: 4px; padding: 3px 7px; }
-  .cbtn:hover { background: color-mix(in srgb, currentColor 14%, transparent); }
-  .cbtn:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
-  .cbtn:disabled { opacity: .6; cursor: default; }
-  .cell.lit.warn .cbtn { color: var(--warn-ink); background: var(--warn-fill); }
-  .cell.lit.caution .cbtn { color: var(--caution-ink); background: var(--caution-fill); }
-  .cell:not(.lit) .cbtn { color: var(--dim); }
-  /* Clear waits in the corner until you point at or tab to the cell, so it never squeezes the names.
-     Without a pointer that hovers it sits on its own line. */
-  .cbtn[data-clear] { position: absolute; right: 8px; bottom: 8px; }
-  @media (hover: hover) {
-    .cbtn[data-clear] { opacity: 0; transition: opacity .12s ease-out; }
-    .cell:hover .cbtn[data-clear], .cell:focus-within .cbtn[data-clear] { opacity: 1; }
-  }
-  @media (hover: none) {
-    .cell .detrow { flex-wrap: wrap; }
-    .cbtn[data-clear] { position: static; margin-left: auto; }
-  }
 
   /* layout */
   .grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 14px; padding: 14px 20px 28px; align-items: start; }
@@ -487,8 +441,6 @@
 
   @media (max-width: 1180px) {
     .grid { grid-template-columns: 1fr; }
-    .cw { grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .cell.wide { grid-column: span 2; }
   }
   @media (max-width: 760px) {
     .seg .seglbl { display: none; }
@@ -499,7 +451,6 @@
     .hclock-time { font-size: 24px; }
     .mascot { position: static; order: 99; margin-left: auto; width: 177px; height: 60px; border-radius: 8px; }
     .theme { margin-left: 0; }
-    .cw { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px 16px 0; }
     .grid { padding: 10px 16px 20px; }
     .wi { grid-template-columns: minmax(0, 1fr); }
     .wi > .wpill { display: none; }
@@ -524,8 +475,6 @@
     .expand { padding-left: 14px; }
   }
   @media (max-width: 480px) {
-    .cw { grid-template-columns: 1fr; padding: 8px 12px 0; }
-    .cell.wide { grid-column: span 1; }
     .grid { padding: 8px 12px 16px; }
     .wi .end { gap: 6px; }
     body { overflow-x: hidden; }
@@ -1101,8 +1050,11 @@
   // The eye: watch or stop watching an issue from anywhere on the page. Every eye for the same issue
   // follows, and a short note says what happened.
   (function () {
-    var token = (document.querySelector("section.cw") || {}).dataset;
-    token = token ? token.token : "";
+    // Self-contained rather than borrowing the dashboard's helper: this define is also pulled
+    // by the standalone feed window, where that helper is not in scope. The feed list carries
+    // the token there; the grid carries it on the dashboard.
+    var tokenEl = document.querySelector("[data-token]");
+    var token = tokenEl ? tokenEl.dataset.token : "";
     var msg = null, timer = 0;
     function say(text, bad) {
       if (!msg) { msg = document.createElement("div"); msg.className = "eyemsg"; msg.setAttribute("role", "status"); document.body.appendChild(msg); }
@@ -1281,20 +1233,9 @@
 {{end}}{{end}}
 {{template "site-header" .}}
 
-<section class="cw" aria-label="Alerts" data-module="alerts" data-token="{{.Token}}">
-{{range .Cells}}
-  <div class="cell {{.Level}}{{if .Lit}} lit{{end}}{{if .Wide}} wide{{end}}{{if .Empty}} empty{{end}}{{if .Link}} linked{{end}}" tabindex="0" data-term="{{if $.HasTerm (print "p:" .Label)}}p:{{.Label}}{{else}}cell-{{.Key}}{{end}}"{{if .Title}} data-extra="{{.Title}}"{{end}} data-cell="{{.Key}}"{{if .Clearable}} data-items="{{.ItemsAttr}}"{{end}}{{if .Link}} data-link="{{.Link}}"{{end}}>
-    <div class="head"><span class="leg">{{.Label}}</span>{{if and .Value (not .Empty)}}<span class="cnt" data-v="cw-{{.Key}}">{{.Value}}</span>{{end}}</div>
-    {{if .Empty}}<span class="det" data-v="cw-{{.Key}}">{{.Value}}</span>{{end}}
-    {{if and .Lit .Detail}}<div class="detrow"><span class="det">{{.Detail}}</span>{{if .More}}<span class="more">+{{.More}}</span>{{end}}{{if .Clearable}}<button type="button" class="cbtn" data-clear aria-label="Clear {{.Label}} until something new lights it">Clear</button>{{end}}</div>
-    {{else if .Cleared}}<div class="detrow"><span class="det">{{.Cleared}} cleared</span><button type="button" class="cbtn" data-restore aria-label="Show the cleared {{.Label}} again">Show</button></div>{{end}}
-    <span class="sr">{{if .Lit}}lit{{else}}not lit{{end}}</span>
-  </div>
-{{end}}
-</section>
 
 
-<div class="grid">
+<div class="grid" data-token="{{.Token}}">
   <div class="main">
     <section class="panel" aria-labelledby="work-h" data-board data-module="your-work">
       <h2 id="work-h">Your work{{if .Work.Known}} · <span data-v="work-you">{{len .Work.You}}</span> need you{{end}} <span class="lbl">{{if .Work.Known}}Pull requests and issues @{{.Work.Login}} has out, anywhere on GitHub · updated {{.Work.FetchedAgo}}{{else}}Not fetched yet{{end}}</span><span class="nb" id="newcount"{{if not .WorkNew}} hidden{{end}}>{{.WorkNew}} new</span>{{if .Work.Known}}<button type="button" class="triage-toggle" data-triage="your-work">Show all</button>{{end}}</h2>
@@ -1605,13 +1546,18 @@
   })();
 </script>
 <script>
+  // The page's CSRF token. It used to be read off the alerts section; that section is gone, so
+  // it is read from whichever element carries it and the readers do not care which.
+  function hgToken() { var e = document.querySelector("[data-token]"); return e ? e.dataset.token : ""; }
+</script>
+<script>
   // Clear on a GitHub notification row: it leaves now, and stays away until the thread changes.
   document.addEventListener("click", function (e) {
     var b = e.target.closest(".nclear");
     if (!b) return;
-    var cw = document.querySelector("section.cw"), li = b.closest("li");
+    var li = b.closest("li");
     b.disabled = true;
-    fetch("/notifications/clear", { method: "POST", headers: { "Content-Type": "application/json", "X-HelloGitty-Token": cw ? cw.dataset.token : "" },
+    fetch("/notifications/clear", { method: "POST", headers: { "Content-Type": "application/json", "X-HelloGitty-Token": hgToken() },
       body: JSON.stringify({ key: b.dataset.nclear }) })
       .then(function (r) { return r.ok ? null : r.text().then(function (t) { return Promise.reject(t); }); })
       .then(function () {
@@ -1624,9 +1570,9 @@
   document.addEventListener("click", function (e) {
     var b = e.target.closest(".wdismiss");
     if (!b) return;
-    var cw = document.querySelector("section.cw"), li = b.closest("li");
+    var li = b.closest("li");
     b.disabled = true;
-    fetch("/work/dismiss", { method: "POST", headers: { "Content-Type": "application/json", "X-HelloGitty-Token": cw ? cw.dataset.token : "" },
+    fetch("/work/dismiss", { method: "POST", headers: { "Content-Type": "application/json", "X-HelloGitty-Token": hgToken() },
       body: JSON.stringify({ key: b.dataset.wdismiss }) })
       .then(function (r) { return r.ok ? null : r.text().then(function (t) { return Promise.reject(t); }); })
       .then(function () {
@@ -1641,9 +1587,8 @@
   document.addEventListener("click", function (e) {
     var b = e.target.closest(".seenbtn");
     if (!b) return;
-    var cw = document.querySelector("section.cw");
-    b.disabled = true;
-    fetch("/cells/clear", { method: "POST", headers: { "Content-Type": "application/json", "X-HelloGitty-Token": cw ? cw.dataset.token : "" },
+        b.disabled = true;
+    fetch("/cells/clear", { method: "POST", headers: { "Content-Type": "application/json", "X-HelloGitty-Token": hgToken() },
       body: JSON.stringify({ key: b.dataset.seenCell, items: [b.dataset.seenItem] }) })
       .then(function (r) { if (!r.ok) return Promise.reject(r.status); location.reload(); })
       .catch(function () { b.disabled = false; b.textContent = "Try again"; });
@@ -1677,34 +1622,6 @@
 </script>
 <script>
   // Clear and Show on the indicators. The page reloads so every count and the mascot agree.
-  (function () {
-    var cw = document.querySelector("section.cw");
-    if (!cw) return;
-    cw.addEventListener("click", function (e) {
-      var b = e.target.closest(".cbtn"), c = b && b.closest("[data-cell]");
-      if (!c) return;
-      e.stopPropagation();
-      var restore = b.hasAttribute("data-restore"), items = (c.dataset.items || "").split("|").filter(Boolean);
-      b.disabled = true;
-      fetch(restore ? "/cells/restore" : "/cells/clear", { method: "POST",
-        headers: { "Content-Type": "application/json", "X-HelloGitty-Token": cw.dataset.token },
-        body: JSON.stringify({ key: c.dataset.cell, items: items }) })
-        .then(function (r) { if (!r.ok) return Promise.reject(r.status); location.reload(); })
-        .catch(function () { b.disabled = false; b.textContent = "Try again"; });
-    });
-    cw.addEventListener("click", function (e) {
-      var c = e.target.closest("[data-link]");
-      if (!c || e.target.closest(".cbtn") || e.target.closest("a")) return;
-      location.href = c.dataset.link;
-    });
-    cw.addEventListener("keydown", function (e) {
-      if (e.key !== "Enter" && e.key !== " ") return;
-      var c = e.target.closest("[data-link]");
-      if (!c || e.target.closest(".cbtn") || e.target.closest("a")) return;
-      e.preventDefault();
-      location.href = c.dataset.link;
-    });
-  })();
 </script>
 <script>
   (function () {
