@@ -23,3 +23,7 @@ DESIGN.md
 
 # Captures made for other sites, not part of this repository
 docs/profile-capture.png
+
+# Written by the app as it runs, and by the extension build
+unreplied.json
+monitor/extension/dist/
