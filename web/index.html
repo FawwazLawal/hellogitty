@@ -784,7 +784,17 @@
   .brand .ver { line-height: 1.2; white-space: nowrap; }
   .status h1 { margin: 0; font-size: 17px; line-height: 1.3; font-weight: 700; letter-spacing: -0.01em; }
   .ver .baby { font-style: italic; }
-  .head-right { display: flex; align-items: center; gap: 8px; justify-self: end; flex-wrap: wrap; justify-content: flex-end; }
+  .head-right { display: flex; align-items: center; gap: 8px; justify-self: end; }
+  /* The cluster is ~456px. It shares the header row with the brand and the clock, and from
+     1180 down there is no longer room for all three, so it wraps. Above that it must not:
+     putting flex-wrap on the base rule collapsed the column's minimum width and made it
+     stack into two rows at 1280, where it fits on one. */
+  @media (max-width: 1180px) {
+    /* Given the whole column rather than squeezed into a 1fr share, so it wraps to two rows
+       instead of five. The clock keeps the middle; only the controls reflow. */
+    .status { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+    .head-right { flex-wrap: wrap; justify-content: flex-end; }
+  }
   .head-right .theme { margin: 0; }
   .headbtn { font: 12px/1 var(--sans); color: var(--dim); background: transparent; border: 1px solid var(--rule-hi);
     border-radius: 6px; padding: 6px 10px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
