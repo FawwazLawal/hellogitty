@@ -525,9 +525,76 @@
   .m { display: contents; }
   .stg { display: none; }
   .mlbl { display: none; font: 12px var(--sans); color: var(--dim); letter-spacing: 0.02em; }
+
+  /* --- proto/dashboard-density ---
+     A look-at-it prototype: make the "needs you" items the biggest thing on the page,
+     collapse quiet alert cells, and put ambient panels behind one door. */
+  .lead { padding: 18px 20px 6px; }
+  .lead-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px; margin: 0 0 10px;
+    font: 700 20px/1.25 var(--sans); color: var(--text); }
+  .lead-head .count { font: 700 36px/1 var(--mono); color: var(--caution-text); }
+  .lead-head .lbl { font: 400 13px/1.3 var(--sans); color: var(--dim); margin-left: auto; }
+  .lead-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .lead-list .wi { background: var(--panel); border: 1px solid var(--rule-hi); border-radius: 10px;
+    padding: 14px 18px; }
+  .lead-list .wi > .wpill { font-size: 13px; padding: 5px 11px; }
+  .lead-list .wi .title { font: 600 17px/1.35 var(--sans); }
+  .lead-list .wi .meta { font-size: 13px; margin-top: 4px; }
+  .lead-list .wi .state { font-size: 13px; margin-top: 4px; }
+  .lead-list .wi .state .say { font-weight: 700; }
+  .lead-list .wi .end { font-size: 12px; }
+  .lead-none { padding: 20px; margin: 0; text-align: center; color: var(--dim);
+    font: 500 15px/1.4 var(--sans); border: 1px dashed var(--rule); border-radius: 8px; }
+  .lead-none b { color: var(--text); font-weight: 700; }
+
+  /* Alerts: collapse quiet cells into one summary row. The lit ones stay prominent. */
+  body.proto-density .cw.cw-collapsed .cell.cw-quiet { display: none; }
+  .cell.cw-summary { grid-column: 1 / -1; display: flex; align-items: center; justify-content: flex-start;
+    gap: 10px; min-height: 32px; padding: 6px 12px; background: transparent;
+    border: 1px dashed var(--rule); border-radius: 6px; font: 500 12px/1.3 var(--sans); color: var(--dim); }
+  .cell.cw-summary button { background: none; border: 0; color: var(--text);
+    font: 600 12px/1.3 var(--sans); text-decoration: underline; text-underline-offset: 2px;
+    cursor: pointer; padding: 0; }
+  .cell.cw-summary button:hover { color: var(--caution-text); }
+
+  /* Ambient panels behind one door. Prototype only: this hides the saved layout rail. */
+  body.proto-density .grid { grid-template-columns: minmax(0, 1fr); }
+  body.proto-density .grid > .rail { display: none; }
+  body.proto-density section[data-module="tracked"] { display: none; }
+  body.proto-density.proto-rest-open .grid { grid-template-columns: minmax(0, 1fr) 380px; }
+  body.proto-density.proto-rest-open .grid > .rail { display: grid; }
+  body.proto-density.proto-rest-open section[data-module="tracked"] { display: block; }
+  @media (max-width: 1180px) {
+    body.proto-density.proto-rest-open .grid { grid-template-columns: 1fr; }
+  }
+  .rest-door { display: flex; justify-content: center; margin: 6px 20px 14px; }
+  .rest-door button { font: 500 13px/1.3 var(--sans); color: var(--dim); background: transparent;
+    border: 1px solid var(--rule); border-radius: 999px; padding: 8px 16px; cursor: pointer;
+    display: inline-flex; align-items: baseline; gap: 8px; }
+  .rest-door button:hover { color: var(--text); border-color: var(--rule-hi); }
+  .rest-door button[aria-expanded="true"] { color: var(--text); background: var(--raised); }
+  .rest-door button b { font: 600 13px var(--sans); color: var(--text); }
+  .rest-door small { color: var(--dim); font: 400 12px var(--sans); }
+
+  .done-line { margin: 18px 20px 28px; padding: 20px; text-align: center;
+    border-top: 1px dashed var(--rule); color: var(--dim); font: 500 14px/1.4 var(--sans); }
+  .done-line b { color: var(--text); font-weight: 600; }
+  @media (max-width: 760px) {
+    .lead { padding: 14px 16px 4px; } .lead-head { font-size: 18px; } .lead-head .count { font-size: 30px; }
+    .rest-door { margin: 6px 16px 10px; }
+    .done-line { margin: 12px 16px 20px; padding: 14px; font-size: 13px; }
+  }
+  @media (max-width: 480px) {
+    .lead { padding: 12px 12px 4px; } .lead-head { font-size: 17px; gap: 8px; }
+    .lead-head .count { font-size: 26px; } .lead-head .lbl { font-size: 12px; margin-left: 0; }
+    .lead-list .wi { padding: 11px 13px; } .lead-list .wi .title { font-size: 16px; }
+    .rest-door { margin: 6px 12px 8px; } .rest-door button { padding: 7px 12px; }
+    .rest-door small { display: none; }
+    .done-line { margin: 10px 12px 16px; padding: 12px; font-size: 13px; }
+  }
 </style>
 </head>
-<body>
+<body class="proto-density">
 {{define "theme-head"}}<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script>
   // Apply a saved theme before first paint; with none saved the page follows the system setting.
   try { var t = localStorage.getItem("hellogitty-theme"); if (t === "light" || t === "dark" || t === "amoled") document.documentElement.dataset.theme = t; else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) document.documentElement.dataset.theme = "light"; } catch (e) {}
@@ -1249,6 +1316,26 @@
 {{end}}{{end}}
 {{template "site-header" .}}
 
+<section class="lead" aria-label="What needs you today">
+  {{if .Work.Known}}
+  <h2 class="lead-head">Needs you today
+    <span class="count" data-v="lead-count">0</span>
+    <span class="lbl">Pull requests, threads and reviews on this account that are waiting on you right now.</span>
+  </h2>
+    {{if or .Work.You .Work.ConvYou .Work.InYou}}<ul class="lead-list">
+      {{range .Work.You}}{{template "item" .}}{{end}}
+      {{range .Work.ConvYou}}{{template "item" .}}{{end}}
+      {{range .Work.InYou}}{{template "item" .}}{{end}}
+    </ul>
+    {{else}}<p class="lead-none"><b>Nothing needs you right now.</b> You're clear.</p>{{end}}
+  {{else}}
+  <h2 class="lead-head">Needs you today
+    <span class="lbl">Pull requests, threads and reviews on this account that are waiting on you right now.</span>
+  </h2>
+  <p class="lead-none">Loading your pull requests and issues. The page reloads on its own.</p>
+  {{end}}
+</section>
+
 <section class="cw" aria-label="Alerts" data-module="alerts" data-token="{{.Token}}">
 {{range .Cells}}
   <div class="cell {{.Level}}{{if .Lit}} lit{{end}}{{if .Wide}} wide{{end}}{{if .Empty}} empty{{end}}{{if .Link}} linked{{end}}" tabindex="0" data-term="{{if $.HasTerm (print "p:" .Label)}}p:{{.Label}}{{else}}cell-{{.Key}}{{end}}"{{if .Title}} data-extra="{{.Title}}"{{end}} data-cell="{{.Key}}"{{if .Clearable}} data-items="{{.ItemsAttr}}"{{end}}{{if .Link}} data-link="{{.Link}}"{{end}}>
@@ -1475,6 +1562,12 @@
     </section>
   </div>
 </div>
+<div class="rest-door">
+  <button type="button" id="rest-door-btn" aria-expanded="false">
+    <b>Show everything else</b> <small>tracked repos, live feed, recent issues, DevSecOps, pipeline</small>
+  </button>
+</div>
+<p class="done-line"><b>That's everything that needs you today.</b></p>
 <dialog id="layout" class="sheet" aria-labelledby="layout-h">
   <div class="sheet-head"><h2 id="layout-h">Layout</h2><button type="button" class="clear" id="layout-reset" disabled>Reset</button></div>
   <p class="hint">Saved in this browser. Hidden panels still count in the alert cells.</p>
@@ -2671,6 +2764,43 @@
     var a = e.target.closest("summary a.ilink, summary a.cntl");
     if (a) e.stopPropagation();
   }, true);
+</script>
+<script>
+  // proto/dashboard-density: fill the lead count from the actual rendered list.
+  (function () {
+    var cnt = document.querySelector(".lead-head .count");
+    var list = document.querySelector(".lead-list");
+    if (cnt && list) cnt.textContent = list.children.length;
+  })();
+  // proto/dashboard-density: collapse quiet alert cells into one summary row.
+  (function () {
+    var cw = document.querySelector(".cw"); if (!cw) return;
+    var cells = Array.prototype.slice.call(cw.querySelectorAll(".cell:not(.lit)"));
+    if (cells.length < 2) return;
+    cw.classList.add("cw-collapsed");
+    cells.forEach(function (c) { c.classList.add("cw-quiet"); });
+    var row = document.createElement("div");
+    row.className = "cell cw-summary";
+    row.innerHTML = '<span>' + cells.length + ' quiet · nothing new since you last cleared</span>' +
+      '<button type="button" aria-expanded="false">Show all</button>';
+    var btn = row.querySelector("button");
+    btn.addEventListener("click", function () {
+      var collapsed = cw.classList.toggle("cw-collapsed");
+      btn.textContent = collapsed ? "Show all" : "Hide quiet";
+      btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    });
+    cw.appendChild(row);
+  })();
+  // proto/dashboard-density: single disclosure for the ambient panels.
+  (function () {
+    var btn = document.getElementById("rest-door-btn"); if (!btn) return;
+    var label = btn.querySelector("b");
+    btn.addEventListener("click", function () {
+      var open = document.body.classList.toggle("proto-rest-open");
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      if (label) label.textContent = open ? "Hide everything else" : "Show everything else";
+    });
+  })();
 </script>
 </body>
 </html>
