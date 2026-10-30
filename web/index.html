@@ -71,7 +71,8 @@
   .user-presets { list-style: none; margin: 0; padding: 0 16px 8px; }
   .user-presets li { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-top: 1px solid var(--rule); font-size: 13px; }
   .user-presets li button { flex: none; }
-  .user-presets .up-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+  .user-presets .up-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
+    background: none; border: 0; padding: 0; font: inherit; color: inherit; text-align: left; }
   .user-presets .up-name:hover { text-decoration: underline; }
   .user-presets .up-active { font-weight: 600; }
   .save-row { display: flex; gap: 6px; padding: 0 16px 10px; }
@@ -2055,6 +2056,7 @@
         var label = presetLabel(base);
         btn.disabled = !def || stateEq(state, def);
         btn.textContent = label ? "Reset to " + label : "Reset";
+        btn.title = label ? "Put " + label + " back the way it is defined" : "";
       }
       function change(fn) {
         var base = state.base || state.preset;
@@ -2144,7 +2146,7 @@
         if (!names.length) return;
         names.forEach(function (pname) {
           var li = document.createElement("li");
-          var span = document.createElement("span"); span.className = "up-name"; span.textContent = pname;
+          var span = document.createElement("button"); span.type = "button"; span.className = "up-name"; span.textContent = pname;
           if (state.preset === "user:" + pname) span.classList.add("up-active");
           span.addEventListener("click", function () {
             var fresh = loadUserPresets();
