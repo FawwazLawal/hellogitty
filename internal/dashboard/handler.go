@@ -209,7 +209,6 @@ type page struct {
 	APIResetUTC  string
 	RepoCount    int
 	TargetCount  int
-	Cells        []cell
 	Stages       []stageHead
 	Rows         []row
 	Watch        []watchRow
@@ -295,21 +294,6 @@ func (p *page) HasTerm(id string) bool {
 type mascot struct {
 	Routine, News []string
 	Rest          string
-}
-
-type cell struct {
-	Key, Label, Value, Level string
-	// Detail names what lit the cell, cut to fit; Title carries the full list.
-	Detail, Title string
-	// More counts names left out of Detail; it renders outside the clamped text so it always shows.
-	More             int
-	Lit, Wide, Empty bool
-	// Items are the names that light the cell, for clearing; Cleared counts those you cleared.
-	Items     []string
-	ItemsAttr string
-	Clearable bool
-	Cleared   int
-	Link      string // alert detail page URL, if the cell is clickable
 }
 
 type failedRepo struct {
@@ -907,9 +891,11 @@ func (h *Handler) build() (*page, error) {
 	}
 	stageIdx := func(stage string) int { return pst.StageIndex(stage) }
 
-	var claimed, closed, dormant, slow, flagged, failed int
-	var closedRepos []string
-	var claimedRepos, dormantRepos, slowRepos, flaggedRepos, failedRepos []string
+	// claimed/closed counts and their repo-id lists feed the Seen button on the Watched issues
+	// panel: a watch row with its CellKey marked Seen hides from the "need you" alerts, and the
+	// forget sweep below drops cleared ids that no longer light any live watch.
+	var claimed, closed int
+	var claimedRepos, closedRepos []string
 	for _, r := range reports {
 		full := r.Owner + "/" + r.Name
 		rw := row{
@@ -939,29 +925,17 @@ func (h *Handler) build() (*page, error) {
 			for i, ph := range pst.Phases(pr) {
 				rw.Phases = append(rw.Phases, phaseCell{Abbr: pst.Stages[i].Abbr, Name: pst.Stages[i].Name, State: string(ph)})
 				if ph == pipeline.Failed {
-					failed++
-					failedRepos = append(failedRepos, r.Name)
 					rowFailed = true
 				}
 			}
 			counts[stageIdx(pr.Stage)]++
 			p.TargetCount++
 			if pr.Level == "caution" {
-				flagged++
-				flaggedRepos = append(flaggedRepos, r.Name)
 				p.FlaggedPipeline = append(p.FlaggedPipeline, rw)
 			}
 			if rowFailed {
 				p.FailedPipeline = append(p.FailedPipeline, rw)
 			}
-		}
-		switch rw.Health {
-		case "DORMANT":
-			dormant++
-			dormantRepos = append(dormantRepos, r.Name)
-		case "SLOW":
-			slow++
-			slowRepos = append(slowRepos, r.Name)
 		}
 		for _, wr := range r.Watch {
 			w := watchRow{
@@ -1070,39 +1044,8 @@ func (h *Handler) build() (*page, error) {
 		failNames = append(failNames, "your work")
 		failWhy = append(failWhy, failedLine("Refreshing Your work", p.Work.Err))
 	}
-	staleLit := lastPoll.IsZero() || now.Sub(lastPoll) > staleAfter
-	staleShown := ""
-	if lastPoll.IsZero() {
-		staleShown = "no check yet"
-	} else if staleLit {
-		staleShown = ago(now, lastPoll)
-	}
-	apiLow := tel.RateLimit > 0 && tel.RateRemaining*10 < tel.RateLimit
-	apiValue := ""
-	if apiLow {
-		apiValue = strconv.Itoa(tel.RateRemaining) + " left"
-	}
-	claimedCell := counter("watch-claimed", "Watched issue claimed", claimed, "warn", claimedRepos, true)
-	claimedCell.Link = "/alerts/watched-claimed"
-	closedCell := counter("watch-closed", "Watched issue closed", closed, "caution", closedRepos, false)
-	closedCell.Link = "/alerts/watched-closed"
-	if len(p.Watch) == 0 {
-		// A zero here must only ever mean "watched and clear".
-		claimedCell.Value, claimedCell.Empty = "nothing watched", true
-		closedCell.Value, closedCell.Empty = "nothing watched", true
-	}
-	var moveNames []string
-	for _, r := range append(append(append([]workRow(nil), p.Work.You...), p.Work.InYou...), p.Work.ConvYou...) {
-		moveNames = append(moveNames, shortRepo(r.Repo)+"#"+strconv.Itoa(r.Number))
-	}
-	moveCell := counter("your-move", "Your move", p.Work.YourMove(), "caution", moveNames, true)
-	moveCell.Link = "/alerts/your-move"
-	moveCell.Title = "Pull requests and issues waiting on you. " + moveCell.Title
-	if !p.Work.Known {
-		moveCell.Value, moveCell.Empty = "not checked yet", true
-	}
-
-	var unresolvedNames []string
+	// Unresolved pull-request threads — one row per sent PR with any review thread the user
+	// has not replied to. Feeds /alerts/unresolved-threads.
 	if board != nil {
 		for _, it := range board.Sent {
 			if !it.PR || it.State != "OPEN" {
@@ -1115,46 +1058,17 @@ func (h *Handler) build() (*page, error) {
 				}
 			}
 			if len(open) > 0 {
-				unresolvedNames = append(unresolvedNames, shortRepo(it.Repo)+"#"+strconv.Itoa(it.Number))
 				p.UnresolvedPRs = append(p.UnresolvedPRs, unresolvedPR{
 					Repo: it.Repo, Number: it.Number, Title: it.Title, URL: it.URL, Threads: open,
 				})
 			}
 		}
 	}
-	unresolvedCell := counter("unresolved", "Unresolved threads", len(unresolvedNames), "caution", unresolvedNames, false)
-	unresolvedCell.Link = "/alerts/unresolved-threads"
-	if !p.Work.Known {
-		unresolvedCell.Value, unresolvedCell.Empty = "not checked yet", true
-	}
 
-	failCell := counter("poll-fail", "Check failed", pollFail, "warn", failNames, false)
-	failCell.Link = "/alerts/check-failed"
-	if len(failWhy) > 0 {
-		next := " HelloGitty tries again on the next check."
-		if left := lastPoll.Add(h.PollInterval).Sub(now); !lastPoll.IsZero() && h.PollInterval > 0 && left > time.Minute {
-			next = " HelloGitty tries again on the next check, in about " + plural(int(left.Minutes()+0.5), "minute") + "."
-		}
-		failCell.Title = strings.Join(failWhy, " ") + next
-	}
-	p.Cells = []cell{
-		claimedCell,
-		moveCell,
-		unresolvedCell,
-		failCell,
-		{Key: "data-stale", Label: "Data is stale", Value: staleShown, Level: "warn", Lit: staleLit,
-			Title: "Lit when the last check of GitHub is more than 2 hours old.", Link: "/alerts/data-stale"},
-		closedCell,
-		withLink(counter("repo-dormant", "Repo dormant", dormant, "caution", dormantRepos, false), "/alerts/repo-dormant"),
-		withLink(counter("repo-slow", "Repo slowing", slow, "caution", slowRepos, false), "/alerts/repo-slow"),
-	}
-	if pst != nil {
-		p.Cells = append(p.Cells,
-			withLink(counter("repo-flagged", pst.Labels.Flagged, flagged, "caution", flaggedRepos, false), "/alerts/repo-flagged"),
-			withLink(counter("stage-failed", pst.Labels.Failed, failed, "caution", failedRepos, false), "/alerts/stage-failed"))
-	}
-	p.Cells = append(p.Cells, cell{Key: "api-low", Label: "API running low", Value: apiValue, Level: "caution", Lit: apiLow,
-		Title: "Lit when under 10% of the hourly GitHub quota remains.", Link: "/alerts/api-low"})
+	// The Watched issues panel still carries a Seen button that posts to /cells/clear with the
+	// watch's cell key and item id. Mark previously cleared watches as Seen for the alert pages
+	// and the panel; the forget sweep drops cleared ids no longer lit by any live watch, which
+	// are now the only cleared ids anything can produce.
 	if cs, ok := h.Source.(CellSource); ok {
 		cleared := cs.Cleared()
 		for i := range p.Watch {
@@ -1162,9 +1076,15 @@ func (h *Handler) build() (*page, error) {
 				p.Watch[i].Seen = cleared[ClearedID(k, p.Watch[i].Item)]
 			}
 		}
-		if forget := applyCleared(p.Cells, cleared, !lastPoll.IsZero() && len(reports) > 0); len(forget) > 0 {
-			if err := cs.ForgetCleared(forget); err != nil {
-				log.Printf("dashboard: forget cleared indicators: %v", err)
+		if settled := !lastPoll.IsZero() && len(reports) > 0; settled {
+			present := []clearedState{
+				{Key: "watch-claimed", Items: claimedRepos},
+				{Key: "watch-closed", Items: closedRepos},
+			}
+			if forget := applyCleared(present, cleared, true); len(forget) > 0 {
+				if err := cs.ForgetCleared(forget); err != nil {
+					log.Printf("dashboard: forget cleared indicators: %v", err)
+				}
 			}
 		}
 	}
@@ -1202,13 +1122,6 @@ func (h *Handler) build() (*page, error) {
 	return p, nil
 }
 
-// A narrow cell has room for one name in two lines; the wide cell holds three. Showing more than
-// fits would let the clamp hide names the "+N" does not count.
-const (
-	detailNamesNarrow = 1
-	detailNamesWide   = 3
-)
-
 func (h *Handler) mascot() *mascot {
 	if h.Mascot == nil {
 		return nil
@@ -1233,29 +1146,6 @@ func (h *Handler) mascot() *mascot {
 		return nil
 	}
 	return m
-}
-
-func counter(key, label string, n int, level string, names []string, wide bool) cell {
-	c := cell{Key: key, Label: label, Value: strconv.Itoa(n), Level: level, Lit: n > 0, Wide: wide,
-		Title: strings.Join(names, ", "), Items: names}
-	limit := detailNamesNarrow
-	if wide {
-		limit = detailNamesWide
-	}
-	if len(names) > limit {
-		c.Detail = strings.Join(names[:limit], ", ")
-		c.More = len(names) - limit
-	} else {
-		c.Detail = strings.Join(names, ", ")
-	}
-	return c
-}
-
-func withLink(c cell, link string) cell { c.Link = link; return c }
-
-func shortRepo(full string) string {
-	_, name, _ := strings.Cut(full, "/")
-	return name
 }
 
 // duration reads like "1 min 26 s" rather than "86 S".

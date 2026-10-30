@@ -3,13 +3,13 @@ package dashboard
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
-// Clearing an indicator says "I've seen these". The cell goes dark and stays dark until something
-// new lights it: a repository, issue or check that wasn't among the ones you cleared. Things that
-// stop lighting it are forgotten, so if they come back later they light it again.
+// Clearing an indicator says "I've seen these". The alert goes quiet and stays quiet until
+// something new lights it: a watched issue, check or similar that wasn't among the ones you
+// cleared. Things that stop lighting it are forgotten, so if they come back later they light it
+// again.
 
 // CellSource is optional: a Source that can remember which indicators you cleared.
 type CellSource interface {
@@ -33,41 +33,33 @@ var clearable = map[string]bool{
 // ClearedID is how a cleared item is kept.
 func ClearedID(key, item string) string { return "c:" + key + ":" + strings.ToLower(item) }
 
-// applyCleared hides the cleared items of each clearable cell. settled says the data behind the
-// cells is complete, so an item missing from a cell has really stopped lighting it and its cleared
-// mark can be forgotten.
-func applyCleared(cells []cell, cleared map[string]bool, settled bool) (forget []string) {
-	for i := range cells {
-		c := &cells[i]
-		if !clearable[c.Key] || c.Empty {
+// clearedState names one clearable key and the ids that still light it right now.
+type clearedState struct {
+	Key   string
+	Items []string
+}
+
+// applyCleared returns the cleared ids that no longer appear in the present set and are safe to
+// drop from storage. settled says the data behind these states is complete, so an item missing
+// from a state has really stopped lighting its cell. Only clearable keys are considered.
+func applyCleared(present []clearedState, cleared map[string]bool, settled bool) (forget []string) {
+	if !settled {
+		return nil
+	}
+	for _, s := range present {
+		if !clearable[s.Key] {
 			continue
 		}
-		c.Clearable = true
-		c.ItemsAttr = strings.Join(c.Items, "|")
-		present := map[string]bool{}
-		var fresh []string
-		for _, it := range c.Items {
-			id := ClearedID(c.Key, it)
-			present[id] = true
-			if cleared[id] {
-				c.Cleared++
-			} else {
-				fresh = append(fresh, it)
+		presentIDs := map[string]bool{}
+		for _, it := range s.Items {
+			presentIDs[ClearedID(s.Key, it)] = true
+		}
+		prefix := "c:" + s.Key + ":"
+		for id := range cleared {
+			if strings.HasPrefix(id, prefix) && !presentIDs[id] {
+				forget = append(forget, id)
 			}
 		}
-		if settled {
-			prefix := "c:" + c.Key + ":"
-			for id := range cleared {
-				if strings.HasPrefix(id, prefix) && !present[id] {
-					forget = append(forget, id)
-				}
-			}
-		}
-		if c.Cleared == 0 {
-			continue
-		}
-		shown := counter(c.Key, c.Label, len(fresh), c.Level, fresh, c.Wide)
-		c.Value, c.Lit, c.Detail, c.More = strconv.Itoa(len(fresh)), shown.Lit, shown.Detail, shown.More
 	}
 	return forget
 }
