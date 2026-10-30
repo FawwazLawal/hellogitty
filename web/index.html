@@ -2491,7 +2491,7 @@
         var key = toggle.dataset.triage;
         var list = document.querySelector('[data-triage-list="' + key + '"]');
         if (!list) return;
-        var expanded = false;
+        var expanded = false, quiet = null;
         function apply() {
           var items = list.querySelectorAll(".wi");
           var total = items.length, youCount = 0;
@@ -2502,6 +2502,21 @@
             else { if (!isYou) items[i].setAttribute("hidden", ""); else items[i].removeAttribute("hidden"); }
           }
           toggle.textContent = expanded ? "Show mine (" + youCount + ")" : "Show all (" + total + ")";
+          // Triage can hide every row while the list still holds items, which drew a panel as a
+          // void: a heading, a resize handle and nothing between them. Nothing needing you is the
+          // best news a panel has, and an empty box reads as a failure to load instead. The
+          // count stays on the toggle an inch away, so this only has to say the one true thing.
+          if (!expanded && total > 0 && youCount === 0) {
+            if (!quiet) {
+              quiet = document.createElement("p");
+              quiet.className = "none";
+              list.insertAdjacentElement("afterend", quiet);
+            }
+            quiet.textContent = "Nothing here needs you.";
+            quiet.hidden = false;
+          } else if (quiet) {
+            quiet.hidden = true;
+          }
         }
         apply();
         toggle.addEventListener("click", function () {
