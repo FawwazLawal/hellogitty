@@ -545,6 +545,11 @@
   try { if (localStorage.getItem("hellogitty-shortcuts") === "off") document.documentElement.dataset.shortcuts = "off"; } catch (e) {}
 </script>{{end}}
 {{define "base-css"}}
+  /* The skip link: off-screen until focused, so a keyboard user meets it first and a pointer
+     user never sees it. Shared here because every page needs it and fifteen copies of two
+     rules is fifteen places for them to drift. */
+  .skip-link { position: absolute; left: 8px; top: 8px; z-index: 1000; padding: 8px 12px; background: var(--panel); color: var(--text); border: 2px solid var(--text); border-radius: 6px; text-decoration: none; transform: translateY(-200%); }
+  .skip-link:focus { transform: translateY(0); }
   :root[data-shortcuts="off"] kbd[data-shortcut] { display: none; }
   :root {
     color-scheme: dark;
