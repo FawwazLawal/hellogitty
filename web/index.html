@@ -530,7 +530,7 @@
 <body>
 {{define "theme-head"}}<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script>
   // Apply a saved theme before first paint; with none saved the page follows the system setting.
-  try { var t = localStorage.getItem("hellogitty-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) document.documentElement.dataset.theme = "light"; } catch (e) {}
+  try { var t = localStorage.getItem("hellogitty-theme"); if (t === "light" || t === "dark" || t === "amoled") document.documentElement.dataset.theme = t; else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) document.documentElement.dataset.theme = "light"; } catch (e) {}
   // Apply a saved visual (collaboration) theme before first paint.
   try { var vt = localStorage.getItem("hellogitty-visual-theme"); if (vt) document.documentElement.dataset.visualTheme = vt; } catch (e) {}
   // One-key shortcuts (/, ?, c, e, 1-9) can be turned off in Settings; the handlers check this.
@@ -599,6 +599,38 @@
     --mascot-bg: #ffffff;
     color-scheme: light;
   }
+  /* Muertos — Halloween / Dia de los Muertos. Dark variant.
+     Violet carries the pack's identity and marigold is reserved for caution alone, so the only
+     warm light on the page is the thing that needs you. Status keeps its temperature order:
+     verdigris (ok) -> marigold (caution) -> crimson (danger). */
+  :root[data-visual-theme="muertos"] {
+    --bg: #0b0a10; --panel: #120f18; --raised: #1a1622; --rule: #2a2335; --rule-hi: #3d3350;
+    --text: #ece6f2; --dim: #a098ae; --track: #2a2335;
+    --nom: #6fdcbb; --caution: #f0a93b; --caution-text: #f0a93b; --warn: #ff4d6a;
+    --caution-fill: #2e2210; --caution-ink: #f7d79a; --warn-fill: #3a0f1d; --warn-ink: #ffd0d9;
+    --tag-fill: #241a33; --tag-ink: #c9a7f0; --tag-rule: #3f3058;
+    --head: #15111d; --head-dim: #a098ae; --head-accent: #b98cf0;
+    --mascot-bg: #120f18;
+    color-scheme: dark;
+  }
+  /* Muertos — true black (AMOLED). A variant of dark, never of light: only the ground moves.
+     The panel fill collapses into the page, so the panel's border becomes the only thing marking
+     it, and --rule is raised to clear 3:1 against black to carry what the fill no longer carries. */
+  :root[data-theme="amoled"][data-visual-theme="muertos"] {
+    --bg: #000000; --panel: #000000; --raised: #120f18; --rule: #5c5c62; --rule-hi: #7a7a82;
+    --head: #000000; --mascot-bg: #000000;
+  }
+  /* Muertos — light variant: warm paper and burnt earth, violet still carrying identity. */
+  :root[data-theme="light"][data-visual-theme="muertos"] {
+    --bg: #f2ece0; --panel: #fbf7ef; --raised: #efe7d8; --rule: #ded2bd; --rule-hi: #b9a988;
+    --text: #231b16; --dim: #6b5a4a; --track: #e3d9c6;
+    --nom: #1b6b57; --caution: #9c5c00; --caution-text: #7d4a00; --warn: #b11d34;
+    --caution-fill: #fbeccd; --caution-ink: #5c3600; --warn-fill: #fbe0e4; --warn-ink: #7a0f22;
+    --tag-fill: #efe2f5; --tag-ink: #5b2d7a; --tag-rule: #d3bde2;
+    --head: #f7f2e7; --head-dim: #6b5a4a; --head-accent: #6d3b96;
+    --mascot-bg: #fbf7ef;
+    color-scheme: light;
+  }
   * { box-sizing: border-box; }
   html { background: var(--bg); scrollbar-color: var(--rule-hi) var(--bg); scroll-padding-top: 60px; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--sans); caret-color: var(--text);
@@ -624,7 +656,7 @@
     var root = document.documentElement, buttons = document.querySelectorAll("[data-theme-set]");
     function showTheme() {
       var cur; try { cur = localStorage.getItem("hellogitty-theme"); } catch(x) {} cur = cur || "auto";
-      buttons.forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.themeSet === cur ? "true" : "false"); });
+      document.querySelectorAll("[data-theme-set]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.themeSet === cur ? "true" : "false"); });
     }
     buttons.forEach(function (b) {
       b.addEventListener("click", function () {
@@ -638,15 +670,48 @@
     if (window.matchMedia) try { window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function(e) { var s; try { s = localStorage.getItem("hellogitty-theme"); } catch(x) {} if (!s) { if (e.matches) root.dataset.theme = "light"; else delete root.dataset.theme; } }); } catch(e) {}
 
     // Visual (collaboration) theme: a colour overlay on top of Auto/Light/Dark.
-    var VISUAL_THEMES = { pink: { label: "(pinky v2)" } };
+    var VISUAL_THEMES = { pink: { label: "(pinky v2)" }, muertos: { label: "(muertos)", amoled: true } };
+    // A pack that declares amoled offers a third appearance: true black, a variant of dark.
+    // The button is added here rather than in every page's header, so one change covers them all.
+    function amoledButton(on) {
+      // Inject into every theme-picker group on the page: the one in the shared site-header
+      // (.theme) and the one on Settings > Appearance (.theme-pick). One change, every surface.
+      var groups = document.querySelectorAll(".theme, .theme-pick");
+      if (!groups.length) return;
+      groups.forEach(function (group) {
+        var btn = group.querySelector('[data-theme-set="amoled"]');
+        if (on && !btn) {
+          btn = document.createElement("button");
+          btn.type = "button"; btn.dataset.themeSet = "amoled"; btn.textContent = "AMOLED";
+          btn.title = "True black: dark with the ground switched off";
+          btn.addEventListener("click", function () {
+            root.dataset.theme = "amoled";
+            try { localStorage.setItem("hellogitty-theme", "amoled"); } catch (e) {}
+            showTheme();
+          });
+          group.appendChild(btn);
+        } else if (!on && btn) {
+          btn.remove();
+        }
+      });
+      // True black belongs to the pack, so losing the pack falls back to the dark it varies.
+      if (!on && root.dataset.theme === "amoled") {
+        root.dataset.theme = "dark";
+        try { localStorage.setItem("hellogitty-theme", "dark"); } catch (e) {}
+      }
+      showTheme();
+    }
     function applyVisualTheme(id) {
       if (id && VISUAL_THEMES[id]) root.dataset.visualTheme = id; else delete root.dataset.visualTheme;
       try { if (id) localStorage.setItem("hellogitty-visual-theme", id); else localStorage.removeItem("hellogitty-visual-theme"); } catch (e) {}
       var baby = document.querySelector(".baby");
       if (baby) baby.textContent = (id && VISUAL_THEMES[id]) ? VISUAL_THEMES[id].label : "(baby)";
+      amoledButton(!!(id && VISUAL_THEMES[id] && VISUAL_THEMES[id].amoled));
     }
+    // Settings changes the pack on its own page; let it reuse this so the switch keeps up.
+    window.hgApplyVisualTheme = applyVisualTheme;
     // Ensure the codename matches the loaded visual theme on page load.
-    (function () { var vt; try { vt = localStorage.getItem("hellogitty-visual-theme"); } catch (e) {} if (vt && VISUAL_THEMES[vt]) applyVisualTheme(vt); })();
+    (function () { var vt; try { vt = localStorage.getItem("hellogitty-visual-theme"); } catch (e) {} applyVisualTheme(vt && VISUAL_THEMES[vt] ? vt : ""); })();
 {{end}}
 {{define "sort-css"}}
   th[data-sort] { cursor: pointer; user-select: none; white-space: nowrap; letter-spacing: 0.02em; }

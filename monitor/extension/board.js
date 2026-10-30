@@ -223,6 +223,10 @@ function header(st, signingIn) {
     if (view === "popup" && chrome.sidePanel) rightKids.push(el("button", { type: "button", class: "headbtn", id: "act-panel" }, "Side panel"));
     if (narrow) rightKids.push(el("button", { type: "button", class: "headbtn", id: "act-full" }, "Full view"));
   }
+  // The .theme group matches the dashboard's shape (class, role, aria-label, data-theme-set), so
+  // the shared theme-js in dashboard.js can inject the AMOLED button here when the active pack
+  // declares amoled: true. A second implementation of the button in board.js would drift from the
+  // dashboard; leave it to the shared script.
   rightKids.push(el("div", { class: "theme", role: "group", "aria-label": "Colour theme" },
     ["auto", "light", "dark"].map((t) => {
       const name = t[0].toUpperCase() + t.slice(1);
