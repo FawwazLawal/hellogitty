@@ -70,6 +70,21 @@ var AlertCheckFailed string
 //go:embed alert-repo-health.html
 var AlertRepoHealth string
 
+//go:embed alert-unresolved-threads.html
+var AlertUnresolvedThreads string
+
+//go:embed alert-data-stale.html
+var AlertDataStale string
+
+//go:embed alert-repo-flagged.html
+var AlertRepoFlagged string
+
+//go:embed alert-stage-failed.html
+var AlertStageFailed string
+
+//go:embed alert-api-low.html
+var AlertAPILow string
+
 // Mascot holds the banner clips (kitten-routine-*.mp4, kitten-news-*.mp4) and the rest still
 // (rest.png) under mascot/.
 //

@@ -47,6 +47,26 @@ func (h *Handler) serveAlertCheckFailed(w http.ResponseWriter, r *http.Request) 
 	h.serveSubPage(w, r, h.AlertCheckFailedTemplate, "alert-check-failed")
 }
 
+func (h *Handler) serveAlertUnresolvedThreads(w http.ResponseWriter, r *http.Request) {
+	h.serveSubPage(w, r, h.AlertUnresolvedThreadsTemplate, "alert-unresolved-threads")
+}
+
+func (h *Handler) serveAlertDataStale(w http.ResponseWriter, r *http.Request) {
+	h.serveSubPage(w, r, h.AlertDataStaleTemplate, "alert-data-stale")
+}
+
+func (h *Handler) serveAlertRepoFlagged(w http.ResponseWriter, r *http.Request) {
+	h.serveSubPage(w, r, h.AlertRepoFlaggedTemplate, "alert-repo-flagged")
+}
+
+func (h *Handler) serveAlertStageFailed(w http.ResponseWriter, r *http.Request) {
+	h.serveSubPage(w, r, h.AlertStageFailedTemplate, "alert-stage-failed")
+}
+
+func (h *Handler) serveAlertAPILow(w http.ResponseWriter, r *http.Request) {
+	h.serveSubPage(w, r, h.AlertAPILowTemplate, "alert-api-low")
+}
+
 func (h *Handler) serveAlertRepoHealthPage(w http.ResponseWriter, r *http.Request) {
 	health := ""
 	if strings.HasSuffix(r.URL.Path, "/repo-slow") {

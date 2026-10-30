@@ -1,0 +1,80 @@
+{{define "alert-api-low"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>API running low · HelloGitty</title>
+{{template "theme-head"}}
+<style>
+{{template "base-css"}}
+{{template "header-css"}}
+  .cwrap { max-width: var(--w-list); margin: 0 auto; padding: 18px 20px 40px; }
+  .sub { margin: 0 0 18px; color: var(--dim); }
+  .overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 0 0 24px; }
+  .ocard { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; text-align: center; }
+  .ocard .ov { font: 700 28px var(--mono); font-variant-numeric: tabular-nums; display: block; }
+  .ocard .ol { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .ocard.caution { border-color: var(--head-accent); }
+  .section { margin: 0 0 28px; }
+  .section h2 { margin: 0 0 10px; font-size: 14px; font-weight: 650; letter-spacing: 0.02em; border-left: 3px solid var(--head-accent); padding-left: 10px; }
+  .meter { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; }
+  .meter .bar { height: 10px; background: var(--raised); border-radius: 5px; overflow: hidden; }
+  .meter .bar > div { height: 100%; background: var(--caution-fill); }
+  .meter .legend { display: flex; justify-content: space-between; font-size: 12px; color: var(--dim); margin-top: 6px;
+    font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .facts { list-style: none; padding: 0; margin: 10px 0 0; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; }
+  .facts li { display: grid; grid-template-columns: 180px 1fr; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--rule); font-size: 13px; }
+  .facts li:last-child { border-bottom: 0; }
+  .facts .lbl { color: var(--dim); }
+  .facts .val { font-family: var(--mono); color: var(--text); }
+  .recovery { margin: 18px 0 0; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 8px;
+    background: var(--panel); font-size: 13px; color: var(--text); line-height: 1.5; }
+  .recovery b { font-weight: 650; }
+  .recovery a { color: var(--text); }
+  .nodata { color: var(--dim); padding: 20px; text-align: center; }
+</style>
+</head>
+<body>
+{{template "site-header" .}}
+<div class="cwrap">
+  <p class="sub">Under 10% of the hourly GitHub quota remains — HelloGitty will keep working, but any additional traffic from this account's token (another tool, a browser session) could run the quota out before it resets.</p>
+
+  {{if .APIKnown}}
+  <div class="overview">
+    <div class="ocard caution"><span class="ov">{{sub .APILimit .APIUsed}}</span><span class="ol">Remaining</span></div>
+    <div class="ocard"><span class="ov">{{.APIUsed}}</span><span class="ol">Used</span></div>
+    <div class="ocard"><span class="ov">{{.APILimit}}</span><span class="ol">Hourly limit</span></div>
+  </div>
+
+  <div class="section">
+    <h2>Quota</h2>
+    <div class="meter">
+      <div class="bar"><div style="width: {{.APIPct}}%"></div></div>
+      <div class="legend"><span>{{.APIPct}}% used</span><span>resets {{if .APIResetUTC}}{{.APIResetUTC}}{{else}}on the hour{{end}}</span></div>
+    </div>
+    <ul class="facts">
+      <li><span class="lbl">Used this hour</span><span class="val">{{.APIUsed}} / {{.APILimit}} points</span></li>
+      <li><span class="lbl">Reset at</span><span class="val">{{if .APIResetUTC}}{{.APIResetUTC}}{{else}}unknown{{end}}</span></li>
+      <li><span class="lbl">Repositories tracked</span><span class="val">{{.RepoCount}}</span></li>
+      <li><span class="lbl">Poll interval</span><span class="val">{{if .PollInterval}}every {{.PollInterval}}s{{else}}not configured{{end}}</span></li>
+    </ul>
+  </div>
+  {{else}}
+  <p class="nodata">GitHub hasn't reported a quota yet — this normally means the first check has not completed.</p>
+  {{end}}
+
+  <div class="recovery">
+    <b>Why this lit.</b> GitHub's REST and GraphQL APIs share a 5,000-point hourly budget per token. HelloGitty's refresh costs about 45 points, so the dashboard alone takes under 1% an hour. A spike almost always means another tool is using the same token.<br><br>
+    <b>What to do.</b> Wait for the reset time above — the counter clears at the top of the hour. If the alert keeps lighting between resets, check what else is calling GitHub with the same token (a CI job, a scripts folder, a browser extension that signed in), and either narrow the tracked repository list in <a href="/settings">Settings</a> or give that other tool its own token. HelloGitty automatically slows its own polling when the quota is near empty.
+  </div>
+</div>
+<script>
+(function () {
+  {{template "theme-js"}}
+  {{template "nav-active-js"}}
+    {{template "clock-js"}}
+})();
+</script>
+</body>
+</html>{{end}}

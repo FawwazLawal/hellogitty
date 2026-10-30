@@ -17,6 +17,7 @@ import (
 	"github.com/FawwazLawal/hellogitty/internal/pipeline"
 	"github.com/FawwazLawal/hellogitty/internal/security"
 	"github.com/FawwazLawal/hellogitty/internal/store"
+	"github.com/FawwazLawal/hellogitty/internal/help"
 	"github.com/FawwazLawal/hellogitty/internal/work"
 )
 
@@ -104,6 +105,11 @@ type Handler struct {
 	AlertWatchedClosedTemplate  string
 	AlertCheckFailedTemplate    string
 	AlertRepoHealthTemplate     string
+	AlertUnresolvedThreadsTemplate string
+	AlertDataStaleTemplate         string
+	AlertRepoFlaggedTemplate       string
+	AlertStageFailedTemplate       string
+	AlertAPILowTemplate            string
 	SettingsTemplate string
 	Guide        string
 	Screenshot   []byte
@@ -256,14 +262,27 @@ type page struct {
 	DismissedWork []workRow
 
 	// Alert detail pages.
-	ClaimedWatch []watchRow
-	ClaimedCount int
-	ClosedWatch  []watchRow
-	ClosedCount  int
-	FailedRepos  []failedRepo
-	HealthRepos  []row
-	AlertTitle   string
-	AlertDesc    string
+	ClaimedWatch    []watchRow
+	ClaimedCount    int
+	ClosedWatch     []watchRow
+	ClosedCount     int
+	FailedRepos     []failedRepo
+	HealthRepos     []row
+	UnresolvedPRs   []unresolvedPR
+	FlaggedPipeline []row
+	FailedPipeline  []row
+	AlertTitle      string
+	AlertDesc       string
+}
+
+// unresolvedPR gathers one open pull request and the review threads on it that nobody has
+// marked resolved — the detail an operator needs to answer each one.
+type unresolvedPR struct {
+	Repo    string
+	Number  int
+	Title   string
+	URL     string
+	Threads []work.Thread
 }
 
 // HasTerm reports whether the hover help explains id, so the page only marks what it can explain.
@@ -484,6 +503,21 @@ var funcs = template.FuncMap{
 		}
 		return t.UTC().Format("2006-01-02 15:04Z")
 	},
+	"excerpt": func(s string, n int) string { return help.Excerpt(s, n) },
+	"isoDate": func(t time.Time) string {
+		if t.IsZero() {
+			return ""
+		}
+		return t.UTC().Format("2006-01-02 15:04Z")
+	},
+	"threadCount": func(prs []unresolvedPR) int {
+		n := 0
+		for _, p := range prs {
+			n += len(p.Threads)
+		}
+		return n
+	},
+	"sub": func(a, b int) int { return a - b },
 	"watchText": func(status string) string {
 		switch status {
 		case "CLAIMED":
@@ -580,6 +614,16 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveAlertRepoHealthPage(w, r)
 	case r.URL.Path == "/alerts/repo-slow":
 		h.serveAlertRepoHealthPage(w, r)
+	case r.URL.Path == "/alerts/unresolved-threads":
+		h.serveAlertUnresolvedThreads(w, r)
+	case r.URL.Path == "/alerts/data-stale":
+		h.serveAlertDataStale(w, r)
+	case r.URL.Path == "/alerts/repo-flagged":
+		h.serveAlertRepoFlagged(w, r)
+	case r.URL.Path == "/alerts/stage-failed":
+		h.serveAlertStageFailed(w, r)
+	case r.URL.Path == "/alerts/api-low":
+		h.serveAlertAPILow(w, r)
 	case r.URL.Path == "/list":
 		h.serveList(w, r)
 	case r.URL.Path == "/repos/add":
@@ -891,11 +935,13 @@ func (h *Handler) build() (*page, error) {
 		if pr, ok := pst.Repo(r.Owner, r.Name); ok && pr.Stage != "" {
 			rw.InPipeline, rw.Stage, rw.Label, rw.Level = true, pr.Stage, pr.Label, pr.Level
 			rw.StageAbbr = pst.Stages[stageIdx(pr.Stage)].Abbr
+			rowFailed := false
 			for i, ph := range pst.Phases(pr) {
 				rw.Phases = append(rw.Phases, phaseCell{Abbr: pst.Stages[i].Abbr, Name: pst.Stages[i].Name, State: string(ph)})
 				if ph == pipeline.Failed {
 					failed++
 					failedRepos = append(failedRepos, r.Name)
+					rowFailed = true
 				}
 			}
 			counts[stageIdx(pr.Stage)]++
@@ -903,6 +949,10 @@ func (h *Handler) build() (*page, error) {
 			if pr.Level == "caution" {
 				flagged++
 				flaggedRepos = append(flaggedRepos, r.Name)
+				p.FlaggedPipeline = append(p.FlaggedPipeline, rw)
+			}
+			if rowFailed {
+				p.FailedPipeline = append(p.FailedPipeline, rw)
 			}
 		}
 		switch rw.Health {
@@ -1058,18 +1108,22 @@ func (h *Handler) build() (*page, error) {
 			if !it.PR || it.State != "OPEN" {
 				continue
 			}
-			var open int
+			var open []work.Thread
 			for _, t := range it.Threads {
 				if !t.RepliedLast {
-					open++
+					open = append(open, t)
 				}
 			}
-			if open > 0 {
+			if len(open) > 0 {
 				unresolvedNames = append(unresolvedNames, shortRepo(it.Repo)+"#"+strconv.Itoa(it.Number))
+				p.UnresolvedPRs = append(p.UnresolvedPRs, unresolvedPR{
+					Repo: it.Repo, Number: it.Number, Title: it.Title, URL: it.URL, Threads: open,
+				})
 			}
 		}
 	}
 	unresolvedCell := counter("unresolved", "Unresolved threads", len(unresolvedNames), "caution", unresolvedNames, false)
+	unresolvedCell.Link = "/alerts/unresolved-threads"
 	if !p.Work.Known {
 		unresolvedCell.Value, unresolvedCell.Empty = "not checked yet", true
 	}
@@ -1089,18 +1143,18 @@ func (h *Handler) build() (*page, error) {
 		unresolvedCell,
 		failCell,
 		{Key: "data-stale", Label: "Data is stale", Value: staleShown, Level: "warn", Lit: staleLit,
-			Title: "Lit when the last check of GitHub is more than 2 hours old."},
+			Title: "Lit when the last check of GitHub is more than 2 hours old.", Link: "/alerts/data-stale"},
 		closedCell,
 		withLink(counter("repo-dormant", "Repo dormant", dormant, "caution", dormantRepos, false), "/alerts/repo-dormant"),
 		withLink(counter("repo-slow", "Repo slowing", slow, "caution", slowRepos, false), "/alerts/repo-slow"),
 	}
 	if pst != nil {
 		p.Cells = append(p.Cells,
-			counter("repo-flagged", pst.Labels.Flagged, flagged, "caution", flaggedRepos, false),
-			counter("stage-failed", pst.Labels.Failed, failed, "caution", failedRepos, false))
+			withLink(counter("repo-flagged", pst.Labels.Flagged, flagged, "caution", flaggedRepos, false), "/alerts/repo-flagged"),
+			withLink(counter("stage-failed", pst.Labels.Failed, failed, "caution", failedRepos, false), "/alerts/stage-failed"))
 	}
 	p.Cells = append(p.Cells, cell{Key: "api-low", Label: "API running low", Value: apiValue, Level: "caution", Lit: apiLow,
-		Title: "Lit when under 10% of the hourly GitHub quota remains."})
+		Title: "Lit when under 10% of the hourly GitHub quota remains.", Link: "/alerts/api-low"})
 	if cs, ok := h.Source.(CellSource); ok {
 		cleared := cs.Cleared()
 		for i := range p.Watch {

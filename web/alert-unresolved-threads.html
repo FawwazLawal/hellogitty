@@ -1,0 +1,88 @@
+{{define "alert-unresolved-threads"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Unresolved threads · HelloGitty</title>
+{{template "theme-head"}}
+<style>
+{{template "base-css"}}
+{{template "header-css"}}
+  .cwrap { max-width: var(--w-list); margin: 0 auto; padding: 18px 20px 40px; }
+  .sub { margin: 0 0 18px; color: var(--dim); }
+  .overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 0 0 24px; }
+  .ocard { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; text-align: center; }
+  .ocard .ov { font: 700 28px var(--mono); font-variant-numeric: tabular-nums; display: block; }
+  .ocard .ol { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .ocard .ov.zero { color: var(--dim); }
+  .ocard.caution { border-color: var(--head-accent); }
+  .section { margin: 0 0 28px; }
+  .section h2 { margin: 0 0 10px; font-size: 14px; font-weight: 650; letter-spacing: 0.02em; border-left: 3px solid var(--head-accent); padding-left: 10px; }
+  .pr { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; margin: 0 0 10px; }
+  .pr .title { font-size: 14px; font-weight: 550; }
+  .pr .title a { color: var(--text); text-decoration: none; }
+  .pr .title a:hover { text-decoration: underline; }
+  .pr .meta { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .threads { list-style: none; padding: 0; margin: 10px 0 0; }
+  .threads li { padding: 8px 0 8px 10px; border-left: 2px solid var(--rule); margin: 0 0 6px; }
+  .threads li.outdated { opacity: .6; }
+  .thead { font-size: 12px; color: var(--dim); display: flex; flex-wrap: wrap; gap: 4px 10px; }
+  .thead .path { font-family: var(--mono); color: var(--text); }
+  .thead .author { font-weight: 600; color: var(--text); }
+  .thead .at { white-space: nowrap; }
+  .thead .flag { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--raised); color: var(--dim); }
+  .tbody { font-size: 13px; color: var(--text); margin-top: 4px; line-height: 1.4; }
+  .tbody a { color: var(--text); }
+  .nodata { color: var(--dim); padding: 20px; text-align: center; }
+  .recovery { margin: 18px 0 0; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 8px;
+    background: var(--panel); font-size: 13px; color: var(--text); line-height: 1.5; }
+  .recovery b { font-weight: 650; }
+</style>
+</head>
+<body>
+{{template "site-header" .}}
+<div class="cwrap">
+  <p class="sub">Open pull requests of yours with review comments the reviewer has yet to mark resolved — every unresolved thread still blocks a merge for the reviewers who gate on them.</p>
+  <div class="overview">
+    <div class="ocard caution"><span class="ov">{{len .UnresolvedPRs}}</span><span class="ol">Pull requests</span></div>
+    <div class="ocard"><span class="ov">{{threadCount .UnresolvedPRs}}</span><span class="ol">Open threads</span></div>
+  </div>
+
+  {{if .UnresolvedPRs}}
+  <div class="section">
+    <h2>Pull requests with open threads</h2>
+    {{range .UnresolvedPRs}}
+    <div class="pr">
+      <div class="title"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Repo}}#{{.Number}} {{.Title}}</a></div>
+      <div class="meta">{{len .Threads}} open thread{{if ne (len .Threads) 1}}s{{end}}</div>
+      <ul class="threads">{{range .Threads}}
+        <li{{if .Outdated}} class="outdated"{{end}}>
+          <div class="thead">
+            <span class="path">{{.Path}}</span>
+            <span class="author">@{{.Author}}{{if .Bot}} (bot){{end}}</span>
+            <span class="at" title="{{.At}}">{{isoDate .At}}</span>
+            {{if .Outdated}}<span class="flag">outdated (code changed)</span>{{end}}
+          </div>
+          <div class="tbody">{{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener">{{excerpt .Body 240}}</a>{{else}}{{excerpt .Body 240}}{{end}}</div>
+        </li>
+      {{end}}</ul>
+    </div>
+    {{end}}
+    <div class="recovery">
+      <b>Clearing a thread.</b> Reply to the open comment, and if the reviewer agrees ask them to mark it resolved on GitHub — a reviewer can resolve any thread they can see, you can resolve your own. GitHub itself doesn't require resolved threads to merge, but a repository's branch protection or a reviewer's habit might. An <b>outdated</b> thread points at code the diff has since replaced; it is almost always safe to resolve.
+    </div>
+  </div>
+  {{else}}
+  <p class="nodata">No unresolved review threads on your open pull requests.</p>
+  {{end}}
+</div>
+<script>
+(function () {
+  {{template "theme-js"}}
+  {{template "nav-active-js"}}
+    {{template "clock-js"}}
+})();
+</script>
+</body>
+</html>{{end}}
