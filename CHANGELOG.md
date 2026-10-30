@@ -5,6 +5,32 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (30) · Black Bombay (baby) · 2026-10-29
+
+Tag `v0.2.30`.
+
+- **Layout presets**: the built-in layouts carry curated panel sizes, and a
+  layout you arrange yourself can be saved under a name, then reloaded, renamed
+  or deleted. Built-ins stay read-only. A Reset button restores the defaults of
+  whichever preset is active — Contributor resets to Contributor, Program to
+  Program — and stays disabled while the layout still matches it, so it doubles
+  as a sign that something has been changed.
+- **Stale indicators quieten with age**: an amber flag on a row nobody has
+  touched in 24 hours drops to 0.6 opacity; after 7 days it drops to 0.45 and
+  loses its amber border, reading as history rather than urgency. Hover or focus
+  restores it. Nothing is hidden at any age — a PR whose checks have been
+  failing for ten days still has failing checks.
+- **Extension side panel matches the dashboard**: flat lists with status pills,
+  the same tiered timestamps, the triage default with its `Show all (N)` toggle,
+  and the staleness decay. Extension bumped to 0.2.28.
+- **Cleanup**: the last of the pre-redesign vocabulary is gone — the `.group`
+  CSS and the two script lookups that kept its count badges in step, and the
+  hidden `movetag` span the status pill replaced. The orphan guard now fails if
+  any of them comes back.
+- ADR-002 records the two places the shipped behaviour departs from the draft:
+  decayed indicators are never hidden, and staleness is measured on the row
+  rather than on each flag.
+
 ## v0.2.0 (29) · Black Bombay (baby) · 2026-10-29
 
 Tag `v0.2.29`.
