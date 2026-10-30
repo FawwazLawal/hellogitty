@@ -134,18 +134,27 @@ async function doRefresh() {
       await chrome.storage.local.set({ auth: { ...auth, login } });
     }
     const hg = await classifier();
-    const req = JSON.parse(hg.request(JSON.stringify({ login, maintain, finishedDays: FINISHED_DAYS, now })));
+    const req = JSON.parse(hg.requests(JSON.stringify({ login, maintain, finishedDays: FINISHED_DAYS, now })));
     if (req.error) throw new Error(req.error);
-    let body;
-    try {
-      body = await graphql(token, req.query, req.variables);
-    } catch (e) {
-      // A renewable token GitHub turned down early: renew it once and try again.
-      if (!(e instanceof AuthError) || !auth.refresh) throw e;
-      token = await freshToken(true);
-      body = await graphql(token, req.query, req.variables);
+    // The board draws from eight searches. Running them in one request shared a resource budget
+    // and silently nulled nested fields such as the check status when it tipped over, so each
+    // search goes in its own request. Running them in sequence mirrors the server (fetch.go)
+    // and keeps a 401-and-renew retry simple: one token for the whole refresh.
+    const bodies = [];
+    let renewed = false;
+    for (const r of req.requests) {
+      let body;
+      try {
+        body = await graphql(token, r.query, r.variables);
+      } catch (e) {
+        if (!(e instanceof AuthError) || !auth.refresh || renewed) throw e;
+        renewed = true;
+        token = await freshToken(true);
+        body = await graphql(token, r.query, r.variables);
+      }
+      bodies.push({ name: r.name, body });
     }
-    const out = JSON.parse(hg.board(JSON.stringify({ login, maintain, scope: req.scope, now }), body));
+    const out = JSON.parse(hg.boardMulti(JSON.stringify({ login, maintain, scope: req.scope, now }), JSON.stringify(bodies)));
     // GitHub repeats an error once per search in the query; show each message once.
     const error = out.error ? [...new Set(out.error.split("; "))].join("; ") : "";
     const update = { status: { checkedAt: now, error, errorAt: error ? now : "" } };

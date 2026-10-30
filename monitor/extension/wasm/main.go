@@ -1,13 +1,21 @@
 //go:build js && wasm
 
 // Command wasm exposes the work board classifier to the browser extension. The extension sends
-// the GraphQL request itself; this builds the request and turns the response into the board, with
+// the GraphQL requests itself; this builds them and turns the responses into the board, with
 // the same sentences the dashboard shows.
 //
-// It sets globalThis.hellogitty with two functions, each taking and returning JSON strings:
+// The board draws from eight searches. They used to ride in one request and share one resource
+// budget, which tipped over on a well-stocked board and nulled nested fields such as the check
+// status. Each search now goes in its own request. requests() returns the eight sub-requests;
+// boardMulti() takes the eight bodies and assembles the board.
 //
-//	request({login, maintain, finishedDays, now}) -> {query, variables, scope}
-//	board({login, maintain, scope, now}, body)    -> {board, error}
+// It sets globalThis.hellogitty with these functions, each taking and returning JSON strings:
+//
+//	requests({login, maintain, finishedDays, now})   -> {requests: [{name, query, variables}, ...], scope}
+//	boardMulti({login, maintain, scope, now}, bodies) -> {board, error}
+//
+// where bodies is a JSON array of {name, body} with one entry per sub-request. The pre-split
+// contract (request / board) is still exported for compatibility.
 package main
 
 import (
@@ -82,8 +90,10 @@ type view struct {
 
 func main() {
 	js.Global().Set("hellogitty", js.ValueOf(map[string]any{
-		"request": js.FuncOf(request),
-		"board":   js.FuncOf(board),
+		"request":    js.FuncOf(request),
+		"board":      js.FuncOf(board),
+		"requests":   js.FuncOf(requests),
+		"boardMulti": js.FuncOf(boardMulti),
 	}))
 	select {}
 }
@@ -124,6 +134,50 @@ func board(_ js.Value, v []js.Value) any {
 		return reply(map[string]string{"error": "board: want arguments and a response body"})
 	}
 	b, err := work.Decode([]byte(v[1].String()), a.Login, a.Maintain, a.Scope, a.now())
+	out := map[string]any{}
+	if err != nil {
+		out["error"] = err.Error()
+	}
+	if b != nil {
+		out["board"] = toView(b)
+	}
+	return reply(out)
+}
+
+func requests(_ js.Value, v []js.Value) any {
+	a, err := parse(v)
+	if err != nil {
+		return reply(map[string]string{"error": err.Error()})
+	}
+	days := a.FinishedDays
+	if days <= 0 {
+		days = 30
+	}
+	reqs, scope := work.Requests(a.Login, a.Maintain, a.now().AddDate(0, 0, -days))
+	return reply(map[string]any{"requests": reqs, "scope": scope})
+}
+
+// bodies is a JSON array of {"name": ..., "body": "..."} entries where body is the raw response
+// text. Keeping it as a string per entry avoids re-encoding each body through JSON twice.
+type namedBody struct {
+	Name string `json:"name"`
+	Body string `json:"body"`
+}
+
+func boardMulti(_ js.Value, v []js.Value) any {
+	a, err := parse(v)
+	if err != nil || len(v) < 2 {
+		return reply(map[string]string{"error": "boardMulti: want arguments and sub-response bodies"})
+	}
+	var raw []namedBody
+	if err := json.Unmarshal([]byte(v[1].String()), &raw); err != nil {
+		return reply(map[string]string{"error": "boardMulti: " + err.Error()})
+	}
+	bodies := make([]work.SubResponse, 0, len(raw))
+	for _, r := range raw {
+		bodies = append(bodies, work.SubResponse{Name: r.Name, Body: []byte(r.Body)})
+	}
+	b, err := work.DecodeMulti(bodies, a.Login, a.Maintain, a.Scope, a.now())
 	out := map[string]any{}
 	if err != nil {
 		out["error"] = err.Error()
