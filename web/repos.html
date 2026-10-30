@@ -47,11 +47,14 @@
   .empty { color: var(--dim); padding: 40px 0; text-align: center; }
   @media (max-width: 640px) { .rgrid { grid-template-columns: 1fr; } }
   @media (prefers-reduced-motion: reduce) { .rcard { transition: none; } }
+  .skip-link { position: absolute; left: 8px; top: 8px; z-index: 1000; padding: 8px 12px; background: var(--panel); color: var(--text); border: 2px solid var(--text); border-radius: 6px; text-decoration: none; transform: translateY(-200%); }
+  .skip-link:focus { transform: translateY(0); }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to main content</a>
 {{template "site-header" .}}
-<main class="rwrap">
+<main id="main" class="rwrap" tabindex="-1">
   <p class="sub">All repositories HelloGitty tracks, with health, issue counts and pipeline stage.</p>
   <div class="rtools">
     <input type="search" id="rq" aria-label="Search tracked repositories" placeholder="Search repositories…" autocomplete="off">

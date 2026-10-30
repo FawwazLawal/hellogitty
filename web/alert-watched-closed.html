@@ -40,11 +40,14 @@
   :root[data-theme="dark"] .badge.fixed { background: #14532d44; color: #4ade80; }
   :root[data-theme="dark"] .badge.closed { background: #1e293b44; color: #94a3b8; }
   .hint { font-size: 12px; color: var(--dim); margin: 12px 0 0; }
+  .skip-link { position: absolute; left: 8px; top: 8px; z-index: 1000; padding: 8px 12px; background: var(--panel); color: var(--text); border: 2px solid var(--text); border-radius: 6px; text-decoration: none; transform: translateY(-200%); }
+  .skip-link:focus { transform: translateY(0); }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to main content</a>
 {{template "site-header" .}}
-<div class="cwrap">
+<main id="main" class="cwrap" tabindex="-1">
   <p class="sub">Issues you were watching that have been closed — either fixed or decided against.</p>
   <div class="overview">
     <div class="ocard"><span class="ov">{{.ClosedCount}}</span><span class="ol">Closed</span></div>
@@ -52,8 +55,8 @@
   </div>
 
   {{if .ClosedWatch}}
-  <div class="section">
-    <h2>Closed issues</h2>
+  <section class="section" aria-labelledby="closed-h">
+    <h2 id="closed-h">Closed issues</h2>
     <ul class="wlist">{{range .ClosedWatch}}
       <li>
         <div class="body">
@@ -65,11 +68,11 @@
       </li>
     {{end}}</ul>
     <p class="hint">Mark a closed issue as Seen on the dashboard to quiet its alert until something changes.</p>
-  </div>
+  </section>
   {{else}}
   <p class="nodata">No watched issues have been closed.</p>
   {{end}}
-</div>
+</main>
 <script>
 (function () {
   {{template "theme-js"}}

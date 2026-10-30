@@ -81,9 +81,12 @@
     .kv { grid-template-columns: minmax(0, 1fr); gap: 2px; }
     .kv dd { margin-bottom: 8px; }
   }
+  .skip-link { position: absolute; left: 8px; top: 8px; z-index: 1000; padding: 8px 12px; background: var(--panel); color: var(--text); border: 2px solid var(--text); border-radius: 6px; text-decoration: none; transform: translateY(-200%); }
+  .skip-link:focus { transform: translateY(0); }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to main content</a>
 {{template "site-header" .}}
 <div class="hsearch">
   <label><span class="sr">Search help</span><input type="search" id="h-q" placeholder="Ask or search, e.g. how to add a repo" autocomplete="off" spellcheck="false"><kbd data-shortcut>/</kbd></label>
@@ -99,7 +102,7 @@
       <li><a href="#about">About this install</a></li>
     </ol>
   </nav>
-  <main class="doc">
+  <main id="main" class="doc" tabindex="-1">
     <section class="results" id="h-results" aria-live="polite" hidden>
       <p class="rhead" id="h-rhead"></p>
       <ol class="hits" id="h-hits"></ol>

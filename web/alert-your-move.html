@@ -45,11 +45,14 @@
   :root[data-theme="dark"] .pill.pr { color: #d2a8ff; }
   :root[data-theme="dark"] .pill.issue { color: #56d364; }
   .label { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 10px; background: var(--rule); margin-left: 4px; }
+  .skip-link { position: absolute; left: 8px; top: 8px; z-index: 1000; padding: 8px 12px; background: var(--panel); color: var(--text); border: 2px solid var(--text); border-radius: 6px; text-decoration: none; transform: translateY(-200%); }
+  .skip-link:focus { transform: translateY(0); }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to main content</a>
 {{template "site-header" .}}
-<div class="cwrap">
+<main id="main" class="cwrap" tabindex="-1">
   <p class="sub">Pull requests and issues waiting on you — things where the next action is yours.</p>
   <div class="overview">
     <div class="ocard caution"><span class="ov">{{.Work.YourMove}}</span><span class="ol">Total waiting on you</span></div>
@@ -59,8 +62,8 @@
   </div>
 
   {{if .Work.You}}
-  <div class="section">
-    <h2>Your pull requests and issues</h2>
+  <section class="section" aria-labelledby="ym-sent-h">
+    <h2 id="ym-sent-h">Your pull requests and issues</h2>
     <ul class="ilist">{{range .Work.You}}
       <li>
         <span class="icon"><svg viewBox="0 0 16 16"><use href="#i-{{if eq .Kind "PR"}}pr{{else}}issue{{end}}"/></svg></span>
@@ -73,12 +76,12 @@
         <span class="when" title="Since {{.AgoTitle}}">{{.Ago}}</span>
       </li>
     {{end}}</ul>
-  </div>
+  </section>
   {{end}}
 
   {{if .Work.InYou}}
-  <div class="section">
-    <h2>Incoming — in others' repositories</h2>
+  <section class="section" aria-labelledby="ym-in-h">
+    <h2 id="ym-in-h">Incoming — in others' repositories</h2>
     <ul class="ilist">{{range .Work.InYou}}
       <li>
         <span class="icon"><svg viewBox="0 0 16 16"><use href="#i-{{if eq .Kind "PR"}}pr{{else}}issue{{end}}"/></svg></span>
@@ -91,12 +94,12 @@
         <span class="when" title="Since {{.AgoTitle}}">{{.Ago}}</span>
       </li>
     {{end}}</ul>
-  </div>
+  </section>
   {{end}}
 
   {{if .Work.ConvYou}}
-  <div class="section">
-    <h2>Conversations waiting on you</h2>
+  <section class="section" aria-labelledby="ym-conv-h">
+    <h2 id="ym-conv-h">Conversations waiting on you</h2>
     <ul class="ilist">{{range .Work.ConvYou}}
       <li>
         <span class="icon"><svg viewBox="0 0 16 16"><use href="#i-{{if eq .Kind "PR"}}pr{{else}}issue{{end}}"/></svg></span>
@@ -109,11 +112,11 @@
         <span class="when" title="Since {{.AgoTitle}}">{{.Ago}}</span>
       </li>
     {{end}}</ul>
-  </div>
+  </section>
   {{end}}
 
   {{if not .Work.YourMove}}<p class="nodata">Nothing is waiting on you right now.</p>{{end}}
-</div>
+</main>
 <script>
 (function () {
   {{template "theme-js"}}

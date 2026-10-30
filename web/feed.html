@@ -15,13 +15,18 @@
   .check input { accent-color: var(--caution); width: 15px; height: 15px; margin: 0; }
   .clear { font: 13px var(--sans); color: var(--text); background: transparent; border: 0; padding: 0; cursor: pointer;
     text-decoration: underline; text-decoration-color: var(--rule-hi); text-underline-offset: 3px; }
+  .skip-link { position: absolute; left: 8px; top: 8px; z-index: 1000; padding: 8px 12px; background: var(--panel); color: var(--text); border: 2px solid var(--text); border-radius: 6px; text-decoration: none; transform: translateY(-200%); }
+  .skip-link:focus { transform: translateY(0); }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to main content</a>
 {{template "site-header" .}}
+<main id="main" tabindex="-1">
 <ol class="feed tall" id="feed-list" data-token="{{.Token}}"{{if .CanWatch}} data-watch="1"{{end}} aria-live="polite">{{template "feed-rows" .Feed}}</ol>
 <p class="fnone" id="feed-none"{{if .Feed.Open}} hidden{{end}}>Nothing new. New issues, comments, reviews and notifications appear here as they happen.</p>
 <div class="ffoot"><label class="check"><input type="checkbox" id="feed-show"> Show acknowledged</label><button type="button" class="clear" id="feed-all">Acknowledge all</button><span id="feed-msg" class="sr" role="status"></span></div>
+</main>
 <script>
   (function () {
     {{template "theme-js"}}

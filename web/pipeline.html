@@ -62,11 +62,14 @@
   {{end}}
   @media (max-width: 640px) { .overview { grid-template-columns: repeat(2, 1fr); } }
   @media (prefers-reduced-motion: reduce) { .ocard, .scard { transition: none; } }
+  .skip-link { position: absolute; left: 8px; top: 8px; z-index: 1000; padding: 8px 12px; background: var(--panel); color: var(--text); border: 2px solid var(--text); border-radius: 6px; text-decoration: none; transform: translateY(-200%); }
+  .skip-link:focus { transform: translateY(0); }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to main content</a>
 {{template "site-header" .}}
-<main class="pwrap">
+<main id="main" class="pwrap" tabindex="-1">
   <p class="sub">Your pull requests in tracked repositories, which ones need you, and the pipeline stages.</p>
 
   <div class="overview">
@@ -89,16 +92,16 @@
   {{end}}
 
   {{if .HasPipeline}}
-  <div class="section">
-    <h2>Stages</h2>
+  <section class="section" aria-labelledby="stages-h">
+    <h2 id="stages-h">Stages</h2>
     <div class="stages">
       {{range .Pipeline.Counts}}<a class="scard" href="/list?stage={{.Name}}"><span class="sv{{if not .Count}} zero{{end}}">{{.Count}}</span><span class="sl">{{.Name}}</span></a>{{end}}
     </div>
-  </div>
+  </section>
   {{end}}
 
-  <div class="section">
-    <h2>Pull requests</h2>
+  <section class="section" aria-labelledby="prs-h">
+    <h2 id="prs-h">Pull requests</h2>
     <div class="pfilter" role="group" aria-label="Filter pull requests">
       <button type="button" data-pf="all" aria-pressed="true">All</button>
       <button type="button" data-pf="Open" aria-pressed="false">Open</button>
@@ -124,7 +127,7 @@
     </table>
     <p class="empty" id="pr-none" hidden>No pull requests match these filters.</p>
     {{else}}<p class="empty">No pull requests yet in tracked repositories.</p>{{end}}
-  </div>
+  </section>
 </main>
 <script>
 (function () {
