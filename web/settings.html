@@ -581,7 +581,11 @@
     { id: "pink", name: "Pinky v2", desc: "Hot pink collaboration theme",
       badge: "Limited", badgeBg: "#ff69b4", badgeColor: "#fff",
       bg: "#21101a", dot: "#ff69b4", bar1: "#ff69b4", bar2: "#55304a", bar3: "#b88aa4",
-      nameCl: "#f5e0ec", descCl: "#b88aa4" }
+      nameCl: "#f5e0ec", descCl: "#b88aa4" },
+    { id: "muertos", name: "Muertos", desc: "Halloween / Dia de los Muertos, with a true-black mode",
+      badge: "Seasonal", badgeBg: "#b98cf0", badgeColor: "#15111d",
+      bg: "#120f18", dot: "#f0a93b", bar1: "#b98cf0", bar2: "#3d3350", bar3: "#a098ae",
+      nameCl: "#ece6f2", descCl: "#a098ae" }
   ];
   var vtGrid = document.getElementById("s-visual-theme");
   if (vtGrid) {
@@ -595,10 +599,13 @@
       none.innerHTML = '<div class="vt-preview"><span class="vt-dot"></span><div class="vt-bars"><span class="vt-bar" style="width:80%"></span><span class="vt-bar" style="width:55%"></span></div></div><span class="vt-name">None</span><span class="vt-desc">Default dashboard colours</span>';
       none.addEventListener("click", function() {
         currentVT = "";
-        try { localStorage.removeItem(VT_KEY); } catch(e) {}
-        document.documentElement.removeAttribute("data-visual-theme");
-        var baby = document.querySelector(".baby");
-        if (baby) baby.textContent = "(baby)";
+        if (window.hgApplyVisualTheme) { window.hgApplyVisualTheme(""); }
+        else {
+          try { localStorage.removeItem(VT_KEY); } catch(e) {}
+          document.documentElement.removeAttribute("data-visual-theme");
+          var baby = document.querySelector(".baby");
+          if (baby) baby.textContent = "(baby)";
+        }
         renderVT();
       });
       vtGrid.appendChild(none);
@@ -616,10 +623,11 @@
           (vt.badge ? '<span class="vt-badge" style="background:' + vt.badgeBg + ';color:' + vt.badgeColor + '">' + vt.badge + '</span>' : '');
         sw.addEventListener("click", function() {
           currentVT = vt.id;
-          try { localStorage.setItem(VT_KEY, vt.id); } catch(e) {}
-          document.documentElement.dataset.visualTheme = vt.id;
-          var baby = document.querySelector(".baby");
-          if (baby) baby.textContent = "(pinky v2)";
+          if (window.hgApplyVisualTheme) { window.hgApplyVisualTheme(vt.id); }
+          else {
+            try { localStorage.setItem(VT_KEY, vt.id); } catch(e) {}
+            document.documentElement.dataset.visualTheme = vt.id;
+          }
           renderVT();
         });
         vtGrid.appendChild(sw);
