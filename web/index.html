@@ -485,6 +485,7 @@
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to main content</a>
 {{define "theme-head"}}<link rel="icon" type="image/svg+xml" href="/favicon.svg"><script>
   // Apply a saved theme before first paint; with none saved the page follows the system setting.
   try { var t = localStorage.getItem("hellogitty-theme"); if (t === "light" || t === "dark" || t === "amoled") document.documentElement.dataset.theme = t; else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) document.documentElement.dataset.theme = "light"; } catch (e) {}
@@ -1235,7 +1236,7 @@
 
 
 
-<div class="grid" data-token="{{.Token}}">
+<main class="grid" id="main" tabindex="-1" data-token="{{.Token}}">
   <div class="main">
     <section class="panel" aria-labelledby="work-h" data-board data-module="your-work">
       <h2 id="work-h">Your work{{if .Work.Known}} · <span data-v="work-you">{{len .Work.You}}</span> need you{{end}} <span class="lbl">{{if .Work.Known}}Pull requests and issues @{{.Work.Login}} has out, anywhere on GitHub · updated {{.Work.FetchedAgo}}{{else}}Not fetched yet{{end}}</span><span class="nb" id="newcount"{{if not .WorkNew}} hidden{{end}}>{{.WorkNew}} new</span>{{if .Work.Known}}<button type="button" class="triage-toggle" data-triage="your-work">Show all</button>{{end}}</h2>
@@ -1246,7 +1247,7 @@
       {{if or .Work.You .Work.Them .Work.Other .Work.Done}}<ul class="items" data-triage-list="your-work">{{range .Work.You}}{{template "item" .}}{{end}}{{range .Work.Them}}{{template "item" .}}{{end}}{{range .Work.Other}}{{template "other" .}}{{end}}{{range .Work.Done}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nothing is waiting on you.</p>{{end}}
       {{if .Work.DoneMore}}<p class="hint">{{.Work.DoneMore}} more finished items not shown.</p>{{end}}
       {{if eq .Work.NotifyState "off"}}<p class="pad hint">New-activity dots are off: {{.Work.NotifyNote}}.</p>{{end}}
-      {{if .Work.Err}}<p class="pad err">The last refresh failed, so this is the previous list. {{.Work.ErrF.Summary}} <small>({{.Work.ErrF.Detail}})</small></p>{{end}}
+      {{if .Work.Err}}<p class="pad err">{{if .Work.Partial}}This list is incomplete: the last refresh got part of your work and GitHub refused the rest.{{else}}The last refresh failed, so this is the previous list.{{end}} {{.Work.ErrF.Summary}} <small>({{.Work.ErrF.Detail}})</small></p>{{end}}
       {{end}}
     </section>
 
@@ -1447,7 +1448,7 @@
       </dl>
     </section>
   </div>
-</div>
+</main>
 <dialog id="layout" class="sheet" aria-labelledby="layout-h">
   <div class="sheet-head"><h2 id="layout-h">Layout</h2><button type="button" class="clear" id="layout-reset" disabled>Reset</button></div>
   <p class="hint">Saved in this browser. Hidden panels still count in the alert cells.</p>

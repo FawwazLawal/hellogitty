@@ -28,11 +28,11 @@ import (
 	"github.com/FawwazLawal/hellogitty/internal/notify"
 	"github.com/FawwazLawal/hellogitty/internal/overlap"
 	"github.com/FawwazLawal/hellogitty/internal/pipeline"
-	"github.com/FawwazLawal/hellogitty/internal/security"
 	"github.com/FawwazLawal/hellogitty/internal/poller"
+	"github.com/FawwazLawal/hellogitty/internal/security"
 	"github.com/FawwazLawal/hellogitty/internal/snapshot"
-	"github.com/FawwazLawal/hellogitty/internal/unreplied"
 	"github.com/FawwazLawal/hellogitty/internal/store"
+	"github.com/FawwazLawal/hellogitty/internal/unreplied"
 	"github.com/FawwazLawal/hellogitty/internal/work"
 	"github.com/FawwazLawal/hellogitty/web"
 )
@@ -250,44 +250,44 @@ func run() int {
 	}
 	srv := &http.Server{
 		Handler: &dashboard.Handler{
-			Template:     web.Index,
-			SnapshotPath: snapPath,
-			Source:       src,
-			PollInterval: cfg.PollInterval,
-			Version:      versionLabel,
-			Baby:         versionBaby,
-			Favicon:      web.Favicon,
-			Mascot:       mascotFS,
-			HelpTemplate: web.Help,
-			FeedTemplate: web.Feed,
-			ListTemplate:   web.List,
-			IssuesTemplate:        web.Issues,
-			ReposTemplate:         web.Repos,
-			PipelineTemplate:      web.Pipeline,
-			ConversationsTemplate: web.Conversations,
-			YourReposTemplate:     web.YourRepos,
-			WorkTemplate:          web.Work,
-			AlertYourMoveTemplate:       web.AlertYourMove,
-			AlertWatchedClaimedTemplate: web.AlertWatchedClaimed,
-			AlertWatchedClosedTemplate:  web.AlertWatchedClosed,
-			AlertCheckFailedTemplate:    web.AlertCheckFailed,
-			AlertRepoHealthTemplate:     web.AlertRepoHealth,
+			Template:                       web.Index,
+			SnapshotPath:                   snapPath,
+			Source:                         src,
+			PollInterval:                   cfg.PollInterval,
+			Version:                        versionLabel,
+			Baby:                           versionBaby,
+			Favicon:                        web.Favicon,
+			Mascot:                         mascotFS,
+			HelpTemplate:                   web.Help,
+			FeedTemplate:                   web.Feed,
+			ListTemplate:                   web.List,
+			IssuesTemplate:                 web.Issues,
+			ReposTemplate:                  web.Repos,
+			PipelineTemplate:               web.Pipeline,
+			ConversationsTemplate:          web.Conversations,
+			YourReposTemplate:              web.YourRepos,
+			WorkTemplate:                   web.Work,
+			AlertYourMoveTemplate:          web.AlertYourMove,
+			AlertWatchedClaimedTemplate:    web.AlertWatchedClaimed,
+			AlertWatchedClosedTemplate:     web.AlertWatchedClosed,
+			AlertCheckFailedTemplate:       web.AlertCheckFailed,
+			AlertRepoHealthTemplate:        web.AlertRepoHealth,
 			AlertUnresolvedThreadsTemplate: web.AlertUnresolvedThreads,
 			AlertDataStaleTemplate:         web.AlertDataStale,
 			AlertRepoFlaggedTemplate:       web.AlertRepoFlagged,
 			AlertStageFailedTemplate:       web.AlertStageFailed,
 			AlertAPILowTemplate:            web.AlertAPILow,
-			SettingsTemplate:            web.Settings,
-			Guide:        docs.Guide,
-			Screenshot:   docs.Screenshot,
-			About:        aboutInstall(cfg),
-			ConfigListen:    cfg.Listen,
-			ConfigDatabase:  cfg.Database,
-			ConfigSnapshot:  cfg.Snapshot,
-			ConfigReposFile: cfg.ReposFile,
-			ConfigInbox:     cfg.Inbox,
-			ConfigMaintain:  cfg.Maintain,
-			LayoutDefault:   layoutDefaultJSON(cfg.Layout),
+			SettingsTemplate:               web.Settings,
+			Guide:                          docs.Guide,
+			Screenshot:                     docs.Screenshot,
+			About:                          aboutInstall(cfg),
+			ConfigListen:                   cfg.Listen,
+			ConfigDatabase:                 cfg.Database,
+			ConfigSnapshot:                 cfg.Snapshot,
+			ConfigReposFile:                cfg.ReposFile,
+			ConfigInbox:                    cfg.Inbox,
+			ConfigMaintain:                 cfg.Maintain,
+			LayoutDefault:                  layoutDefaultJSON(cfg.Layout),
 		},
 		ReadHeaderTimeout: 10 * time.Second,
 	}
@@ -326,7 +326,7 @@ func run() int {
 		for {
 			if err := board.Refresh(ctx); err != nil {
 				log.Printf("work board: %v", err)
-			} else if b, _ := board.Snapshot(); b != nil {
+			} else if b, _, _ := board.Snapshot(); b != nil {
 				log.Printf("work board: %d sent, %d incoming, %d GraphQL points (%d left)", len(b.Sent), len(b.Incoming), b.Cost, b.Remaining)
 			}
 			if time.Since(checked) >= overlapRefresh-time.Minute {
@@ -432,7 +432,7 @@ func unrepliedWriter(path string, board *work.Tracker) func() {
 	return func() {
 		mu.Lock()
 		defer mu.Unlock()
-		b, _ := board.Snapshot()
+		b, _, _ := board.Snapshot()
 		f := unreplied.Build(b)
 		if err := unreplied.Write(path, f); err != nil {
 			log.Printf("unreplied: %v", err)
@@ -480,7 +480,7 @@ func aboutInstall(cfg *config.Config) []dashboard.AboutItem {
 // says who you are and which issues your pull requests fix.
 func overlapChecker(ov *overlap.Watcher, st *store.Store, pl *poller.Poller, pipe *pipeline.Provider, board *work.Tracker) func(context.Context) {
 	return func(ctx context.Context) {
-		b, _ := board.Snapshot()
+		b, _, _ := board.Snapshot()
 		if b == nil {
 			return
 		}
@@ -585,7 +585,7 @@ func (s source) OverlapReports() []store.Overlap {
 
 func (s source) Notifications() notify.View { return s.feed.Snapshot() }
 
-func (s source) Work() (*work.Board, string) { return s.board.Snapshot() }
+func (s source) Work() (*work.Board, string, bool) { return s.board.Snapshot() }
 
 func (s source) Reports() ([]store.RepoReport, error) { return tracked(s.st, s.p) }
 
