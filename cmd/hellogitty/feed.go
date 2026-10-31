@@ -17,7 +17,7 @@ import (
 // reports, and new issues worth a decision. ok is false until the work board and the overlap watcher
 // have each run once, so nothing half-built is written.
 func (s source) entries(now time.Time) ([]inbox.Entry, bool) {
-	b, _ := s.board.Snapshot()
+	b, _, _ := s.board.Snapshot()
 	if b == nil {
 		return nil, false
 	}

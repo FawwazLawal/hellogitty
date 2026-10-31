@@ -14,10 +14,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/FawwazLawal/hellogitty/internal/help"
 	"github.com/FawwazLawal/hellogitty/internal/pipeline"
 	"github.com/FawwazLawal/hellogitty/internal/security"
 	"github.com/FawwazLawal/hellogitty/internal/store"
-	"github.com/FawwazLawal/hellogitty/internal/help"
 	"github.com/FawwazLawal/hellogitty/internal/work"
 )
 
@@ -71,7 +71,7 @@ type Source interface {
 	Reports() ([]store.RepoReport, error)
 	Telemetry() Telemetry
 	Pipeline() (*pipeline.State, error)
-	Work() (*work.Board, string)
+	Work() (*work.Board, string, bool)
 	Security() security.Feed
 }
 
@@ -82,7 +82,7 @@ type Handler struct {
 	PollInterval time.Duration
 	Version      string
 	// Baby marks a codename that has not graduated yet; the page sets it apart from the label.
-	Baby bool
+	Baby    bool
 	Favicon []byte
 	// Mascot holds the banner clips and rest still; nil leaves the banner without a mascot.
 	Mascot fs.FS
@@ -90,36 +90,36 @@ type Handler struct {
 
 	// Help page: its template (parsed with Template, whose base styles it shares), the guide in
 	// Markdown, the guide's screenshot, and facts about this install set at startup (files in use).
-	HelpTemplate string
-	FeedTemplate string // the feed on its own page, parsed with Template like Help
-	ListTemplate   string // what a Pipeline number counts, on a page of its own
+	HelpTemplate          string
+	FeedTemplate          string // the feed on its own page, parsed with Template like Help
+	ListTemplate          string // what a Pipeline number counts, on a page of its own
 	IssuesTemplate        string // all open issues across tracked repos, on a page of its own
 	ReposTemplate         string // tracked repos on a page of its own
 	PipelineTemplate      string // pipeline on a page of its own
 	ConversationsTemplate string // conversations on a page of its own
 	YourReposTemplate     string // your repos on a page of its own
 
-	WorkTemplate               string // your work on a page of its own
-	AlertYourMoveTemplate      string
-	AlertWatchedClaimedTemplate string
-	AlertWatchedClosedTemplate  string
-	AlertCheckFailedTemplate    string
-	AlertRepoHealthTemplate     string
+	WorkTemplate                   string // your work on a page of its own
+	AlertYourMoveTemplate          string
+	AlertWatchedClaimedTemplate    string
+	AlertWatchedClosedTemplate     string
+	AlertCheckFailedTemplate       string
+	AlertRepoHealthTemplate        string
 	AlertUnresolvedThreadsTemplate string
 	AlertDataStaleTemplate         string
 	AlertRepoFlaggedTemplate       string
 	AlertStageFailedTemplate       string
 	AlertAPILowTemplate            string
-	SettingsTemplate string
-	Guide        string
-	Screenshot   []byte
-	About        []AboutItem
-	ConfigListen    string
-	ConfigDatabase  string
-	ConfigSnapshot  string
-	ConfigReposFile string
-	ConfigInbox     string
-	ConfigMaintain  []string
+	SettingsTemplate               string
+	Guide                          string
+	Screenshot                     []byte
+	About                          []AboutItem
+	ConfigListen                   string
+	ConfigDatabase                 string
+	ConfigSnapshot                 string
+	ConfigReposFile                string
+	ConfigInbox                    string
+	ConfigMaintain                 []string
 	// LayoutDefault is the JSON-encoded layout config from hellogitty.json, or empty.
 	LayoutDefault string
 }
@@ -219,8 +219,8 @@ type page struct {
 	Feed         feedView
 	Token        string // sent back with acknowledgements; see Handler.token
 	// Security panel: CVEs and tips.
-	SecurityFeed  security.Feed
-	SecurityErrF  FriendlyErr
+	SecurityFeed security.Feed
+	SecurityErrF FriendlyErr
 
 	// Settings page: server config (read-only on the page).
 	ConfigListen    string
@@ -776,8 +776,8 @@ func (h *Handler) build() (*page, error) {
 		news = newsByRepo(rows)
 	}
 
-	board, workErr := h.Source.Work()
-	p.Work = buildWork(board, workErr, now)
+	board, workErr, workPartial := h.Source.Work()
+	p.Work = buildWork(board, workErr, workPartial, now)
 	addOverlapPeeks(&p.Work, overlapsByIssue(overlaps))
 	if ns, ok := h.Source.(NotificationSource); ok {
 		nv := ns.Notifications()

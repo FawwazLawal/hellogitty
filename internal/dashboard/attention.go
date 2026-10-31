@@ -163,7 +163,7 @@ func (h *Handler) serveAttention(w http.ResponseWriter, r *http.Request) {
 		nv := ns.Notifications()
 		out.State = nv.State
 		if nv.State == "ok" {
-			board, _ := h.Source.Work()
+			board, _, _ := h.Source.Work()
 			a := matchNotifications(board, nv.Items, time.Now())
 			out.Rows = a.Rows
 			for _, o := range a.Other {

@@ -181,15 +181,19 @@ type Tracker struct {
 	board   *Board
 	err     string
 	errAt   time.Time
+	// partial is true when the last refresh replaced the board but GitHub refused part of it:
+	// what is on screen is new and incomplete, not old and whole. The two read the same from
+	// outside and call for opposite responses, so they are not collapsed into one flag.
+	partial bool
 	running bool
 }
 
-// Snapshot returns the last good board (nil before the first success) and the last error, if the
-// most recent refresh failed.
-func (t *Tracker) Snapshot() (*Board, string) {
+// Snapshot returns the last good board (nil before the first success), the last error if the most
+// recent refresh failed, and whether that board is itself the partial result of a failed refresh.
+func (t *Tracker) Snapshot() (*Board, string, bool) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	return t.board, t.err
+	return t.board, t.err, t.partial
 }
 
 // Refresh fetches the board once. Concurrent calls collapse into one.
@@ -237,17 +241,20 @@ func (t *Tracker) Refresh(ctx context.Context) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.login = login
-	if b != nil && (err == nil || len(b.Sent)+len(b.Incoming) > 0) {
+	replaced := b != nil && (err == nil || len(b.Sent)+len(b.Incoming) > 0)
+	if replaced {
 		t.board = b
 	}
 	if err != nil {
-		t.err, t.errAt = err.Error(), now
+		// Replaced despite the error means the board on screen is the partial one.
+		t.err, t.errAt, t.partial = err.Error(), now, replaced
 		return err
 	}
-	t.err = ""
+	t.err, t.partial = "", false
 	return nil
 }
 
+// fail records a refresh that produced nothing, so whatever is on screen is simply old.
 func (t *Tracker) fail(err error, at time.Time) {
 	t.mu.Lock()
 	t.err, t.errAt = err.Error(), at

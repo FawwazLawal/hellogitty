@@ -20,17 +20,18 @@ import (
 )
 
 type fakeSource struct {
-	reports []store.RepoReport
-	tel     Telemetry
-	pipe    *pipeline.State
-	board   *work.Board
-	workErr string
+	reports     []store.RepoReport
+	tel         Telemetry
+	pipe        *pipeline.State
+	board       *work.Board
+	workErr     string
+	workPartial bool
 }
 
 func (f fakeSource) Reports() ([]store.RepoReport, error) { return f.reports, nil }
 func (f fakeSource) Telemetry() Telemetry                 { return f.tel }
 func (f fakeSource) Pipeline() (*pipeline.State, error)   { return f.pipe, nil }
-func (f fakeSource) Work() (*work.Board, string)          { return f.board, f.workErr }
+func (f fakeSource) Work() (*work.Board, string, bool)    { return f.board, f.workErr, f.workPartial }
 func (f fakeSource) Security() security.Feed              { return security.Feed{} }
 
 // pipeFixture is a pipeline with rocket two stages in and lullaby one stage in.
