@@ -142,3 +142,23 @@ func TestStaleBucketReachesTheRow(t *testing.T) {
 		t.Error("a row touched two hours ago should carry no staleness class")
 	}
 }
+
+// A refresh that half-worked replaces the board with new, incomplete data, while one that failed
+// outright leaves the old whole board on screen. The two look identical from outside and call for
+// opposite responses, so the page must not describe one as the other.
+func TestAPartialBoardIsNotCalledThePreviousList(t *testing.T) {
+	now := time.Now()
+	board := workFixture(now)
+
+	partial := buildWork(board, "github graphql: Resource limits for this query exceeded.", true, now)
+	if !partial.Partial {
+		t.Error("a partial refresh did not reach the view as partial")
+	}
+	stale := buildWork(board, "github: 502", false, now)
+	if stale.Partial {
+		t.Error("a wholly failed refresh was reported as partial")
+	}
+	if partial.Err == "" || stale.Err == "" {
+		t.Fatal("both cases should still carry their error")
+	}
+}

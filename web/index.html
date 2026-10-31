@@ -1247,7 +1247,7 @@
       {{if or .Work.You .Work.Them .Work.Other .Work.Done}}<ul class="items" data-triage-list="your-work">{{range .Work.You}}{{template "item" .}}{{end}}{{range .Work.Them}}{{template "item" .}}{{end}}{{range .Work.Other}}{{template "other" .}}{{end}}{{range .Work.Done}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nothing is waiting on you.</p>{{end}}
       {{if .Work.DoneMore}}<p class="hint">{{.Work.DoneMore}} more finished items not shown.</p>{{end}}
       {{if eq .Work.NotifyState "off"}}<p class="pad hint">New-activity dots are off: {{.Work.NotifyNote}}.</p>{{end}}
-      {{if .Work.Err}}<p class="pad err">The last refresh failed, so this is the previous list. {{.Work.ErrF.Summary}} <small>({{.Work.ErrF.Detail}})</small></p>{{end}}
+      {{if .Work.Err}}<p class="pad err">{{if .Work.Partial}}This list is incomplete: the last refresh got part of your work and GitHub refused the rest.{{else}}The last refresh failed, so this is the previous list.{{end}} {{.Work.ErrF.Summary}} <small>({{.Work.ErrF.Detail}})</small></p>{{end}}
       {{end}}
     </section>
 

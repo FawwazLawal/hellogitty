@@ -44,7 +44,7 @@ func TestNotificationsLandOnTheirRows(t *testing.T) {
 		t.Errorf("other: unread first, then read ones that still ask something, a repeated CI failure once; read mentions drop off: %+v", a.Other)
 	}
 
-	v := buildWork(b, "", now)
+	v := buildWork(b, "", false, now)
 	applyAttention(&v, notify.View{State: "ok"}, a)
 	dots := map[string]string{}
 	for _, list := range [][]workRow{v.You, v.Them, v.Done} {
@@ -56,7 +56,7 @@ func TestNotificationsLandOnTheirRows(t *testing.T) {
 		t.Errorf("green unread, amber your move, hollow otherwise: %v", dots)
 	}
 
-	off := buildWork(b, "", now)
+	off := buildWork(b, "", false, now)
 	applyAttention(&off, notify.View{State: "off", Note: "no"}, attention{Rows: a.Rows})
 	for _, r := range off.Them {
 		if r.Attn == "new" {
