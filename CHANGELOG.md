@@ -5,6 +5,23 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (34) · Black Bombay (baby) · 2026-10-31
+
+Tag `v0.2.34`.
+
+- **The dashboard has a skip link and a main landmark.** It was the last page in
+  the product without either, and the page where it matters most: the densest one,
+  the most to tab through, and the one that opens first. The grid became the
+  landmark rather than gaining a wrapper around it — every selector already reached
+  it by `.grid` — so the panel drag and resize machinery is untouched.
+- **A partial board no longer calls itself the previous one.** When GitHub refused
+  part of a refresh, the board on screen was new and incomplete while the page said
+  the last refresh had failed and this was the previous list. "Previous" means old
+  but whole: wait, or look again later. The truth was current but holed: what you
+  are reading is missing things. The two call for opposite responses, and the page
+  asserted the one that was not true. The tracker records which actually happened
+  and the page says so, with nothing inferred from timestamps.
+
 ## v0.2.0 (33) · Black Bombay (baby) · 2026-10-30
 
 Tag `v0.2.33`.
