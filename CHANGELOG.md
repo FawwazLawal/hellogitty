@@ -5,6 +5,42 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (33) · Black Bombay (baby) · 2026-10-30
+
+Tag `v0.2.33`.
+
+- **The alert row is gone.** Eleven tiles across the top of the dashboard, at equal
+  weight, mixing your work with repository health, system health and a watchlist.
+  On a real board nine of them read zero or "not checked yet" and the two with
+  content truncated into fragments. The dashboard now opens on the work that needs
+  you. The count has not gone anywhere — the Your work heading already carries it.
+- **A panel whose work is all done says so.** Triage mode hides everything that is
+  not your move, and a panel with items but none of them yours drew a heading and
+  280px of nothing: the best news a panel can give, rendered as something that
+  reads like a failed load. It says "Nothing here needs you" now.
+- **Amber means one thing again.** 103 elements wore the caution colour and seven
+  of them meant work that needs doing. `--head-accent` was defined as the same
+  value as `--caution`, so every panel heading wore the alert colour, and a closed,
+  resolved issue wore the same fill as Your move. Repository health, age bars and
+  quota gauges move to their own ramp: they are conditions, not tasks.
+- **The light theme stops inverting the alert signal.** A lit cell set its border
+  to its own fill, which measures 1.00:1 against the page there, so a lit cell had
+  no edge at all while a quiet one kept a 1.50:1 border — lit read as less
+  important than unlit. Lit state is carried by a 4px edge now, 3.24:1.
+- **Every alert has somewhere to go.** Five new pages — unresolved threads, data
+  stale, repositories flagged, stage failed, API low — each with an orienting
+  sentence, the counts and what to do about it. The two loudest numbers on the old
+  row went nowhere at all when clicked.
+- **Skip links and landmarks** on every page outside the dashboard, with the rules
+  in the shared stylesheet rather than copied into fifteen templates.
+- **The controls you sort and triage with are big enough to hit.** Column sorts
+  were 15px tall against a 24px minimum, the work sorts 22px, the triage toggle
+  20px. The high-severity badge was white on orange at 3.85:1.
+- **The header fits the window.** It overflowed every route at phone width, the
+  whole of it the control cluster at 424px inside a 390px viewport.
+- **The Chrome extension gets the board fix from v0.2.32**: its eight searches now
+  go in their own requests, so check status stops nulling out there too.
+
 ## v0.2.0 (32) · Black Bombay (baby) · 2026-10-30
 
 Tag `v0.2.32`.
