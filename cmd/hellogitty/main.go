@@ -404,7 +404,9 @@ func applyTotals(reports []store.RepoReport, totals map[string]poller.IssueTotal
 // list, overlap reports and new issues, or does nothing when no inbox is configured. Both loops call
 // it; the mutex keeps one write at a time, and the file itself is replaced atomically. Nothing is
 // written before the first board and the first overlap check, so a fresh start never replaces a full
-// inbox with a partial one.
+// inbox with a partial one. A refresh that replaced the board with a partial one is skipped the same
+// way: the Tracker already distinguishes new-and-incomplete from old-and-whole, and a downstream
+// script reading this file cannot tell a partial write from the state it claims to describe.
 func inboxWriter(path string, src source) func() {
 	if path == "" {
 		return func() {}
@@ -413,6 +415,10 @@ func inboxWriter(path string, src source) func() {
 	return func() {
 		mu.Lock()
 		defer mu.Unlock()
+		if _, _, partial := src.board.Snapshot(); partial {
+			log.Printf("inbox: not written, the work board is the partial result of a failed refresh")
+			return
+		}
 		now := time.Now().UTC()
 		entries, ok := src.entries(now)
 		if !ok {
@@ -432,7 +438,11 @@ func unrepliedWriter(path string, board *work.Tracker) func() {
 	return func() {
 		mu.Lock()
 		defer mu.Unlock()
-		b, _, _ := board.Snapshot()
+		b, _, partial := board.Snapshot()
+		if partial {
+			log.Printf("unreplied: not written, the work board is the partial result of a failed refresh")
+			return
+		}
 		f := unreplied.Build(b)
 		if err := unreplied.Write(path, f); err != nil {
 			log.Printf("unreplied: %v", err)
