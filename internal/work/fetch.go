@@ -649,10 +649,13 @@ func recent(n node, threads []Thread, login string) []Activity {
 			AuthorAssociation: c.AuthorAssociation})
 	}
 	// Review bots count here: their inline comments block a merge as surely as a person's.
+	// Replied is carried across from the thread; it is the one field whose nil-ness tells a caller
+	// this activity came from a review thread rather than an issue comment or a review body.
 	for _, t := range threads {
 		if !strings.EqualFold(t.Author, login) {
+			replied := t.RepliedLast
 			out = append(out, Activity{Author: t.Author, Body: t.Body, URL: t.URL, At: t.At, Path: t.Path, Bot: t.Bot,
-				AuthorAssociation: t.AuthorAssociation})
+				AuthorAssociation: t.AuthorAssociation, Replied: &replied})
 		}
 	}
 	return out
