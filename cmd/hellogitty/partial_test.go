@@ -58,72 +58,90 @@ func partialBoardServer(t *testing.T) *httptest.Server {
 	}))
 }
 
-// TestWritersSkipOnPartialBoard proves the regression this PR fixes: after a refresh that
-// Tracker records as partial, inboxWriter and unrepliedWriter must leave the on-disk files
-// untouched. Before the fix they overwrite both with a near-empty partial board; the test
-// goes red by design on main and green once the writers consult Snapshot's partial flag.
-func TestWritersSkipOnPartialBoard(t *testing.T) {
-	srv := partialBoardServer(t)
-	defer srv.Close()
-
+// trackerAfterCompleteRefresh returns a Tracker that has had one successful refresh (partial
+// = false). Shared setup for both the skip-partial and replaces-complete cases, so each test
+// asserts one thing against the exact tracker state its name claims.
+func trackerAfterCompleteRefresh(t *testing.T, srv *httptest.Server) *work.Tracker {
+	t.Helper()
 	gh := github.New("test-token")
 	gh.BaseURL = srv.URL
 	tracker := &work.Tracker{GH: gh}
-
-	// Refresh once: a clean board, partial should be false.
 	if err := tracker.Refresh(context.Background()); err != nil {
 		t.Fatalf("first Refresh: unexpected error: %v", err)
 	}
 	if _, _, partial := tracker.Snapshot(); partial {
 		t.Fatalf("first Refresh: partial = true, want false")
 	}
+	return tracker
+}
 
-	// Refresh again: prsOpen fails, other lanes still hand back a node, so the board is
-	// replaced with a partial one and Snapshot reports partial = true.
+// TestUnrepliedWriter_SkipsPartialBoard is the real red for this fix: the writer takes a
+// *work.Tracker directly and reaches no nil-store landmine, so on the unfixed tree it genuinely
+// overwrites the seeded file and this assertion genuinely fails. partialBoardServer drives the
+// tracker through one clean refresh and one partial refresh (prsOpen errors, `issues` still
+// populated), leaving Snapshot().partial = true.
+func TestUnrepliedWriter_SkipsPartialBoard(t *testing.T) {
+	srv := partialBoardServer(t)
+	defer srv.Close()
+
+	tracker := trackerAfterCompleteRefresh(t, srv)
 	if err := tracker.Refresh(context.Background()); err == nil {
 		t.Fatalf("second Refresh: expected error from prsOpen, got nil")
 	}
-	b, _, partial := tracker.Snapshot()
-	if !partial {
+	if _, _, partial := tracker.Snapshot(); !partial {
 		t.Fatalf("second Refresh: partial = false, want true")
 	}
-	if b == nil {
-		t.Fatalf("second Refresh: board = nil, want partial board")
-	}
 
-	// Seed known-good files whose bytes we expect to survive the partial write.
 	dir := t.TempDir()
-	inboxPath := filepath.Join(dir, "inbox.json")
-	unrepliedPath := filepath.Join(dir, "unreplied.json")
-	inboxBytes := []byte(`{"seeded":"full","entries":18}`)
-	unrepliedBytes := []byte(`{"seeded":"full","our_open_prs":18}`)
-	if err := os.WriteFile(inboxPath, inboxBytes, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(unrepliedPath, unrepliedBytes, 0o644); err != nil {
+	path := filepath.Join(dir, "unreplied.json")
+	seeded := []byte(`{"seeded":"full","our_open_prs":18}`)
+	if err := os.WriteFile(path, seeded, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	// Build the two writers and call each once while the tracker reports partial. Neither
-	// file should change. inboxWriter's source is only consulted past the partial check, so
-	// the other fields can stay zero-valued for this test.
-	writeInbox := inboxWriter(inboxPath, source{board: tracker})
-	writeUnreplied := unrepliedWriter(unrepliedPath, tracker)
-	writeInbox()
-	writeUnreplied()
+	unrepliedWriter(path, tracker)()
 
-	got, err := os.ReadFile(inboxPath)
+	got, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(got) != string(inboxBytes) {
-		t.Errorf("inbox.json was overwritten on partial\n have: %s\n want: %s", got, inboxBytes)
-	}
-	got, err = os.ReadFile(unrepliedPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(got) != string(unrepliedBytes) {
-		t.Errorf("unreplied.json was overwritten on partial\n have: %s\n want: %s", got, unrepliedBytes)
+	if string(got) != string(seeded) {
+		t.Errorf("unreplied.json was overwritten on partial\n have: %s\n want: %s", got, seeded)
 	}
 }
+
+// TestUnrepliedWriter_ReplacesCompleteBoard proves the guard is a filter, not an off switch.
+// Without this case, swapping the fix for `if true { return }` would still pass the skip test
+// and ship a regression worse than the one being fixed: files silently never written again.
+func TestUnrepliedWriter_ReplacesCompleteBoard(t *testing.T) {
+	srv := partialBoardServer(t)
+	defer srv.Close()
+
+	tracker := trackerAfterCompleteRefresh(t, srv)
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "unreplied.json")
+	seeded := []byte(`{"seeded":"stale"}`)
+	if err := os.WriteFile(path, seeded, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	unrepliedWriter(path, tracker)()
+
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) == string(seeded) {
+		t.Errorf("unreplied.json was NOT replaced after a complete refresh; the guard swallows the happy path")
+	}
+}
+
+// inboxWriter is not covered by a machine test here. The guard is two functions up, identical
+// in shape to unrepliedWriter's and consulting the same Snapshot flag. Exercising it end-to-end
+// would require wiring a real *store.Store, *poller.Poller, *pipeline.Provider and
+// *overlap.Watcher so that source.entries() both reaches past its own early-returns AND produces
+// entries worth writing; without that last part, the unfixed writer would see ok=false and
+// return anyway, giving a false green. That wiring runs well past the 20-line budget set for
+// this PR, so the inbox guard is covered by reading the diff against unrepliedWriter's and
+// noted here on purpose, rather than left under a panic that was proving nothing.
