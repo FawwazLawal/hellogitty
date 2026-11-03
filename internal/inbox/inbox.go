@@ -56,6 +56,28 @@ type Entry struct {
 	AuthorAssociation string     `json:"author_association,omitempty"`
 	FirstSeenAt       *time.Time `json:"first_seen_at,omitempty"`
 	AgeHours          float64    `json:"age_hours,omitempty"`
+
+	// Move is the item's own whose-move-is-it answer ("you", "them", "done"), for every entry
+	// built from a work.Item. Empty on entries that have no Item behind them (watched_issue,
+	// new_issue, issue_overlap, issue_similar, pr_cross_reference, issue_comment_reply): guessing
+	// Move from the other fields would be a derived answer standing in for a measured one.
+	Move string `json:"move,omitempty"`
+
+	// Replied is set only on entries built from a review-thread activity. true means the newest
+	// comment in that thread is ours; false means the maintainer has the last word. It is a
+	// pointer because `omitempty` on a plain bool omits false — and false is the one value a
+	// drain reader needs most. Absent means this entry did not come from a review thread; the
+	// caller should look at Move instead.
+	Replied *bool `json:"replied,omitempty"`
+
+	// ThreadURL is the review thread's permalink, set together with Replied and never on its own.
+	// Reading one without the other would be a half-answer about a different URL than the entry's.
+	ThreadURL string `json:"thread_url,omitempty"`
+
+	// No thread_resolved field is shipped on purpose: fetch.go:489 drops resolved review threads
+	// before Thread is ever built, so a field derived from this data would be a constant false — a
+	// check that cannot go red. Resolved threads are not available here; they could be, by widening
+	// Item.Threads's eight consumers across the product, and that is a separate change.
 }
 
 const SchemaVersion = 2
@@ -163,6 +185,9 @@ func sortEntries(out []Entry) {
 
 func prEntries(it work.Item, login string, seen FirstSeen) []Entry {
 	base := "hg-" + slug(it.Repo) + "-" + strconv.Itoa(it.Number) + "-"
+	// entry carries the item's whose-move answer onto every pr_* entry it builds — merged, closed,
+	// changes-requested, ci-red, conflict and the per-activity rows below. The closure sees it
+	// directly so no caller has to remember.
 	entry := func(id, kind, url, actor string, at time.Time, summary string) Entry {
 		if url == "" {
 			url = it.URL
@@ -170,7 +195,7 @@ func prEntries(it work.Item, login string, seen FirstSeen) []Entry {
 		if at.IsZero() {
 			at = seen(base + id)
 		}
-		return Entry{ID: base + id, Kind: kind, Repo: it.Repo, Number: it.Number, URL: url, Actor: actor, OccurredAt: at.UTC(), Summary: summary}
+		return Entry{ID: base + id, Kind: kind, Repo: it.Repo, Number: it.Number, URL: url, Actor: actor, OccurredAt: at.UTC(), Summary: summary, Move: it.Move}
 	}
 	var out []Entry
 	switch it.State {
@@ -222,6 +247,14 @@ func prEntries(it work.Item, login string, seen FirstSeen) []Entry {
 		e.ReviewState = a.Review
 		e.Path = a.Path
 		e.AuthorAssociation = a.AuthorAssociation
+		// Replied and ThreadURL ride together: either both set, or neither. recent() leaves
+		// a.Replied nil for issue-comment and review-body activities, so those entries omit the
+		// field pair and the drain reader looks at Move instead.
+		if a.Replied != nil {
+			replied := *a.Replied
+			e.Replied = &replied
+			e.ThreadURL = a.URL
+		}
 		out = append(out, e)
 	}
 
@@ -322,7 +355,7 @@ func botEntry(it work.Item) (Entry, bool) {
 		when = it.UpdatedAt
 	}
 	return Entry{ID: "hg-" + slug(it.Repo) + "-" + strconv.Itoa(it.Number) + "-bot-" + newest.id, Kind: KindBot, Repo: it.Repo,
-		Number: it.Number, URL: it.URL, Actor: newest.bot, OccurredAt: when.UTC(), Summary: summary}, true
+		Number: it.Number, URL: it.URL, Actor: newest.bot, OccurredAt: when.UTC(), Summary: summary, Move: it.Move}, true
 }
 
 func humanThreads(ts []work.Thread) int {
@@ -414,7 +447,7 @@ func labelEntries(it work.Item, seen FirstSeen) []Entry {
 			summary += " (now closed without merging)"
 		}
 		out = append(out, Entry{ID: id, Kind: KindLabel, Repo: it.Repo, Number: it.Number, URL: it.URL, Actor: ev.Actor,
-			OccurredAt: when.UTC(), Summary: summary, Priority: "high"})
+			OccurredAt: when.UTC(), Summary: summary, Priority: "high", Move: it.Move})
 	}
 	return out
 }
@@ -570,7 +603,7 @@ func issueEntry(it work.Item, login string, seen FirstSeen) (Entry, bool) {
 		at = seen(id)
 	}
 	e := Entry{ID: id, Kind: KindIssue, Repo: it.Repo, Number: it.Number, URL: url, Actor: it.Last.Author,
-		OccurredAt: at.UTC(), Summary: summary}
+		OccurredAt: at.UTC(), Summary: summary, Move: it.Move}
 	e.Body = it.Last.Body
 	e.AuthorAssociation = it.Last.AuthorAssociation
 	return e, true

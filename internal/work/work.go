@@ -71,6 +71,12 @@ type Activity struct {
 	Path string
 	// Bot marks an inline comment from a review bot; such threads still block a merge.
 	Bot bool
+	// Replied is set only for activities that came from a review thread. true means the newest
+	// comment in that thread is yours; false means the other side has the last word. It is a
+	// pointer because nil is meaningful: a nil Replied marks an activity that did NOT come from a
+	// review thread (an issue comment, a review body), where "whose move is it" is answered by the
+	// item's own Move instead.
+	Replied *bool
 }
 
 // Item is one pull request or issue, with a plain-language status.
