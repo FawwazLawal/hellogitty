@@ -426,3 +426,138 @@ func TestNewIssuesOneEntryPerRepository(t *testing.T) {
 		t.Errorf("golang: %q", e.Summary)
 	}
 }
+
+// TestBotEntryWhoseMove asserts the five-way contract botEntry must satisfy once pr_bot entries
+// carry replied/thread_url: a bot entry folds every finding on a pull request into one row, so the
+// flag it carries has to speak for all of them. The rules are strict on purpose — a non-thread
+// finding (a BotChanges review, or an "actionable comments posted" tally that was never a thread)
+// is a finding you have demonstrably NOT answered inline, so it drags Replied to false even when
+// every thread beside it is answered. If this test ever reads as true for case (d), the pr_bot row
+// is lying to the drain.
+func TestBotEntryWhoseMove(t *testing.T) {
+	review := t0.Add(-time.Hour)
+	base := func() work.Item {
+		return work.Item{PR: true, Role: work.RoleAuthor, State: "OPEN", Repo: "o/r", Number: 42,
+			URL: "https://github.com/o/r/pull/42", LastCommitAt: tp(review.Add(-time.Hour))}
+	}
+
+	// (a) one unanswered bot thread → replied = false, thread_url = that thread's URL.
+	t.Run("one_unanswered_thread", func(t *testing.T) {
+		it := base()
+		it.Threads = []work.Thread{{Author: "coderabbitai", Bot: true, Path: "a.go", Body: "nit", At: review,
+			URL: "https://github.com/o/r/pull/42#discussion_r1", RepliedLast: false}}
+		e, ok := botEntry(it)
+		if !ok {
+			t.Fatal("entry expected")
+		}
+		if e.Replied == nil {
+			t.Fatalf("Replied = nil, want non-nil pointer to false")
+		}
+		if *e.Replied != false {
+			t.Errorf("*Replied = %v, want false", *e.Replied)
+		}
+		if e.ThreadURL != "https://github.com/o/r/pull/42#discussion_r1" {
+			t.Errorf("ThreadURL = %q, want the unanswered thread's URL", e.ThreadURL)
+		}
+	})
+
+	// (b) every bot thread answered, nothing else → replied = true.
+	t.Run("all_threads_answered", func(t *testing.T) {
+		it := base()
+		it.Threads = []work.Thread{
+			{Author: "coderabbitai", Bot: true, Body: "x", At: review, URL: "u#discussion_r1", RepliedLast: true},
+			{Author: "coderabbitai", Bot: true, Body: "y", At: review.Add(time.Minute), URL: "u#discussion_r2", RepliedLast: true},
+		}
+		e, ok := botEntry(it)
+		if !ok {
+			t.Fatal("entry expected")
+		}
+		if e.Replied == nil {
+			t.Fatalf("Replied = nil, want non-nil pointer to true")
+		}
+		if *e.Replied != true {
+			t.Errorf("*Replied = %v, want true", *e.Replied)
+		}
+		if e.ThreadURL != "u#discussion_r2" {
+			t.Errorf("ThreadURL = %q, want the newest thread's URL", e.ThreadURL)
+		}
+	})
+
+	// (c1) no thread findings — BotChanges only → replied absent, thread_url empty.
+	t.Run("no_threads_botchanges_only", func(t *testing.T) {
+		it := base()
+		it.BotChanges = []string{"policy-bot"}
+		e, ok := botEntry(it)
+		if !ok {
+			t.Fatal("entry expected")
+		}
+		if e.Replied != nil {
+			t.Errorf("Replied = %v, want nil (no thread findings)", e.Replied)
+		}
+		if e.ThreadURL != "" {
+			t.Errorf("ThreadURL = %q, want empty", e.ThreadURL)
+		}
+	})
+
+	// (c2) no thread findings — actionable review only → replied absent, thread_url empty.
+	t.Run("no_threads_actionable_only", func(t *testing.T) {
+		it := base()
+		it.BotReviews = []work.Activity{{Author: "coderabbitai", Bot: true, Review: "COMMENTED",
+			Body: "**Actionable comments posted: 2**", At: review, URL: "u#pullrequestreview-1"}}
+		e, ok := botEntry(it)
+		if !ok {
+			t.Fatal("entry expected")
+		}
+		if e.Replied != nil {
+			t.Errorf("Replied = %v, want nil (no thread findings)", e.Replied)
+		}
+		if e.ThreadURL != "" {
+			t.Errorf("ThreadURL = %q, want empty", e.ThreadURL)
+		}
+	})
+
+	// (d) mixed: one ANSWERED bot thread plus a BotChanges finding → replied = false. A non-thread
+	// finding is one we have not answered inline, so the entry cannot read as answered.
+	t.Run("mixed_answered_thread_plus_botchanges", func(t *testing.T) {
+		it := base()
+		it.Threads = []work.Thread{{Author: "coderabbitai", Bot: true, Body: "x", At: review,
+			URL: "u#discussion_r9", RepliedLast: true}}
+		it.BotChanges = []string{"policy-bot"}
+		e, ok := botEntry(it)
+		if !ok {
+			t.Fatal("entry expected")
+		}
+		if e.Replied == nil {
+			t.Fatalf("Replied = nil, want non-nil pointer to false (a non-thread finding sits beside the answered thread)")
+		}
+		if *e.Replied != false {
+			t.Errorf("*Replied = %v, want false", *e.Replied)
+		}
+		if e.ThreadURL != "u#discussion_r9" {
+			t.Errorf("ThreadURL = %q, want the answered thread's URL", e.ThreadURL)
+		}
+	})
+
+	// (e) two bot threads, the newest answered and the older not → replied = false, thread_url = the
+	// OLDER thread's URL. The value is about the thread that is still open, not the latest one.
+	t.Run("newest_answered_older_not", func(t *testing.T) {
+		it := base()
+		it.Threads = []work.Thread{
+			{Author: "coderabbitai", Bot: true, Body: "older", At: review, URL: "u#discussion_r_old", RepliedLast: false},
+			{Author: "coderabbitai", Bot: true, Body: "newer", At: review.Add(time.Hour), URL: "u#discussion_r_new", RepliedLast: true},
+		}
+		e, ok := botEntry(it)
+		if !ok {
+			t.Fatal("entry expected")
+		}
+		if e.Replied == nil {
+			t.Fatalf("Replied = nil, want non-nil pointer to false")
+		}
+		if *e.Replied != false {
+			t.Errorf("*Replied = %v, want false", *e.Replied)
+		}
+		if e.ThreadURL != "u#discussion_r_old" {
+			t.Errorf("ThreadURL = %q, want the older UNANSWERED thread's URL", e.ThreadURL)
+		}
+	})
+}

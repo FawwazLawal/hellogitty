@@ -296,6 +296,13 @@ var (
 type finding struct {
 	bot, id, what string
 	at            time.Time
+	// thread is true when this finding came from an unresolved review thread, in which case url is
+	// that thread's permalink and repliedLast says whether our comment is the newest in it. For
+	// non-thread findings (a BotChanges standing review, an "actionable comments posted" tally),
+	// thread is false and repliedLast is ignored — see botEntry for how that forces Replied.
+	thread      bool
+	url         string
+	repliedLast bool
 }
 
 // botEntry reports what bots still ask to be fixed on an open pull request you opened, as one entry
@@ -309,6 +316,11 @@ type finding struct {
 // Summaries, coverage reports, "LGTM" and canned prompts never match any of these. Failing checks,
 // including a CLA check, already have their own ci-red entry. The id carries the newest finding, so
 // a re-review replaces the entry instead of adding one, and the entry goes when nothing is left.
+//
+// Replied/ThreadURL ride with the entry only when at least one finding came from a review thread.
+// A non-thread finding beside an answered thread — a BotChanges standing review, or an "actionable
+// comments posted" tally — forces Replied to false: a finding with no thread is one we have
+// demonstrably not answered inline, so the entry can never read as answered.
 func botEntry(it work.Item) (Entry, bool) {
 	if !it.PR || it.Role != work.RoleAuthor || it.State != "OPEN" {
 		return Entry{}, false
@@ -324,10 +336,11 @@ func botEntry(it work.Item) (Entry, bool) {
 		if t.Path != "" {
 			what = "Inline on " + filepath.Base(t.Path) + ": " + what
 		}
-		fs = append(fs, finding{t.Author, eventID(t.URL), what, t.At})
+		fs = append(fs, finding{bot: t.Author, id: eventID(t.URL), what: what, at: t.At,
+			thread: true, url: t.URL, repliedLast: t.RepliedLast})
 	}
 	for _, b := range it.BotChanges {
-		fs = append(fs, finding{b, "changes-" + strings.ToLower(b), "@" + b + " requested changes", time.Time{}})
+		fs = append(fs, finding{bot: b, id: "changes-" + strings.ToLower(b), what: "@" + b + " requested changes"})
 	}
 	latest := map[string]work.Activity{}
 	for _, r := range it.BotReviews {
@@ -338,7 +351,8 @@ func botEntry(it work.Item) (Entry, bool) {
 		if m == nil || m[1] == "0" || threads[bot] > 0 || (it.LastCommitAt != nil && it.LastCommitAt.After(r.At)) {
 			continue
 		}
-		fs = append(fs, finding{bot, eventID(r.URL), "@" + bot + ": " + m[1] + " actionable comments posted", r.At})
+		fs = append(fs, finding{bot: bot, id: eventID(r.URL),
+			what: "@" + bot + ": " + m[1] + " actionable comments posted", at: r.At})
 	}
 	if len(fs) == 0 {
 		return Entry{}, false
@@ -354,8 +368,36 @@ func botEntry(it work.Item) (Entry, bool) {
 	if when.IsZero() {
 		when = it.UpdatedAt
 	}
-	return Entry{ID: "hg-" + slug(it.Repo) + "-" + strconv.Itoa(it.Number) + "-bot-" + newest.id, Kind: KindBot, Repo: it.Repo,
-		Number: it.Number, URL: it.URL, Actor: newest.bot, OccurredAt: when.UTC(), Summary: summary, Move: it.Move}, true
+	e := Entry{ID: "hg-" + slug(it.Repo) + "-" + strconv.Itoa(it.Number) + "-bot-" + newest.id, Kind: KindBot, Repo: it.Repo,
+		Number: it.Number, URL: it.URL, Actor: newest.bot, OccurredAt: when.UTC(), Summary: summary, Move: it.Move}
+	// Replied/ThreadURL ride together, or neither. fs is sorted newest first above, so the first
+	// thread finding we see is the newest and the first unanswered one is the newest-unanswered.
+	var newestThread, newestUnanswered finding
+	var hasThread, anyUnanswered, hasNonThread bool
+	for _, f := range fs {
+		if !f.thread {
+			hasNonThread = true
+			continue
+		}
+		if !hasThread {
+			newestThread = f
+			hasThread = true
+		}
+		if !f.repliedLast && !anyUnanswered {
+			newestUnanswered = f
+			anyUnanswered = true
+		}
+	}
+	if hasThread {
+		replied := !anyUnanswered && !hasNonThread
+		e.Replied = &replied
+		if anyUnanswered {
+			e.ThreadURL = newestUnanswered.url
+		} else {
+			e.ThreadURL = newestThread.url
+		}
+	}
+	return e, true
 }
 
 func humanThreads(ts []work.Thread) int {
