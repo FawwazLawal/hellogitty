@@ -5,6 +5,34 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (35) · Black Bombay (baby) · 2026-11-03
+
+Tag `v0.2.35`.
+
+- **A failed refresh no longer overwrites the inbox file.** When GitHub refused part
+  of a refresh, the board on screen was already known to be new and incomplete — but
+  the inbox file and `unreplied.json` were written from it anyway. A reader got a
+  shorter list with nothing on it to say the list was short, and the entries that
+  dropped out looked resolved. Both writers now stop and keep the last good contents,
+  saying in the log why they wrote nothing. The previous release taught the board to
+  tell "new and incomplete" from "old but whole"; this is the half that stops the
+  distinction being thrown away on the way to disk.
+- **Every inbox entry says whose move it is.** A new `move` field on each entry:
+  `you` when the entry is waiting on you, `them` when the other side has it, `done`
+  when it is finished. It is the same answer the work board already computed, so
+  nothing has to re-derive it from a summary line. Entries that are nobody's move by
+  nature — a cross-reference, an overlap report, a new-issue digest — carry no `move`
+  at all rather than a guessed one. Review-thread entries also gained `replied` and
+  `thread_url`, and comments and reviews now carry `author_association`.
+- **A bot's findings say whether you have answered them.** `pr_bot` is one entry for
+  a whole pull request, so its `replied` has to speak for every finding at once: it
+  is true only when every finding came from a review thread and your comment is the
+  newest in all of them. One unanswered thread, or a finding with no thread to answer
+  in — a standing changes-requested review, an "actionable comments posted" tally —
+  and it reads false. `thread_url` points at the newest thread still waiting on you.
+  Absent, as before, means nothing here came from a review thread and `move` is the
+  field to read.
+
 ## v0.2.0 (34) · Black Bombay (baby) · 2026-10-31
 
 Tag `v0.2.34`.
