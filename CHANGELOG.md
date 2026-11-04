@@ -5,6 +5,45 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (36) · Black Bombay (baby) · 2026-11-03
+
+Tag `v0.2.36`.
+
+- **The inbox file's interval field says what it measures.** It was called
+  `poll_interval_minutes` and carried the work-board refresh cadence, five minutes,
+  while the snapshot file used the same name for the repository poll, sixty. Both
+  were honest about their own loop and the shared name was wrong about one of them —
+  and wrong in the direction that makes the data look fresher than it is. The inbox
+  field is now `refresh_interval_minutes`, which is the loop that actually writes
+  the file, and `schema_version` moves to 3 so a reader can tell which it has.
+- **Your own finished work leaves the inbox.** More than half the file had become
+  merges and closures in your own repositories — work you did yourself, with nothing
+  left for anyone to do, re-read on every pass. Finished work in *other* people's
+  repositories stays: a pull request of yours merged upstream is the outcome worth
+  knowing about, not noise. The filter is the narrow one, finished *and* yours, and
+  the matching is case-insensitive on the owner because that is how a repository name
+  can differ from the login that owns it.
+- **A new `/health` endpoint answers whether the service is actually working.** The
+  dashboard renders from the last good data, so a page that loads proves nothing
+  about the loops behind it; twice the only way to find a half-dead service was to
+  read the log and compare timestamps by hand. `GET /health` returns 200 when every
+  check passes and 503 when any one fails — the status code alone is a usable answer
+  — with a line per loop and per output file in the body.
+
+  Each loop is judged against its own cadence rather than one shared timeout: stale
+  past two and a half times its own interval, so a missed tick is tolerated and two
+  in a row are not. A single global threshold would have called a dead five-minute
+  loop healthy for an hour. A file counts as current only when its last write
+  actually put content on disk — a write skipped because the board was incomplete,
+  or one that errored, reads false with the reason in words. A file the service was
+  never asked to maintain is left out of the list entirely rather than reported as
+  fine.
+
+  A first cycle still in flight is not a stopped loop, so a service that has only
+  just started is not reported as broken: on a long repository list the first pass
+  takes many minutes, and anything acting on a 503 would have restarted the process
+  and begun that pass again.
+
 ## v0.2.0 (35) · Black Bombay (baby) · 2026-11-03
 
 Tag `v0.2.35`.
