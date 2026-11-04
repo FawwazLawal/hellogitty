@@ -696,8 +696,35 @@ func TestHealthHonoursConfiguredPollInterval(t *testing.T) {
 	if !strings.Contains(body, `"interval_minutes":10`) {
 		t.Errorf("repo_poll interval: want 10 (the configured value), body=%s", body)
 	}
-	if !strings.Contains(body, `"stale":true`) {
-		t.Errorf("repo_poll should be stale: 40m old against a 10m cadence is 4 missed ticks")
+	if !strings.Contains(body, `"name":"repo_poll","interval_minutes":10,"last_success":"2026-11-04T00:20:00Z","age_minutes":40,"stale":true`) {
+		t.Errorf("repo_poll should be stale: 40m old against a 10m cadence is 4 missed ticks; body=%s", body)
+	}
+	if code != 503 {
+		t.Errorf("status: got %d, want 503", code)
+	}
+}
+
+// The same for the other loop, and it needs its own test: work_refresh's cadence is a constant in
+// the binary rather than a config value, so nothing stops someone writing 5 minutes here again and
+// leaving h.WorkRefresh unread. The inbox file already reports refresh_interval_minutes from that
+// constant, and two copies of one number is how a field name becomes a lie.
+func TestHealthHonoursConfiguredWorkRefresh(t *testing.T) {
+	now := time.Date(2026, 11, 4, 1, 0, 0, 0, time.UTC)
+	h := handler(fakeSource{
+		tel:   Telemetry{LastPoll: now.Add(-5 * time.Minute)},
+		board: &work.Board{FetchedAt: now.Add(-7 * time.Minute)},
+		writes: []WriteStatus{
+			{Name: "inbox.json", LastAttempt: now, LastSuccess: now, Outcome: "written", Detail: "25 entries"},
+		},
+	})
+	h.Now = func() time.Time { return now }
+	h.WorkRefresh = 2 * time.Minute
+
+	// 7 minutes against a 2-minute cadence is three missed ticks. Against the 5-minute default it
+	// would still be fresh, so a hardcoded 5 here reads healthy on a loop that has stopped.
+	code, body := get(t, h, "/health")
+	if !strings.Contains(body, `"name":"work_refresh","interval_minutes":2,"last_success":"2026-11-04T00:53:00Z","age_minutes":7,"stale":true`) {
+		t.Errorf("work_refresh should report a 2-minute cadence and read stale; body=%s", body)
 	}
 	if code != 503 {
 		t.Errorf("status: got %d, want 503", code)
