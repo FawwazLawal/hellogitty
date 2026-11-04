@@ -600,3 +600,54 @@ func TestWrittenFileUsesRefreshIntervalKey(t *testing.T) {
 		t.Errorf("schema_version = %v, want 3 (a key changed name)", m["schema_version"])
 	}
 }
+
+// TestBuildDropsOurOwnFinishedWork pins the one filter Build applies at the end: an entry whose
+// Move is "done" AND whose repo is the viewer's own goes, because a pull request the owner merged
+// himself is not news. Every other combination stays: our own work still in progress is work, and
+// upstream finishing our work (the outcome this product exists to surface) is news. The own-repo
+// cases use a mixed-case owner so the comparison has to be case-insensitive — GitHub's owner
+// casing is not always the viewer login's casing.
+func TestBuildDropsOurOwnFinishedWork(t *testing.T) {
+	mergedAt := t0.Add(-time.Hour)
+	b := &work.Board{Login: "fawwazlawal", Sent: []work.Item{
+		// (a) own repo + done → DROPPED. Mixed-case owner.
+		{PR: true, Role: work.RoleAuthor, Repo: "FawwazLawal/hellogitty", Number: 100, State: "MERGED",
+			URL: "https://github.com/FawwazLawal/hellogitty/pull/100", Move: work.MoveDone,
+			MergedBy: "fawwazlawal", ClosedAt: &mergedAt, UpdatedAt: mergedAt},
+		// (b) own repo + not done → KEPT. Still mixed-case.
+		{PR: true, Role: work.RoleAuthor, Repo: "FawwazLawal/hellogitty", Number: 101, State: "OPEN",
+			URL: "https://github.com/FawwazLawal/hellogitty/pull/101", Move: work.MoveYou,
+			ReviewDecision: "CHANGES_REQUESTED", ChangesBy: []string{"maint"}, ChangesAt: tp(mergedAt)},
+		// (c) upstream + done → KEPT (a maintainer merged our work).
+		{PR: true, Role: work.RoleAuthor, Repo: "upstream/project", Number: 200, State: "MERGED",
+			URL: "https://github.com/upstream/project/pull/200", Move: work.MoveDone,
+			MergedBy: "upstream-maint", ClosedAt: &mergedAt, UpdatedAt: mergedAt},
+		// (d) upstream + not done → KEPT.
+		{PR: true, Role: work.RoleAuthor, Repo: "upstream/project", Number: 201, State: "OPEN",
+			URL: "https://github.com/upstream/project/pull/201", Move: work.MoveYou,
+			ReviewDecision: "CHANGES_REQUESTED", ChangesBy: []string{"them"}, ChangesAt: tp(mergedAt)},
+	}}
+	seen := func(string) time.Time { return mergedAt }
+	entries := Build(b, nil, seen)
+
+	have := func(repo string, number int) bool {
+		for _, e := range entries {
+			if strings.EqualFold(e.Repo, repo) && e.Number == number {
+				return true
+			}
+		}
+		return false
+	}
+	if have("FawwazLawal/hellogitty", 100) {
+		t.Errorf("(a) own-repo done entry must be DROPPED — the owner merged his own PR, that is not news")
+	}
+	if !have("FawwazLawal/hellogitty", 101) {
+		t.Errorf("(b) own-repo not-done entry must be KEPT — unanswered work on our PR is still unanswered")
+	}
+	if !have("upstream/project", 200) {
+		t.Errorf("(c) upstream done entry must be KEPT — a maintainer merging our work is the outcome, not noise")
+	}
+	if !have("upstream/project", 201) {
+		t.Errorf("(d) upstream not-done entry must be KEPT")
+	}
+}
