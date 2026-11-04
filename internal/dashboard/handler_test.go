@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -26,6 +27,7 @@ type fakeSource struct {
 	board       *work.Board
 	workErr     string
 	workPartial bool
+	writes      []WriteStatus
 }
 
 func (f fakeSource) Reports() ([]store.RepoReport, error) { return f.reports, nil }
@@ -33,6 +35,7 @@ func (f fakeSource) Telemetry() Telemetry                 { return f.tel }
 func (f fakeSource) Pipeline() (*pipeline.State, error)   { return f.pipe, nil }
 func (f fakeSource) Work() (*work.Board, string, bool)    { return f.board, f.workErr, f.workPartial }
 func (f fakeSource) Security() security.Feed              { return security.Feed{} }
+func (f fakeSource) WriteStatus() []WriteStatus           { return f.writes }
 
 // pipeFixture is a pipeline with rocket two stages in and lullaby one stage in.
 func pipeFixture(t *testing.T) *pipeline.State {
@@ -438,5 +441,265 @@ func TestPipelinePageActionsAndFilters(t *testing.T) {
 		if !strings.Contains(html, want) {
 			t.Errorf("missing %q", want)
 		}
+	}
+}
+
+// TestHealthEndpoint exercises the /health contract (#208): per-loop staleness at 2.5x cadence,
+// write outcomes that reflect what actually hit disk, and a 503 whenever any check fails.
+func TestHealthEndpoint(t *testing.T) {
+	now := time.Date(2026, 11, 4, 1, 0, 0, 0, time.UTC)
+	// A board fetched 2 minutes ago is fresh for the 5-minute work_refresh loop.
+	board := &work.Board{FetchedAt: now.Add(-2 * time.Minute)}
+	// A poll 29 minutes ago is fresh for the 60-minute repo_poll loop.
+	polled := now.Add(-29 * time.Minute)
+
+	cases := []struct {
+		name       string
+		src        fakeSource
+		wantCode   int
+		wantStatus string
+		// Substrings the JSON body must contain.
+		wantHas []string
+		// Substrings the JSON body must NOT contain.
+		wantHasNot []string
+		// Loops expected, keyed by name — maps to {stale: bool, partial *bool}. Nil partial means
+		// the key must be absent (repo_poll never emits partial). false/true checks the value.
+		loopStale   map[string]bool
+		loopPartial map[string]*bool
+		// Files expected by name → current flag. Absent means must NOT appear in files[].
+		filesCurrent map[string]bool
+		filesAbsent  []string
+	}{
+		{
+			name: "all_green_200",
+			src: fakeSource{
+				tel:   Telemetry{LastPoll: polled},
+				board: board,
+				writes: []WriteStatus{
+					{Name: "inbox.json", LastAttempt: now.Add(-2 * time.Minute), LastSuccess: now.Add(-2 * time.Minute), Outcome: "written", Detail: "25 entries"},
+					{Name: "unreplied.json", LastAttempt: now.Add(-2 * time.Minute), LastSuccess: now.Add(-2 * time.Minute), Outcome: "written", Detail: "6 PRs, 9 threads"},
+				},
+			},
+			wantCode:    200,
+			wantStatus:  "ok",
+			loopStale:   map[string]bool{"repo_poll": false, "work_refresh": false},
+			loopPartial: map[string]*bool{"work_refresh": ptrBool(false)},
+			filesCurrent: map[string]bool{
+				"inbox.json":     true,
+				"unreplied.json": true,
+			},
+			wantHas: []string{`"detail":"25 entries"`, `"detail":"6 PRs, 9 threads"`},
+		},
+		{
+			// (a) kills S1 — work_refresh is 20m old, repo_poll is fine. A shared threshold
+			// would miss this.
+			name: "work_refresh_stale_but_repo_poll_ok_503",
+			src: fakeSource{
+				tel:   Telemetry{LastPoll: polled},
+				board: &work.Board{FetchedAt: now.Add(-20 * time.Minute)},
+				writes: []WriteStatus{
+					{Name: "inbox.json", LastAttempt: now.Add(-20 * time.Minute), LastSuccess: now.Add(-20 * time.Minute), Outcome: "written", Detail: "25 entries"},
+					{Name: "unreplied.json", LastAttempt: now.Add(-20 * time.Minute), LastSuccess: now.Add(-20 * time.Minute), Outcome: "written", Detail: "6 PRs, 9 threads"},
+				},
+			},
+			wantCode:    503,
+			wantStatus:  "degraded",
+			loopStale:   map[string]bool{"repo_poll": false, "work_refresh": true},
+			loopPartial: map[string]*bool{"work_refresh": ptrBool(false)},
+		},
+		{
+			// (b) kills S2 — poll is 3h old (>2h30m), board is 15m old (>12m30s), both files
+			// errored. Fully degraded; no 200 allowed.
+			name: "fully_degraded_503",
+			src: fakeSource{
+				tel:   Telemetry{LastPoll: now.Add(-3 * time.Hour)},
+				board: &work.Board{FetchedAt: now.Add(-15 * time.Minute)},
+				writes: []WriteStatus{
+					{Name: "inbox.json", LastAttempt: now.Add(-15 * time.Minute), LastSuccess: now.Add(-3 * time.Hour), Outcome: "error: disk full", Detail: "disk full"},
+					{Name: "unreplied.json", LastAttempt: now.Add(-15 * time.Minute), LastSuccess: now.Add(-3 * time.Hour), Outcome: "error: disk full", Detail: "disk full"},
+				},
+			},
+			wantCode:   503,
+			wantStatus: "degraded",
+			loopStale:  map[string]bool{"repo_poll": true, "work_refresh": true},
+			filesCurrent: map[string]bool{
+				"inbox.json":     false,
+				"unreplied.json": false,
+			},
+			wantHas: []string{`"outcome":"error: disk full"`},
+		},
+		{
+			// (c) kills S3 — inbox was skipped on a partial board. Must report current:false
+			// even though the file on disk is recent.
+			name: "inbox_skipped_on_partial_503",
+			src: fakeSource{
+				tel:         Telemetry{LastPoll: polled},
+				board:       board,
+				workPartial: true,
+				writes: []WriteStatus{
+					{Name: "inbox.json", LastAttempt: now.Add(-2 * time.Minute), LastSuccess: now.Add(-10 * time.Minute), Outcome: "skipped: partial work board", Detail: ""},
+					{Name: "unreplied.json", LastAttempt: now.Add(-2 * time.Minute), LastSuccess: now.Add(-10 * time.Minute), Outcome: "skipped: partial work board", Detail: ""},
+				},
+			},
+			wantCode:    503,
+			wantStatus:  "degraded",
+			loopPartial: map[string]*bool{"work_refresh": ptrBool(true)},
+			filesCurrent: map[string]bool{
+				"inbox.json":     false,
+				"unreplied.json": false,
+			},
+			wantHas: []string{`"outcome":"skipped: partial work board"`},
+		},
+		{
+			// A file with no path configured is left out of the files array entirely.
+			name: "unconfigured_file_absent",
+			src: fakeSource{
+				tel:   Telemetry{LastPoll: polled},
+				board: board,
+				writes: []WriteStatus{
+					{Name: "inbox.json", LastAttempt: now.Add(-2 * time.Minute), LastSuccess: now.Add(-2 * time.Minute), Outcome: "written", Detail: "25 entries"},
+				},
+			},
+			wantCode:   200,
+			wantStatus: "ok",
+			filesCurrent: map[string]bool{
+				"inbox.json": true,
+			},
+			filesAbsent: []string{"unreplied.json"},
+			wantHasNot:  []string{`"name":"unreplied.json"`},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			h := handler(tc.src)
+			h.Now = func() time.Time { return now }
+			code, body := get(t, h, "/health")
+			if code != tc.wantCode {
+				t.Errorf("status: got %d, want %d; body=%s", code, tc.wantCode, body)
+			}
+			var resp struct {
+				Status    string `json:"status"`
+				CheckedAt string `json:"checked_at"`
+				Loops     []struct {
+					Name     string `json:"name"`
+					Interval int    `json:"interval_minutes"`
+					Age      int    `json:"age_minutes"`
+					Stale    bool   `json:"stale"`
+					Errors   int    `json:"errors"`
+					Partial  *bool  `json:"partial,omitempty"`
+				} `json:"loops"`
+				Files []struct {
+					Name    string `json:"name"`
+					Outcome string `json:"outcome"`
+					Detail  string `json:"detail"`
+					Current bool   `json:"current"`
+				} `json:"files"`
+			}
+			if err := json.Unmarshal([]byte(body), &resp); err != nil {
+				t.Fatalf("unmarshal: %v; body=%s", err, body)
+			}
+			if resp.Status != tc.wantStatus {
+				t.Errorf("status field: got %q, want %q", resp.Status, tc.wantStatus)
+			}
+			for name, wantStale := range tc.loopStale {
+				var got *bool
+				for _, l := range resp.Loops {
+					if l.Name == name {
+						s := l.Stale
+						got = &s
+						break
+					}
+				}
+				if got == nil {
+					t.Errorf("loop %q not in response", name)
+					continue
+				}
+				if *got != wantStale {
+					t.Errorf("loop %q stale: got %v, want %v", name, *got, wantStale)
+				}
+			}
+			for name, wantPartial := range tc.loopPartial {
+				var found bool
+				for _, l := range resp.Loops {
+					if l.Name == name {
+						found = true
+						if wantPartial == nil {
+							if l.Partial != nil {
+								t.Errorf("loop %q should have no partial field, got %v", name, *l.Partial)
+							}
+						} else {
+							if l.Partial == nil {
+								t.Errorf("loop %q missing partial field", name)
+							} else if *l.Partial != *wantPartial {
+								t.Errorf("loop %q partial: got %v, want %v", name, *l.Partial, *wantPartial)
+							}
+						}
+					}
+				}
+				if !found {
+					t.Errorf("loop %q not in response", name)
+				}
+			}
+			for name, wantCurrent := range tc.filesCurrent {
+				var found bool
+				for _, f := range resp.Files {
+					if f.Name == name {
+						found = true
+						if f.Current != wantCurrent {
+							t.Errorf("file %q current: got %v, want %v (outcome=%q)", name, f.Current, wantCurrent, f.Outcome)
+						}
+					}
+				}
+				if !found {
+					t.Errorf("file %q missing from files[]", name)
+				}
+			}
+			for _, name := range tc.filesAbsent {
+				for _, f := range resp.Files {
+					if f.Name == name {
+						t.Errorf("file %q should be absent (no path configured)", name)
+					}
+				}
+			}
+			for _, want := range tc.wantHas {
+				if !strings.Contains(body, want) {
+					t.Errorf("body missing %q; body=%s", want, body)
+				}
+			}
+			for _, bad := range tc.wantHasNot {
+				if strings.Contains(body, bad) {
+					t.Errorf("body contains %q but should not; body=%s", bad, body)
+				}
+			}
+		})
+	}
+}
+
+func ptrBool(b bool) *bool { return &b }
+
+// A run started with -interval 10m polls every 10 minutes, so a poll 40 minutes old is four
+// missed ticks and must read stale. Handler.PollInterval already carries the real value.
+func TestHealthHonoursConfiguredPollInterval(t *testing.T) {
+	now := time.Date(2026, 11, 4, 1, 0, 0, 0, time.UTC)
+	h := handler(fakeSource{
+		tel:   Telemetry{LastPoll: now.Add(-40 * time.Minute)},
+		board: &work.Board{FetchedAt: now.Add(-2 * time.Minute)},
+		writes: []WriteStatus{
+			{Name: "inbox.json", LastAttempt: now, LastSuccess: now, Outcome: "written", Detail: "25 entries"},
+		},
+	})
+	h.Now = func() time.Time { return now }
+	h.PollInterval = 10 * time.Minute
+
+	code, body := get(t, h, "/health")
+	if !strings.Contains(body, `"interval_minutes":10`) {
+		t.Errorf("repo_poll interval: want 10 (the configured value), body=%s", body)
+	}
+	if !strings.Contains(body, `"stale":true`) {
+		t.Errorf("repo_poll should be stale: 40m old against a 10m cadence is 4 missed ticks")
+	}
+	if code != 503 {
+		t.Errorf("status: got %d, want 503", code)
 	}
 }

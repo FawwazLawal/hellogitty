@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -67,12 +68,27 @@ type PR struct {
 // Source supplies everything the page shows. Reports are already filtered to tracked repos.
 // Pipeline returns nil, nil when no pipeline command is configured. Work returns the last good
 // work board (nil before the first fetch) and the error from the latest fetch, if it failed.
+// WriteStatus returns one record per CONFIGURED output file — a file with no path configured is
+// left out, because absence is the honest answer for something the service was never asked to
+// maintain.
 type Source interface {
 	Reports() ([]store.RepoReport, error)
 	Telemetry() Telemetry
 	Pipeline() (*pipeline.State, error)
 	Work() (*work.Board, string, bool)
 	Security() security.Feed
+	WriteStatus() []WriteStatus
+}
+
+// WriteStatus is one output file's most recent write attempt. Outcome is one of the plain-words
+// phrases the /health endpoint returns ("written", "skipped: partial work board", "error: <msg>",
+// "never written"); current is derived from it (true iff outcome == "written"), not stored.
+type WriteStatus struct {
+	Name        string
+	LastAttempt time.Time
+	LastSuccess time.Time
+	Outcome     string
+	Detail      string
 }
 
 type Handler struct {
@@ -80,6 +96,9 @@ type Handler struct {
 	SnapshotPath string
 	Source       Source
 	PollInterval time.Duration
+	// WorkRefresh is the cadence of the work-board loop. /health reads it to judge work_refresh
+	// staleness against its own interval, not a shared threshold.
+	WorkRefresh time.Duration
 	Version      string
 	// Baby marks a codename that has not graduated yet; the page sets it apart from the label.
 	Baby    bool
@@ -544,6 +563,114 @@ var funcs = template.FuncMap{
 	},
 }
 
+// serveHealth answers GET /health with the result of every check, and an HTTP status code that
+// tells pass from fail (200 ok, 503 degraded) without needing to parse the body. See issue #208.
+//
+// Each loop is judged against its OWN cadence (2.5x its interval), never a shared threshold: a
+// single global timeout would call a dead 5-minute loop healthy for an hour. Intervals come from
+// h.PollInterval and h.WorkRefresh, which the binary sets from the same constants that drive the
+// loops themselves, so there is one source for each number. A file is current when its last write
+// attempt actually put content on disk — skips, errors, and never-attempted all read as
+// current:false, each with the plain-words reason in `outcome`. A file with no path configured is
+// omitted from the array entirely, since a check that cannot fail is not a check. tel.Errors is
+// surfaced per loop but does not gate `status`: a single repository failing to poll should not
+// take the whole service down, and a number that is surfaced and never acted on is how a check
+// quietly stops being a check — what we act on is the loop still turning.
+func (h *Handler) serveHealth(w http.ResponseWriter, r *http.Request) {
+	now := h.now()
+	tel := h.Source.Telemetry()
+	board, _, partial := h.Source.Work()
+
+	type loopOut struct {
+		Name     string `json:"name"`
+		Interval int    `json:"interval_minutes"`
+		Last     string `json:"last_success,omitempty"`
+		Age      int    `json:"age_minutes"`
+		Stale    bool   `json:"stale"`
+		Errors   int    `json:"errors"`
+		Partial  *bool  `json:"partial,omitempty"`
+	}
+	type fileOut struct {
+		Name        string `json:"name"`
+		LastAttempt string `json:"last_attempt,omitempty"`
+		LastSuccess string `json:"last_success,omitempty"`
+		Outcome     string `json:"outcome"`
+		Detail      string `json:"detail"`
+		Current     bool   `json:"current"`
+	}
+
+	// A zero-value Handler.PollInterval or WorkRefresh means the field was not set by the
+	// caller — a test, or a binary that forgot to wire it. Falling back to the real defaults
+	// (60m and 5m) is defensible: those are the production values, and the alternative is
+	// "stale past zero" which would red every green run. A misconfigured binary would show
+	// age_minutes rising past 2h30m / 12m30s on screen just the same.
+	repoInterval := h.PollInterval
+	if repoInterval <= 0 {
+		repoInterval = 60 * time.Minute
+	}
+	workInterval := h.WorkRefresh
+	if workInterval <= 0 {
+		workInterval = 5 * time.Minute
+	}
+
+	repoLoop := loopOut{Name: "repo_poll", Interval: int(repoInterval / time.Minute), Errors: len(tel.Errors)}
+	if !tel.LastPoll.IsZero() {
+		repoLoop.Last = tel.LastPoll.UTC().Format(time.RFC3339)
+		repoLoop.Age = int(now.Sub(tel.LastPoll) / time.Minute)
+		repoLoop.Stale = now.Sub(tel.LastPoll) > 5*repoInterval/2
+	} else {
+		repoLoop.Stale = true
+	}
+
+	workLoop := loopOut{Name: "work_refresh", Interval: int(workInterval / time.Minute)}
+	workLoop.Partial = &partial
+	if board != nil && !board.FetchedAt.IsZero() {
+		workLoop.Last = board.FetchedAt.UTC().Format(time.RFC3339)
+		workLoop.Age = int(now.Sub(board.FetchedAt) / time.Minute)
+		workLoop.Stale = now.Sub(board.FetchedAt) > 5*workInterval/2
+	} else {
+		workLoop.Stale = true
+	}
+
+	loops := []loopOut{repoLoop, workLoop}
+
+	files := []fileOut{}
+	for _, rec := range h.Source.WriteStatus() {
+		f := fileOut{Name: rec.Name, Outcome: rec.Outcome, Detail: rec.Detail, Current: rec.Outcome == "written"}
+		if !rec.LastAttempt.IsZero() {
+			f.LastAttempt = rec.LastAttempt.UTC().Format(time.RFC3339)
+		}
+		if !rec.LastSuccess.IsZero() {
+			f.LastSuccess = rec.LastSuccess.UTC().Format(time.RFC3339)
+		}
+		files = append(files, f)
+	}
+
+	ok := !repoLoop.Stale && !workLoop.Stale && !partial
+	for _, f := range files {
+		if !f.Current {
+			ok = false
+		}
+	}
+	status := "ok"
+	code := http.StatusOK
+	if !ok {
+		status = "degraded"
+		code = http.StatusServiceUnavailable
+	}
+
+	body := struct {
+		Status    string    `json:"status"`
+		CheckedAt string    `json:"checked_at"`
+		Loops     []loopOut `json:"loops"`
+		Files     []fileOut `json:"files"`
+	}{Status: status, CheckedAt: now.Format(time.RFC3339), Loops: loops, Files: files}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	_ = json.NewEncoder(w).Encode(body)
+}
+
 func (h *Handler) now() time.Time {
 	if h.Now != nil {
 		return h.Now().UTC()
@@ -559,6 +686,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.URL.Path == "/":
 		h.serveDashboard(w, r)
+	case r.URL.Path == "/health":
+		h.serveHealth(w, r)
 	case r.URL.Path == "/favicon.svg" && len(h.Favicon) > 0:
 		w.Header().Set("Content-Type", "image/svg+xml")
 		w.Header().Set("Cache-Control", "public, max-age=86400")

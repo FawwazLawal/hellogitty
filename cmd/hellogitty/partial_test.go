@@ -99,7 +99,7 @@ func TestUnrepliedWriter_SkipsPartialBoard(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	unrepliedWriter(path, tracker)()
+	unrepliedWriter(path, tracker, newWriteRecorder())()
 
 	got, err := os.ReadFile(path)
 	if err != nil {
@@ -126,7 +126,7 @@ func TestUnrepliedWriter_ReplacesCompleteBoard(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	unrepliedWriter(path, tracker)()
+	unrepliedWriter(path, tracker, newWriteRecorder())()
 
 	got, err := os.ReadFile(path)
 	if err != nil {
