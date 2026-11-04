@@ -193,10 +193,17 @@ func run() int {
 	ov := &overlap.Watcher{GH: gh, Store: st}
 	checkOverlap := overlapChecker(ov, st, pl, pipe, board)
 	secCache := security.NewCache(30 * time.Minute)
-	src := source{st: st, p: pl, gh: gh, pipe: pipe, board: board, feed: feed, ov: ov, sec: secCache,
+	writes := newWriteRecorder()
+	if cfg.Inbox != "" {
+		writes.register("inbox.json")
+	}
+	if cfg.Unreplied != "" {
+		writes.register("unreplied.json")
+	}
+	src := source{st: st, p: pl, gh: gh, pipe: pipe, board: board, feed: feed, ov: ov, sec: secCache, writes: writes,
 		repoManager: repoManager{cfg: cfg, st: st, gh: gh, p: pl}}
-	writeInbox := inboxWriter(cfg.Path(cfg.Inbox), src)
-	writeUnreplied := unrepliedWriter(cfg.Path(cfg.Unreplied), board)
+	writeInbox := inboxWriter(cfg.Path(cfg.Inbox), src, writes)
+	writeUnreplied := unrepliedWriter(cfg.Path(cfg.Unreplied), board, writes)
 	snapPath := cfg.Path(cfg.Snapshot)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -254,6 +261,7 @@ func run() int {
 			SnapshotPath:                   snapPath,
 			Source:                         src,
 			PollInterval:                   cfg.PollInterval,
+			WorkRefresh:                    workRefresh,
 			Version:                        versionLabel,
 			Baby:                           versionBaby,
 			Favicon:                        web.Favicon,
@@ -407,7 +415,7 @@ func applyTotals(reports []store.RepoReport, totals map[string]poller.IssueTotal
 // inbox with a partial one. A refresh that replaced the board with a partial one is skipped the same
 // way: the Tracker already distinguishes new-and-incomplete from old-and-whole, and a downstream
 // script reading this file cannot tell a partial write from the state it claims to describe.
-func inboxWriter(path string, src source) func() {
+func inboxWriter(path string, src source, writes *writeRecorder) func() {
 	if path == "" {
 		return func() {}
 	}
@@ -415,44 +423,57 @@ func inboxWriter(path string, src source) func() {
 	return func() {
 		mu.Lock()
 		defer mu.Unlock()
+		now := time.Now().UTC()
 		if _, _, partial := src.board.Snapshot(); partial {
 			log.Printf("inbox: not written, the work board is the partial result of a failed refresh")
+			writes.record("inbox.json", now, "skipped: partial work board", "")
 			return
 		}
-		now := time.Now().UTC()
 		entries, ok := src.entries(now)
 		if !ok {
+			writes.record("inbox.json", now, "skipped: overlap check not ready", "")
 			return
 		}
 		f := inbox.File{GeneratedAt: now, RefreshIntervalMinutes: int(workRefresh / time.Minute), Entries: entries}
 		if err := inbox.Write(path, f); err != nil {
 			log.Printf("inbox: %v", err)
+			writes.record("inbox.json", now, "error: "+err.Error(), err.Error())
 			return
 		}
-		log.Printf("inbox: %d entries written to %s", len(entries), path)
+		detail := fmt.Sprintf("%d entries", len(entries))
+		log.Printf("inbox: %s written to %s", detail, path)
+		writes.record("inbox.json", now, "written", detail)
 	}
 }
 
-func unrepliedWriter(path string, board *work.Tracker) func() {
+func unrepliedWriter(path string, board *work.Tracker, writes *writeRecorder) func() {
+	if path == "" {
+		return func() {}
+	}
 	var mu sync.Mutex
 	return func() {
 		mu.Lock()
 		defer mu.Unlock()
+		now := time.Now().UTC()
 		b, _, partial := board.Snapshot()
 		if partial {
 			log.Printf("unreplied: not written, the work board is the partial result of a failed refresh")
+			writes.record("unreplied.json", now, "skipped: partial work board", "")
 			return
 		}
 		f := unreplied.Build(b)
 		if err := unreplied.Write(path, f); err != nil {
 			log.Printf("unreplied: %v", err)
+			writes.record("unreplied.json", now, "error: "+err.Error(), err.Error())
 			return
 		}
 		var total int
 		for _, pr := range f.OurOpenPRs {
 			total += len(pr.UnrepliedThreads)
 		}
-		log.Printf("unreplied: %d PRs, %d threads written to %s", len(f.OurOpenPRs), total, path)
+		detail := fmt.Sprintf("%d PRs, %d threads", len(f.OurOpenPRs), total)
+		log.Printf("unreplied: %s written to %s", detail, path)
+		writes.record("unreplied.json", now, "written", detail)
 	}
 }
 
@@ -571,7 +592,58 @@ type source struct {
 	feed        *notify.Feed
 	ov          *overlap.Watcher
 	sec         *security.Cache
-	repoManager // adding and removing repositories from the dashboard
+	writes      *writeRecorder // tracks the last attempt of each configured output file
+	repoManager               // adding and removing repositories from the dashboard
+}
+
+// writeRecorder collects the most recent write attempt of each configured output file, so the
+// /health endpoint can tell a successful rewrite from a skip, an error, or a file never attempted.
+// Entries are inserted at startup for every configured file; writers update them in place.
+type writeRecorder struct {
+	mu   sync.Mutex
+	recs map[string]dashboard.WriteStatus
+	// order preserves the order files were configured, so the /health array is stable.
+	order []string
+}
+
+func newWriteRecorder() *writeRecorder {
+	return &writeRecorder{recs: map[string]dashboard.WriteStatus{}}
+}
+
+// register declares a configured file, with its initial outcome "never written".
+func (w *writeRecorder) register(name string) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if _, ok := w.recs[name]; ok {
+		return
+	}
+	w.recs[name] = dashboard.WriteStatus{Name: name, Outcome: "never written"}
+	w.order = append(w.order, name)
+}
+
+// record stamps the most recent attempt.
+func (w *writeRecorder) record(name string, at time.Time, outcome, detail string) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	rec := w.recs[name]
+	rec.Name = name
+	rec.LastAttempt = at
+	rec.Outcome = outcome
+	rec.Detail = detail
+	if outcome == "written" {
+		rec.LastSuccess = at
+	}
+	w.recs[name] = rec
+}
+
+func (w *writeRecorder) snapshot() []dashboard.WriteStatus {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	out := make([]dashboard.WriteStatus, 0, len(w.order))
+	for _, name := range w.order {
+		out = append(out, w.recs[name])
+	}
+	return out
 }
 
 // OverlapReports returns the overlap reports for issues still being watched, for the row peeks.
@@ -596,6 +668,8 @@ func (s source) OverlapReports() []store.Overlap {
 func (s source) Notifications() notify.View { return s.feed.Snapshot() }
 
 func (s source) Work() (*work.Board, string, bool) { return s.board.Snapshot() }
+
+func (s source) WriteStatus() []dashboard.WriteStatus { return s.writes.snapshot() }
 
 func (s source) Reports() ([]store.RepoReport, error) { return tracked(s.st, s.p) }
 
