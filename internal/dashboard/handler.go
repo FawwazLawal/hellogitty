@@ -99,6 +99,9 @@ type Handler struct {
 	// WorkRefresh is the cadence of the work-board loop. /health reads it to judge work_refresh
 	// staleness against its own interval, not a shared threshold.
 	WorkRefresh time.Duration
+	// StartedAt is the process start time. /health reads it so a zero LastPoll can be judged
+	// against how long the process has been up — a first cycle still in flight is not stale.
+	StartedAt time.Time
 	Version      string
 	// Baby marks a codename that has not graduated yet; the page sets it apart from the label.
 	Baby    bool
@@ -582,13 +585,15 @@ func (h *Handler) serveHealth(w http.ResponseWriter, r *http.Request) {
 	board, _, partial := h.Source.Work()
 
 	type loopOut struct {
-		Name     string `json:"name"`
-		Interval int    `json:"interval_minutes"`
-		Last     string `json:"last_success,omitempty"`
-		Age      int    `json:"age_minutes"`
-		Stale    bool   `json:"stale"`
-		Errors   int    `json:"errors"`
-		Partial  *bool  `json:"partial,omitempty"`
+		Name           string `json:"name"`
+		Interval       int    `json:"interval_minutes"`
+		Last           string `json:"last_success,omitempty"`
+		Age            int    `json:"age_minutes"`
+		Stale          bool   `json:"stale"`
+		Errors         int    `json:"errors"`
+		Partial        *bool  `json:"partial,omitempty"`
+		NeverPolled    bool   `json:"never_polled,omitempty"`
+		NeverRefreshed bool   `json:"never_refreshed,omitempty"`
 	}
 	type fileOut struct {
 		Name        string `json:"name"`
@@ -613,13 +618,32 @@ func (h *Handler) serveHealth(w http.ResponseWriter, r *http.Request) {
 		workInterval = 5 * time.Minute
 	}
 
+	// A zero LastPoll / FetchedAt means no cycle has finished yet, which is not the same claim
+	// as "the loop has stopped". While uptime is under 2.5x the loop's interval, a never-completed
+	// first cycle is still in flight and must not read as stale — anything acting on a 503 would
+	// restart the process and start the first cycle over, and the check would become the outage.
+	// Past 2.5x uptime with still no completed cycle, it IS stale: a first cycle that cannot
+	// finish in two and a half intervals is a real fault and must not be hidden.
+	// A first cycle still in flight is not stale, so a zero LastPoll is judged against how long
+	// the process has been up rather than against a timestamp that does not exist yet.
+	//
+	// An unwired StartedAt needs no special case: time.Since(zero) is centuries, which is past
+	// every grace period, so the loop reads stale. That is the direction to fail in — an unwired
+	// field gives a loud false red that gets noticed, where granting the grace would report a
+	// dead loop as healthy for ever, which is the failure this endpoint exists to catch. Do not
+	// "fix" it by clamping the zero case to no uptime: that is what it did, and it meant any
+	// caller who forgot the field disabled this check silently.
+	uptime := now.Sub(h.StartedAt)
+	withinGrace := func(interval time.Duration) bool { return uptime <= 5*interval/2 }
+
 	repoLoop := loopOut{Name: "repo_poll", Interval: int(repoInterval / time.Minute), Errors: len(tel.Errors)}
 	if !tel.LastPoll.IsZero() {
 		repoLoop.Last = tel.LastPoll.UTC().Format(time.RFC3339)
 		repoLoop.Age = int(now.Sub(tel.LastPoll) / time.Minute)
 		repoLoop.Stale = now.Sub(tel.LastPoll) > 5*repoInterval/2
 	} else {
-		repoLoop.Stale = true
+		repoLoop.NeverPolled = true
+		repoLoop.Stale = !withinGrace(repoInterval)
 	}
 
 	workLoop := loopOut{Name: "work_refresh", Interval: int(workInterval / time.Minute)}
@@ -629,7 +653,8 @@ func (h *Handler) serveHealth(w http.ResponseWriter, r *http.Request) {
 		workLoop.Age = int(now.Sub(board.FetchedAt) / time.Minute)
 		workLoop.Stale = now.Sub(board.FetchedAt) > 5*workInterval/2
 	} else {
-		workLoop.Stale = true
+		workLoop.NeverRefreshed = true
+		workLoop.Stale = !withinGrace(workInterval)
 	}
 
 	loops := []loopOut{repoLoop, workLoop}

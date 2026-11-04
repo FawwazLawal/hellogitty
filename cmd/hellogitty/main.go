@@ -262,6 +262,7 @@ func run() int {
 			Source:                         src,
 			PollInterval:                   cfg.PollInterval,
 			WorkRefresh:                    workRefresh,
+			StartedAt:                      time.Now().UTC(),
 			Version:                        versionLabel,
 			Baby:                           versionBaby,
 			Favicon:                        web.Favicon,
