@@ -839,3 +839,29 @@ func TestHealthWorkRefreshNeverRefreshed(t *testing.T) {
 		t.Errorf("work_refresh should report never_refreshed:true; body=%s", body)
 	}
 }
+
+// An unwired StartedAt must not buy a never-completed cycle an unlimited grace period. There is
+// one Handler construction site today and it sets the field, so this guards the next one: without
+// an uptime there is no evidence the first cycle is in flight rather than stopped, and reporting
+// healthy on no evidence is the failure /health exists to catch.
+func TestHealthRefusesGraceWithoutUptime(t *testing.T) {
+	now := time.Date(2026, 11, 4, 1, 0, 0, 0, time.UTC)
+	h := handler(fakeSource{
+		writes: []WriteStatus{
+			{Name: "inbox.json", LastAttempt: now, LastSuccess: now, Outcome: "written", Detail: "25 entries"},
+		},
+	})
+	h.Now = func() time.Time { return now }
+	// StartedAt deliberately left at its zero value, as a caller that forgot to wire it leaves it.
+
+	code, body := get(t, h, "/health")
+	if !strings.Contains(body, `"name":"repo_poll","interval_minutes":60,"age_minutes":0,"stale":true`) {
+		t.Errorf("repo_poll should read stale with no uptime to justify a grace; body=%s", body)
+	}
+	if !strings.Contains(body, `"never_polled":true`) {
+		t.Errorf("never_polled should still say which state it is in; body=%s", body)
+	}
+	if code != 503 {
+		t.Errorf("status: got %d, want 503", code)
+	}
+}

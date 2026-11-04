@@ -624,10 +624,17 @@ func (h *Handler) serveHealth(w http.ResponseWriter, r *http.Request) {
 	// restart the process and start the first cycle over, and the check would become the outage.
 	// Past 2.5x uptime with still no completed cycle, it IS stale: a first cycle that cannot
 	// finish in two and a half intervals is a real fault and must not be hidden.
+	// A first cycle still in flight is not stale, so a zero LastPoll is judged against how long
+	// the process has been up rather than against a timestamp that does not exist yet.
+	//
+	// An unwired StartedAt needs no special case: time.Since(zero) is centuries, which is past
+	// every grace period, so the loop reads stale. That is the direction to fail in — an unwired
+	// field gives a loud false red that gets noticed, where granting the grace would report a
+	// dead loop as healthy for ever, which is the failure this endpoint exists to catch. Do not
+	// "fix" it by clamping the zero case to no uptime: that is what it did, and it meant any
+	// caller who forgot the field disabled this check silently.
 	uptime := now.Sub(h.StartedAt)
-	if h.StartedAt.IsZero() {
-		uptime = 0
-	}
+	withinGrace := func(interval time.Duration) bool { return uptime <= 5*interval/2 }
 
 	repoLoop := loopOut{Name: "repo_poll", Interval: int(repoInterval / time.Minute), Errors: len(tel.Errors)}
 	if !tel.LastPoll.IsZero() {
@@ -636,7 +643,7 @@ func (h *Handler) serveHealth(w http.ResponseWriter, r *http.Request) {
 		repoLoop.Stale = now.Sub(tel.LastPoll) > 5*repoInterval/2
 	} else {
 		repoLoop.NeverPolled = true
-		repoLoop.Stale = uptime > 5*repoInterval/2
+		repoLoop.Stale = !withinGrace(repoInterval)
 	}
 
 	workLoop := loopOut{Name: "work_refresh", Interval: int(workInterval / time.Minute)}
@@ -647,7 +654,7 @@ func (h *Handler) serveHealth(w http.ResponseWriter, r *http.Request) {
 		workLoop.Stale = now.Sub(board.FetchedAt) > 5*workInterval/2
 	} else {
 		workLoop.NeverRefreshed = true
-		workLoop.Stale = uptime > 5*workInterval/2
+		workLoop.Stale = !withinGrace(workInterval)
 	}
 
 	loops := []loopOut{repoLoop, workLoop}
