@@ -424,7 +424,7 @@ func inboxWriter(path string, src source) func() {
 		if !ok {
 			return
 		}
-		f := inbox.File{GeneratedAt: now, PollIntervalMinutes: int(workRefresh / time.Minute), Entries: entries}
+		f := inbox.File{GeneratedAt: now, RefreshIntervalMinutes: int(workRefresh / time.Minute), Entries: entries}
 		if err := inbox.Write(path, f); err != nil {
 			log.Printf("inbox: %v", err)
 			return

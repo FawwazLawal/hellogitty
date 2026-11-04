@@ -80,13 +80,16 @@ type Entry struct {
 	// Item.Threads's eight consumers across the product, and that is a separate change.
 }
 
-const SchemaVersion = 2
+const SchemaVersion = 3
 
 type File struct {
-	SchemaVersion       int       `json:"schema_version"`
-	GeneratedAt         time.Time `json:"generated_at"`
-	PollIntervalMinutes int       `json:"poll_interval_minutes"`
-	Entries             []Entry   `json:"entries"`
+	SchemaVersion int       `json:"schema_version"`
+	GeneratedAt   time.Time `json:"generated_at"`
+	// RefreshIntervalMinutes is how often the work-board refresh rewrites this file. It is not a
+	// poll interval (snapshot.json carries the poll loop's own value under its own key); every entry
+	// here comes from the work-board fetch that runs on this cadence.
+	RefreshIntervalMinutes int     `json:"refresh_interval_minutes"`
+	Entries                []Entry `json:"entries"`
 }
 
 // FirstSeen returns a stable time for an event GitHub does not timestamp (the first time it was

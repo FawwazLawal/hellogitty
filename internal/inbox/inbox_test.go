@@ -145,7 +145,7 @@ func TestWriteReplacesAtomicallyAndLeavesNoTempFiles(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "inbox.json")
 	for i := 0; i < 2; i++ {
-		f := File{GeneratedAt: t0.Add(time.Duration(i) * time.Minute), PollIntervalMinutes: 5, Entries: Build(board(), reports(), seenAt(map[string]time.Time{}, t0))}
+		f := File{GeneratedAt: t0.Add(time.Duration(i) * time.Minute), RefreshIntervalMinutes: 5, Entries: Build(board(), reports(), seenAt(map[string]time.Time{}, t0))}
 		if err := Write(path, f); err != nil {
 			t.Fatal(err)
 		}
@@ -174,13 +174,13 @@ func TestWriteReplacesAtomicallyAndLeavesNoTempFiles(t *testing.T) {
 func TestFailedWriteKeepsThePreviousFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "inbox.json")
-	if err := Write(path, File{PollIntervalMinutes: 5}); err != nil {
+	if err := Write(path, File{RefreshIntervalMinutes: 5}); err != nil {
 		t.Fatal(err)
 	}
 	before, _ := os.ReadFile(path)
 	os.Chmod(dir, 0o555) // no new files allowed, so the temporary file cannot be created
 	defer os.Chmod(dir, 0o755)
-	if err := Write(path, File{PollIntervalMinutes: 60}); err == nil {
+	if err := Write(path, File{RefreshIntervalMinutes: 60}); err == nil {
 		t.Skip("directory permissions not enforced here (running as root?)")
 	}
 	after, _ := os.ReadFile(path)
@@ -205,7 +205,7 @@ func TestReaderNeverSeesAHalfWrittenFile(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for i := 0; i < 40; i++ {
-			Write(path, File{PollIntervalMinutes: i, Entries: big})
+			Write(path, File{RefreshIntervalMinutes: i, Entries: big})
 		}
 		close(stop)
 	}()
@@ -560,4 +560,43 @@ func TestBotEntryWhoseMove(t *testing.T) {
 			t.Errorf("ThreadURL = %q, want the older UNANSWERED thread's URL", e.ThreadURL)
 		}
 	})
+}
+
+// TestWrittenFileUsesRefreshIntervalKey pins the two schema promises of the rename: the written
+// file carries the refresh interval under refresh_interval_minutes and never under the old
+// poll_interval_minutes key (which was a value from a different loop entirely), and schema_version
+// is bumped. The test populates the interval field by JSON-unmarshalling the new key name into a
+// File, so it compiles against both pre- and post-rename struct states and fails on assertions
+// about the decoded JSON rather than on a build error.
+func TestWrittenFileUsesRefreshIntervalKey(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "inbox.json")
+	var f File
+	if err := json.Unmarshal([]byte(`{"refresh_interval_minutes":5}`), &f); err != nil {
+		t.Fatal(err)
+	}
+	if err := Write(path, f); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var m map[string]any
+	if err := json.Unmarshal(b, &m); err != nil {
+		t.Fatal(err)
+	}
+	if _, bad := m["poll_interval_minutes"]; bad {
+		t.Errorf("poll_interval_minutes still present; the file is the work-board refresh, not a poll loop: %s", b)
+	}
+	v, ok := m["refresh_interval_minutes"]
+	if !ok {
+		t.Fatalf("refresh_interval_minutes absent: %s", b)
+	}
+	if n, _ := v.(float64); n != 5 {
+		t.Errorf("refresh_interval_minutes = %v, want 5", v)
+	}
+	if sv, _ := m["schema_version"].(float64); sv != 3 {
+		t.Errorf("schema_version = %v, want 3 (a key changed name)", m["schema_version"])
+	}
 }
