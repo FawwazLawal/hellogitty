@@ -603,7 +603,7 @@ func TestWrittenFileUsesRefreshIntervalKey(t *testing.T) {
 
 // TestBuildDropsOurOwnFinishedWork pins the one filter Build applies at the end: an entry whose
 // Move is "done" AND whose repo is the viewer's own goes, because a pull request the owner merged
-// himself is not news. Every other combination stays: our own work still in progress is work, and
+// themselves is not news. Every other combination stays: our own work still in progress is work, and
 // upstream finishing our work (the outcome this product exists to surface) is news. The own-repo
 // cases use a mixed-case owner so the comparison has to be case-insensitive — GitHub's owner
 // casing is not always the viewer login's casing.
@@ -639,7 +639,7 @@ func TestBuildDropsOurOwnFinishedWork(t *testing.T) {
 		return false
 	}
 	if have("FawwazLawal/hellogitty", 100) {
-		t.Errorf("(a) own-repo done entry must be DROPPED — the owner merged his own PR, that is not news")
+		t.Errorf("(a) own-repo done entry must be DROPPED — the owner merged their own pull request, that is not news")
 	}
 	if !have("FawwazLawal/hellogitty", 101) {
 		t.Errorf("(b) own-repo not-done entry must be KEPT — unanswered work on our PR is still unanswered")

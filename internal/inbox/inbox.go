@@ -101,7 +101,7 @@ var fragment = regexp.MustCompile(`#(issuecomment|pullrequestreview|discussion_r
 // Build lists what is pertinent now: comments, reviews and state changes on pull requests you
 // opened, replies that made an issue your move, and watched issues someone claimed or closed.
 // Nothing else: no new issues, repo health, other people's pull requests, or our own finished
-// work (a pull request the owner merged himself is not news; one an upstream maintainer merged
+// work (a pull request the owner merged themselves is not news; one an upstream maintainer merged
 // is, so the filter requires both Move == "done" AND the repo being ours).
 func Build(b *work.Board, reports []store.RepoReport, seen FirstSeen) []Entry {
 	var out []Entry
@@ -132,7 +132,7 @@ func Build(b *work.Board, reports []store.RepoReport, seen FirstSeen) []Entry {
 }
 
 // dropOwnDone removes entries whose Move is "done" AND whose repo's owner is the viewer's: a
-// pull request the owner merged himself is not news. An upstream maintainer merging our work is
+// pull request the owner merged themselves is not news. An upstream maintainer merging our work is
 // the outcome this product exists to surface, so the rule needs both halves. Owner casing on
 // GitHub is not always the login's casing — FawwazLawal vs fawwazlawal — so the compare is
 // case-insensitive on the owner segment.
