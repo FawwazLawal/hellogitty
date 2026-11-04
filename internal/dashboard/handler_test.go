@@ -730,3 +730,112 @@ func TestHealthHonoursConfiguredWorkRefresh(t *testing.T) {
 		t.Errorf("status: got %d, want 503", code)
 	}
 }
+
+// TestHealthFirstCycleGrace covers #210: a zero LastPoll is not stale while the process has
+// been up for less than 2.5x the poll interval. Once uptime passes that, it IS stale.
+func TestHealthFirstCycleGrace(t *testing.T) {
+	now := time.Date(2026, 11, 4, 1, 0, 0, 0, time.UTC)
+
+	cases := []struct {
+		name         string
+		pollInterval time.Duration
+		startedAt    time.Time
+		wantCode     int
+		wantStatus   string
+		wantHas      []string
+		wantHasNot   []string
+	}{
+		{
+			// Fresh process, zero LastPoll, uptime 2 minutes against a 1h cadence. Must be 200.
+			// Kills S2 (zero LastPoll always stale).
+			name:         "fresh_process_within_grace_200",
+			pollInterval: time.Hour,
+			startedAt:    now.Add(-2 * time.Minute),
+			wantCode:     200,
+			wantStatus:   "ok",
+			wantHas: []string{
+				// repo_poll must carry never_polled:true with no last_success key.
+				`"name":"repo_poll","interval_minutes":60,"age_minutes":0,"stale":false,"errors":0,"never_polled":true}`,
+			},
+		},
+		{
+			// Uptime is 3 hours against a 1h cadence — well past 2h30m grace. Must be 503. The
+			// grace window exists so a healthy first cycle is not misreported; it does not
+			// exist to hide a poll loop that never turns. Kills S1 (unbounded uptime).
+			name:         "long_up_no_cycle_503",
+			pollInterval: time.Hour,
+			startedAt:    now.Add(-3 * time.Hour),
+			wantCode:     503,
+			wantStatus:   "degraded",
+			wantHas:      []string{`"never_polled":true`, `"stale":true`},
+		},
+		{
+			// Non-default interval: -interval 10m means 2.5x = 25m. Uptime 30m with no cycle
+			// is past that, so 503. A fixed grace based on the 60m default would be 2h30m and
+			// would still read 200 here. Kills S3 (ignore configured interval).
+			name:         "custom_interval_past_grace_503",
+			pollInterval: 10 * time.Minute,
+			startedAt:    now.Add(-30 * time.Minute),
+			wantCode:     503,
+			wantStatus:   "degraded",
+			wantHas:      []string{`"interval_minutes":10`, `"stale":true`, `"never_polled":true`},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			h := handler(fakeSource{
+				tel:   Telemetry{}, // zero LastPoll
+				board: &work.Board{FetchedAt: now.Add(-2 * time.Minute)},
+				writes: []WriteStatus{
+					{Name: "inbox.json", LastAttempt: now, LastSuccess: now, Outcome: "written", Detail: "25 entries"},
+				},
+			})
+			h.Now = func() time.Time { return now }
+			h.PollInterval = tc.pollInterval
+			h.StartedAt = tc.startedAt
+
+			code, body := get(t, h, "/health")
+			if code != tc.wantCode {
+				t.Errorf("status: got %d, want %d; body=%s", code, tc.wantCode, body)
+			}
+			if !strings.Contains(body, `"status":"`+tc.wantStatus+`"`) {
+				t.Errorf("status field: want %q in body; body=%s", tc.wantStatus, body)
+			}
+			for _, want := range tc.wantHas {
+				if !strings.Contains(body, want) {
+					t.Errorf("missing %q; body=%s", want, body)
+				}
+			}
+			for _, bad := range tc.wantHasNot {
+				if strings.Contains(body, bad) {
+					t.Errorf("should NOT contain %q; body=%s", bad, body)
+				}
+			}
+		})
+	}
+}
+
+// Work-refresh gets the same treatment, so neither of the two is honest by luck.
+func TestHealthWorkRefreshNeverRefreshed(t *testing.T) {
+	now := time.Date(2026, 11, 4, 1, 0, 0, 0, time.UTC)
+	h := handler(fakeSource{
+		tel:   Telemetry{LastPoll: now.Add(-5 * time.Minute)},
+		board: nil, // never fetched
+		writes: []WriteStatus{
+			{Name: "inbox.json", LastAttempt: now, LastSuccess: now, Outcome: "written", Detail: "25 entries"},
+		},
+	})
+	h.Now = func() time.Time { return now }
+	h.PollInterval = time.Hour
+	h.WorkRefresh = 5 * time.Minute
+	h.StartedAt = now.Add(-30 * time.Second) // 2.5x = 12m30s, well within grace
+
+	code, body := get(t, h, "/health")
+	if code != 200 {
+		t.Errorf("status: got %d, want 200; body=%s", code, body)
+	}
+	if !strings.Contains(body, `"name":"work_refresh"`) || !strings.Contains(body, `"never_refreshed":true`) {
+		t.Errorf("work_refresh should report never_refreshed:true; body=%s", body)
+	}
+}
