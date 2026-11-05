@@ -408,6 +408,11 @@ type prRow struct {
 	Conflict, Draft   bool
 	UnresolvedThreads int  // unresolved review threads you have not answered yet
 	Requested         bool // a reviewer is still asked to review
+
+	// LastActivity is the newest of any comment, review, review-thread reply, bot finding, or our
+	// own commit on this pull request. Not GitHub's updated_at on its own — that includes label
+	// edits and other noise. Nil when the board has nothing to go on.
+	LastActivity *time.Time
 }
 
 // ChecksFailing reports a failed or errored check run.
@@ -427,6 +432,30 @@ func (r *prRow) withActions(it work.Item) {
 		if !t.RepliedLast {
 			r.UnresolvedThreads++
 		}
+	}
+	// LastActivity: newest across comments/reviews (bot and human), review threads, and our own
+	// commits. The board separates Last (non-bot activity) from BotReviews (bots) and Threads
+	// (inline review conversations, both kinds); unify them here.
+	bump := func(t time.Time) {
+		if t.IsZero() {
+			return
+		}
+		if r.LastActivity == nil || t.After(*r.LastActivity) {
+			c := t.UTC()
+			r.LastActivity = &c
+		}
+	}
+	if it.Last != nil {
+		bump(it.Last.At)
+	}
+	for _, a := range it.BotReviews {
+		bump(a.At)
+	}
+	for _, t := range it.Threads {
+		bump(t.At)
+	}
+	if it.LastCommitAt != nil {
+		bump(*it.LastCommitAt)
 	}
 }
 

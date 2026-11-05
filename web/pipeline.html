@@ -12,29 +12,50 @@
 {{template "sort-css"}}
   .pwrap { max-width: var(--w-list); margin: 0 auto; padding: 18px 20px 40px; }
   .sub { margin: 0 0 18px; color: var(--dim); }
-  .overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 0 0 24px; }
-  .ocard { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; text-align: center; text-decoration: none; color: inherit; transition: border-color .12s; }
-  .ocard:hover { border-color: var(--head-accent); background: var(--raised); }
-  .ocard .ov { font: 700 28px var(--mono); font-variant-numeric: tabular-nums; display: block; }
-  .ocard .ol { font-size: 12px; color: var(--dim); margin-top: 2px; }
-  .ocard .ov.zero { color: var(--dim); }
-  .actions { margin-top: -14px; }
-  .acard { border-top: 3px solid var(--rule-hi); }
-  .acard.caution { border-top-color: var(--caution); }
-  .acard.nom { border-top-color: var(--nom); }
-  .acard:hover { border-color: var(--rule); border-top-color: var(--rule-hi); background: var(--panel); }
-  .acard.caution:hover { border-top-color: var(--caution); }
-  .acard.nom:hover { border-top-color: var(--nom); }
-  .rate { font: 700 28px var(--mono); color: var(--head-accent); }
+  /* Funnel: three tiers top-to-bottom.
+     1) Lifetime — small muted cards, the historical totals.
+     2) Open now — one large card, the thing most sentences are about.
+     3) Needs you — compact action cards; each one is a filter on Open now. */
+  .funnel { display: flex; flex-direction: column; gap: 14px; margin: 0 0 24px; }
+  .tier-label { font: 600 11px var(--sans); color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 6px; }
+  .lifetime { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+  .lcard { background: transparent; border: 1px solid var(--rule); border-radius: 6px; padding: 8px 12px; text-decoration: none; color: inherit; display: flex; align-items: baseline; gap: 8px; transition: border-color .12s; }
+  .lcard:hover { border-color: var(--head-accent); background: var(--raised); }
+  .lcard .lv { font: 600 16px var(--mono); font-variant-numeric: tabular-nums; }
+  .lcard .ll { font-size: 11px; color: var(--dim); }
+  .lcard .lv.zero { color: var(--dim); }
+  .open-now { display: grid; grid-template-columns: minmax(220px, 300px) 1fr; gap: 14px; align-items: stretch; }
+  .opencard { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 18px 20px; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: center; transition: border-color .12s; }
+  .opencard:hover { border-color: var(--head-accent); background: var(--raised); }
+  .opencard .ov { font: 700 44px var(--mono); font-variant-numeric: tabular-nums; line-height: 1; }
+  .opencard .ol { font-size: 13px; color: var(--dim); margin-top: 6px; }
+  .opencard .ov.zero { color: var(--dim); }
+  .needs { display: flex; flex-direction: column; justify-content: center; }
+  .needs .tier-label { margin: 0 0 8px; }
+  .needs .actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; }
+  .acard { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 8px 10px; text-align: left; display: flex; align-items: baseline; gap: 8px; border-left: 2px solid var(--rule-hi); }
+  .acard.caution { border-left-color: var(--caution); }
+  .acard .av { font: 600 16px var(--mono); font-variant-numeric: tabular-nums; }
+  .acard .al { font-size: 11px; color: var(--dim); }
+  .acard .av.zero { color: var(--dim); }
+  .acard.zeroed { opacity: 0.5; }
+  @media (max-width: 720px) { .open-now { grid-template-columns: 1fr; } .opencard { padding: 14px 16px; } .opencard .ov { font-size: 36px; } }
   .section { margin: 0 0 24px; }
   .section h2 { margin: 0 0 10px; font-size: 14px; font-weight: 650; letter-spacing: 0.02em; border-left: 3px solid var(--head-accent); padding-left: 10px; }
-  .ptable { width: 100%; table-layout: fixed; border-collapse: collapse; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+  .ptable-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; border: 1px solid var(--rule); }
+  .ptable { width: 100%; table-layout: fixed; border-collapse: collapse; background: var(--panel); min-width: 640px; }
   .ptable th, .ptable td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
   .ptable th { font-size: 12px; font-weight: 600; color: var(--dim); background: var(--head); letter-spacing: 0.03em; text-transform: uppercase; }
   .ptable tr:last-child td { border-bottom: 0; }
   .ptable tbody tr:hover { background: var(--raised); }
   .ptable .cnum { width: 60px; }
   .ptable .cst { width: 80px; }
+  .ptable .cact { width: 110px; font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--dim); font-size: 12px; }
+  .ptable th.cact { font-family: inherit; }
+  .ptable tr[data-hide-activity="1"] .cact, .ptable thead th.cact[data-hidden="1"] { display: none; }
+  .colshow { display: inline-flex; align-items: center; gap: 6px; font: 13px var(--sans); color: var(--dim); cursor: pointer; margin-left: 8px; }
+  .colshow input { accent-color: var(--head-accent); cursor: pointer; }
+  .colshow:hover { color: var(--text); }
   .ptable td.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
   .ptable a { color: var(--text); }
   .tag { font-size: 12px; color: var(--dim); border: 1px solid var(--rule-hi); border-radius: 4px; padding: 0 6px; white-space: nowrap; }
@@ -70,22 +91,32 @@
 <main id="main" class="pwrap" tabindex="-1">
   <p class="sub">Your pull requests in tracked repositories, which ones need you, and the pipeline stages.</p>
 
-  <div class="overview">
-    <a class="ocard" href="/list?prs=opened"><span class="ov{{if not .Pipeline.Opened}} zero{{end}}">{{.Pipeline.Opened}}</span><span class="ol">Opened</span></a>
-    <a class="ocard" href="/list?prs=open"><span class="ov{{if not .Pipeline.Open}} zero{{end}}">{{.Pipeline.Open}}</span><span class="ol">Open</span></a>
-    <a class="ocard" href="/list?prs=merged"><span class="ov{{if not .Pipeline.Merged}} zero{{end}}">{{.Pipeline.Merged}}</span><span class="ol">Merged</span></a>
-    <a class="ocard" href="/list?prs=closed"><span class="ov{{if not .Pipeline.Closed}} zero{{end}}">{{.Pipeline.Closed}}</span><span class="ol">Closed</span></a>
-    <div class="ocard"><span class="ov{{if not .Pipeline.Rate}} zero{{end}}">{{if .Pipeline.Rate}}{{.Pipeline.Rate}}{{else}}—{{end}}</span><span class="ol">Merge rate</span></div>
-  </div>
-
   {{with .Pipeline}}
-  <div class="overview actions" aria-label="Open pull requests by what they wait on">
-    <div class="ocard acard" title="Open pull requests still waiting on a requested reviewer"><span class="ov{{if not .ReviewRequested}} zero{{end}}">{{.ReviewRequested}}</span><span class="ol">Review requested</span></div>
-    <div class="ocard acard caution"><span class="ov{{if not .ChangesRequested}} zero{{end}}">{{.ChangesRequested}}</span><span class="ol">Changes requested</span></div>
-    <div class="ocard acard caution"><span class="ov{{if not .ChecksFailing}} zero{{end}}">{{.ChecksFailing}}</span><span class="ol">Checks failing</span></div>
-    <div class="ocard acard nom"><span class="ov{{if not .Approved}} zero{{end}}">{{.Approved}}</span><span class="ol">Approved</span></div>
-    <div class="ocard acard caution"><span class="ov{{if not .Conflicts}} zero{{end}}">{{.Conflicts}}</span><span class="ol">Conflicts</span></div>
-    <div class="ocard acard"><span class="ov{{if not .Drafts}} zero{{end}}">{{.Drafts}}</span><span class="ol">Draft</span></div>
+  <div class="funnel" aria-label="Pull request totals">
+    <section aria-labelledby="t-lifetime">
+      <p class="tier-label" id="t-lifetime">Lifetime</p>
+      <div class="lifetime">
+        <a class="lcard" href="/list?prs=opened"><span class="lv{{if not .Opened}} zero{{end}}">{{.Opened}}</span><span class="ll">Opened</span></a>
+        <a class="lcard" href="/list?prs=merged"><span class="lv{{if not .Merged}} zero{{end}}">{{.Merged}}</span><span class="ll">Merged</span></a>
+        <a class="lcard" href="/list?prs=closed"><span class="lv{{if not .Closed}} zero{{end}}">{{.Closed}}</span><span class="ll">Closed without merging</span></a>
+        <div class="lcard"><span class="lv{{if not .Rate}} zero{{end}}">{{if .Rate}}{{.Rate}}{{else}}—{{end}}</span><span class="ll">Merge rate</span></div>
+      </div>
+    </section>
+    <section class="open-now" aria-labelledby="t-open">
+      <a class="opencard" href="/list?prs=open" aria-describedby="t-open">
+        <span class="ov{{if not .Open}} zero{{end}}">{{.Open}}</span>
+        <span class="ol" id="t-open">Open now — your pull requests still in flight</span>
+      </a>
+      <div class="needs" aria-labelledby="t-needs">
+        <p class="tier-label" id="t-needs">Of those, waiting on</p>
+        <div class="actions">
+          <div class="acard caution{{if not .ChangesRequested}} zeroed{{end}}" title="You, to address a reviewer's requested changes"><span class="av{{if not .ChangesRequested}} zero{{end}}">{{.ChangesRequested}}</span><span class="al">Changes requested</span></div>
+          <div class="acard caution{{if not .ChecksFailing}} zeroed{{end}}" title="You, to fix a failing check"><span class="av{{if not .ChecksFailing}} zero{{end}}">{{.ChecksFailing}}</span><span class="al">Checks failing</span></div>
+          <div class="acard caution{{if not .Conflicts}} zeroed{{end}}" title="You, to resolve a merge conflict"><span class="av{{if not .Conflicts}} zero{{end}}">{{.Conflicts}}</span><span class="al">Conflicts</span></div>
+          <div class="acard{{if not .ReviewRequested}} zeroed{{end}}" title="A requested reviewer still has to look"><span class="av{{if not .ReviewRequested}} zero{{end}}">{{.ReviewRequested}}</span><span class="al">Review requested</span></div>
+        </div>
+      </div>
+    </section>
   </div>
   {{end}}
 
@@ -106,23 +137,28 @@
       <button type="button" data-pf="Merged" aria-pressed="false">Merged</button>
       <button type="button" data-pf="Closed" aria-pressed="false">Closed</button>
       <button type="button" data-pf="pending" aria-pressed="false"{{if .Pipeline.Pending}} class="lit"{{end}} title="Threads to answer, changes requested or checks failing">Pending<span class="pcount">{{.Pipeline.Pending}}</span></button>
+      <button type="button" data-pf="approved" aria-pressed="false" title="Open and approved — ready to merge">Approved<span class="pcount">{{.Pipeline.Approved}}</span></button>
+      <button type="button" data-pf="draft" aria-pressed="false" title="Open drafts, not yet ready for review">Draft<span class="pcount">{{.Pipeline.Drafts}}</span></button>
       {{if gt (len .Pipeline.Repos) 1}}<select id="pf-repo" aria-label="Repository">
         <option value="">All repositories</option>
         {{range .Pipeline.Repos}}<option value="{{.}}">{{.}}</option>{{end}}
       </select>{{end}}
+      <label class="colshow" title="Show the Last activity column"><input type="checkbox" id="col-activity" checked> Last activity</label>
     </div>
     {{if .Pipeline.PRs}}
+    <div class="ptable-scroll">
     <table class="ptable">
-      <thead><tr><th class="cnum" data-sort="num">#</th><th data-sort="text">Pull request</th><th data-sort="text">Repository</th><th class="cst" data-sort="text">State</th></tr></thead>
-      <tbody id="pr-rows">{{range .Pipeline.All}}<tr data-state="{{.State}}" data-repo="{{.Repo}}" data-pending="{{if .Pending}}1{{else}}0{{end}}"><td class="num">{{.Number}}</td><td><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a>{{if or .Pending .Requested .Conflict .Draft (eq .ReviewDecision "APPROVED")}}<div class="pflags">
+      <thead><tr><th class="cnum" data-sort="num">#</th><th data-sort="text">Pull request</th><th data-sort="text">Repository</th><th class="cact" data-sort="num" data-col="activity">Last activity</th><th class="cst" data-sort="text">State</th></tr></thead>
+      <tbody id="pr-rows">{{range .Pipeline.All}}<tr data-state="{{.State}}" data-repo="{{.Repo}}" data-pending="{{if .Pending}}1{{else}}0{{end}}" data-approved="{{if eq .ReviewDecision "APPROVED"}}1{{else}}0{{end}}" data-draft="{{if .Draft}}1{{else}}0{{end}}"><td class="num">{{.Number}}</td><td><a href="{{.URL}}" target="_blank" rel="noopener">{{.Title}}</a>{{if or .Pending .Requested .Conflict .Draft (eq .ReviewDecision "APPROVED")}}<div class="pflags">
         {{- if eq .ReviewDecision "CHANGES_REQUESTED"}}<span class="tag caution">Changes requested</span>{{end}}
         {{- if .ChecksFailing}}<span class="tag caution">Checks failing</span>{{end}}
         {{- if .UnresolvedThreads}}<span class="tag caution">{{.UnresolvedThreads}} unresolved {{if eq .UnresolvedThreads 1}}thread{{else}}threads{{end}}</span>{{end}}
         {{- if .Conflict}}<span class="tag caution">Conflict</span>{{end}}
         {{- if .Requested}}<span class="tag">Review requested</span>{{end}}
         {{- if eq .ReviewDecision "APPROVED"}}<span class="tag nom">Approved</span>{{end}}
-        {{- if .Draft}}<span class="tag">Draft</span>{{end}}</div>{{end}}</td><td>{{.Repo}}</td><td><span class="tag {{.State}}">{{.State}}</span></td></tr>{{end}}</tbody>
+        {{- if .Draft}}<span class="tag">Draft</span>{{end}}</div>{{end}}</td><td>{{.Repo}}</td><td class="cact" data-col="activity" data-sort="{{if .LastActivity}}{{.LastActivity.Unix}}{{else}}0{{end}}"><span class="ago" {{if .LastActivity}}data-ts="{{.LastActivity.Unix}}" title="{{.LastActivity.UTC.Format "2006-01-02 15:04 UTC"}}"{{end}}>{{if .LastActivity}}…{{else}}—{{end}}</span></td><td><span class="tag {{.State}}">{{.State}}</span></td></tr>{{end}}</tbody>
     </table>
+    </div>
     <p class="empty" id="pr-none" hidden>No pull requests match these filters.</p>
     {{else}}<p class="empty">No pull requests yet in tracked repositories.</p>{{end}}
   </section>
@@ -139,7 +175,14 @@
   function apply() {
     var r = repo ? repo.value : "", shown = 0;
     rows.forEach(function (row) {
-      var ok = state === "all" || (state === "pending" ? row.dataset.pending === "1" : row.dataset.state === state);
+      var ok;
+      switch (state) {
+        case "all": ok = true; break;
+        case "pending": ok = row.dataset.pending === "1"; break;
+        case "approved": ok = row.dataset.approved === "1"; break;
+        case "draft": ok = row.dataset.draft === "1"; break;
+        default: ok = row.dataset.state === state;
+      }
       row.hidden = !(ok && (!r || row.dataset.repo === r));
       if (!row.hidden) shown++;
     });
@@ -154,6 +197,44 @@
     });
   });
   if (repo) repo.addEventListener("change", apply);
+
+  // "4m ago" renderer, driven off FetchedAt-stamped Unix seconds. Updates every 30s so the
+  // relative label does not drift between work_refresh ticks.
+  function fmtAgo(sec) {
+    var delta = Math.max(0, Math.floor(Date.now() / 1000 - sec));
+    if (delta < 60) return delta + "s ago";
+    if (delta < 3600) return Math.floor(delta / 60) + "m ago";
+    if (delta < 86400) return Math.floor(delta / 3600) + "h ago";
+    if (delta < 86400 * 30) return Math.floor(delta / 86400) + "d ago";
+    return Math.floor(delta / 86400 / 30) + "mo ago";
+  }
+  function renderAgos() {
+    document.querySelectorAll(".ago[data-ts]").forEach(function (el) {
+      var ts = parseInt(el.getAttribute("data-ts"), 10);
+      if (ts > 0) el.textContent = fmtAgo(ts);
+    });
+  }
+  renderAgos();
+  setInterval(renderAgos, 30000);
+
+  // Last activity column show/hide, persisted per browser.
+  var colToggle = document.getElementById("col-activity");
+  var PREF_KEY = "hg:pipeline:col-activity";
+  function setColVisible(v) {
+    var ths = document.querySelectorAll("th.cact");
+    var tds = document.querySelectorAll("td.cact");
+    ths.forEach(function (th) { th.style.display = v ? "" : "none"; });
+    tds.forEach(function (td) { td.style.display = v ? "" : "none"; });
+  }
+  if (colToggle) {
+    var saved = null;
+    try { saved = localStorage.getItem(PREF_KEY); } catch (e) {}
+    if (saved === "0") { colToggle.checked = false; setColVisible(false); }
+    colToggle.addEventListener("change", function () {
+      setColVisible(colToggle.checked);
+      try { localStorage.setItem(PREF_KEY, colToggle.checked ? "1" : "0"); } catch (e) {}
+    });
+  }
 })();
 </script>
 </body>
