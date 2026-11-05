@@ -12,6 +12,9 @@ const (
 	mqOnceChecksPass = "### Merge started\n\nYour change will be merged once all checks pass (ETA 0-4 Hours).\n\nLearn more about merging in the wiki."
 	mqForced         = "### Merge started\n\nYour change will be merged immediately since you used the force (-f) flag, **bypassing any CI checks** (ETA: 1-5 minutes)."
 	mqIgnoringChecks = "### Merge started\n\nYour change will be merged while ignoring the following 1 checks: [trunk / test]"
+	// The same project, a second wording, for a change landing as one commit of a stack. Found by
+	// the sweep the morning after the first fix shipped, which had caught only the heading above.
+	mqStacked = "Starting merge as part of PR stack under #203352"
 	mqFailedCommand  = "## Merge failed\n\n**Reason**: Command `git -C /home/runner/work/pytorch/pytorch merge --squash` returned non-zero exit code"
 	mqFailedChecks   = "## Merge failed\n\n**Reason**: 10 mandatory check(s) failed.  The first few are:\n- [pull / linux-jammy-py3.10-gcc11 / build]"
 )
@@ -21,6 +24,7 @@ func TestAutomatedMergeIsNotADenial(t *testing.T) {
 		{"queued, waiting on checks", mqOnceChecksPass},
 		{"forced past the checks", mqForced},
 		{"merged ignoring some checks", mqIgnoringChecks},
+		{"landing as part of a stack", mqStacked},
 	}
 	for _, c := range merged {
 		if !MergedElsewhere(c.comment) {
@@ -35,6 +39,7 @@ func TestAutomatedMergeIsNotADenial(t *testing.T) {
 		{"a plain rejection", "Thanks, but we are not taking this direction."},
 		{"a rejection that mentions merging something else", "Closing as a duplicate of #1742, which we are going to merge instead."},
 		{"the word in prose", "Once the merge started failing we reverted; please rebase and reopen."},
+		{"starting a merge in prose", "We are not starting merge work on this until the RFC lands."},
 	}
 	for _, c := range notMerged {
 		if MergedElsewhere(c.comment) {

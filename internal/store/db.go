@@ -945,10 +945,17 @@ var mergedByHand = regexp.MustCompile(`(?i)\b(merged|landed|applied)\s+(it\s+|th
 // does, so without this every one of those reads as a denial.
 //
 // Anchored to the start of a line, with an optional heading marker, because that is how a bot
-// announces and not how anyone writes prose: "Once the merge started failing we reverted" must not
-// match. It requires "started", so the same bot's "## Merge failed" — a merge that did not happen,
-// on a pull request that really is closed unmerged — stays in the denied list where it belongs.
-var automatedMerge = regexp.MustCompile(`(?im)^[ \t]*#{0,6}[ \t]*merge started\b`)
+// announces and not how anyone writes prose: neither "Once the merge started failing we reverted"
+// nor "we are not starting merge work on this yet" may match. The same bot's "## Merge failed" — a
+// merge that did not happen, on a pull request that really is closed unmerged — stays in the denied
+// list where it belongs, because neither alternative here matches it.
+//
+// Two wordings, one project: a heading for an ordinary merge, and a plain line for a change landing
+// as one commit of a stack. The first shipped alone and the next morning's sweep found the second,
+// 31 rows of it. That is the argument for not settling here: a filter built by reading prose is only
+// ever as complete as the last sentence someone's bot was taught to write. The durable fix is to
+// check whether the change landed.
+var automatedMerge = regexp.MustCompile(`(?im)^[ \t]*#{0,6}[ \t]*(merge started|starting merge)\b`)
 
 // MergedElsewhere reports whether a closing comment says the change landed outside GitHub's merge
 // button, which leaves the pull request closed and unmerged and makes it look like a rejection.
