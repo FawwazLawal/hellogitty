@@ -44,12 +44,16 @@ func WorkPeek(it work.Item, login string, now time.Time) Peek {
 		p.Add("Updated", "", Ago(now, it.UpdatedAt))
 	}
 
-	var failed, running []string
+	var failed, stopped, running []string
 	passed := 0
 	for _, c := range it.CheckList {
 		switch c.State {
 		case work.CheckFailed:
-			failed = append(failed, c.Name)
+			if c.Stopped {
+				stopped = append(stopped, c.Name)
+			} else {
+				failed = append(failed, c.Name)
+			}
 		case work.CheckPending:
 			running = append(running, c.Name)
 		default:
@@ -60,6 +64,11 @@ func WorkPeek(it work.Item, login string, now time.Time) Peek {
 	level := ""
 	if len(failed) > 0 {
 		checks, level = append(checks, "Failed: "+list(failed, 4)), "caution"
+	}
+	// A stopped check still blocks the merge, so the panel stays cautioned; it is listed apart
+	// because there is nothing in its log to fix.
+	if len(stopped) > 0 {
+		checks, level = append(checks, "Stopped: "+list(stopped, 4)), "caution"
 	}
 	if len(running) > 0 {
 		checks = append(checks, "Running: "+list(running, 3))

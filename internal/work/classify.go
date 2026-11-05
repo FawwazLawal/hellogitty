@@ -105,10 +105,13 @@ func list(names []string, max int) string {
 }
 
 func prFacts(it *Item) {
-	failing, pending := failingChecks(it), pendingChecks(it)
+	failing, stopped := splitFailed(it.CheckList)
+	pending := pendingChecks(it)
 	switch {
 	case len(failing) > 0:
 		it.Notes = append(it.Notes, "Failing: "+list(failing, 2))
+	case len(stopped) > 0:
+		it.Notes = append(it.Notes, "Stopped: "+list(stopped, 2))
 	case len(it.CheckList) == 0 && checksFailing(it):
 		it.Notes = append(it.Notes, "Checks failing")
 	}
@@ -290,9 +293,24 @@ func classifyMyPR(it *Item, login string) {
 		it.Status = at(it.Last.Author) + " " + verb(it.Last)
 	case checksFailing(it):
 		it.Move, it.Level, it.Status = MoveYou, "caution", "Checks are failing"
-		if f := failingChecks(it); len(f) > 0 {
-			it.Status = "Failing: " + list(f, 3)
+		// A stopped check blocks the merge just as a failed one does, so the move is still yours.
+		// What changes is the sentence: "Failing: build" on a cancelled run sends you to read a
+		// log that holds no failure.
+		failing, stopped := splitFailed(it.CheckList)
+		switch {
+		case len(failing) > 0 && len(stopped) > 0:
+			// With real failures alongside them the stopped runs are counted, not named: upstream
+			// matrix job names run to 100 characters each and two named lists do not fit a row.
+			// The peek panel names them.
+			it.Status = "Failing: " + list(failing, 3) + "; " + strconv.Itoa(len(stopped)) + " also stopped"
+		case len(failing) > 0:
+			it.Status = "Failing: " + list(failing, 3)
+		case len(stopped) > 0:
+			it.Status = "Stopped: " + list(stopped, 2) + "; re-run for a verdict"
+		}
+		if len(failing) > 0 || len(stopped) > 0 {
 			it.Notes = dropPrefix(it.Notes, "Failing: ")
+			it.Notes = dropPrefix(it.Notes, "Stopped: ")
 		}
 		it.Notes = drop(it.Notes, "Checks failing")
 	case it.Conflict || it.MergeState == "DIRTY":

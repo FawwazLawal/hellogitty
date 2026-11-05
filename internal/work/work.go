@@ -40,6 +40,27 @@ type Check struct {
 	State  string // CheckPassed, CheckFailed or CheckPending
 	Detail string // the check's own one-line description, e.g. "CLA signature required"
 	At     *time.Time
+	// Stopped marks a check that was halted instead of reaching a verdict: cancelled by hand or by
+	// a newer push, or left stale by a new merge commit. Its State is CheckFailed, because it is
+	// not a pass and GitHub will not merge over it, but nothing in the code failed and the next
+	// step is to run it again rather than to read a log.
+	Stopped bool
+}
+
+// splitFailed names the non-passing checks in a list, separating the ones that failed from the
+// ones that were only stopped. Both block a merge; only the first kind is something to fix.
+func splitFailed(checks []Check) (failed, stopped []string) {
+	for _, c := range checks {
+		if c.State != CheckFailed {
+			continue
+		}
+		if c.Stopped {
+			stopped = append(stopped, c.Name)
+		} else {
+			failed = append(failed, c.Name)
+		}
+	}
+	return failed, stopped
 }
 
 // Thread is an unresolved review thread: an inline comment someone expects answered before merge.

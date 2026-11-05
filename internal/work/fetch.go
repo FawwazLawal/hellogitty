@@ -517,7 +517,7 @@ func toItem(n node, role, login string) Item {
 				if x.Typename == "StatusContext" {
 					ch.Name, ch.Detail, ch.State, ch.At = x.Context, x.Description, statusState(x.State), x.CreatedAt
 				} else {
-					ch.State = runState(x.Status, x.Conclusion)
+					ch.State, ch.Stopped = runState(x.Status, x.Conclusion)
 				}
 				it.CheckList = append(it.CheckList, ch)
 			}
@@ -614,19 +614,27 @@ func statusState(s string) string {
 	return CheckPending
 }
 
-// runState maps a check run's status and conclusion to a check state. Skipped and neutral runs
-// count as passed: they never block a merge.
-func runState(status, conclusion string) string {
+// runState maps a check run's status and conclusion to a check state, and reports whether the run
+// was stopped rather than run to a verdict. Skipped and neutral runs count as passed: they never
+// block a merge.
+//
+// CANCELLED and STALE runs count as failed, because they are not a pass and GitHub will not merge
+// over them, but they are marked stopped: nothing in the code failed and the next step is to run
+// them again. TIMED_OUT is deliberately not stopped — a run that spent its whole budget without
+// reaching a verdict did fail, and there is something to fix.
+func runState(status, conclusion string) (state string, stopped bool) {
 	if status != "COMPLETED" {
-		return CheckPending
+		return CheckPending, false
 	}
 	switch conclusion {
 	case "SUCCESS", "NEUTRAL", "SKIPPED":
-		return CheckPassed
+		return CheckPassed, false
 	case "ACTION_REQUIRED":
-		return CheckPending
+		return CheckPending, false
+	case "CANCELLED", "STALE":
+		return CheckFailed, true
 	}
-	return CheckFailed
+	return CheckFailed, false
 }
 
 // recent lists every comment and review from someone else that the board fetched: the last three

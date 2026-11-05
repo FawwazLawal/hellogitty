@@ -296,17 +296,13 @@ func prEntries(it work.Item, login string, seen FirstSeen) []Entry {
 		out = append(out, entry("changes-requested-"+strconv.FormatInt(it.ChangesAt.Unix(), 10), KindState, "",
 			strings.Join(it.ChangesBy, ","), *it.ChangesAt, "Changes requested by "+at(it.ChangesBy)))
 	}
-	if failing := failed(it.CheckList); len(failing) > 0 || (len(it.CheckList) == 0 && (it.Checks == "FAILURE" || it.Checks == "ERROR")) {
+	if failing, stopped := failed(it.CheckList); len(failing)+len(stopped) > 0 || (len(it.CheckList) == 0 && (it.Checks == "FAILURE" || it.Checks == "ERROR")) {
 		id := "ci-red-" + short(it.HeadOID)
 		when := latestTime(it.CheckList)
 		if when.IsZero() {
 			when = seen(base + id)
 		}
-		summary := "CI failing"
-		if len(failing) > 0 {
-			summary += ": " + strings.Join(failing, ", ")
-		}
-		out = append(out, entry(id, KindState, "", "", when, summary))
+		out = append(out, entry(id, KindState, "", "", when, ciSummary(failing, stopped)))
 	}
 	if it.Conflict || it.MergeState == "DIRTY" {
 		id := "conflict-" + short(it.HeadOID)
@@ -771,14 +767,35 @@ func plural(n int, s string) string {
 	return strconv.Itoa(n) + " " + s + "s"
 }
 
-func failed(checks []work.Check) []string {
-	var out []string
+// failed names the checks that block a merge, separating the ones that failed from the ones that
+// were only stopped before reaching a verdict.
+func failed(checks []work.Check) (failing, stopped []string) {
 	for _, c := range checks {
-		if c.State == work.CheckFailed {
-			out = append(out, c.Name)
+		if c.State != work.CheckFailed {
+			continue
+		}
+		if c.Stopped {
+			stopped = append(stopped, c.Name)
+		} else {
+			failing = append(failing, c.Name)
 		}
 	}
-	return out
+	return failing, stopped
+}
+
+// ciSummary is the line the inbox file carries for a red pull request. An entry whose blocking
+// checks were all stopped does not say "failing": a cancelled run is not a verdict, and reporting
+// it as one sends the reader to a log that holds no failure.
+func ciSummary(failing, stopped []string) string {
+	switch {
+	case len(failing) == 0 && len(stopped) == 0:
+		return "CI failing"
+	case len(failing) == 0:
+		return "CI stopped before finishing: " + strings.Join(stopped, ", ")
+	case len(stopped) == 0:
+		return "CI failing: " + strings.Join(failing, ", ")
+	}
+	return "CI failing: " + strings.Join(failing, ", ") + "; stopped: " + strings.Join(stopped, ", ")
 }
 
 func latestTime(checks []work.Check) time.Time {
