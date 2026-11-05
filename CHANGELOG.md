@@ -5,6 +5,67 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (38) · Black Bombay (baby) · 2026-11-05
+
+Tag `v0.2.38`.
+
+- **The pipeline page's top numbers now say what they count.** Eleven figures sat
+  there as peers. "Opened" was a lifetime total and "Open" was right now, two words
+  apart and reading as the same thing, and the six action figures below them were
+  subsets of "Open" that could count the same pull request twice. Nothing on the page
+  said which number contained which, so the eye had to guess, and the honest reading
+  of eleven peers is that they are eleven independent facts.
+
+  They are now three tiers that say their own relationship. A muted lifetime row
+  (opened, merged, closed without merging — relabelled so it reads as the complement
+  of merged rather than as "shut right now" — and the merge rate). One large card for
+  open now, with "your pull requests still in flight" beside the digit so it cannot be
+  misread as "opened". Then, under a heading that says "of those, waiting on", the
+  four action counts as what they always were: filters of the card above them.
+  Approved and draft left the rail for the table's filter chips, because they are
+  states rather than things waiting on you. No counter's arithmetic changed; this is
+  what the page says about its own numbers.
+
+- **The pull requests table has a Last activity column.** It is the newest of four
+  things — a human comment or review, a bot review, a review-thread reply, or our own
+  last commit on the branch — and deliberately not GitHub's `updated_at`, which moves
+  when someone edits a label. Shown as "4m ago", with the exact UTC time on hover, and
+  re-rendered every 30 seconds so the relative label does not drift between refreshes.
+  A row with none of the four shows an em dash and sorts to the bottom rather than
+  pretending to be from 1970. The column hides and shows from a toggle beside the
+  filter chips, remembered per browser.
+
+- **A red CI entry now changes its id when its checks change.** The id was built from
+  the commit alone, so a pull request that went from one failing check to three kept
+  the same entry: the board had already told you about this one, and a reader who had
+  seen it had no way to learn that what was failing was not what had failed before.
+  The id now carries a short digest of the failing and stopped check names, sorted
+  first so that the same set always hashes the same way. New names, new id, new entry
+  — and an unchanged set stays quiet, which is the other half of the contract.
+
+- **Every pull request runs CI, whatever it targets.** The workflow's `pull_request`
+  trigger was filtered to base `dev`. A pull request opened against any other base ran
+  nothing — not pending, not skipped, never created — so its status box was empty, and
+  an empty box reads as fine; retargeting it to `dev` afterwards does not re-fire the
+  trigger, so it stayed empty. One branch reached review that way with a failing test
+  nobody had seen. The filter is gone. The `push` trigger keeps its `dev`/`main` list,
+  which is what that one is for.
+
+- **A fourth visual theme pack: Muertos V2, "La Noche Viva".** Three designed
+  appearances — cream paper for light, aubergine and plum for dark, true black for
+  AMOLED — with pack-scoped ornament: a papel picado strip across the site head, a
+  violet medallion on the active quicknav tab, a left-edge ribbon on panels in light,
+  faint paper grain on the light canvas, and Luz, the Signal Keeper, as an empty-state
+  cameo. The existing muertos pack is untouched; both sit alongside the appearance
+  setting rather than replacing it.
+
+  The semantic triad holds, which is the part that matters: violet carries identity,
+  marigold stays reserved for caution and jade for good news, and the decorative
+  marigold, pink and jade in the ornament never land on a status surface. Every
+  decorative rule is scoped to the pack and attached to single elements, so no row pays
+  for a filter or a blur. The grayscale check and the palette that was tried and
+  rejected are written down in the implementation report.
+
 ## v0.2.0 (37) · Black Bombay (baby) · 2026-11-05
 
 Tag `v0.2.37`.
