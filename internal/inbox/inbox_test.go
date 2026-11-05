@@ -68,26 +68,38 @@ func TestBuildKeepsOnlyPertinentEvents(t *testing.T) {
 	for _, e := range got {
 		byID[e.ID] = e
 	}
+	// The red CI id carries a digest of the checks it is about, so it is matched by prefix: the
+	// digest is the point of that id and pinning it here would only record today's check list.
+	byPrefix := func(prefix string) Entry {
+		for _, e := range got {
+			if strings.HasPrefix(e.ID, prefix) {
+				return e
+			}
+		}
+		return Entry{}
+	}
 	want := map[string]string{
 		"hg-opencti-platform-opencti-19110-review-1761234567": KindReview,
 		"hg-opencti-platform-opencti-19110-comment-555":       KindComment,
 		"hg-opencti-platform-opencti-19110-bot-inline-777":    KindBot,
-		"hg-opencti-platform-opencti-19110-ci-red-abcdef0":    KindState,
 		"hg-opencti-platform-opencti-19110-conflict-abcdef0":  KindState,
 		"hg-pbakaus-impeccable-1084-merged":                   KindState,
 		"hg-corazawaf-coraza-804-watch-claimed":               KindWatched,
 	}
-	if len(got) != len(want) {
+	if len(got) != len(want)+1 { // +1 for the red CI entry, matched by prefix below
 		var ids []string
 		for _, e := range got {
 			ids = append(ids, e.ID)
 		}
-		t.Fatalf("got %d entries %v, want %d", len(got), ids, len(want))
+		t.Fatalf("got %d entries %v, want %d", len(got), ids, len(want)+1)
 	}
 	for id, kind := range want {
 		if e, ok := byID[id]; !ok || e.Kind != kind {
 			t.Errorf("missing or wrong kind for %s: %+v", id, e)
 		}
+	}
+	if ci := byPrefix("hg-opencti-platform-opencti-19110-ci-red-abcdef0-"); ci.Kind != KindState {
+		t.Errorf("missing or wrong kind for the red CI entry: %+v", ci)
 	}
 	r := byID["hg-opencti-platform-opencti-19110-review-1761234567"]
 	if r.Actor != "Archidoit" || !r.OccurredAt.Equal(t0) || r.Summary != "CHANGES_REQUESTED, 2 unresolved inline comments: Use the EMPTY_VALUE constant" {
@@ -99,7 +111,7 @@ func TestBuildKeepsOnlyPertinentEvents(t *testing.T) {
 	if c := byID["hg-opencti-platform-opencti-19110-comment-555"]; c.Summary != "Also here" {
 		t.Errorf("comment summary should be one clean line: %q", c.Summary)
 	}
-	if ci := byID["hg-opencti-platform-opencti-19110-ci-red-abcdef0"]; !ci.OccurredAt.Equal(t0.Add(time.Hour)) || ci.Summary != "CI failing: lint" {
+	if ci := byPrefix("hg-opencti-platform-opencti-19110-ci-red-abcdef0-"); !ci.OccurredAt.Equal(t0.Add(time.Hour)) || ci.Summary != "CI failing: lint" {
 		t.Errorf("CI entry should carry the failing check's own time and name: %+v", ci)
 	}
 	if w := byID["hg-corazawaf-coraza-804-watch-claimed"]; w.URL != "https://github.com/corazawaf/coraza/issues/804#issuecomment-9" {
