@@ -297,7 +297,7 @@ func prEntries(it work.Item, login string, seen FirstSeen) []Entry {
 			strings.Join(it.ChangesBy, ","), *it.ChangesAt, "Changes requested by "+at(it.ChangesBy)))
 	}
 	if failing, stopped := failed(it.CheckList); len(failing)+len(stopped) > 0 || (len(it.CheckList) == 0 && (it.Checks == "FAILURE" || it.Checks == "ERROR")) {
-		id := "ci-red-" + short(it.HeadOID)
+		id := "ci-red-" + short(it.HeadOID) + "-" + ciDigest(failing, stopped)
 		when := latestTime(it.CheckList)
 		if when.IsZero() {
 			when = seen(base + id)
@@ -733,6 +733,27 @@ func eventID(url string) string {
 
 func slug(repo string) string {
 	return strings.ToLower(strings.NewReplacer("/", "-", ".", "-", "_", "-").Replace(repo))
+}
+
+// ciDigest fingerprints the checks a red entry is about, so that its id moves when they do. The id
+// used to be the head sha and nothing else, which made two different facts share one name: a head
+// whose only red was a cancelled job, and the same head once five real failures had arrived. A
+// reader that had dismissed the first had no way to tell the second was not it.
+//
+// The names are sorted first. GitHub does not promise an order for the rollup contexts, and a
+// digest taken over the order it happened to send would move the id on a refresh where nothing had
+// changed, which would cost more than the bug. Failures and stops are digested apart because they
+// are different facts: "build failed" and "build was cancelled" must not share a name either.
+func ciDigest(failing, stopped []string) string {
+	f := append([]string(nil), failing...)
+	st := append([]string(nil), stopped...)
+	sort.Strings(f)
+	sort.Strings(st)
+	h := fnv.New64a()
+	h.Write([]byte(strings.Join(f, "\x00")))
+	h.Write([]byte{1})
+	h.Write([]byte(strings.Join(st, "\x00")))
+	return strconv.FormatUint(h.Sum64(), 36)
 }
 
 func short(oid string) string {
