@@ -6,11 +6,21 @@
 snapshot.json
 .snapshot-*.json
 
-# Binaries
+# Binaries. /hellogitty-* catches alternate-named builds like hellogitty-v2
+# that slipped past the plain /hellogitty rule when a worktree built to a new
+# name — a 21 MB Mach-O in git history cannot be taken back once pushed.
 /hellogitty
+/hellogitty-*
 
-# Your configuration (copy hellogitty.example.json to start)
+# Your configuration (copy hellogitty.example.json to start). hellogitty.*.json
+# catches alternate-config files (hellogitty.muertos-v2.json and the like);
+# the negation keeps the example file tracked.
 hellogitty.json
+hellogitty.*.json
+!hellogitty.example.json
+
+# Working PR-body drafts kept beside the worktree, never meant to ship.
+.hg-*.md
 
 # Local working files
 local/

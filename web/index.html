@@ -598,6 +598,59 @@
     --mascot-bg: #fbf7ef;
     color-scheme: light;
   }
+  /* Muertos V2 — La Noche Viva. Dark variant: aubergine night, violet carries identity,
+     marigold is RESERVED for --caution so the only warm light on the page is still the thing
+     that needs you. Temperature-ordered triad: jade (ok) -> marigold (caution) -> crimson (danger).
+     Decorative petal tokens (--pack-*-flower) exist for flower illustrations and ornament
+     and are intentionally not reused for any status element; see the §3 triad rule in
+     docs/THEME-PACKS.md. --raised is lifted deliberately warm so Dark reads as layered plum
+     against AMOLED's flat-black elevation. */
+  :root[data-visual-theme="muertos-v2"] {
+    --bg: #170f21; --panel: #261a34; --raised: #3c2a4b; --rule: #4a365a; --rule-hi: #6b4e82;
+    --text: #fff5e7; --dim: #d8c5d8; --track: #422e4e;
+    --nom: #79d8a0; --caution: #ffc050; --caution-text: #ffc050; --warn: #ff8690;
+    --caution-fill: #332410; --caution-ink: #ffdca3; --warn-fill: #3a1420; --warn-ink: #ffd6db;
+    --tag-fill: #2a1f3d; --tag-ink: #c6b8ff; --tag-rule: #4b3d6a;
+    --head: #1f1530; --head-dim: #d8c5d8; --head-accent: #a99dff;
+    --mascot-bg: #261a34;
+    --pack-flower-marigold: #ffc050; --pack-flower-pink: #ff78be; --pack-flower-jade: #6de4d0;
+    --pack-flower-indigo: #a99dff; --pack-flower-papaya: #ff7240;
+    color-scheme: dark;
+  }
+  /* Muertos V2 — Eclipse (AMOLED): a true-black outer canvas; panel collapses into the
+     page so the border becomes the only thing marking it. --rule is raised to clear 3:1
+     against #000 since it now carries what the fill no longer does. No wide dark-purple
+     gradients. Decorative flower tokens are slightly dimmed from Dark so precise accents
+     punch without screen-spanning glow. */
+  :root[data-theme="amoled"][data-visual-theme="muertos-v2"] {
+    --bg: #000000; --panel: #080808; --raised: #111111; --rule: #353035; --rule-hi: #605860;
+    --text: #f8f4ef; --dim: #c2bcbe;
+    --caution: #ffbd40; --caution-text: #ffbd40; --warn: #ff7888; --nom: #68ddb5;
+    --caution-fill: #1a1308; --warn-fill: #1a0a10; --tag-fill: #16101f;
+    --head: #000000; --head-dim: #c2bcbe; --head-accent: #a397ff;
+    --mascot-bg: #000000;
+    --pack-flower-marigold: #ffbd40; --pack-flower-pink: #ff6bb5; --pack-flower-jade: #5fe2c9;
+    --pack-flower-indigo: #a397ff; --pack-flower-papaya: #ff7240;
+  }
+  /* Muertos V2 — Día de Flores (light): creamed paper (--bg), warm cream panels (--panel),
+     dark ink, indigo carrying identity. The canvas is cream so the white panels nest on it
+     like printed cards on a paper spread; --raised is a coral-warm step up for tags and
+     sub-cards. --rule is a tactile dusty-rose so dividers read as cut paper, not hairlines.
+     --caution stays in the burnt-sienna family — distinct from jade, from danger, and far
+     enough from decorative marigold in luminance that a flower and a Your-move chip never
+     land at the same weight. */
+  :root[data-theme="light"][data-visual-theme="muertos-v2"] {
+    --bg: #fff3df; --panel: #ffffff; --raised: #fbe7cf; --rule: #dec7d4; --rule-hi: #b89aa8;
+    --text: #251a2b; --dim: #655468; --track: #e9d7ca;
+    --nom: #0a6b55; --caution: #8e5100; --caution-text: #6f3f00; --warn: #b12845;
+    --caution-fill: #fdebcd; --caution-ink: #5a3200; --warn-fill: #ffe0e4; --warn-ink: #7a0f22;
+    --tag-fill: #f1e3f5; --tag-ink: #4a357f; --tag-rule: #c7b4dc;
+    --head: #fbe7cf; --head-dim: #655468; --head-accent: #5944a5;
+    --mascot-bg: #ffffff;
+    --pack-flower-marigold: #b25d05; --pack-flower-pink: #a91f69; --pack-flower-jade: #006e64;
+    --pack-flower-indigo: #5944a5; --pack-flower-papaya: #c44622;
+    color-scheme: light;
+  }
   * { box-sizing: border-box; }
   html { background: var(--bg); scrollbar-color: var(--rule-hi) var(--bg); scroll-padding-top: 60px; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--sans); caret-color: var(--text);
@@ -637,7 +690,7 @@
     if (window.matchMedia) try { window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function(e) { var s; try { s = localStorage.getItem("hellogitty-theme"); } catch(x) {} if (!s) { if (e.matches) root.dataset.theme = "light"; else delete root.dataset.theme; } }); } catch(e) {}
 
     // Visual (collaboration) theme: a colour overlay on top of Auto/Light/Dark.
-    var VISUAL_THEMES = { pink: { label: "(pinky v2)" }, muertos: { label: "(muertos)", amoled: true } };
+    var VISUAL_THEMES = { pink: { label: "(pinky v2)" }, muertos: { label: "(muertos)", amoled: true }, "muertos-v2": { label: "(la noche viva)", amoled: true } };
     // A pack that declares amoled offers a third appearance: true black, a variant of dark.
     // The button is added here rather than in every page's header, so one change covers them all.
     function amoledButton(on) {
@@ -814,6 +867,94 @@
   .hclock.clock-led .hclock-date { color: var(--head-accent); font-weight: 600; letter-spacing: 0.08em; }
   :root[data-visual-theme="pink"] .hclock-time { color: var(--head-accent); text-shadow: 0 0 7px var(--head-accent), 0 0 20px rgba(255,105,180,.3); }
   :root[data-visual-theme="pink"] .hclock-date { color: var(--head-accent); opacity: .7; }
+
+  /* Muertos V2 — La Noche Viva. Pack-scoped ornament only. Every rule in this block
+     carries :root[data-visual-theme="muertos-v2"] so it leaks into no other pack.
+     No blur/filter/box-shadow on repeating rows; decoration sits on singleton elements
+     (the site head, the active nav tab, empty-state text) where the §6 decoration
+     budget pays once per page. The semantic triad is unchanged: --caution remains the
+     only warm light on the page, so the festival palette lives in violet, jade and
+     ornament assets, never on any status chip. */
+  :root[data-visual-theme="muertos-v2"] .hclock-time { color: var(--head-accent); letter-spacing: 0.06em; }
+  :root[data-visual-theme="muertos-v2"] .hclock-date { color: var(--head-accent); opacity: .72; }
+
+  /* Papel picado strip above the quicknav — cut-paper tabs in brand colours.
+     Mask-based so the shape stays one gradient and no extra DOM. Keeps clear of
+     interactive controls: it sits in the thin band between the status header and the
+     nav, over no clickable surface. 9px tall, repeats horizontally. */
+  :root[data-visual-theme="muertos-v2"] .site-head { position: relative; }
+  :root[data-visual-theme="muertos-v2"] .site-head::after {
+    content: ""; display: block; height: 9px; margin-top: -1px;
+    background: linear-gradient(90deg,
+      var(--pack-flower-marigold) 0 20%,
+      var(--pack-flower-pink) 20% 40%,
+      var(--pack-flower-jade) 40% 60%,
+      var(--pack-flower-indigo) 60% 80%,
+      var(--pack-flower-papaya) 80% 100%);
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 9' preserveAspectRatio='none'><path d='M0 0 H24 V5 L22 9 L19 5 L16 9 L13 5 L10 9 L7 5 L4 9 L1 5 L0 9 Z' fill='black'/></svg>");
+    mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 9' preserveAspectRatio='none'><path d='M0 0 H24 V5 L22 9 L19 5 L16 9 L13 5 L10 9 L7 5 L4 9 L1 5 L0 9 Z' fill='black'/></svg>");
+    -webkit-mask-size: 24px 9px; mask-size: 24px 9px;
+    -webkit-mask-repeat: repeat-x; mask-repeat: repeat-x;
+    opacity: .85;
+  }
+  :root[data-theme="amoled"][data-visual-theme="muertos-v2"] .site-head::after { opacity: .62; }
+
+  /* Día de Flores: a printed-paper left-edge ribbon in indigo on every .panel, singleton
+     per section, keeps the identity carrier visible on the white card without re-tinting
+     anything inside. Ribbon is 3px, no shadow, no blur — paid once per panel, not per row. */
+  :root[data-theme="light"][data-visual-theme="muertos-v2"] .panel {
+    box-shadow: inset 3px 0 0 var(--head-accent);
+  }
+  /* Faint paper-grain on the Light canvas: a sparse SVG noise mask at 4% alpha, tiled.
+     The grain only renders on the body/html background, not on panels — so the "between
+     panels" cream reads as paper, and the white panels remain clean print surfaces. */
+  :root[data-theme="light"][data-visual-theme="muertos-v2"] body {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160'><g fill='%235c3d20' fill-opacity='0.055'><circle cx='17' cy='21' r='.9'/><circle cx='63' cy='9' r='.7'/><circle cx='121' cy='27' r='.8'/><circle cx='39' cy='65' r='.9'/><circle cx='95' cy='49' r='.7'/><circle cx='150' cy='81' r='.8'/><circle cx='7' cy='97' r='.8'/><circle cx='75' cy='115' r='.9'/><circle cx='131' cy='103' r='.7'/><circle cx='45' cy='141' r='.8'/><circle cx='108' cy='149' r='.8'/><circle cx='28' cy='121' r='.7'/></g></svg>");
+    background-size: 160px 160px;
+    background-attachment: fixed;
+  }
+
+  /* Violet petal medallion in front of the active nav tab — identity, not status.
+     A 4-petal flower drawn as crossed ellipses so no glyph font is needed. */
+  :root[data-visual-theme="muertos-v2"] .quicknav a[aria-current="page"],
+  :root[data-visual-theme="muertos-v2"] .quicknav a.active {
+    position: relative;
+  }
+  :root[data-visual-theme="muertos-v2"] .quicknav a[aria-current="page"]::before,
+  :root[data-visual-theme="muertos-v2"] .quicknav a.active::before {
+    content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 6px;
+    background: var(--head-accent);
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><g fill='black'><ellipse cx='5' cy='5' rx='4.5' ry='1.6'/><ellipse cx='5' cy='5' rx='1.6' ry='4.5'/><ellipse cx='5' cy='5' rx='3.4' ry='3.4' transform='rotate(45 5 5)' opacity='.5'/></g></svg>");
+    mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><g fill='black'><ellipse cx='5' cy='5' rx='4.5' ry='1.6'/><ellipse cx='5' cy='5' rx='1.6' ry='4.5'/><ellipse cx='5' cy='5' rx='3.4' ry='3.4' transform='rotate(45 5 5)' opacity='.5'/></g></svg>");
+    -webkit-mask-size: contain; mask-size: contain;
+    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+    vertical-align: -1px;
+  }
+
+  /* Luz, the Signal Keeper, as a decorative cameo on the Conversations empty state.
+     Delivered as an SVG asset embedded via web/mascot/ (already covered by the
+     existing go:embed directive). Appears only when the pack is active and only on
+     the .empty block — which is a singleton per panel, not a repeating row. State
+     variants come later; v1 ships the "all clear" cameo.
+     The `.empty` block's layout is unchanged — the cameo renders above the existing
+     text with a margin, same paragraph box. */
+  :root[data-visual-theme="muertos-v2"] .empty,
+  :root[data-visual-theme="muertos-v2"] p.none {
+    padding-top: 68px; position: relative; text-align: center;
+  }
+  :root[data-visual-theme="muertos-v2"] .empty::before,
+  :root[data-visual-theme="muertos-v2"] p.none::before {
+    content: ""; position: absolute; left: 50%; top: 4px; width: 56px; height: 60px;
+    transform: translateX(-50%);
+    background-image: url("/mascot/luz.svg"); background-repeat: no-repeat;
+    background-size: contain; background-position: center;
+    opacity: .95;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    :root[data-visual-theme="muertos-v2"] .empty::before,
+    :root[data-visual-theme="muertos-v2"] p.none::before { animation: luzBlink 9s ease-in-out infinite; }
+    @keyframes luzBlink { 0%, 92%, 100% { opacity: .95; } 94%, 96% { opacity: .55; } }
+  }
 
   /* Flip clock: retro split-flap style */
   .hclock.clock-flip .hclock-time { color: #f5f0e8; font-weight: 700; letter-spacing: 0.14em;

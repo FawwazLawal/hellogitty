@@ -50,16 +50,24 @@ func indexPackIDs(t *testing.T) ([]string, map[string]bool) {
 	}
 	body := rest[:end]
 
-	// Each entry is `<id>: { ... }`. The inner body may itself be empty.
-	entryRe := regexp.MustCompile(`([A-Za-z_][A-Za-z0-9_]*)\s*:\s*\{([^{}]*)\}`)
+	// Each entry is `<id>: { ... }`. The inner body may itself be empty. The key may be a
+	// bareword identifier (pink, muertos) OR a quoted string ("muertos-v2") — the latter is
+	// valid JS and is the only option when the id carries a hyphen, which the data attribute
+	// and localStorage both do. The earlier parser matched barewords only and silently skipped
+	// quoted-key packs, which made this test and its two neighbours give passing readings on an
+	// incomplete pack list.
+	entryRe := regexp.MustCompile(`(?:"([^"]+)"|([A-Za-z_][A-Za-z0-9_]*))\s*:\s*\{([^{}]*)\}`)
 	amoledRe := regexp.MustCompile(`\bamoled\s*:\s*true\b`)
 
 	var ids []string
 	amoled := map[string]bool{}
 	for _, m := range entryRe.FindAllStringSubmatch(body, -1) {
 		id := m[1]
+		if id == "" {
+			id = m[2]
+		}
 		ids = append(ids, id)
-		if amoledRe.MatchString(m[2]) {
+		if amoledRe.MatchString(m[3]) {
 			amoled[id] = true
 		}
 	}
