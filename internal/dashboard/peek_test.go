@@ -104,3 +104,22 @@ func TestPanelsAreModules(t *testing.T) {
 		}
 	}
 }
+
+// A cancelled check is cautioned like a failure, because it blocks the merge, and listed apart from
+// one, because its log holds nothing to fix.
+func TestWorkPeekListsStoppedChecksApart(t *testing.T) {
+	now := time.Date(2026, 10, 21, 12, 0, 0, 0, time.UTC)
+	it := work.Item{PR: true, Repo: "o/r", Number: 7, State: "OPEN", Author: "me", CreatedAt: now.Add(-48 * time.Hour),
+		CheckList: []work.Check{
+			{Name: "build", State: work.CheckFailed, Stopped: true},
+			{Name: "lint", State: work.CheckFailed},
+			{Name: "test", State: work.CheckPassed},
+		}}
+	checks := lines(workPeek(it, "me", now, nil))["Checks"]
+	if !strings.Contains(checks, "Failed: lint") {
+		t.Errorf("peek drops the real failure: %q", checks)
+	}
+	if !strings.Contains(checks, "Stopped: build") {
+		t.Errorf("peek reports a cancelled check as failed: %q", checks)
+	}
+}
