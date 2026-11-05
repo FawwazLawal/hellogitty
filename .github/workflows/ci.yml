@@ -1,10 +1,13 @@
 name: CI
 
+# Every pull request runs CI, whatever it targets. A base filter here looks harmless but is a
+# silent hole: a PR opened against the wrong base gets no checks at all -- not pending, never
+# created -- and retargeting it to dev does not re-fire the trigger, so the PR sits there looking
+# clean because nothing ever ran. A check that cannot go red is not a check.
 on:
   push:
     branches: [dev, main]
   pull_request:
-    branches: [dev]
 
 jobs:
   build:
