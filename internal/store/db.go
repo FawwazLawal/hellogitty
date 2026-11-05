@@ -940,8 +940,21 @@ func (s *Store) watchReport(repoID int64) ([]WatchReport, error) {
 // never be hidden, so only explicit wording counts.
 var mergedByHand = regexp.MustCompile(`(?i)\b(merged|landed|applied)\s+(it\s+|this\s+)?(manually|by hand|locally)\b|\b(merged|landed|applied|cherry[- ]?picked)\s+(it\s+|this\s+)?(as|in|via)\s+(commit\s+)?[0-9a-f]{7,40}\b`)
 
-// MergedByHand reports whether a closing comment says the change was merged outside GitHub.
-func MergedByHand(closingComment string) bool { return mergedByHand.MatchString(closingComment) }
+// automatedMerge matches a merge bot announcing that it is landing the change itself. A project
+// whose bot rebases and pushes leaves the pull request closed and unmerged, exactly as a rejection
+// does, so without this every one of those reads as a denial.
+//
+// Anchored to the start of a line, with an optional heading marker, because that is how a bot
+// announces and not how anyone writes prose: "Once the merge started failing we reverted" must not
+// match. It requires "started", so the same bot's "## Merge failed" — a merge that did not happen,
+// on a pull request that really is closed unmerged — stays in the denied list where it belongs.
+var automatedMerge = regexp.MustCompile(`(?im)^[ \t]*#{0,6}[ \t]*merge started\b`)
+
+// MergedElsewhere reports whether a closing comment says the change landed outside GitHub's merge
+// button, which leaves the pull request closed and unmerged and makes it look like a rejection.
+func MergedElsewhere(closingComment string) bool {
+	return mergedByHand.MatchString(closingComment) || automatedMerge.MatchString(closingComment)
+}
 
 // deniedPRs returns the most recent denied outside PRs (up to limit) and the total count,
 // leaving out PRs whose closing comment says they were merged by hand.
@@ -963,7 +976,7 @@ func (s *Store) deniedPRs(repoID int64, limit int) ([]DeniedPR, int, error) {
 		if err := rows.Scan(&d.Number, &d.Title, &d.AuthorAssociation, &d.ClosingComment, &d.ReviewVerdict, &ca); err != nil {
 			return nil, 0, err
 		}
-		if MergedByHand(d.ClosingComment) {
+		if MergedElsewhere(d.ClosingComment) {
 			continue
 		}
 		total++
