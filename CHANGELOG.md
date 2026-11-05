@@ -5,6 +5,49 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (37) · Black Bombay (baby) · 2026-11-05
+
+Tag `v0.2.37`.
+
+- **A check that was cancelled is no longer reported as a failure.** GitHub gives a
+  check run one of nine conclusions and the board named four of them, sending the
+  other five to "failed". Two of those five are not failures: a cancelled run was
+  halted, by hand or by a newer push, and a stale one belongs to a merge commit that
+  no longer exists. Neither says anything about the code, and the board sent you to
+  open a log that held no failure — on the row, in the peek panel, and in
+  `inbox.json`, which is the line that leaves the machine.
+
+  A stopped check still blocks a merge, so it is still your move and it still raises
+  an inbox entry; dropping it was the shorter thing to describe and it would have
+  quietly hidden a pull request that cannot merge. What changed is the words:
+  "Stopped: build; re-run for a verdict" in place of "Failing: build". `TIMED_OUT`
+  deliberately stays a failure, because a run that spent its whole budget without
+  reaching a verdict did fail and there is something to fix. Where real failures
+  stand beside stopped ones the row names the failures and counts the stops —
+  upstream matrix job names run past a hundred characters each and two named lists do
+  not fit a row — and the peek panel, which exists for what the row has no room
+  for, names them.
+
+- **A merge bot's own merge is no longer counted as a rejection.** A project whose
+  bot rebases and pushes instead of using the merge button leaves the pull request
+  closed and unmerged, which is the same state a refusal leaves, so every one of
+  those merges was being read as a turndown. The filter meant to catch exactly this
+  was written for a person saying it in prose — "merged manually",
+  "cherry-picked as `9f3a2b1c`" — and caught three rows in four thousand. A bot
+  writes a heading instead, or a plain line about landing one commit of a stack.
+
+  Both wordings are now matched, anchored to the start of a line because that is how
+  a bot announces and not how anyone writes a sentence. 309 automated merges leave
+  the count: 42% of every turned-down row that carries a closing comment, which are
+  the only rows anything can be learned from. The error ran in the worst available
+  direction, since those rows feed the rejection reading — the tool had been
+  teaching us to avoid the things that in fact worked.
+
+  The second wording turned up the morning after the first one shipped. A filter
+  built by reading prose is only ever as complete as the last sentence someone's bot
+  was taught to write, and the code now says so where the pattern is: checking
+  whether the change actually landed is the durable answer, and this is not it.
+
 ## v0.2.0 (36) · Black Bombay (baby) · 2026-11-03
 
 Tag `v0.2.36`.
