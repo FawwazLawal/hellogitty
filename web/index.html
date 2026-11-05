@@ -202,6 +202,27 @@
   .trail .rp { min-width: 0; overflow: hidden; text-overflow: ellipsis; } /* a long name shortens; the number stays */
   .trail .num { flex: none; font: 500 11.5px/16px var(--mono); }
   .none { margin: 0; padding: 4px 14px 14px; color: var(--dim); }
+  /* The old empty-state was a one-sentence .none paragraph rattling around a 280px panel — the
+     "vast black void" the dashboard's redesign brief named. panel-empty replaces it with a
+     compact block that says what is true, names the next move, and gives the reader somewhere
+     to go. It is not themed and it is not tied to any pack; every theme gets this. On a sized
+     panel it centres vertically so the fixed height reads as intentional rather than hollow. */
+  .panel-empty { margin: 0; padding: 18px 16px; display: flex; flex-direction: column; gap: 10px; color: var(--text); }
+  .panel-empty-lede { margin: 0; font-size: 14px; }
+  .panel-empty-lede b { font-weight: 600; }
+  .panel-empty-what { margin: 0; font-size: 13px; color: var(--dim); max-width: 48ch; }
+  .panel-empty-do { margin: 2px 0 0; font-size: 13px; }
+  .panel-empty-do a { color: var(--text); text-decoration: underline; text-decoration-color: var(--rule-hi); text-underline-offset: 3px; }
+  .panel-empty-do a:hover { text-decoration-color: var(--text); }
+  .panel.sized .panel-empty { min-height: calc(100% - 46px); justify-content: center; }
+  /* data-empty is the attribute the panel carries when its body is nothing but a panel-empty
+     block — set by the template when ConvYou+ConvThem are both empty, and by the triage script
+     when it hides every row. The layout preset writes an inline `height: 280px` onto this
+     element (see `style.height = h + "px"` in the preset-apply JS), so compressing needs
+     `!important` to win against the inline style. min-height keeps the card visibly present
+     in a user's Custom grid — the owner's rule is "compact, clearly present", not collapsed. */
+  .panel[data-empty] { height: auto !important; min-height: 76px; }
+  .panel[data-empty] .panel-empty { min-height: 0; justify-content: flex-start; }
   .hint { margin: 0; padding: 0 14px 14px; color: var(--dim); font-size: 12px; }
   /* The sort bar mirrors .wi so each label sits over the column it sorts: the title on the
      left, the timestamp on the right where the row prints it. */
@@ -950,9 +971,22 @@
     background-size: contain; background-position: center;
     opacity: .95;
   }
+  /* The Conversations empty state is a left-aligned block of three lines rather than one
+     centred sentence, so Luz sits at its top-left, aligned with the text she introduces,
+     instead of centred over it. Same asset, same blink. Without this rule the pack would
+     simply lose its cameo wherever .panel-empty replaced a .none paragraph -- silently,
+     because a missing decoration looks like a decoration nobody added. */
+  :root[data-visual-theme="muertos-v2"] .panel-empty { padding-top: 64px; position: relative; }
+  :root[data-visual-theme="muertos-v2"] .panel-empty::before {
+    content: ""; position: absolute; left: 16px; top: 6px; width: 48px; height: 52px;
+    background-image: url("/mascot/luz.svg"); background-repeat: no-repeat;
+    background-size: contain; background-position: left center;
+    opacity: .95;
+  }
   @media (prefers-reduced-motion: no-preference) {
     :root[data-visual-theme="muertos-v2"] .empty::before,
-    :root[data-visual-theme="muertos-v2"] p.none::before { animation: luzBlink 9s ease-in-out infinite; }
+    :root[data-visual-theme="muertos-v2"] p.none::before,
+    :root[data-visual-theme="muertos-v2"] .panel-empty::before { animation: luzBlink 9s ease-in-out infinite; }
     @keyframes luzBlink { 0%, 92%, 100% { opacity: .95; } 94%, 96% { opacity: .55; } }
   }
 
@@ -1393,9 +1427,13 @@
     </section>
 
     {{if .Work.Known}}
-    <section class="panel" aria-labelledby="conv-h" data-board data-module="conversations">
+    <section class="panel" aria-labelledby="conv-h" data-board data-module="conversations"{{if and (not .Work.ConvYou) (not .Work.ConvThem)}} data-empty{{end}}>
       <h2 id="conv-h"><span class="term" data-term="conversations" tabindex="0">Conversations</span>{{if .Work.ConvYou}} · <span data-v="conv-you">{{len .Work.ConvYou}}</span> need you{{end}}{{if .ConvNew}}<span class="nb">{{.ConvNew}} new</span>{{end}} <span class="lbl">Issues and pull requests you joined but didn't open · <span data-v="conv-them">{{len .Work.ConvThem}}</span> quiet</span><button type="button" class="triage-toggle" data-triage="conversations">Show all</button></h2>
-      {{if or .Work.ConvYou .Work.ConvThem}}<ul class="items" data-triage-list="conversations">{{range .Work.ConvYou}}{{template "item" .}}{{end}}{{range .Work.ConvThem}}{{template "item" .}}{{end}}</ul>{{else}}<p class="none">Nobody in a thread you joined is waiting on you.</p>{{end}}
+      {{if or .Work.ConvYou .Work.ConvThem}}<ul class="items" data-triage-list="conversations">{{range .Work.ConvYou}}{{template "item" .}}{{end}}{{range .Work.ConvThem}}{{template "item" .}}{{end}}</ul>{{else}}<div class="panel-empty">
+        <p class="panel-empty-lede"><b>No conversations yet.</b></p>
+        <p class="panel-empty-what">Threads you commented on or were mentioned in across tracked repositories appear here — so you see replies that need you without opening every tab.</p>
+        <p class="panel-empty-do"><a href="/conversations">Open the full Conversations page →</a></p>
+      </div>{{end}}
     </section>
 
     <section class="panel" aria-labelledby="repos-h" data-board data-module="your-repos">
@@ -2597,16 +2635,42 @@
           // void: a heading, a resize handle and nothing between them. Nothing needing you is the
           // best news a panel has, and an empty box reads as a failure to load instead. The
           // count stays on the toggle an inch away, so this only has to say the one true thing.
+          // Mark the panel data-empty whenever the body is nothing but the empty-state block.
+          // The .panel[data-empty] stylesheet rule overrides the preset-driven inline height,
+          // so the card shrinks to its content instead of leaving a void below it. Conversations
+          // only: the other panel this script serves (your-work) keeps its existing behaviour.
+          var panelEl = list.closest(".panel");
           if (!expanded && total > 0 && youCount === 0) {
             if (!quiet) {
-              quiet = document.createElement("p");
-              quiet.className = "none";
+              if (key === "conversations") {
+                // Triage has hidden every row in a panel that still holds items. For
+                // Conversations that means N quiet threads you joined and nothing needing you —
+                // which is the best news this panel has. The empty state says that plainly and
+                // sends you to the full view where those threads live, so the panel is useful
+                // at a glance rather than a void with one sentence in it.
+                quiet = document.createElement("div");
+                quiet.className = "panel-empty";
+                quiet.innerHTML =
+                  '<p class="panel-empty-lede"><b>No conversations need you right now.</b></p>' +
+                  '<p class="panel-empty-what"><span data-quiet-count>' + total + '</span> quiet thread' + (total === 1 ? '' : 's') + ' you joined ' + (total === 1 ? 'sits' : 'sit') + ' here until someone replies.</p>' +
+                  '<p class="panel-empty-do"><a href="/conversations">Open the full Conversations page →</a></p>';
+              } else {
+                quiet = document.createElement("p");
+                quiet.className = "none";
+                quiet.textContent = "Nothing here needs you.";
+              }
               list.insertAdjacentElement("afterend", quiet);
+            } else if (key === "conversations") {
+              // Keep the count current without rebuilding the block, in case rows get added
+              // or dismissed while the panel is in this state.
+              var c = quiet.querySelector("[data-quiet-count]");
+              if (c) c.textContent = String(total);
             }
-            quiet.textContent = "Nothing here needs you.";
             quiet.hidden = false;
+            if (panelEl && key === "conversations") panelEl.setAttribute("data-empty", "");
           } else if (quiet) {
             quiet.hidden = true;
+            if (panelEl && key === "conversations") panelEl.removeAttribute("data-empty");
           }
         }
         apply();
