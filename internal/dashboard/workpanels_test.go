@@ -103,6 +103,80 @@ func TestSortBarHoldsOnlyColumnHeaders(t *testing.T) {
 	}
 }
 
+// emptyConversationsFixture is a board whose Sent has one PR but no Involved items, so
+// ConvYou and ConvThem both come out empty while Work.Known is still true. The Conversations
+// panel renders, but its body is the empty-state block — which is exactly the case the old
+// "vast black void with one sentence" complaint was about.
+func emptyConversationsFixture(now time.Time) *work.Board {
+	return &work.Board{
+		Login: "alice", Scope: "repos owned by alice", FetchedAt: now.Add(-time.Minute),
+		Sent: []work.Item{
+			{PR: true, Repo: "acme/rocket", Number: 1, Title: "fix: landing gear",
+				State: "OPEN", Role: work.RoleAuthor, Move: work.MoveYou,
+				CreatedAt: now.Add(-72 * time.Hour), UpdatedAt: now.Add(-3 * time.Hour)},
+		},
+	}
+}
+
+// Before: the empty Conversations panel read "Nobody in a thread you joined is waiting on you."
+// with nothing else — a 280px panel with one short sentence at the top left and nothing to do
+// about it. This test anchors the redesign: the empty state has to say what is actually true,
+// name the user's next move, and link somewhere a reader can go. The old sentence is gone.
+func TestConversationsEmptyStateIsInformative(t *testing.T) {
+	_, body := get(t, handler(fakeSource{board: emptyConversationsFixture(time.Now())}), "/")
+
+	if !strings.Contains(body, `data-module="conversations"`) {
+		t.Fatal("conversations panel did not render; fixture broken")
+	}
+	// The old empty must be gone — a sentence alone is what the owner's complaint was about.
+	if strings.Contains(body, `Nobody in a thread you joined is waiting on you.`) {
+		t.Error("old empty-state sentence is still rendered; the redesign is not applied")
+	}
+	if !strings.Contains(body, `class="panel-empty"`) {
+		t.Error("new empty state missing the panel-empty block")
+	}
+	// A clear next action — a link off the panel to the full conversations page, where the
+	// quiet threads actually live.
+	if !strings.Contains(body, `href="/conversations"`) {
+		t.Error("empty state missing a link to the full /conversations page as the next move")
+	}
+	// The container element is the empty-state block; it stays inside the conversations panel.
+	// Panels sit side by side in the layout grid; this one carries the data-module hook that
+	// the layout presets and keyboard reordering key off of.
+	re := regexp.MustCompile(`(?s)<section class="panel"[^>]*data-module="conversations"[^>]*>.*?</section>`)
+	m := re.FindString(body)
+	if m == "" {
+		t.Fatal("conversations panel markup not matched")
+	}
+	if !strings.Contains(m, `class="panel-empty"`) {
+		t.Error("panel-empty block is not inside the conversations panel")
+	}
+	// The panel must advertise its empty state so the stylesheet can compress the card to its
+	// content height. The owner's complaint on the dashboard brief was not "the sentence is
+	// unhelpful" — it was that the panel occupies screen it has not earned. Better content
+	// without compression leaves the same void with better words in it.
+	if !strings.Contains(m, `data-empty`) {
+		t.Error("empty conversations panel is not marked data-empty for the compression rule")
+	}
+}
+
+// TestPanelEmptyCompressionRuleExists anchors the CSS counterpart to the data-empty attribute:
+// a .panel[data-empty] rule must force height off the preset-driven inline style so the empty
+// card shrinks to its content. A min-height keeps the panel visibly present — a zero-height
+// panel in a user's Custom layout would be a bug report waiting to happen.
+func TestPanelEmptyCompressionRuleExists(t *testing.T) {
+	_, body := get(t, handler(fakeSource{board: emptyConversationsFixture(time.Now())}), "/")
+	if !strings.Contains(body, `.panel[data-empty]`) {
+		t.Error("stylesheet has no .panel[data-empty] rule — the panel will keep its preset height even when marked empty")
+	}
+	if !strings.Contains(body, `height: auto !important`) {
+		t.Error(".panel[data-empty] rule does not force height auto !important — the inline style set from the layout preset wins and the panel does not compress")
+	}
+	if !strings.Contains(body, `min-height`) {
+		t.Error(".panel[data-empty] rule has no min-height — risk of collapsing a user's Custom panel to zero")
+	}
+}
+
 // An amber flag on something nobody has touched in days should not read as loudly as one raised an
 // hour ago. The flags keep no history of their own, so the row's own last change drives this.
 func TestStaleRowsCarryTheirBucket(t *testing.T) {
