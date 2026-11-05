@@ -424,19 +424,23 @@ func TestPipelinePageActionsAndFilters(t *testing.T) {
 	html = strings.Join(strings.Fields(html), " ")
 	for _, want := range []string{
 		`<title>PR Pipeline · HelloGitty</title>`,
-		`>1</span><span class="ol">Review requested<`,
-		`>1</span><span class="ol">Changes requested<`,
-		`>2</span><span class="ol">Checks failing<`,
-		`>1</span><span class="ol">Approved<`,
-		`>1</span><span class="ol">Conflicts<`,
-		`>1</span><span class="ol">Draft<`,
+		// Action counts in the new "Needs you" tier — same numbers, new markup.
+		`>1</span><span class="al">Review requested<`,
+		`>1</span><span class="al">Changes requested<`,
+		`>2</span><span class="al">Checks failing<`,
+		`>1</span><span class="al">Conflicts<`,
+		// Approved and Draft are now filter chips above the table (states, not actions).
+		`title="Open and approved — ready to merge">Approved<span class="pcount">1</span>`,
+		`title="Open drafts, not yet ready for review">Draft<span class="pcount">1</span>`,
 		`class="lit" title="Threads to answer, changes requested or checks failing">Pending<span class="pcount">2</span>`,
 		`<option value="acme/rocket">acme/rocket</option><option value="sleepyco/lullaby">sleepyco/lullaby</option>`,
-		`data-repo="acme/rocket" data-pending="1"><td class="num">1<`,
-		`data-repo="acme/rocket" data-pending="0"><td class="num">2<`,
-		`data-repo="sleepyco/lullaby" data-pending="1"><td class="num">3<`,
-		`data-repo="sleepyco/lullaby" data-pending="0"><td class="num">4<`,
+		`data-repo="acme/rocket" data-pending="1" data-approved="0" data-draft="0"><td class="num">1<`,
+		`data-repo="acme/rocket" data-pending="0" data-approved="1" data-draft="0"><td class="num">2<`,
+		`data-repo="sleepyco/lullaby" data-pending="1" data-approved="0" data-draft="1"><td class="num">3<`,
+		`data-repo="sleepyco/lullaby" data-pending="0" data-approved="0" data-draft="0"><td class="num">4<`,
 		`1 unresolved thread<`,
+		// The new column exists and its header is clickable for sort.
+		`data-sort="num" data-col="activity">Last activity</th>`,
 	} {
 		if !strings.Contains(html, want) {
 			t.Errorf("missing %q", want)
@@ -863,5 +867,46 @@ func TestHealthRefusesGraceWithoutUptime(t *testing.T) {
 	}
 	if code != 503 {
 		t.Errorf("status: got %d, want 503", code)
+	}
+}
+
+// TestPrRowLastActivity: the Last activity column takes the newest of comments/reviews
+// (including bots), review threads, and our own commits — NOT GitHub's updated_at on its own.
+func TestPrRowLastActivity(t *testing.T) {
+	at := func(d time.Duration) time.Time {
+		return time.Date(2026, 11, 4, 1, 0, 0, 0, time.UTC).Add(-d)
+	}
+	commit := at(2 * time.Hour)   // oldest
+	humanMsg := at(90 * time.Minute)
+	botReview := at(30 * time.Minute) // newest
+	thread := at(45 * time.Minute)
+	it := work.Item{
+		PR: true, Repo: "acme/rocket", Number: 42, State: "OPEN",
+		Last:         &work.Activity{Author: "alice", At: humanMsg},
+		BotReviews:   []work.Activity{{Author: "coderabbit", Bot: true, At: botReview}},
+		Threads:      []work.Thread{{Author: "bob", At: thread}},
+		LastCommitAt: &commit,
+	}
+	var r prRow
+	r.withActions(it)
+	if r.LastActivity == nil {
+		t.Fatal("LastActivity nil, want the bot-review timestamp")
+	}
+	if !r.LastActivity.Equal(botReview) {
+		t.Errorf("LastActivity: got %s, want the newest (bot review at %s)", r.LastActivity, botReview)
+	}
+
+	// With nothing to go on, it stays nil (not zero-time masquerading as data).
+	var r2 prRow
+	r2.withActions(work.Item{PR: true})
+	if r2.LastActivity != nil {
+		t.Errorf("LastActivity with no inputs: got %v, want nil", r2.LastActivity)
+	}
+
+	// A commit, no activity: commit wins.
+	var r3 prRow
+	r3.withActions(work.Item{PR: true, LastCommitAt: &commit})
+	if r3.LastActivity == nil || !r3.LastActivity.Equal(commit) {
+		t.Errorf("LastActivity with only a commit: got %v, want %v", r3.LastActivity, commit)
 	}
 }
