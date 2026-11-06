@@ -5,6 +5,66 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (41) · Black Bombay (baby) · 2026-11-06
+
+Tag `v0.2.41`.
+
+- **A sixth pack, Oni, which is one identity in three appearances rather than three
+  packs.** Three reference renders came in — a midnight indigo, a porcelain light, a
+  vermilion on near-black — and the obvious reading was three packs. They are one
+  direction drawn three times, so this ships them as one selectable pack whose dark,
+  light and AMOLED appearances are Azure, Bone and Vermilion. The appearance control
+  and the pack control stay orthogonal, every appearance has a real token block, and
+  the registry guard that rejects half-finished packs passes honestly rather than
+  being widened to let one through. Token names are shared across the three blocks
+  and only their values differ, so a single rule can say `var(--pack-crimson)` and
+  mean the right red in each. It is also the first pack with raster art rather than
+  generated surfaces: five images, served from the binary, nothing fetched over the
+  network.
+
+- **The header art never reached the screen, in any of the three appearances.** The
+  header element ships at roughly 21:1, the art was drawn at roughly 8.6:1, and
+  `background-size: cover` on that pair crops sixty per cent of the art's height from
+  the centre. The horizon all three bands had been composed around sat outside the
+  visible slice, so every piece of scenery — ridgeline, torii, cat — was off screen
+  and the band rendered as flat colour. It looked exactly like a pack with no art in
+  it, which is why reading the stylesheet could not find it. The band now has real
+  height and the art is anchored to its bottom edge at a width-pinned scale, which
+  also holds the horizon still as the window widens.
+
+- **Art that was referenced only from a comment, and art gated behind an attribute
+  nothing sets.** Four finished images shipped embedded in the binary while every
+  reference to them lived inside a comment block, so 83 KB of art painted nothing.
+  Separately, every art rule in the light appearance sat behind `[data-art="ready"]`,
+  added as a guard against serving a 404 before an asset landed — but nothing ever
+  sets that attribute, so it guarded by never firing, which is indistinguishable from
+  a pack with no art. A build-time test now enforces that every art URL the template
+  paints names a file that is actually embedded. It went red on its first run, on a
+  footer that had not been generated yet.
+
+- **The keyboard focus indicator on the stat tiles was effectively invisible.** Those
+  tiles suppress the native focus outline and draw their own one-pixel border in an
+  accent token, so that border is the only focus indicator they have. It measured
+  2.87:1 in dark and 2.08:1 in light against the surface behind it, where the standard
+  asks for 3:1. A keyboard user tabbing through the rail could barely tell which tile
+  was focused, and in light could not. The token reads as a quiet accent, and quiet is
+  right for the decorative panel-heading rule it also draws — the same token was doing
+  a second job where quiet is the defect. Three values move on lightness alone, holding
+  hue and saturation, so each theme keeps its own colour; a test now holds every token
+  block to the floor and ships with no exemptions.
+
+- **A screenshot gate, because the failures in this work were feedback-loop failures.**
+  Art was being authored by something that could not see its own output, and three
+  consecutive fixes were each reasoned correctly and wrong on screen. The gate renders
+  a captured page fixture — real markup, frozen content — so every difference is
+  attributable to CSS, art or layout rather than to the board's data moving. Its
+  tolerances were set by experiment rather than taste: the first, more defensible-
+  sounding pair of numbers flagged zero of eighteen captures when a known layering bug
+  was reintroduced, because a low-alpha overlay moves each pixel less than the
+  threshold allowed. The accessibility gate alongside it is a per-rule ratchet rather
+  than a wall, since a wall on a suite with existing violations is either permanently
+  red or switched off within the week.
+
 ## v0.2.0 (40) · Black Bombay (baby) · 2026-11-06
 
 Tag `v0.2.40`.
