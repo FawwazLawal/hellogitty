@@ -890,6 +890,20 @@
     --pack-sakura: #d98fb4;
     color-scheme: light;
   }
+  /* NOT REGISTERED YET. The vermilion and bone token blocks below are complete and
+     measured, but neither pack appears in VISUAL_THEMES, because neither is a whole
+     pack yet: vermilion has no light block and bone has no dark one, and
+     TestEveryVisualThemePackHasDarkAndLightBlocks rejects a pack that breaks when a
+     user switches appearance under it. That guard is right and registering them early
+     was my mistake — a half-registered pack is selectable and then falls back to the
+     default theme the moment someone changes appearance, which reads as a bug.
+
+     These three identities are appearance-scoped by design — vermilion is a dark
+     identity, bone a light one — so completing them means either designing the missing
+     appearance for each, or teaching the theme model that a pack may declare which
+     appearances it supports. The second is the better answer and is a real feature, not
+     a way to quiet a test. Until one of those lands, the tokens sit here unreferenced
+     and cost nothing. */
   /* Vermilion Dark. The identity from the owner's reference render: obsidian and
      oxblood planes, crimson signal, scenery supplied as raster art rather than
      drawn in CSS.
@@ -984,7 +998,7 @@
     if (window.matchMedia) try { window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function(e) { var s; try { s = localStorage.getItem("hellogitty-theme"); } catch(x) {} if (!s) { if (e.matches) root.dataset.theme = "light"; else delete root.dataset.theme; } }); } catch(e) {}
 
     // Visual (collaboration) theme: a colour overlay on top of Auto/Light/Dark.
-    var VISUAL_THEMES = { pink: { label: "(pinky v2)" }, muertos: { label: "(muertos)", amoled: true }, "muertos-v2": { label: "(la noche viva)", amoled: true }, "azure-oni": { label: "(ao-oni)", amoled: true }, "azure-oni-v2": { label: "(ao-oni ii)", amoled: true }, vermilion: { label: "(vermilion)", amoled: true }, bone: { label: "(bone)" } };
+    var VISUAL_THEMES = { pink: { label: "(pinky v2)" }, muertos: { label: "(muertos)", amoled: true }, "muertos-v2": { label: "(la noche viva)", amoled: true }, "azure-oni": { label: "(ao-oni)", amoled: true }, "azure-oni-v2": { label: "(ao-oni ii)", amoled: true } };
     // A pack that declares amoled offers a third appearance: true black, a variant of dark.
     // The button is added here rather than in every page's header, so one change covers them all.
     function amoledButton(on) {
