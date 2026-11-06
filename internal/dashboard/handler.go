@@ -231,6 +231,16 @@ type page struct {
 	APIResetUTC  string
 	RepoCount    int
 	TargetCount  int
+	// Stat rail (issue 232): the four figures above the panel grid. These are a promotion
+	// of counts the page already computes, not new telemetry. RailKnown mirrors Work.Known
+	// so the rail stays honest before the first work fetch arrives.
+	RailKnown    bool
+	RailNeedsYou int
+	RailOpenPRs  int
+	// APIRemaining is APILimit - APIUsed — the headroom the rail shows, kept separate so
+	// the footer can continue to render used-of-limit without another subtraction in the
+	// template. Only meaningful when APIKnown is true.
+	APIRemaining int
 	Stages       []stageHead
 	Rows         []row
 	Watch        []watchRow
@@ -939,6 +949,7 @@ func (h *Handler) build() (*page, error) {
 		p.APIUsed = tel.RateLimit - tel.RateRemaining
 		p.APIPct = p.APIUsed * 100 / tel.RateLimit
 		p.APIResetUTC = tel.RateReset.UTC().Format("15:04Z")
+		p.APIRemaining = p.APILimit - p.APIUsed
 	}
 
 	p.Glossary = terms(pst)
@@ -987,6 +998,20 @@ func (h *Handler) build() (*page, error) {
 		p.DismissedWork = append(p.DismissedWork, d...)
 		p.Work.InThem, d = filterDismissed(p.Work.InThem, dismissed)
 		p.DismissedWork = append(p.DismissedWork, d...)
+	}
+	// Stat rail counts: reflect the user's reality AFTER dismissals (Needs you tracks what
+	// still waits on them, not what they already told HelloGitty to hide), but Open PRs
+	// reads the raw board — a dismissal from the dashboard doesn't close a PR on GitHub.
+	// Drafts are excluded from Open PRs so the number matches what a reviewer waits on;
+	// this is said in the PR body.
+	p.RailKnown = p.Work.Known
+	if p.RailKnown {
+		p.RailNeedsYou = p.Work.YourMove()
+		for _, it := range board.Sent {
+			if it.PR && it.State == "OPEN" && !it.Draft {
+				p.RailOpenPRs++
+			}
+		}
 	}
 	for _, list := range [][]workRow{p.Work.You, p.Work.Them, p.Work.Done} {
 		for _, r := range list {

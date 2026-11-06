@@ -88,6 +88,30 @@
     padding: 7px 14px; cursor: pointer; }
   /* alert panel */
 
+  /* stat rail (issue 232): four figures above the panel grid. A compact, full-width
+     promotion of counts split across three headings and the footer. Not a panel — no
+     chrome, no resize, no fold — so it doesn't share the .panel rules. */
+  .statrail { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
+    padding: 12px 20px 2px; margin: 0; }
+  .statrail .stat { display: flex; flex-direction: column; justify-content: center;
+    gap: 2px; padding: 10px 14px; background: var(--panel); border: 1px solid var(--rule);
+    border-radius: 8px; min-width: 0; text-decoration: none; color: inherit;
+    transition: background 120ms ease, border-color 120ms ease; }
+  .statrail a.stat:hover, .statrail a.stat:focus-visible { border-color: var(--head-accent);
+    background: var(--head); outline: none; }
+  .statrail .stat-fig { font-size: 22px; font-weight: 650; line-height: 1.1;
+    letter-spacing: -0.01em; font-variant-numeric: tabular-nums; color: var(--nom); }
+  .statrail .stat-lbl { font-size: 12px; color: var(--head-dim); line-height: 1.3;
+    overflow: hidden; text-overflow: ellipsis; }
+  .statrail .stat-sub { font-weight: 400; color: var(--head-dim); opacity: 0.8;
+    font-size: 11px; display: block; }
+  .statrail .stat.unknown .stat-fig { color: var(--head-dim); opacity: 0.6; }
+  @media (max-width: 760px) {
+    .statrail { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px 16px 2px; }
+    .statrail .stat-fig { font-size: 20px; }
+  }
+  .statrail .stat.mod-hidden, .mod-hidden.statrail { display: none; }
+
   /* layout */
   .grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 14px; padding: 14px 20px 28px; align-items: start; }
   .main, .rail { display: grid; gap: 12px; min-width: 0; }
@@ -1409,7 +1433,28 @@
 {{end}}{{end}}
 {{template "site-header" .}}
 
-
+{{if .IsDashboard}}
+<section class="statrail" aria-label="Dashboard summary at a glance" data-module="statrail">
+  <a class="stat{{if not .RailKnown}} unknown{{end}}" href="#work-h" data-rail="needs">
+    <span class="stat-fig" data-v="rail-needs"{{if not .RailKnown}} aria-hidden="true"{{end}}>{{if .RailKnown}}{{.RailNeedsYou}}{{else}}&mdash;{{end}}</span>
+    <span class="stat-lbl">Needs you{{if not .RailKnown}} <small class="stat-sub">not fetched yet</small>{{end}}</span>
+  </a>
+  <a class="stat{{if not .RailKnown}} unknown{{end}}" href="#work-h" data-rail="prs">
+    <span class="stat-fig" data-v="rail-prs"{{if not .RailKnown}} aria-hidden="true"{{end}}>{{if .RailKnown}}{{.RailOpenPRs}}{{else}}&mdash;{{end}}</span>
+    <span class="stat-lbl">Open PRs{{if not .RailKnown}} <small class="stat-sub">not fetched yet</small>{{else}} <small class="stat-sub">non-draft, state OPEN</small>{{end}}</span>
+  </a>
+  <span class="stat" data-rail="repos">
+    <span class="stat-fig">{{.RepoCount}}</span>
+    <span class="stat-lbl">Repos{{if .HasPipeline}} <small class="stat-sub">{{.TargetCount}} in pipeline</small>{{end}}</span>
+  </span>
+  <span class="stat{{if not .APIKnown}} unknown{{end}}" data-rail="api">
+    {{if .APIKnown}}<span class="stat-fig" data-v="rail-api">{{.APIRemaining}}</span>
+    <span class="stat-lbl">API left <small class="stat-sub">of {{.APILimit}} this hour</small></span>
+    {{else}}<span class="stat-fig" aria-hidden="true">&mdash;</span>
+    <span class="stat-lbl">API quota <small class="stat-sub">not checked yet</small></span>{{end}}
+  </span>
+</section>
+{{end}}
 
 <main class="grid" id="main" tabindex="-1" data-token="{{.Token}}">
   <div class="main">
@@ -2107,8 +2152,8 @@
       if (!main || !rail || !dialog) return;
       var el = {};
       document.querySelectorAll("[data-module]").forEach(function (m) { el[m.dataset.module] = m; });
-      var TOP = ["alerts"];
-      var NAMES = { alerts: "Alerts" };
+      var TOP = ["statrail"];
+      var NAMES = { statrail: "Stat rail" };
       var named = {};
       function name(id) {
         if (NAMES[id]) return NAMES[id];
