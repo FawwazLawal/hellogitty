@@ -1413,7 +1413,7 @@
 
 <main class="grid" id="main" tabindex="-1" data-token="{{.Token}}">
   <div class="main">
-    <section class="panel" aria-labelledby="work-h" data-board data-module="your-work">
+    <section class="panel" aria-labelledby="work-h" data-board data-module="your-work" data-snap-rows>
       <h2 id="work-h">Your work{{if .Work.Known}} · <span data-v="work-you">{{len .Work.You}}</span> need you{{end}} <span class="lbl">{{if .Work.Known}}Pull requests and issues @{{.Work.Login}} has out, anywhere on GitHub · updated {{.Work.FetchedAgo}}{{else}}Not fetched yet{{end}}</span><span class="nb" id="newcount"{{if not .WorkNew}} hidden{{end}}>{{.WorkNew}} new</span>{{if .Work.Known}}<button type="button" class="triage-toggle" data-triage="your-work">Show all</button>{{end}}</h2>
       {{if .Work.Known}}<div class="wsort" role="group" aria-label="Sort work items"><button type="button" data-wsort="name">Name</button><button type="button" data-wsort="updated" title="Sort by last update">Updated</button></div>{{end}}
       {{if not .Work.Known}}
@@ -2119,11 +2119,11 @@
       Object.keys(el).forEach(name); // before the grip and arrow join the headings
       var PRESETS = {
         everything: { main: ["your-work", "conversations", "your-repos", "tracked"], rail: ["feed", "watched", "issues", "security", "pipeline", "checks"], hidden: [], folded: [],
-          sizes: { "your-work": 360, conversations: 280, "your-repos": 280, tracked: 320, feed: 300, watched: 260, issues: 260, security: 260, pipeline: 280, checks: 260 } },
+          sizes: { "your-work": 720, conversations: 280, "your-repos": 280, tracked: 320, feed: 300, watched: 260, issues: 260, security: 260, pipeline: 280, checks: 260 } },
         contributor: { main: ["your-work", "conversations", "tracked", "your-repos"], rail: ["feed", "watched", "issues", "security", "pipeline", "checks"], hidden: ["your-repos", "pipeline", "checks"], folded: ["tracked"],
-          sizes: { "your-work": 340, conversations: 260, feed: 280, watched: 240, issues: 240, security: 240 } },
+          sizes: { "your-work": 680, conversations: 260, feed: 280, watched: 240, issues: 240, security: 240 } },
         maintainer: { main: ["your-repos", "your-work", "conversations", "tracked"], rail: ["feed", "watched", "issues", "security", "pipeline", "checks"], hidden: [], folded: ["conversations"],
-          sizes: { "your-repos": 340, "your-work": 300, tracked: 300, feed: 280, watched: 240, issues: 260, security: 240, pipeline: 260, checks: 240 } },
+          sizes: { "your-repos": 340, "your-work": 600, tracked: 300, feed: 280, watched: 240, issues: 260, security: 240, pipeline: 260, checks: 240 } },
         program: { main: ["tracked", "your-work", "conversations", "your-repos"], rail: ["pipeline", "feed", "watched", "issues", "security", "checks"], hidden: ["your-repos"], folded: ["your-work", "conversations"],
           sizes: { tracked: 400, pipeline: 320, feed: 260, watched: 220, issues: 240, security: 220, checks: 220 } },
         focus: { main: ["your-work", "conversations", "your-repos", "tracked"], rail: ["feed", "watched", "issues", "security", "pipeline", "checks"],
@@ -2148,13 +2148,84 @@
         return st;
       }
       var MINH = 120; // the smallest a resized panel gets: its heading and a few rows
+
+      // snapPanelToRowBoundary returns a height close to `wanted` that lands on a row's
+      // bottom inside the panel, so the clip at the panel's lower edge sits on a row's
+      // edge rather than cutting through a title. Rows can vary in height — one row with
+      // more chips wraps to 223px while uniform rows sit at 85–86 — so the first version
+      // of this function, which multiplied one row's height by N, sliced any board with a
+      // non-uniform row below the measurement point. This version walks the actual rows
+      // and takes the last row whose bottom still fits inside the available content area,
+      // which is correct whatever the rows do.
+      //
+      // Snap is a floor against `wanted`, never a cap: a user dragging to 500 gets the
+      // nearest whole-row height AT OR BELOW 500. When no row fits in the available
+      // space (narrow viewport with a tall row), the function returns `min(wanted,
+      // chrome + rows[0])` — never above wanted, even if that leaves a partial row.
+      //
+      // This is the JS mirror of SnapRowsToBoundary in internal/dashboard/snap.go, which
+      // the Go test exercises against a list of concrete row heights. Keep both in step.
+      function snapPanelToRowBoundary(p, wanted) {
+        if (!p || !wanted) return wanted;
+        var rowEls = p.querySelectorAll("ul.items > li.wi");
+        if (!rowEls.length) return wanted;
+        var h2 = p.querySelector(":scope > h2");
+        var sort = p.querySelector(":scope > .wsort, :scope > .thead, :scope > .tbar");
+        var presize = p.querySelector(":scope > .presize");
+        // The height we set lands on the BORDER box (box-sizing: border-box), so the panel's
+        // own top and bottom borders eat into the space the rows get. Leaving them out put the
+        // boundary two pixels past the clip and let a sliver of the next row show at the edge.
+        var cs = getComputedStyle(p);
+        var border = (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0);
+        var chrome = (h2 ? h2.getBoundingClientRect().height : 0) +
+                     (sort ? sort.getBoundingClientRect().height : 0) +
+                     (presize ? presize.getBoundingClientRect().height : 0) +
+                     border;
+        var avail = wanted - chrome;
+        if (avail <= 0) return wanted;
+        var acc = 0, lastFit = -1, firstRow = 0;
+        for (var i = 0; i < rowEls.length; i++) {
+          var r = rowEls[i];
+          if (r.hidden) continue;
+          var h = r.getBoundingClientRect().height;
+          if (h < 1) continue;
+          if (!firstRow) firstRow = h;
+          var next = acc + h;
+          if (next > avail) break;
+          acc = next;
+          lastFit = acc;
+        }
+        if (lastFit < 0) {
+          var oneRow = chrome + firstRow;
+          if (firstRow && oneRow <= wanted) return Math.max(MINH, Math.round(oneRow));
+          return wanted;
+        }
+        return Math.max(MINH, Math.round(chrome + lastFit));
+      }
+      // Stored-layout migrations. Raising a preset constant only reaches a browser that
+      // has never saved a layout; a returning user's saved sizes override the new default
+      // for ever after. This runs on a stored layout BEFORE normalize, migrates values
+      // that still equal yesterday's default up to today's, and leaves any user-chosen
+      // height alone. The map keys off the old preset default per module: a stored
+      // "your-work": 360 is one of these; a stored "your-work": 412 is a user's drag and
+      // stays. Add to STORED_SIZE_MIGRATIONS when a preset constant moves.
+      var STORED_SIZE_MIGRATIONS = { "your-work": { 360: 720, 340: 680, 300: 600 } };
+      function migrateStoredSizes(st) {
+        if (!st || !st.sizes) return st;
+        Object.keys(STORED_SIZE_MIGRATIONS).forEach(function (id) {
+          var cur = st.sizes[id];
+          var mapped = STORED_SIZE_MIGRATIONS[id][cur];
+          if (mapped) st.sizes[id] = mapped;
+        });
+        return st;
+      }
       var extPopup = /[?&]ext=popup\b/.test(location.search);
       var state;
       if (extPopup) {
         state = normalize(copy(PRESETS.focus, "focus"));
       } else try { state = JSON.parse(localStorage.getItem(key) || "null"); } catch (e) {}
       if (!extPopup && state && state.main) {
-        state = normalize(state);
+        state = normalize(migrateStoredSizes(state));
       } else if (!extPopup && configDefault) {
         if (configDefault.preset && PRESETS[configDefault.preset]) {
           state = normalize(copy(PRESETS[configDefault.preset], configDefault.preset));
@@ -2184,8 +2255,16 @@
             arrow.title = folded ? "Expand" : "Collapse";
           }
           // A resized panel keeps its height and scrolls inside; folded, it is just its heading.
+          // Panels that opt in with data-snap-rows pass their target height through
+          // snapPanelToRowBoundary first, so the preset's 720px for Your-work lands on a clean
+          // row boundary instead of slicing a row mid-title. Rows must be present in the DOM
+          // for the snap to measure; if they are not yet, the applied height falls back to the
+          // preset and the first render after fetch re-runs apply() with real rows.
           var h = state.sizes[id], sized = !!h && !folded && el[id].classList.contains("panel");
           el[id].classList.toggle("sized", sized);
+          if (sized && el[id].hasAttribute("data-snap-rows")) {
+            h = snapPanelToRowBoundary(el[id], h);
+          }
           el[id].style.height = sized ? h + "px" : "";
           if (sized) pin(el[id]);
         });
@@ -2200,7 +2279,7 @@
       function loadCustom() {
         var c = null;
         try { c = JSON.parse(localStorage.getItem(customKey) || "null"); } catch (e) {}
-        return c && c.main ? normalize(Object.assign(c, { preset: "custom" })) : normalize(Object.assign(copy(state, "custom"), { preset: "custom" }));
+        return c && c.main ? normalize(migrateStoredSizes(Object.assign(c, { preset: "custom" }))) : normalize(Object.assign(copy(state, "custom"), { preset: "custom" }));
       }
       // User-saved presets: a keyed collection in its own localStorage key.
       var userPresetsKey = "hellogitty-layout-presets";
@@ -2432,8 +2511,18 @@
         p.appendChild(bar);
 
         // Resize: drag the bottom edge, or arrow keys on it. Double-click returns to natural height.
+        // For panels that opt in with data-snap-rows, snapPanelToRowBoundary rounds the stored
+        // height down to a whole-row multiple, so the clip at the panel's lower edge lands on a
+        // row's bottom rather than mid-title. Called here (preset-apply, keyboard arrows,
+        // double-click-to-fit) and on drag-up below.
         function setH(px) {
-          change(function () { if (px == null) delete state.sizes[id]; else state.sizes[id] = Math.max(MINH, Math.round(px)); });
+          change(function () {
+            if (px == null) delete state.sizes[id];
+            else {
+              var snapped = snapPanelToRowBoundary(p, Math.max(MINH, Math.round(px)));
+              state.sizes[id] = snapped;
+            }
+          });
         }
         bar.addEventListener("pointerdown", function (e) {
           if (e.button !== 0) return;
