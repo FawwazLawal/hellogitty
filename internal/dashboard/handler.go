@@ -108,6 +108,9 @@ type Handler struct {
 	Favicon []byte
 	// Mascot holds the banner clips and rest still; nil leaves the banner without a mascot.
 	Mascot fs.FS
+	// Art holds the scenic assets visual packs paint with; nil simply means those packs render
+	// without their scenery rather than erroring, so a build without art still serves.
+	Art fs.FS
 	Now    func() time.Time
 
 	// Help page: its template (parsed with Template, whose base styles it shares), the guide in
@@ -759,6 +762,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case strings.HasPrefix(r.URL.Path, "/mascot/") && h.Mascot != nil:
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		http.StripPrefix("/mascot/", http.FileServer(http.FS(h.Mascot))).ServeHTTP(w, r)
+	case strings.HasPrefix(r.URL.Path, "/art/") && h.Art != nil:
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		http.StripPrefix("/art/", http.FileServer(http.FS(h.Art))).ServeHTTP(w, r)
 	case r.URL.Path == "/feed":
 		h.serveFeedPage(w, r)
 	case r.URL.Path == "/feed.json":

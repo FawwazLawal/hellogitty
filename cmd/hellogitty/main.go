@@ -250,6 +250,11 @@ func run() int {
 		return 1
 	}
 	versionLabel, versionBaby := dashboardVersion()
+	artFS, err := iofs.Sub(web.Art, "art")
+	if err != nil {
+		log.Printf("art assets: %v", err)
+		artFS = nil // a pack without scenery still renders; this is not fatal
+	}
 	mascotFS, err := iofs.Sub(web.Mascot, "mascot")
 	if err != nil {
 		log.Printf("mascot assets: %v", err)
@@ -267,6 +272,7 @@ func run() int {
 			Baby:                           versionBaby,
 			Favicon:                        web.Favicon,
 			Mascot:                         mascotFS,
+			Art:                            artFS,
 			HelpTemplate:                   web.Help,
 			FeedTemplate:                   web.Feed,
 			ListTemplate:                   web.List,
