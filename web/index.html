@@ -927,7 +927,11 @@
      Mask-based so the shape stays one gradient and no extra DOM. Keeps clear of
      interactive controls: it sits in the thin band between the status header and the
      nav, over no clickable surface. 9px tall, repeats horizontally. */
-  :root[data-visual-theme="muertos-v2"] .site-head { position: relative; }
+  /* No `position` here. `.site-head` is `position: sticky` in the base stylesheet; setting
+     `position: relative` wins on specificity and un-pins the header, so it scrolls away for
+     anyone using this pack. `sticky` is itself a positioned value and already gives the
+     ::after below the containing block it needs. Caught by
+     TestNoPackOverridesSiteHeadLayout; this rule had shipped. */
   :root[data-visual-theme="muertos-v2"] .site-head::after {
     content: ""; display: block; height: 9px; margin-top: -1px;
     background: linear-gradient(90deg,
