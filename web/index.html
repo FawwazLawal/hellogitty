@@ -1435,12 +1435,12 @@
 
 {{if .IsDashboard}}
 <section class="statrail" aria-label="Dashboard summary at a glance" data-module="statrail">
-  <a class="stat" href="#work-h" data-rail="needs">
-    <span class="stat-fig" data-v="rail-needs">{{if .RailKnown}}{{.RailNeedsYou}}{{else}}&mdash;{{end}}</span>
+  <a class="stat{{if not .RailKnown}} unknown{{end}}" href="#work-h" data-rail="needs">
+    <span class="stat-fig" data-v="rail-needs"{{if not .RailKnown}} aria-hidden="true"{{end}}>{{if .RailKnown}}{{.RailNeedsYou}}{{else}}&mdash;{{end}}</span>
     <span class="stat-lbl">Needs you{{if not .RailKnown}} <small class="stat-sub">not fetched yet</small>{{end}}</span>
   </a>
-  <a class="stat" href="#work-h" data-rail="prs">
-    <span class="stat-fig" data-v="rail-prs">{{if .RailKnown}}{{.RailOpenPRs}}{{else}}&mdash;{{end}}</span>
+  <a class="stat{{if not .RailKnown}} unknown{{end}}" href="#work-h" data-rail="prs">
+    <span class="stat-fig" data-v="rail-prs"{{if not .RailKnown}} aria-hidden="true"{{end}}>{{if .RailKnown}}{{.RailOpenPRs}}{{else}}&mdash;{{end}}</span>
     <span class="stat-lbl">Open PRs{{if not .RailKnown}} <small class="stat-sub">not fetched yet</small>{{else}} <small class="stat-sub">non-draft, state OPEN</small>{{end}}</span>
   </a>
   <span class="stat" data-rail="repos">

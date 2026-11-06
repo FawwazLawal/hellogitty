@@ -228,4 +228,18 @@ func TestStatRailIsHonestBeforeTheFirstWorkFetch(t *testing.T) {
 			t.Errorf(`tile %q renders a confident 0 before the work board arrives`, key)
 		}
 	}
+	// Saying "not fetched yet" in small type is not enough. The placeholder dash is set in
+	// the same size and weight as a real figure, so a reader scanning the rail for numbers
+	// reads it as one and only discovers otherwise by stopping to read the label. The tile
+	// has to be marked so the figure can be dimmed, the way the API tile already is.
+	for _, key := range []string{"needs", "prs"} {
+		open := regexp.MustCompile(`<[^>]*data-rail="` + key + `"[^>]*>`).FindString(rail)
+		if open == "" {
+			t.Errorf(`tile %q missing before the first work fetch`, key)
+			continue
+		}
+		if !strings.Contains(open, "unknown") {
+			t.Errorf("tile %q has no figure yet but is not marked unknown, so its dash renders at full figure weight: %s", key, open)
+		}
+	}
 }
