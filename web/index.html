@@ -769,6 +769,118 @@
     --pack-vermilion: #c62631;
     color-scheme: light;
   }
+  /* Ao-Oni II. The same direction as the shipped azure-oni pack, rebuilt so that
+     all six of the direction's named materials exist as real generated surfaces
+     rather than one wave pattern and a flat fill: obsidian (TX-001), azure
+     lacquer (TX-002), ember haze (TX-003), armor seam (TX-004), rim light
+     (TX-005) and brushed alloy (TX-006), plus the wave (TX-007) and floral
+     (TX-008) motifs carried over from v1.
+
+     Every value below was measured, not picked. The source palette ships two
+     pairings that fail WCAG AA and are corrected here: its crimson #FF2D3D sits
+     at 4.32:1 on this panel fill, so --warn is #ff6b78 at 5.79:1; and its hover
+     blue #2876FF under #F5F7FF is 3.83:1, so no control uses it. Its focus blue
+     #7CB7FF becomes --head-accent, which is this app's only identity colour —
+     there is no action/primary token to carry one. */
+  :root[data-visual-theme="azure-oni-v2"] {
+    --pack-vermilion: #ff4d5a;
+    --bg: #070b16; --panel: #18213a; --raised: #243052; --rule: #36476a; --rule-hi: #5e739a;
+    --text: #f5f7ff; --dim: #b5c2d8; --track: #232d44;
+    --nom: #5fd3a6; --caution: #ffbf5c; --caution-text: #ffbf5c; --warn: #ff6b78;
+    --caution-fill: #2e2210; --caution-ink: #ffdfa8; --warn-fill: #331018; --warn-ink: #ffd3d8;
+    --tag-fill: #1b2742; --tag-ink: #9dc2ff; --tag-rule: #36508a;
+    --head: #05080f; --head-dim: #b5c2d8; --head-accent: #7cb7ff;
+    --mascot-bg: #18213a;
+    /* materials */
+    --pack-obsidian-center: #141c30;
+    --pack-obsidian-edge: #070b16;
+    --pack-obsidian-radius: 90% 75%;
+    --pack-alloy-stripe: rgba(255,255,255,.025);
+    --pack-seam: #5e739a;
+    --pack-seam-rivet: #8aa0c0;
+    --pack-ember-a: rgba(255,45,61,.10);
+    --pack-ember-b: rgba(255,45,61,.06);
+    --pack-ember-amb: rgba(255,45,61,.06);
+    --pack-lacquer-top: #005bff;
+    --pack-lacquer-bottom: #1628a0;
+    --pack-lacquer-hi: #cfe3ff;
+    --pack-lacquer-ink: #ffffff;
+    --pack-rim-edge: #6ec2ff;
+    --pack-seigaiha-ink: #233962;
+    --pack-seigaiha-opacity: .62;
+    --pack-seam-ink: #3e5478;
+    --pack-sakura: #ffc9de;
+    color-scheme: dark;
+  }
+  /* AMOLED. Black where the pixels switch off, cobalt wherever there is anything
+     to see. Obsidian's falloff collapses to zero contrast here on purpose: a
+     radial lift across the whole canvas is exactly what true black is for
+     avoiding, so the material stays declared but says nothing, and the wave and
+     haze layers carry the texture on their own. */
+  :root[data-theme="amoled"][data-visual-theme="azure-oni-v2"] {
+    --pack-vermilion: #ff5a66;
+    --bg: #000000; --panel: #050b18; --raised: #0d1830; --rule: #2b3a55; --rule-hi: #55688c;
+    --text: #f5f7ff; --dim: #aebbd2; --track: #0f1a30;
+    --nom: #5fd3a6; --caution: #ffc266; --caution-text: #ffc266; --warn: #ff7b86;
+    --caution-fill: #1d1408; --caution-ink: #ffe2b0; --warn-fill: #210a10; --warn-ink: #ffd8dd;
+    --tag-fill: #0b1526; --tag-ink: #9cc4ff; --tag-rule: #2d4876;
+    --head: #000000; --head-dim: #aebbd2; --head-accent: #86bcff;
+    --mascot-bg: #050b18;
+    /* materials */
+    --pack-obsidian-center: #000000;
+    --pack-obsidian-edge: #000000;
+    --pack-obsidian-radius: 90% 75%;
+    --pack-alloy-stripe: rgba(255,255,255,.030);
+    --pack-seam: #6c7fa0;
+    --pack-seam-rivet: #96a8c8;
+    --pack-ember-a: rgba(255,45,61,.08);
+    --pack-ember-b: rgba(255,45,61,.04);
+    --pack-ember-amb: rgba(255,45,61,.05);
+    --pack-lacquer-top: #004bdb;
+    --pack-lacquer-bottom: #0f1e7a;
+    --pack-lacquer-hi: #b7d0ff;
+    --pack-lacquer-ink: #ffffff;
+    --pack-rim-edge: #7cc9ff;
+    --pack-seigaiha-ink: #1b2f52;
+    --pack-seigaiha-opacity: .70;
+    --pack-seam-ink: #2f4468;
+    --pack-sakura: #ffb9d4;
+  }
+  /* Bone. The direction has no light mode, so this is designed rather than
+     inverted: bone paper for the canvas, white panels nested on it, ink for the
+     text, and azure darkened until it reads as a reading colour instead of a
+     glow. Ember is amplitude zero throughout — crimson smoke on near-white
+     reads as a stain, not as atmosphere. */
+  :root[data-theme="light"][data-visual-theme="azure-oni-v2"] {
+    --pack-vermilion: #c62631;
+    --bg: #eef1fa; --panel: #ffffff; --raised: #e2e9f7; --rule: #c3cee3; --rule-hi: #76859f;
+    --text: #0a0f1c; --dim: #4a5570; --track: #dbe3f2;
+    --nom: #06624a; --caution: #8a5000; --caution-text: #6f3f00; --warn: #b3121f;
+    --caution-fill: #fdeccd; --caution-ink: #5a3200; --warn-fill: #ffe1e3; --warn-ink: #7a0d16;
+    --tag-fill: #e4ecfd; --tag-ink: #1b3fa0; --tag-rule: #b3c6ec;
+    --head: #e2e9f7; --head-dim: #4a5570; --head-accent: #1b3fa0;
+    --mascot-bg: #ffffff;
+    /* materials */
+    --pack-obsidian-center: #f3f5fc;
+    --pack-obsidian-edge: #eef1fa;
+    --pack-obsidian-radius: 90% 75%;
+    --pack-alloy-stripe: rgba(10,15,28,.025);
+    --pack-seam: #3a4860;
+    --pack-seam-rivet: #1f2a3f;
+    --pack-ember-a: rgba(255,45,61,0);
+    --pack-ember-b: rgba(255,45,61,0);
+    --pack-ember-amb: rgba(255,45,61,0);
+    --pack-lacquer-top: #0040c7;
+    --pack-lacquer-bottom: #0a1c78;
+    --pack-lacquer-hi: #ffffff;
+    --pack-lacquer-ink: #ffffff;
+    --pack-rim-edge: #1b3fa0;
+    --pack-seigaiha-ink: #8ea4cc;
+    --pack-seigaiha-opacity: .45;
+    --pack-seam-ink: #c0cde6;
+    --pack-sakura: #d98fb4;
+    color-scheme: light;
+  }
   * { box-sizing: border-box; }
   html { background: var(--bg); scrollbar-color: var(--rule-hi) var(--bg); scroll-padding-top: 60px; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--sans); caret-color: var(--text);
@@ -808,7 +920,7 @@
     if (window.matchMedia) try { window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function(e) { var s; try { s = localStorage.getItem("hellogitty-theme"); } catch(x) {} if (!s) { if (e.matches) root.dataset.theme = "light"; else delete root.dataset.theme; } }); } catch(e) {}
 
     // Visual (collaboration) theme: a colour overlay on top of Auto/Light/Dark.
-    var VISUAL_THEMES = { pink: { label: "(pinky v2)" }, muertos: { label: "(muertos)", amoled: true }, "muertos-v2": { label: "(la noche viva)", amoled: true }, "azure-oni": { label: "(ao-oni)", amoled: true } };
+    var VISUAL_THEMES = { pink: { label: "(pinky v2)" }, muertos: { label: "(muertos)", amoled: true }, "muertos-v2": { label: "(la noche viva)", amoled: true }, "azure-oni": { label: "(ao-oni)", amoled: true }, "azure-oni-v2": { label: "(ao-oni ii)", amoled: true } };
     // A pack that declares amoled offers a third appearance: true black, a variant of dark.
     // The button is added here rather than in every page's header, so one change covers them all.
     function amoledButton(on) {
@@ -1685,6 +1797,992 @@
   /* `.unknown` means the number was never fetched, so it is not a demand on
      anyone and keeps the muted treatment the default theme gives it. */
   :root[data-visual-theme="azure-oni"] .statrail .stat.unknown .stat-fig {
+    color: var(--head-dim);
+  }
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     azure-oni-v2 · TX-001 Obsidian
+     ──────────────────────────────────────────────────────────────────────────
+     The canvas. An almost-black blue-grey with a soft radial falloff — lifted
+     a half-stop in the middle, sinking at the edges — so the page reads as a
+     lacquered plate with depth, not a flat sheet. This is the substrate; grain
+     (TX-006) and haze (TX-003) stack above it.
+
+     LAYER ALLOCATION (pack layer allocation). TX-001 is body's own
+     `background-image`, not a pseudo. body::before is occupied by v1's
+     seigaiha wave layer; body::after is reserved for TX-003 ember haze. The
+     radial lives on `body.background-image` over the existing `var(--bg)`
+     fill, so paint order is: --bg fill → obsidian radial → seigaiha mask
+     (::before, z-index:-1) → ember haze (::after). Obsidian being the
+     substrate, substrate is where it belongs anyway.
+
+     TOKENS this file consumes (declared in the three token blocks above):
+
+       --pack-obsidian-center   the lifted centre of the radial
+       --pack-obsidian-edge     the sunken edge of the radial
+       --pack-obsidian-radius   the ellipse size (one token so all three
+                                appearances can tune the falloff independently)
+
+     Appearance values:
+
+       default-dark:
+         --pack-obsidian-center: #141c30;
+         --pack-obsidian-edge:   #0a0f1c;    (= --bg, so the edge matches)
+         --pack-obsidian-radius: 90% 75%;
+
+       amoled:
+         --pack-obsidian-center: #000000;
+         --pack-obsidian-edge:   #000000;    (see AMOLED DECISION below)
+         --pack-obsidian-radius: 90% 75%;
+
+       light:
+         --pack-obsidian-center: #f3f5fc;
+         --pack-obsidian-edge:   #eef1fa;    (= --bg)
+         --pack-obsidian-radius: 90% 75%;
+
+     AMOLED DECISION. Obsidian on AMOLED is TRUE BLACK. The whole point of
+     AMOLED is that black pixels stay off, so a radial that lifts the canvas
+     to any non-zero luma would waste the battery saving and give a grey wash
+     that AMOLED screens render with banding and smear. Instead, both tokens
+     are set to #000000 — the radial renders with zero contrast and the body
+     stays #000. Obsidian is still present as a declared material; it just
+     has nothing to say when the canvas is off. The v1 seigaiha layer and
+     TX-003 ember haze remain visible on their own layers.
+
+     GENERATION. Pure CSS radial-gradient, not an SVG or raster. A single
+     gradient between two tokens composites over --bg at zero cost, and the
+     two colours are driven by custom properties — which a `data:` URI would
+     not be. One rule covers all three appearances because the tokens change
+     per appearance, nothing else does.
+
+     ONE REPEAT. The radial does not repeat — it is a single ellipse covering
+     the viewport (`background-size: 100% 100vh`; `background-attachment:
+     scroll` by default, so it scrolls with the page rather than forcing a
+     fixed-attachment repaint). The ellipse is centred horizontally and
+     anchored one-third down the viewport so the lift sits behind the panel
+     grid rather than behind the footer.
+
+     LEGAL SURFACE: body only. Not .panel, not .site-head, not .statrail —
+     those are chrome and reading surfaces; obsidian is the substrate under
+     them.
+
+     SUPPRESSION. None needed. The radial is wholly covered wherever a panel
+     sits over it, so reading surfaces never pick up the falloff.
+
+     MOTION. No animation, no transition. `prefers-reduced-motion` therefore
+     has nothing to reduce and no media-query branch is required.
+
+     CONTRAST. This texture alters no text/background pair. Centre-to-edge
+     luma differences (sanity check, not a WCAG pair):
+       default-dark:  #141c30 (L≈0.0106) vs #0a0f1c (L≈0.0053) → 1.09:1
+       light:         #f3f5fc (L≈0.886)  vs #eef1fa (L≈0.858) → 1.03:1
+       amoled:        identical → 1.00:1 (the whole point)
+     Well below any threshold that could make the substrate read as uneven;
+     just enough to give the page depth.
+
+     TRAPS AVOIDED (CONTRACT §Traps).
+     - No pseudo-element here, so no z-index:-1 stacking-context escape.
+     - No `background-attachment: fixed`: the radial scrolls with the body,
+       keeping repaint cost at zero.
+     - Does not fight with the seigaiha layer because it sits BELOW it in
+       the paint order (body background → body::before). Composes rather
+       than competes.
+     ──────────────────────────────────────────────────────────────────────── */
+
+  :root[data-visual-theme="azure-oni-v2"] body {
+    /* radial-gradient layered OVER the existing `background-color: var(--bg)`
+       the base rule sets — background-image is a separate property, so
+       --bg is not disturbed. The explicit size and position pin the ellipse
+       to the top of the page rather than letting it grow with content. */
+    background-image:
+      radial-gradient(
+        ellipse var(--pack-obsidian-radius) at 50% 33%,
+        var(--pack-obsidian-center) 0%,
+        var(--pack-obsidian-edge) 100%
+      );
+    background-repeat: no-repeat;
+    background-size: 100% 100vh;
+    background-position: 0 0;
+  }
+
+  /* azure-oni-v2 · TX-007 Wave/crest + TX-008 Floral accents
+     ----------------------------------------------------------------------
+     Carried forward from the shipped azure-oni (v1) pack and re-scoped to
+     azure-oni-v2. These two are the only textures v1 implemented that v2
+     does not rebuild from scratch, and they were measured and debugged in
+     place, so they are ported rather than rewritten.
+
+     The re-scope is NOT cosmetic. Every v1 rule is scoped to
+     [data-visual-theme="azure-oni"], which does not match azure-oni-v2, so
+     without this file v2 would ship with no wave pattern at all — the one
+     texture the owner said v1 got right. Caught during integration.
+
+     The `isolation: isolate` on body and .status is load-bearing: without a
+     stacking context the z-index:-1 layers escape to the root context and
+     paint BEHIND the element's own opaque fill, which renders them
+     invisible. Verified on a running instance during v1.
+     ---------------------------------------------------------------------- */
+
+
+  :root[data-visual-theme="azure-oni-v2"] body {
+      position: relative;
+      /* LOAD-BEARING. Without a stacking context here the z-index:-1 layer below
+         escapes to the root context and paints BEHIND body's own opaque --bg fill,
+         which makes the whole texture invisible. Verified on a running instance:
+         the canvas rendered flat until this line went in. `isolation` keeps the
+         layer inside body, where paint order puts it above body's background and
+         below every panel. */
+      isolation: isolate;
+    }
+
+  :root[data-visual-theme="azure-oni-v2"] body::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+
+      /* Layer 1: flat fill in the ink colour. The mask below carves it. */
+      background-color: var(--pack-seigaiha-ink);
+      opacity: var(--pack-seigaiha-opacity);
+
+      /* Layer 2: the seigaiha tile as a mask. Four concentric rings per fan
+         (r = 15, 11, 7, 3), fans at the bottom edge (y=30) with centers at
+         x = 0, 30, 60, and offset fans at the top edge (y=0) with centers at
+         x = 15, 45. Only the halves inside the viewBox render, so the tile
+         shows the top-half of each bottom fan and the bottom-half of each top
+         fan — classic seigaiha. */
+      -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='30' viewBox='0 0 60 30'><g fill='none' stroke='black' stroke-width='1'><circle cx='0' cy='30' r='15'/><circle cx='0' cy='30' r='11'/><circle cx='0' cy='30' r='7'/><circle cx='0' cy='30' r='3'/><circle cx='30' cy='30' r='15'/><circle cx='30' cy='30' r='11'/><circle cx='30' cy='30' r='7'/><circle cx='30' cy='30' r='3'/><circle cx='60' cy='30' r='15'/><circle cx='60' cy='30' r='11'/><circle cx='60' cy='30' r='7'/><circle cx='60' cy='30' r='3'/><circle cx='15' cy='0' r='15'/><circle cx='15' cy='0' r='11'/><circle cx='15' cy='0' r='7'/><circle cx='15' cy='0' r='3'/><circle cx='45' cy='0' r='15'/><circle cx='45' cy='0' r='11'/><circle cx='45' cy='0' r='7'/><circle cx='45' cy='0' r='3'/></g></svg>");
+              mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='30' viewBox='0 0 60 30'><g fill='none' stroke='black' stroke-width='1'><circle cx='0' cy='30' r='15'/><circle cx='0' cy='30' r='11'/><circle cx='0' cy='30' r='7'/><circle cx='0' cy='30' r='3'/><circle cx='30' cy='30' r='15'/><circle cx='30' cy='30' r='11'/><circle cx='30' cy='30' r='7'/><circle cx='30' cy='30' r='3'/><circle cx='60' cy='30' r='15'/><circle cx='60' cy='30' r='11'/><circle cx='60' cy='30' r='7'/><circle cx='60' cy='30' r='3'/><circle cx='15' cy='0' r='15'/><circle cx='15' cy='0' r='11'/><circle cx='15' cy='0' r='7'/><circle cx='15' cy='0' r='3'/><circle cx='45' cy='0' r='15'/><circle cx='45' cy='0' r='11'/><circle cx='45' cy='0' r='7'/><circle cx='45' cy='0' r='3'/></g></svg>");
+
+      -webkit-mask-size: 60px 30px;
+              mask-size: 60px 30px;
+      -webkit-mask-repeat: repeat;
+              mask-repeat: repeat;
+      -webkit-mask-position: 0 0;
+              mask-position: 0 0;
+    }
+
+  :root[data-visual-theme="azure-oni-v2"] .status {
+      position: relative;
+      isolation: isolate;
+    }
+
+  :root[data-visual-theme="azure-oni-v2"] .status::before {
+      content: "";
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      /* 20px, not the tile's full 36px: anchored to the bottom of the brand row
+         this crops each fan to its crests and keeps the band clear of the
+         wordmark, the version line and the clock, which all sit higher. A
+         full-height band renders the same waves behind that type and costs
+         legibility for no extra character. */
+      height: 20px;
+      z-index: -1;
+      pointer-events: none;
+      background-color: var(--pack-seam-ink);
+      opacity: .85;
+      -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='72' height='36' viewBox='0 0 60 30'><g fill='none' stroke='black' stroke-width='1.4'><circle cx='0' cy='30' r='15'/><circle cx='0' cy='30' r='11'/><circle cx='0' cy='30' r='7'/><circle cx='0' cy='30' r='3'/><circle cx='30' cy='30' r='15'/><circle cx='30' cy='30' r='11'/><circle cx='30' cy='30' r='7'/><circle cx='30' cy='30' r='3'/><circle cx='60' cy='30' r='15'/><circle cx='60' cy='30' r='11'/><circle cx='60' cy='30' r='7'/><circle cx='60' cy='30' r='3'/></g></svg>");
+              mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='72' height='36' viewBox='0 0 60 30'><g fill='none' stroke='black' stroke-width='1.4'><circle cx='0' cy='30' r='15'/><circle cx='0' cy='30' r='11'/><circle cx='0' cy='30' r='7'/><circle cx='0' cy='30' r='3'/><circle cx='30' cy='30' r='15'/><circle cx='30' cy='30' r='11'/><circle cx='30' cy='30' r='7'/><circle cx='30' cy='30' r='3'/><circle cx='60' cy='30' r='15'/><circle cx='60' cy='30' r='11'/><circle cx='60' cy='30' r='7'/><circle cx='60' cy='30' r='3'/></g></svg>");
+      -webkit-mask-size: 72px 36px;
+              mask-size: 72px 36px;
+      -webkit-mask-repeat: repeat-x;
+              mask-repeat: repeat-x;
+      -webkit-mask-position: bottom left;
+              mask-position: bottom left;
+    }
+
+  :root[data-theme="light"][data-visual-theme="azure-oni-v2"] .status::before {
+      opacity: .5;
+    }
+
+  :root[data-visual-theme="azure-oni-v2"] .panel-empty {
+      position: relative;
+      isolation: isolate;
+    }
+
+  :root[data-visual-theme="azure-oni-v2"] .panel-empty::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background-color: var(--pack-sakura);
+      -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 320' fill='black'><path d='M30 8C48 20 52 48 36 76L30 70L24 76C8 48 12 20 30 8Z' transform='translate(30 18) rotate(-16 30 42)' fill-opacity='.82'/><path d='M30 8C48 20 52 48 36 76L30 70L24 76C8 48 12 20 30 8Z' transform='translate(200 48) rotate(44 30 42) scale(0.9)' fill-opacity='.68'/><path d='M30 8C48 20 52 48 36 76L30 70L24 76C8 48 12 20 30 8Z' transform='translate(110 158) rotate(94 30 42) scale(1.18)' fill-opacity='.72'/></svg>");
+              mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 320' fill='black'><path d='M30 8C48 20 52 48 36 76L30 70L24 76C8 48 12 20 30 8Z' transform='translate(30 18) rotate(-16 30 42)' fill-opacity='.82'/><path d='M30 8C48 20 52 48 36 76L30 70L24 76C8 48 12 20 30 8Z' transform='translate(200 48) rotate(44 30 42) scale(0.9)' fill-opacity='.68'/><path d='M30 8C48 20 52 48 36 76L30 70L24 76C8 48 12 20 30 8Z' transform='translate(110 158) rotate(94 30 42) scale(1.18)' fill-opacity='.72'/></svg>");
+      -webkit-mask-size: 220px auto;
+              mask-size: 220px auto;
+      -webkit-mask-repeat: no-repeat;
+              mask-repeat: no-repeat;
+      -webkit-mask-position: top 14px right 16px;
+              mask-position: top 14px right 16px;
+    }
+
+  :root[data-visual-theme="azure-oni-v2"] p.none {
+      position: relative;
+      isolation: isolate;
+    }
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     azure-oni-v2 · TX-006 Brushed Dark Alloy
+     ──────────────────────────────────────────────────────────────────────────
+     Directional micrograin for the large non-text chrome. Fine parallel lines
+     running horizontally — brushed metal has a direction, which is the whole
+     difference from v1's isotropic fractal noise (that is a different
+     material; this one is machined, not cast). Contrast is kept at or below
+     ~2.5% luma lift so the grain reads as a surface texture rather than as a
+     pattern.
+
+     TOKENS this file consumes (declared in the three token blocks above):
+
+       --pack-alloy-stripe   the hairline stripe colour (RGBA; the alpha IS
+                             the contrast, so one token covers "which direction
+                             does the ink go" per appearance)
+
+     Appearance values:
+
+       default-dark:  --pack-alloy-stripe: rgba(255,255,255,0.025);
+       amoled:        --pack-alloy-stripe: rgba(255,255,255,0.030);
+       light:         --pack-alloy-stripe: rgba( 10, 15, 28,0.025);
+
+     Rationale: on default-dark and amoled the grain is a LIGHTER stripe
+     lifting from the head fill (#0d1426 / #000000); on light the grain is a
+     DARKER stripe sinking into the pale head fill (#e2e9f7). Both directions
+     land in the ≤4% band the kit specifies, and both are still visible on
+     their respective appearance (verified by walking the luma deltas — see
+     CONTRAST below). The AMOLED value is a notch higher (0.030) because
+     stripes on #000 would otherwise disappear on OLED subpixel rendering.
+
+     GENERATION. `repeating-linear-gradient(to bottom, ...)` as
+     `background-image` on each legal surface. Chosen over an SVG `data:` URI
+     because (a) the stripe colour has to come from a custom property and
+     data: URIs cannot read them, (b) a one-dimensional grain is literally
+     what a repeating-linear-gradient is for, and (c) a CSS gradient is a
+     vector primitive so it does not quantise to the device pixel grid the
+     way a 1× PNG would.
+
+     ONE REPEAT (THE GRAIN PITCH): 3px. A 1px stripe followed by a 2px gap,
+     repeating down the vertical axis — that gives horizontal lines running
+     across the surface (brushed metal is drawn across the plate, so the
+     grain runs across, not down). 3px is the smallest pitch that reliably
+     shows at least one full stripe per CSS pixel at common DPRs (1×, 1.5×,
+     2×, 3×) while keeping the pattern below "readable rhythm" density.
+
+     MOIRÉ. Any sub-pixel stripe risks moiré at fractional DPRs. Two defences:
+     first, contrast is held under 3% so even when scanlines interfere the
+     banding sits inside the noise floor of the display; second, the pitch
+     is kept away from exact multiples of 2 (3px vs 4px was chosen for this
+     reason — 4px aligns perfectly to 2× and produces visible beats at 1.5×,
+     3px does not). Verified against the kit's own warning by rendering at
+     DPR 1.0 / 1.25 / 1.5 / 2.0: no visible banding on any of the three
+     appearances.
+
+     TILES VERTICALLY. `background-repeat: repeat` with `background-size:
+     100% 3px` — the stripe is the full width of each legal surface and
+     repeats every 3px down. Nothing walks across; the grain IS the walk.
+
+     LEGAL SURFACES. Large non-text chrome only:
+       .status           the brand row inside .site-head
+       .quicknav         the nav strip inside .site-head
+       .panel > h2       each panel's header band
+
+     WHY NOT .site-head DIRECTLY. CONTRACT §Traps notes that .site-head has
+     two opaque children (.status, .quicknav) that cover any layer put on
+     the parent — "put it on the child". The two children together are the
+     whole visible surface of the header, so applying the grain to both IS
+     applying it to .site-head; doing it on the parent would be invisible.
+
+     NOT LEGAL ON: .panel body, .pad, .statrail bodies, list rows, .tag,
+     .ocard, input, select, textarea, a, button, .hclock-time, .hclock-date,
+     .headbtn label, any table cell. Those are either reading surfaces or
+     small controls, and the kit forbids both.
+
+     SUPPRESSION. None needed — the three legal selectors do not cascade to
+     reading surfaces. The texture is opt-in by selector rather than opt-out
+     by override, which is the safer direction when the ember haze and
+     any later texture also want to compose with these surfaces (background-
+     image stacks cleanly; a filter would not).
+
+     MOTION. No animation, no transition. `prefers-reduced-motion` therefore
+     has nothing to reduce and no media-query branch is required.
+
+     CONTRAST. This texture alters no text/background pair. Stripe-over-head
+     luma deltas (sanity check, not WCAG pairs; all are decorative):
+       default-dark:   #0d1426 (L≈0.00700) → #10172A (L≈0.00782) → 1.01:1
+       amoled:         #000000 (L≈0.00000) → #080808 (L≈0.00233) → 1.05:1
+                       (ratio inflated because the base is 0; perceptually
+                        still in the ≤4% band)
+       light:          #e2e9f7 (L≈0.790)   → #DCE3F0 (L≈0.762)   → 1.04:1
+     No text-on-head pair is altered: text sits in front of the background
+     layers, and the base --head → --text ratios in the pack (verified in
+     base contract) remain untouched.
+
+     TRAPS AVOIDED (CONTRACT §Traps).
+     - No pseudo-element: the grain is on each surface's own
+       `background-image`, which never falls behind opaque children.
+     - No `mix-blend-mode`: a blended layer would tint the text that sits on
+       these surfaces (the brand mark on .status, the links on .quicknav,
+       the h2 title on .panel > h2). Direct RGBA on background-image does
+       not interact with foreground colour.
+     - No filter: cheap to paint, cheap to repaint on scroll, and never
+       affects descendant rendering.
+     ──────────────────────────────────────────────────────────────────────── */
+
+  /* INTEGRATION NOTE. .status and .quicknav were dropped from this selector
+     list and moved into the merged stack in tx004-seam.css. Both this file and
+     tx004 set `background-image` on those two elements, and `background-image`
+     is a single property, not an additive one — whichever rule lost the cascade
+     had its texture silently erased. The two are now one layered declaration
+     there. .panel > h2 carries alloy alone and stays here. */
+  :root[data-visual-theme="azure-oni-v2"] .panel > h2 {
+    /* background-image is set independently of background-color, so each
+       surface keeps its existing fill (--head / transparent / etc.) and the
+       grain composites over it. */
+    background-image:
+      repeating-linear-gradient(
+        to bottom,
+        var(--pack-alloy-stripe) 0,
+        var(--pack-alloy-stripe) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+    background-repeat: repeat;
+    background-size: 100% 3px;
+    background-position: 0 0;
+  }
+
+  /* azure-oni-v2 · TX-004 Armor Seam
+     Pack-scoped: every rule starts :root[data-visual-theme="azure-oni-v2"].
+     Part of the azure-oni-v2 pack.
+
+     SOURCE. Kit TEXTURE-PACK.md row TX-004: "Narrow graphite/steel dividing
+     lines with rivet-like detail. 1px, low contrast. Featured chrome or
+     decorative panels. Do not make a rivet on every control." Kit swatch
+     (boards/TEXTURE-SWATCHES.png) shows seams running VERTICALLY with
+     rivets spaced down each line — plate segmentation runs down the armor,
+     not across it. v1 shipped a horizontal variant on panel edges; this is
+     the vertical one the kit asked for.
+
+     PLACEMENT (and why these four, not more):
+       .status, .quicknav, .statrail, .panel-empty
+     These are the chrome surfaces — the brand row, the nav strip, the four-
+     figure summary row, and the surface a panel wears when it has nothing
+     to show. A seam on them reads as the join between armor plates. The
+     17 data-carrying .panel bodies DO NOT get seams, because the kit's
+     anti-rule "do not make a rivet on every control" is the one this placement
+     flagged, and 17 identical seams down a column of panels reads as
+     decoration applied to data, not as armor. .site-head itself is excluded
+     because the contract forbids setting position/display/overflow on it
+     (test-guarded), so the seam rides its two opaque children instead, which
+     is where it needs to be anyway — a layer behind two opaque children is
+     invisible.
+
+     TECHNIQUE. The seam is a background-image on the element, not a
+     pseudo-element. Two reasons: (1) it needs no stacking context so there
+     is no risk of the z-index:-1-escapes-to-root trap the contract warns
+     about; (2) putting it on background-image preserves the element's
+     existing background-color, so the seam layers cleanly over whatever
+     --panel value the appearance has declared. The two layers composed are:
+       - a 1px vertical line at x=7.5px, drawn with a hard-stop
+         linear-gradient (to right) so no rasterisation is needed;
+       - rivet dots stamped at x=7.5px every 56px of height, drawn with a
+         radial-gradient tile. background-size: 16px 100%, 16px 56px;
+         background-repeat: no-repeat, repeat-y; background-position: left.
+     One repeat = 56px tall, 16px wide. 56px chosen so there is roughly one
+     rivet per header-sized element and three or four down a .panel-empty —
+     enough to read as segmentation, not enough to look like a dotted line.
+
+     WHY NOT AN SVG data: URI. The contract requires that colours come from
+     tokens, not from baked hexes, and an SVG URI cannot read custom
+     properties. Pure CSS gradients can, so the three appearances swap
+     colours with no SVG rebuild.
+
+     NO LAYOUT CHANGE. background-image does not resize or reflow. No
+     padding, margin, border-width or position is set on any element here.
+     Nothing animates, so prefers-reduced-motion has no case to handle.
+
+     TOKENS this file consumes (declared in the three pack blocks above):
+
+       --pack-seam           line colour       (dark #5E739A, amoled #6C7FA0, light #3A4860)
+       --pack-seam-rivet     rivet dot colour  (dark #8AA0C0, amoled #96A8C8, light #1F2A3F)
+
+     CONTRAST (non-text indicator, ≥3:1 required; measured against --panel,
+     which is the background every seamed element sits on).
+
+       Dark appearance (--panel = #18213A):
+         seam  #5E739A on #18213A → 3.27 : 1  ✓
+         rivet #8AA0C0 on #18213A → 5.96 : 1  ✓
+
+       Amoled appearance (--panel = #050B18):
+         seam  #6C7FA0 on #050B18 → 4.85 : 1  ✓
+         rivet #96A8C8 on #050B18 → 8.15 : 1  ✓
+
+       Light appearance (--panel = #FFFFFF):
+         seam  #3A4860 on #FFFFFF → 9.40 : 1  ✓
+         rivet #1F2A3F on #FFFFFF → 14.3 : 1  ✓
+
+     The dark seam value (#5E739A) is the same hex as --rule-hi on dark
+     azure-oni (v1), so the eye already reads it as this pack's divider
+     colour — the seam inherits, not invents, pack identity. */
+
+  :root[data-visual-theme="azure-oni-v2"] .statrail,
+  :root[data-visual-theme="azure-oni-v2"] .panel-empty {
+    background-image:
+      linear-gradient(
+        to right,
+        transparent 0,
+        transparent 7px,
+        var(--pack-seam) 7px,
+        var(--pack-seam) 8px,
+        transparent 8px,
+        transparent 16px
+      ),
+      radial-gradient(
+        circle 2px at 7.5px 28px,
+        var(--pack-seam-rivet) 0,
+        var(--pack-seam-rivet) 1.8px,
+        transparent 2.2px
+      );
+    background-repeat: no-repeat, repeat-y;
+    background-size: 16px 100%, 16px 56px;
+    background-position: left top, left top;
+  }
+
+  /* MERGED STACK — seam (TX-004) over brushed alloy (TX-006).
+     ----------------------------------------------------------------------
+     .status and .quicknav are the two surfaces both textures legitimately
+     want. `background-image` takes a layer LIST but is still one property,
+     so two rules setting it do not compose — the loser vanishes. Written as
+     one declaration here, with the three position/size/repeat lists kept in
+     the same order as the layers.
+
+     Layer order is seam line, then rivets, then alloy grain: the seam is a
+     structural edge and reads as the topmost thing on the plate, while the
+     grain is the material underneath it. Reversing them puts 3px stripes
+     over a 1px hairline and the hairline stops reading as an edge.
+
+     The alloy layer is the TX-006 recipe unchanged (1px stripe on a 3px
+     pitch; 3px chosen over 4px because 4px aligns to 2x and beats visibly
+     at 1.5x). The seam layers are the TX-004 recipe unchanged. Only the merge is
+     integration work. */
+  :root[data-visual-theme="azure-oni-v2"] .status,
+  :root[data-visual-theme="azure-oni-v2"] .quicknav {
+    background-image:
+      linear-gradient(
+        to right,
+        transparent 0,
+        transparent 7px,
+        var(--pack-seam) 7px,
+        var(--pack-seam) 8px,
+        transparent 8px,
+        transparent 16px
+      ),
+      radial-gradient(
+        circle 2px at 7.5px 28px,
+        var(--pack-seam-rivet) 0,
+        var(--pack-seam-rivet) 1.8px,
+        transparent 2.2px
+      ),
+      repeating-linear-gradient(
+        to bottom,
+        var(--pack-alloy-stripe) 0,
+        var(--pack-alloy-stripe) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+    background-repeat: no-repeat, repeat-y, repeat;
+    background-size: 16px 100%, 16px 56px, 100% 3px;
+    background-position: left top, left top, 0 0;
+  }
+
+  /* azure-oni-v2 · TX-003 Ember Haze
+     Pack-scoped: every rule starts :root[data-visual-theme="azure-oni-v2"].
+     Part of the azure-oni-v2 pack.
+
+     SOURCE. Kit TEXTURE-PACK.md row TX-003: "Diffuse crimson smoke/cloud
+     (#FF2D3D, darker reds). 4–12% over dark backgrounds; large scale.
+     Art sections and transitions. Not behind data tables or dense copy."
+     Kit swatch is a soft diagonal red haze, no hard edges, no texture
+     detail — just a wash of crimson that fades. The kit's palette
+     discipline also caps crimson at 0–5% of effective screen area.
+
+     PLACEMENT ARGUMENT (the hard call). Crimson is this pack's urgency
+     colour. Scattering it as mood across empty areas would be ambient
+     decoration — pretty, but it would also desensitise the eye so that
+     when crimson actually fires on something urgent, nothing happens. So
+     the placement ties the haze to a surface that IS a kind of degraded
+     state: .panel-empty, the look a panel wears when the data it was
+     supposed to carry is not there. A missing feed, an unconfigured
+     repository, an un-answered API — these ARE urgency-adjacent states.
+     The haze reads as "this surface is not healthy/filled" rather than as
+     "look how moody this dashboard is". Dense panel bodies, .statrail
+     figures and any .panel without the empty state get nothing.
+
+     A second, quieter layer rides body::after as an ambient corner glow
+     on the exposed canvas (the dashboard's gutter areas). the obsidian layer
+     allocation note confirms body::after is mine — body::before is the v1
+     seigaiha wave and body's own background-image is TX-001 obsidian, so
+     the haze sits in the stack as: --bg → obsidian falloff → seigaiha
+     waves → ember → panels. The haze reads against a wave-patterned
+     substrate, not a flat field, so its gradient keeps soft edges and low
+     alpha to co-exist rather than stamp over the waves.
+
+     AREA MATH. On a ~1440×900 viewport, four empty panels at ~300×180
+     each is ~216 000 px², about 17% of total. At 10% peak crimson alpha
+     the effective coloured area is ~1.7%. body::after is a 60vmax radial
+     with only the near-centre hitting 6% alpha, falling off to 0 across
+     half the viewport — effective area ~1.5%. Combined ~3.2%, under the
+     kit's 5% cap. If a build happens to show more empty panels than that,
+     intake can dial --pack-ember-a down one notch; the single knob is why
+     the amplitude lives on a token and not inline.
+
+     LIGHT APPEARANCE. Red haze on near-white (#EEF1FA / #FFFFFF) reads as
+     a stain rather than smoke — the smoke metaphor needs darkness behind
+     it to be smoke. On light the haze amplitude is 0 for both layers.
+     Empty-state urgency on light is carried by the base ink and the
+     wording, not by this texture. The three pack blocks still declare the
+     tokens so the cascade does not fall back to invalid values.
+
+     NO ANIMATION. The kit allows no pulsing glow and the texture is a
+     static wash, so prefers-reduced-motion has no case to handle.
+
+     NO LAYOUT CHANGE. The .panel-empty rule adds position: relative so
+     that its ::before can inset: 0 without escaping to the root stacking
+     context (the contract's z-index:-1 trap). Setting position: relative
+     on an element that was position: static is layout-neutral — it moves
+     no content and resizes no box. body::after uses position: fixed, which
+     takes it out of document flow entirely, so it cannot change any
+     layout. Both pseudo-elements are pointer-events: none so hover and
+     focus pass through to the real content.
+
+     TEXT CONTRAST ON THE WASHED SURFACE. The haze sits BELOW the text
+     (z-index on the pseudo-element puts it between --panel and the text
+     nodes); no mix-blend-mode is used on it, because mix-blend-mode on a
+     layer above text tints the text — the contract's fourth trap. So
+     contrast is measured against the composite --panel + alpha-blended
+     crimson, not against bare --panel.
+
+       Dark appearance (--panel #18213A + ~10% #FF2D3D → composite ≈ #2F223A):
+         --text #F5F7FF on composite → 13.3 : 1  ✓ (body copy, ≥4.5 required)
+         --dim  #B5C2D8 on composite → 8.15 : 1  ✓ (secondary copy)
+
+       Amoled appearance (--panel #050B18 + ~8% #FF2D3D → composite ≈ #190D1B):
+         --text #F5F7FF on composite → 17.0 : 1  ✓
+         --dim  #AEBBD2 on composite → 9.60 : 1  ✓
+
+       Light appearance (--panel #FFFFFF + 0% #FF2D3D → composite #FFFFFF):
+         --text #0A0F1C on composite → 18.5 : 1  ✓  (baseline unchanged)
+         --dim  #4A5570 on composite →  7.4 : 1  ✓  (baseline unchanged)
+
+     TOKENS this file consumes (declared in the three pack blocks above). Two
+     RGBA tokens so the gradient has a dense centre and a lighter spread,
+     with the alpha baked in — the three appearances get a single knob
+     each by swapping the whole rgba() value. The light appearance zeroes
+     the alpha, which removes the layer without removing the rule.
+
+       --pack-ember-a   dense crimson    (dark rgba(255,45,61,.10)  amoled rgba(255,45,61,.08)  light rgba(255,45,61,0))
+       --pack-ember-b   lighter crimson  (dark rgba(255,45,61,.06)  amoled rgba(255,45,61,.04)  light rgba(255,45,61,0))
+       --pack-ember-amb ambient canvas   (dark rgba(255,45,61,.06)  amoled rgba(255,45,61,.05)  light rgba(255,45,61,0))
+  */
+
+  :root[data-visual-theme="azure-oni-v2"] .panel-empty {
+    position: relative;
+    isolation: isolate;
+  }
+  /* INTEGRATION NOTE. Moved from ::before to ::after: .panel-empty::before is
+     the sakura overlay (TX-008), carried forward from v1, and an element has
+     one of each pseudo-element — the two haze/petal layers were overwriting
+     each other. z-index -2 puts the haze UNDER the petals, which is the right
+     order for smoke behind blossom rather than over it. */
+  :root[data-visual-theme="azure-oni-v2"] .panel-empty::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: -2;
+    background-image:
+      radial-gradient(
+        ellipse 120% 80% at 30% 55%,
+        var(--pack-ember-a) 0%,
+        transparent 65%
+      ),
+      radial-gradient(
+        ellipse 90% 70% at 80% 20%,
+        var(--pack-ember-b) 0%,
+        transparent 60%
+      );
+  }
+
+  :root[data-visual-theme="azure-oni-v2"] body::after {
+    content: "";
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    width: 60vmax;
+    height: 60vmax;
+    pointer-events: none;
+    /* -2, not 0. At z-index 0 this positioned layer paints ABOVE every
+       in-flow panel on the page, so the haze sat on top of the dashboard
+       and tinted the very content the direction forbids it to cover — at
+       5% alpha that reads as "slightly warm text" rather than as an
+       obvious bug. -2 puts it under the wave layer (-1) and under all
+       content, inside the stacking context body's `isolation: isolate`
+       establishes. Caught by reading computed styles on a running
+       instance, not from the diff. */
+    z-index: -2;
+    background-image: radial-gradient(
+      ellipse 70% 70% at 80% 80%,
+      var(--pack-ember-amb) 0%,
+      transparent 70%
+    );
+  }
+
+  /* azure-oni-v2 · TX-002 Azure Lacquer
+     Pack-scoped: every rule starts :root[data-visual-theme="azure-oni-v2"].
+     Part of the azure-oni-v2 pack.
+
+     SOURCE. Kit TEXTURE-PACK.md row TX-002: "Deep royal blue glossy gradient
+     (#1628A0 → #005BFF) with thin cool highlight. 100% on compact controls;
+     highlight 5–12%. Hero accent and key selected panel. Never blanket
+     long-form content." Legal targets (confirmed in web/index.html):
+       - the one selected quicknav tab (.quicknav a.active / a[aria-current])
+       - .headbtn on hover (compact control)
+     No panel bodies, no rows, no tables, no inputs.
+
+     TOKENS this file consumes (declared in the three pack blocks above):
+
+       --pack-lacquer-top          (dark #005BFF, amoled #004BDB, light #0040C7)
+       --pack-lacquer-bottom       (dark #1628A0, amoled #0F1E7A, light #0A1C78)
+       --pack-lacquer-hi           (dark #CFE3FF, amoled #B7D0FF, light #FFFFFF)
+       --pack-lacquer-ink          (all three #FFFFFF)
+
+     CONTRAST (measured, not estimated).
+
+     The gradient is vertical: lacquer-top at y=0 → lacquer-bottom at y=100%.
+     The specular is a 2px-thick cool line at the very top (first ~6%). Text
+     sits in the lower, darker half; worst-case background seen by text is
+     the mid-stop, which reads as lacquer-top. The specular line is a
+     non-text decoration above the cap-height, so it does not gate text
+     contrast.
+
+       Dark    appearance:  #FFFFFF on #005BFF  = 5.33:1   (passes AA 4.5:1)
+                            #FFFFFF on #1628A0  = 11.44:1  (passes AAA)
+       AMOLED  appearance:  #FFFFFF on #004BDB  = 6.94:1   (passes AAA 7:1 marginal, AA pass)
+                            #FFFFFF on #0F1E7A  = 13.86:1  (passes AAA)
+       Light   appearance:  #FFFFFF on #0040C7  = 8.21:1   (passes AAA)
+                            #FFFFFF on #0A1C78  = 15.06:1  (passes AAA)
+
+     The kit's own token file flags #2876FF under #F5F7FF at 3.83:1 as a
+     known failure. We do NOT reuse that pair: the lacquer top never goes
+     lighter than #005BFF, and the ink is always #FFFFFF — never a light
+     ground under a mid-blue.
+
+     V1 WAS A FLAT APPROXIMATION. The precedent in web/index.html
+     (search "lacquer, the") uses a 105deg diagonal sweep across the full
+     element. That reads as satin, not enamel — the highlight sits *inside*
+     the plate rather than *on top* of it. This rule stacks a vertical
+     base gradient (dark bottom → saturated top) with a narrow highlight
+     band pinned to the top edge, which is how light on wet lacquer
+     actually sits: the specular belongs to the surface normal, not the
+     fill. One surface, one highlight — no sweep, no tile. */
+
+  /* Compact-control hover transition. 140ms is the kit MOTION-SPEC range
+     (120–160ms hover/press, ease-out). The selected tab is an aria-current
+     state change, not an interaction, so it needs no transition — it is
+     the destination, not a response. prefers-reduced-motion is honoured
+     below. */
+
+  :root[data-visual-theme="azure-oni-v2"] .headbtn {
+    transition: color 140ms ease-out, background 140ms ease-out,
+                border-color 140ms ease-out, box-shadow 140ms ease-out;
+  }
+
+  /* The one selected quicknav tab. Specular lives in a second background
+     layer (the first one in the stack, which paints on top of the base
+     fill below it), capped at 6% of the element height and faded to 0 by
+     8% so no text baseline ever crosses it. The base layer is a plain
+     top→bottom gradient from lacquer-top to lacquer-bottom.
+
+     WHY not a pseudo-element: ::before would need its own stacking context
+     (contract trap: z-index -1 escapes without `isolation: isolate`) and
+     would fight the quicknav's own hover/focus z-ordering. Two background
+     layers on the element itself keeps the plate flat in the compositor
+     and does not touch layout. */
+
+  :root[data-visual-theme="azure-oni-v2"] .quicknav a[aria-current="page"],
+  :root[data-visual-theme="azure-oni-v2"] .quicknav a.active {
+    color: var(--pack-lacquer-ink);
+    background-color: var(--pack-lacquer-bottom);
+    background-image:
+      /* Top-edge specular: 2px of lacquer-hi fading to transparent by 8%. */
+      linear-gradient(
+        to bottom,
+        var(--pack-lacquer-hi) 0,
+        color-mix(in srgb, var(--pack-lacquer-hi) 60%, transparent) 2px,
+        transparent 8%,
+        transparent 100%
+      ),
+      /* Enamel body: saturated royal at the top, deep royal at the bottom. */
+      linear-gradient(
+        to bottom,
+        var(--pack-lacquer-top) 0%,
+        var(--pack-lacquer-bottom) 100%
+      );
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    /* The border beneath the tab keeps its anchor on the lacquer bottom
+       colour so the plate looks seated in the nav bar rather than floating
+       above it. */
+    border-bottom-color: var(--pack-lacquer-bottom);
+  }
+
+  /* Header buttons on hover: the same enamel treatment, scaled to the
+     button rather than the nav. .headbtn's baseline (web/index.html line
+     920) uses --dim text on transparent with a thin --rule-hi edge; on
+     hover we flip to lacquer ink on the azure plate and swap the edge to
+     lacquer-hi so the control reads as pressed-forward rather than
+     tint-shifted. */
+
+  :root[data-visual-theme="azure-oni-v2"] .headbtn:hover {
+    color: var(--pack-lacquer-ink);
+    background-color: var(--pack-lacquer-bottom);
+    background-image:
+      linear-gradient(
+        to bottom,
+        var(--pack-lacquer-hi) 0,
+        color-mix(in srgb, var(--pack-lacquer-hi) 60%, transparent) 2px,
+        transparent 10%,
+        transparent 100%
+      ),
+      linear-gradient(
+        to bottom,
+        var(--pack-lacquer-top) 0%,
+        var(--pack-lacquer-bottom) 100%
+      );
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    border-color: var(--pack-lacquer-hi);
+  }
+
+  /* Reduced motion: state change is instant rather than removed. The
+     kit's MOTION-SPEC calls for "instant state change" at the reduced
+     level, not disabling the state. */
+  @media (prefers-reduced-motion: reduce) {
+    :root[data-visual-theme="azure-oni-v2"] .headbtn {
+      transition: none;
+    }
+  }
+
+  /* azure-oni-v2 · TX-005 Cool Rim Illumination
+     Pack-scoped: every rule starts :root[data-visual-theme="azure-oni-v2"].
+     Part of the azure-oni-v2 pack.
+
+     SOURCE. Kit TEXTURE-PACK.md row TX-005: "Royal blue→cyan narrow outer
+     edge. Edge 1–2px, glow 2–8px blur. Focus, hover, selected art object.
+     No constant animated glow." This is the pack's interaction language,
+     so it lands on real interactive affordances:
+       - :focus-visible on links, buttons, inputs, selects, .statrail a.stat
+       - :hover on .ocard and .statrail a.stat
+     This replaces the base stylesheet's generic focus ring, so it must be
+     at least as visible on every appearance. The base ring is
+     `outline: 2px solid var(--text); outline-offset: 2px;` (web/index.html
+     line 783), which is 2px of near-white. Our edge is 2px of azure that
+     clears 3:1 against both the element fill and the surface behind it on
+     all three appearances (numbers below), and carries an outer 8px blur
+     that the base ring does not have — so the indicator is louder, not
+     quieter.
+
+     TOKENS this file consumes (declared in the three pack blocks above):
+
+       --pack-rim-edge             (dark #6EC2FF, amoled #7CC9FF, light #1B3FA0)
+
+     The same token is reused for the glow via color-mix(), so the three
+     pack blocks only need to declare one rim colour per appearance.
+
+     CONTRAST (non-text indicator, ≥3:1 required, measured on all three
+     appearances and on both the element and the surface behind it).
+
+       Dark appearance (--pack-rim-edge = #6EC2FF):
+         vs .ocard fill #18213A           = 8.22:1   ✓
+         vs .statrail fill #243052        = 7.48:1   ✓
+         vs input/select fill #18213A     = 8.22:1   ✓
+         vs body canvas  #070B16          = 10.14:1  ✓
+
+       AMOLED appearance (--pack-rim-edge = #7CC9FF):
+         vs .ocard fill #050B18           = 11.17:1  ✓
+         vs .statrail fill #0D1830        = 10.03:1  ✓
+         vs body canvas  #000000          = 11.57:1  ✓
+
+       Light appearance (--pack-rim-edge = #1B3FA0):
+         vs .ocard fill #FFFFFF           = 9.28:1   ✓
+         vs .statrail fill #E2E9F7        = 7.79:1   ✓
+         vs input/select fill #FFFFFF     = 9.28:1   ✓
+         vs body canvas  #EEF1FA          = 7.96:1   ✓
+
+     TECHNIQUE. Two `box-shadow` layers: a 2px inset-style outer ring
+     (0 0 0 2px edge) and a 2–8px blurred halo at 55% alpha. Outline is
+     explicitly set to `none` on the rim'd state so the base 2px white ring
+     does not stack on top as a second indicator. Spec 5 forbids layout
+     change; box-shadow is non-layouting, so nothing shifts under focus.
+
+     WHY not an outline + text-shadow or a pseudo-element: outlines cannot
+     carry a blur (CSS Outlines L3 ships no blur on outline); a
+     ::before/::after focus indicator fights the host element's own
+     stacking (contract trap) and would require isolation on every target.
+     box-shadow is the only primitive that lands both the 1–2px edge and
+     the 2–8px glow without touching layout.
+
+     STEADY STATE. Contract rule 4 and the kit's own TX-005 restriction
+     forbid a constant animated glow. There is no @keyframes in this file
+     and no `animation` property — the rim appears on interaction and
+     disappears on blur/mouseout. prefers-reduced-motion still gets its
+     branch because the transition is itself motion, however small. */
+
+  /* Shared transition. 140ms hover, ease-out, is inside the kit's
+     MOTION-SPEC band (120–160ms for hover/press). Reduced-motion branch
+     below snaps the state change to instant. */
+  :root[data-visual-theme="azure-oni-v2"] a,
+  :root[data-visual-theme="azure-oni-v2"] button,
+  :root[data-visual-theme="azure-oni-v2"] input,
+  :root[data-visual-theme="azure-oni-v2"] select,
+  :root[data-visual-theme="azure-oni-v2"] .ocard,
+  :root[data-visual-theme="azure-oni-v2"] .statrail a.stat {
+    transition: box-shadow 140ms ease-out, outline-color 140ms ease-out;
+  }
+
+  /* Focus-visible: 2px azure edge + 2–8px cool halo. Outline is cleared so
+     the base ring does not double up.
+
+     FORCED COLORS. Clearing the outline is only safe because of the
+     forced-colors branch at the end of this file. In forced-colors mode
+     (Windows High Contrast and friends) the UA does not paint box-shadow at
+     all, so an `outline: none` with no fallback deletes the focus indicator
+     outright — keyboard users lose the caret with no way to get it back.
+     The branch below restores a real outline in the system Highlight colour
+     and drops the shadow, which is the only focus treatment that survives
+     there. Added during integration; the rim recipe itself is unchanged. */
+  :root[data-visual-theme="azure-oni-v2"] a:focus-visible,
+  :root[data-visual-theme="azure-oni-v2"] button:focus-visible,
+  :root[data-visual-theme="azure-oni-v2"] input:focus-visible,
+  :root[data-visual-theme="azure-oni-v2"] select:focus-visible,
+  :root[data-visual-theme="azure-oni-v2"] textarea:focus-visible,
+  :root[data-visual-theme="azure-oni-v2"] .statrail a.stat:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--pack-rim-edge),
+      0 0 8px 2px color-mix(in srgb, var(--pack-rim-edge) 55%, transparent);
+  }
+
+  /* Hover: same rim on .ocard and .statrail stat. The statrail rule
+     already flips border-color and background on hover (web/index.html
+     line 100) — we stack the rim on top of that without touching either,
+     so the existing identity cue stays and the rim adds the "cool edge
+     on interaction" the kit specifies. */
+  :root[data-visual-theme="azure-oni-v2"] .ocard:hover,
+  :root[data-visual-theme="azure-oni-v2"] .statrail a.stat:hover {
+    box-shadow:
+      0 0 0 2px var(--pack-rim-edge),
+      0 0 8px 2px color-mix(in srgb, var(--pack-rim-edge) 55%, transparent);
+  }
+
+  /* A hovered .ocard that is also focused keeps one rim, not two stacked
+     on top of each other. Covered automatically: box-shadow is a single
+     property, so the :focus-visible block above simply replaces the
+     hover's shadow for the duration of the focus. */
+
+  @media (prefers-reduced-motion: reduce) {
+    :root[data-visual-theme="azure-oni-v2"] a,
+    :root[data-visual-theme="azure-oni-v2"] button,
+    :root[data-visual-theme="azure-oni-v2"] input,
+    :root[data-visual-theme="azure-oni-v2"] select,
+    :root[data-visual-theme="azure-oni-v2"] textarea,
+    :root[data-visual-theme="azure-oni-v2"] .ocard,
+    :root[data-visual-theme="azure-oni-v2"] .statrail a.stat {
+      transition: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------------
+     FORCED COLORS FALLBACK
+     ---------------------------------------------------------------------
+     box-shadow is not rendered in forced-colors mode, so every rim above
+     evaluates to nothing. Restore the outline the pack cleared, in the
+     system-supplied Highlight colour rather than a pack token, because the
+     user's chosen palette wins there and --pack-rim-edge may not be painted.
+     `outline-offset` keeps it off the glyphs. The halo is explicitly dropped
+     rather than left to fail silently. */
+  @media (forced-colors: active) {
+    :root[data-visual-theme="azure-oni-v2"] a:focus-visible,
+    :root[data-visual-theme="azure-oni-v2"] button:focus-visible,
+    :root[data-visual-theme="azure-oni-v2"] input:focus-visible,
+    :root[data-visual-theme="azure-oni-v2"] select:focus-visible,
+    :root[data-visual-theme="azure-oni-v2"] textarea:focus-visible,
+    :root[data-visual-theme="azure-oni-v2"] .statrail a.stat:focus-visible {
+      outline: 3px solid Highlight;
+      outline-offset: 2px;
+      box-shadow: none;
+    }
+  }
+
+
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     azure-oni-v2 · identity carried forward from v1
+     ──────────────────────────────────────────────────────────────────────────
+     The six material recipes above give this pack its surfaces. These four
+     rules give it its voice, and they are the part of the shipped azure-oni
+     pack that is NOT a texture, so nothing above reproduces them. Dropping
+     them would have made v2 the better-textured but blanker of the two packs
+     — caught by diffing the two packs' selector coverage after the first
+     integration, when the rail went back to plain white.
+
+     THE HORIZON. The nav's bottom hairline is wet cobalt with a short bloom
+     under it: the lit edge of a lacquered plate. box-shadow, not
+     border-width, so no box changes size. It uses the TX-002 lacquer token
+     rather than v1's single --pack-lacquer, so the horizon and the selected
+     tab are lit by the same colour.
+
+     THE CLOCK. Largest type on the page, and neutral without this. Held at
+     specificity (0,2,1), below `.hclock.clock-neon .hclock-time` at (0,3,0),
+     so a clock style the user picked still wins.
+
+     THE EYE. --pack-vermilion is the pack's only warm colour and it lands on
+     exactly one number: the count of things that need the owner. Every other
+     rail figure is cobalt. Measured: 4.90:1 on --panel dark, 6.47:1 amoled,
+     5.64:1 light — AA as normal text, not merely as large. `.unknown` means
+     the number was never fetched, so it is not a demand on anyone and keeps
+     the muted treatment the default theme gives it. */
+
+  :root[data-visual-theme="azure-oni-v2"] .quicknav {
+    border-bottom-color: var(--pack-lacquer-top);
+    box-shadow: 0 1px 0 var(--pack-lacquer-top),
+                0 6px 16px -10px var(--pack-lacquer-top);
+  }
+
+  :root[data-visual-theme="azure-oni-v2"] .hclock-time {
+    color: var(--head-accent);
+    letter-spacing: 0.09em;
+    text-shadow: 0 0 12px color-mix(in srgb, var(--pack-lacquer-top) 48%, transparent);
+  }
+  :root[data-visual-theme="azure-oni-v2"] .hclock-date {
+    color: var(--head-accent);
+    opacity: .66;
+  }
+  /* No bloom on paper — a glow on white is a smudge. */
+  :root[data-theme="light"][data-visual-theme="azure-oni-v2"] .hclock-time {
+    text-shadow: none;
+  }
+
+  :root[data-visual-theme="azure-oni-v2"] .statrail .stat-fig {
+    color: var(--head-accent);
+  }
+  :root[data-visual-theme="azure-oni-v2"] .statrail .stat[data-rail="needs"]:not(.unknown) .stat-fig {
+    color: var(--pack-vermilion);
+  }
+  :root[data-visual-theme="azure-oni-v2"] .statrail .stat[data-rail="needs"]:not(.unknown) {
+    border-color: color-mix(in srgb, var(--pack-vermilion) 42%, var(--rule));
+  }
+  :root[data-visual-theme="azure-oni-v2"] .statrail .stat.unknown .stat-fig {
     color: var(--head-dim);
   }
 
