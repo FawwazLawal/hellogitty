@@ -1,6 +1,8 @@
 package dashboard
 
 import (
+	"fmt"
+	"math"
 	"regexp"
 	"strings"
 	"testing"
@@ -229,4 +231,94 @@ func TestNoPackOverridesSiteHeadLayout(t *testing.T) {
 		}
 	}
 	t.Logf("%d pack-scoped .site-head rules found, %d of them on the element itself", anchors, len(bodies))
+}
+
+// relLuminance is the WCAG 2.x relative luminance of an #rrggbb colour.
+// Calibrated against the reference pair #767676 on #ffffff, which is 4.54:1.
+func relLuminance(hex string) float64 {
+	hex = strings.TrimPrefix(hex, "#")
+	ch := make([]float64, 3)
+	for i := 0; i < 3; i++ {
+		var v int
+		fmt.Sscanf(hex[i*2:i*2+2], "%02x", &v)
+		c := float64(v) / 255
+		if c <= 0.04045 {
+			ch[i] = c / 12.92
+		} else {
+			ch[i] = math.Pow((c+0.055)/1.055, 2.4)
+		}
+	}
+	return 0.2126*ch[0] + 0.7152*ch[1] + 0.0722*ch[2]
+}
+
+func contrastRatio(a, b string) float64 {
+	la, lb := relLuminance(a), relLuminance(b)
+	if la < lb {
+		la, lb = lb, la
+	}
+	return (la + 0.05) / (lb + 0.05)
+}
+
+// The azure packs state in their own comments that --rule-hi carries the panel boundary on a
+// true-black canvas, where --rule is deliberately too soft to do it. WCAG 2.2 SC 1.4.11 puts
+// non-text UI indicators at 3:1, and --rule-hi is also the scrollbar thumb, so that claim has
+// a number attached and this test holds them to it.
+//
+// WHY ONLY THE AZURE PACKS. Measured across every pack, --rule-hi clears 3:1 in azure-oni and
+// azure-oni-v2 only. It does not in six shipped blocks:
+//
+//	pink       dark   #55304a on #1a0a12   1.74:1
+//	pink       light  #e8a0be on #fff0f5   1.87:1
+//	muertos    dark   #3d3350 on #0b0a10   1.68:1
+//	muertos    light  #b9a988 on #f2ece0   1.96:1
+//	muertos-v2 dark   #6b4e82 on #170f21   2.70:1
+//	muertos-v2 light  #b89aa8 on #fff3df   2.33:1
+//
+// Those are real findings and they are recorded here rather than dropped, but raising them
+// means recolouring three themes the owner designed, which is a decision for the owner and not
+// a side effect of adding a pack. Widen the allow-list below once that call is made; do not
+// widen it by lowering the threshold.
+//
+// The companion claim about --rule was simply false. Three AMOLED comments said --rule was
+// "raised to clear 3:1 against #000"; measured, muertos is 3.16 but muertos-v2 is 1.63 and
+// azure-oni is 1.84. The comments now say what is true. Prose cannot be checked, which is why
+// the token that actually carries the requirement is measured here instead.
+func TestRuleHiClearsThreeToOne(t *testing.T) {
+	held := map[string]bool{"azure-oni": true, "azure-oni-v2": true}
+	block := regexp.MustCompile(`:root(?:\[data-theme="(\w+)"\])?\[data-visual-theme="([^"]+)"\]\s*\{([^{}]*)\}`)
+	tok := func(body, name string) string {
+		m := regexp.MustCompile(`--` + name + `:\s*(#[0-9a-fA-F]{6})`).FindStringSubmatch(body)
+		if m == nil {
+			return ""
+		}
+		return m[1]
+	}
+	checked := 0
+	for _, m := range block.FindAllStringSubmatch(web.Index, -1) {
+		appearance, pack, body := m[1], m[2], m[3]
+		if appearance == "" {
+			appearance = "dark"
+		}
+		bg, hi := tok(body, "bg"), tok(body, "rule-hi")
+		if bg == "" || hi == "" {
+			continue // not a full token block; the pack inherits these
+		}
+		if !held[pack] {
+			continue // see the allow-list note above
+		}
+		checked++
+		if r := contrastRatio(hi, bg); r < 3.0 {
+			t.Errorf("pack %q (%s): --rule-hi %s on --bg %s is %.2f:1, below the 3:1 that "+
+				"WCAG 2.2 SC 1.4.11 requires of a non-text UI boundary.\n"+
+				"--rule-hi is the separator that has to be seen; if this edge is meant to be "+
+				"soft, use --rule for it and give --rule-hi a value that clears 3:1.",
+				pack, appearance, hi, bg, r)
+		}
+	}
+	if checked < 4 {
+		t.Fatalf("only %d held pack token blocks were measured; expected at least 4 (two azure "+
+			"packs x dark/amoled/light minus inherited blocks). This guard is barely matching "+
+			"anything and would pass a regression by default", checked)
+	}
+	t.Logf("measured --rule-hi against --bg in %d pack token blocks", checked)
 }
