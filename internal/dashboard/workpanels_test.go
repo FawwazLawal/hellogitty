@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"strconv"
 	"regexp"
 	"strings"
 	"testing"
@@ -174,6 +175,89 @@ func TestPanelEmptyCompressionRuleExists(t *testing.T) {
 	}
 	if !strings.Contains(body, `min-height`) {
 		t.Error(".panel[data-empty] rule has no min-height — risk of collapsing a user's Custom panel to zero")
+	}
+}
+
+// Needs-You panel sizing: the Your-work panel is the dashboard's answer to "what needs you" and
+// the first thing on the page. Pinning it to 360px for the Everything preset — the one the brief
+// calls "the whole board" — means a reader sees three rows and a slice of a fourth, while the
+// queue behind it runs to dozens. Measured on the live board 2026-11-05: panel 360px, row 86px,
+// header 49px, sort bar 32px — ((360-49-32-12)/86) = 3.1 rows before the clip.
+//
+// Two claims this test anchors, and the first is the one the issue names loudest:
+//
+//  1. The Everything preset's default for your-work must be large enough to show prime-queue
+//     work without forcing a scroll on its first paint. 720px is the target (7 rows + chrome
+//     at the measured row height), which leaves room for the runtime snap to settle on 7
+//     clean rows; it is also within the "laptop 1024 remains useful" bound from the brief.
+//  2. The template carries a snap-to-row-boundary JS block keyed off a data attribute on the
+//     panel, so whatever height the panel ends up with (preset, Custom drag, or resize),
+//     the clip lands on a row's bottom rather than through a title.
+func TestYourWorkPresetHeightIsNotAPeephole(t *testing.T) {
+	_, body := get(t, handler(fakeSource{board: workFixture(time.Now())}), "/")
+
+	// Strip the opening of the Everything preset's `sizes:` object and read the integer
+	// following `"your-work":`. The preset is written on one line in the template, which is
+	// what makes this a simple substring + regex rather than a JS parse.
+	re := regexp.MustCompile(`everything:\s*\{[^}]*sizes:\s*\{[^}]*"your-work":\s*(\d+)`)
+	m := re.FindStringSubmatch(body)
+	if len(m) < 2 {
+		t.Fatal("could not parse the Everything preset's your-work size — the template's shape has drifted from this test's regex")
+	}
+	h, _ := strconv.Atoi(m[1])
+	if h <= 360 {
+		t.Errorf("Everything preset's your-work size is %dpx — the 360px peephole the issue names. Prime-queue placement needs ~7 rows of head-room at the measured row height", h)
+	}
+	if h < 700 {
+		t.Errorf("Everything preset's your-work size is %dpx — below the 700px floor for showing ~7 rows at the measured 86px row height", h)
+	}
+}
+
+func TestYourWorkPanelSnapsToRowBoundary(t *testing.T) {
+	_, body := get(t, handler(fakeSource{board: workFixture(time.Now())}), "/")
+
+	// Structural guards: the panel carries the hook and the template carries the function
+	// name. Weak on their own — they would pass against a broken walk — so the real
+	// behavioural guard for the snap arithmetic lives in TestSnapRowsToBoundary beside
+	// snap.go. Keep this one to catch anyone deleting the hook or renaming the function
+	// away from both.
+	if !strings.Contains(body, `data-snap-rows`) {
+		t.Error("Your-work panel is missing the data-snap-rows hook — no snap script will bind to it, so the mid-row clip remains")
+	}
+	if !strings.Contains(body, `snapPanelToRowBoundary`) && !strings.Contains(body, `snapToRowBoundary`) {
+		t.Error("snap-to-row function not found in the dashboard template — the preset or drag height will still slice through row titles")
+	}
+	// The JS walks real row elements rather than multiplying one row's height by N.
+	// That is the whole point of the rewrite: the first version worked only when rows
+	// were uniform, and sliced the live board the moment a row wrapped differently.
+	// Anchor the shape so a future "optimisation" back to rowH*N trips the test.
+	if !strings.Contains(body, `querySelectorAll("ul.items > li.wi")`) {
+		t.Error("snap no longer reads the full row list — a rewrite to one-row-multiplied-by-N would slice any non-uniform board")
+	}
+}
+
+// TestStoredSizesMigrateFromOldPresetDefaults anchors the second half of the fix:
+// raising a preset constant only reaches a browser that has never saved a layout.
+// A returning user's saved sizes override the new default for ever after — which is
+// how the person who filed the issue would keep their 360 peephole unchanged. The
+// migration map in the template moves stored values that still equal yesterday's
+// default up to today's, and leaves any user-chosen height alone.
+func TestStoredSizesMigrateFromOldPresetDefaults(t *testing.T) {
+	_, body := get(t, handler(fakeSource{board: workFixture(time.Now())}), "/")
+
+	if !strings.Contains(body, `STORED_SIZE_MIGRATIONS`) {
+		t.Fatal("stored-size migration map not found — returning users keep their old preset-default heights and never see the raise")
+	}
+	// The specific mapping must carry at least the Everything 360 → 720 pair, which is
+	// the one named in the issue. Contributor 340 and Maintainer 300 ride alongside.
+	for _, pair := range []string{`360: 720`, `340: 680`, `300: 600`} {
+		if !strings.Contains(body, pair) {
+			t.Errorf("migration map missing %q — a returning user on that preset keeps the old height", pair)
+		}
+	}
+	// migrateStoredSizes must be called on the load path, or the map is dead weight.
+	if !strings.Contains(body, `migrateStoredSizes(state)`) {
+		t.Error("migrateStoredSizes is defined but not called on the main-storage load path — no migration happens at page load")
 	}
 }
 
