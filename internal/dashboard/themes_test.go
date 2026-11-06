@@ -178,3 +178,55 @@ func TestAmoledPacksHaveAmoledBlockAndSurviveReload(t *testing.T) {
 		t.Error(`web/index.html's pre-paint script does not accept "amoled" as a saved theme — any amoled pack loses its third appearance on reload`)
 	}
 }
+
+// A pack is colour and ornament. It is not allowed to move the furniture: `.site-head` is
+// `position: sticky` in the base stylesheet so the header stays pinned while the board scrolls,
+// and a pack rule that sets `position` on it wins on specificity and silently un-pins the
+// header for everyone who picks that pack. This shipped: the muertos-v2 pack set
+// `position: relative` on `.site-head` to get a containing block it did not need — `sticky` is
+// itself a positioned value and already provides one — and the header scrolled away. Nothing
+// else caught it, because the pack's colours, registries and AMOLED block were all correct and
+// the only symptom was a header that stopped sticking.
+//
+// `display` and `overflow` are banned alongside `position` as the other two properties that
+// turn a recolour into a layout change.
+//
+// The pseudo-elements are deliberately exempt: `.site-head::after` is a pack's own overlay and
+// `position: absolute` is correct there. They still serve as this test's vacuity anchor, since
+// a stylesheet where no pack targets the header at all would make the check meaningless.
+func TestNoPackOverridesSiteHeadLayout(t *testing.T) {
+	// Comments first: the prose in this stylesheet names both `.site-head` and `position`, and
+	// a naive selector/body split would read a comment as a selector and flag it.
+	css := regexp.MustCompile(`(?s)/\*.*?\*/`).ReplaceAllString(web.Index, "")
+
+	var anchors int
+	var bodies []string
+	for _, m := range regexp.MustCompile(`([^{}]*)\{([^{}]*)\}`).FindAllStringSubmatch(css, -1) {
+		for _, part := range strings.Split(m[1], ",") {
+			part = strings.TrimSpace(part)
+			if !strings.Contains(part, "data-visual-theme=") || !strings.Contains(part, ".site-head") {
+				continue
+			}
+			anchors++
+			if strings.HasSuffix(part, ".site-head") {
+				bodies = append(bodies, m[2])
+			}
+			break
+		}
+	}
+	if anchors == 0 {
+		t.Fatal("no pack-scoped rule in web/index.html targets .site-head at all — this guard is " +
+			"matching nothing and would pass a regression by default")
+	}
+
+	banned := regexp.MustCompile(`(?m)^\s*(position|display|overflow)\s*:`)
+	for _, body := range bodies {
+		if m := banned.FindString(body); m != "" {
+			t.Errorf("a visual-theme pack sets %q on the .site-head element in web/index.html.\n"+
+				"That overrides the base stylesheet's `position: sticky` (or its display/overflow) "+
+				"and un-pins the header for everyone using that pack.\nRule body:\n%s",
+				strings.TrimSpace(strings.Trim(m, " :")), strings.TrimSpace(body))
+		}
+	}
+	t.Logf("%d pack-scoped .site-head rules found, %d of them on the element itself", anchors, len(bodies))
+}
