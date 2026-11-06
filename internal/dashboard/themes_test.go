@@ -235,6 +235,42 @@ func TestNoPackOverridesSiteHeadLayout(t *testing.T) {
 
 // relLuminance is the WCAG 2.x relative luminance of an #rrggbb colour.
 // Calibrated against the reference pair #767676 on #ffffff, which is 4.54:1.
+// A :root token block and the colour tokens it declares.
+type tokenBlock struct {
+	selector string
+	tokens   map[string]string
+}
+
+// tokenBlocks returns every :root{...} declaration block in the template, base
+// appearances included — the existing pack parser matches only blocks carrying
+// [data-visual-theme=...], which skips the two base blocks where the focus
+// indicator defect actually lived.
+//
+// Comments are stripped first. A guard in the oni pack work matched commentary
+// as if it were CSS because it did not, so this does it before parsing rather
+// than filtering afterwards. The `{` must follow the attribute selectors
+// immediately, so descendant rules like `:root[...] .panel { }` are not blocks.
+func tokenBlocks(t *testing.T) []tokenBlock {
+	t.Helper()
+	src := regexp.MustCompile(`(?s)/\*.*?\*/`).ReplaceAllString(web.Index, "")
+	blockRe := regexp.MustCompile(`:root((?:\[[^\]]*\])*)\s*\{([^{}]*)\}`)
+	tokenRe := regexp.MustCompile(`--([a-z0-9-]+)\s*:\s*(#[0-9a-fA-F]{3,8})`)
+
+	var out []tokenBlock
+	for _, m := range blockRe.FindAllStringSubmatch(src, -1) {
+		toks := map[string]string{}
+		for _, tm := range tokenRe.FindAllStringSubmatch(m[2], -1) {
+			toks[tm[1]] = tm[2]
+		}
+		if len(toks) == 0 {
+			continue
+		}
+		sel := ":root" + m[1]
+		out = append(out, tokenBlock{selector: sel, tokens: toks})
+	}
+	return out
+}
+
 func relLuminance(hex string) float64 {
 	hex = strings.TrimPrefix(hex, "#")
 	ch := make([]float64, 3)
@@ -321,6 +357,69 @@ func TestRuleHiClearsThreeToOne(t *testing.T) {
 			"anything and would pass a regression by default", checked)
 	}
 	t.Logf("measured --rule-hi against --bg in %d pack token blocks", checked)
+}
+
+// --head-accent draws the keyboard focus indicator, so it is held to a floor.
+//
+// `.statrail a.stat:focus-visible` takes its border-color from --head-accent.
+// That border IS the focus indicator for the stat tiles, which means WCAG SC
+// 1.4.11 applies and 3:1 against the adjacent surface is the floor, not a
+// preference. The same token also colours `.hclock.clock-led .hclock-date`,
+// which is ordinary text and so carries the 4.5 floor on --head.
+//
+// Both base appearances shipped under those floors: dark at 2.87:1 against
+// --panel and light at 2.08:1, meaning a keyboard user tabbing through the
+// stat rail could barely see where focus was. The token reads as "a quiet
+// accent", and quiet is a reasonable thing to want from a decorative border,
+// which is how it got this pale — but the same token is doing a job where
+// quiet is a defect.
+//
+// Every one of the thirteen pack blocks already cleared, so this has no
+// allow-list and no exemptions. If one is ever needed, that is a signal the
+// pack is wrong rather than the test.
+func TestHeadAccentCarriesAVisibleFocusIndicator(t *testing.T) {
+	blocks := tokenBlocks(t)
+	if len(blocks) == 0 {
+		t.Fatal("parsed no :root token blocks from web/index.html — the parser has drifted and this test would pass vacuously")
+	}
+
+	checked := 0
+	for _, b := range blocks {
+		accent, ok := b.tokens["head-accent"]
+		if !ok {
+			continue
+		}
+		// The focus ring is drawn on tiles sitting on --panel, over a page of
+		// --bg; both are adjacent surfaces, so both carry the 3:1 floor.
+		for _, surface := range []string{"panel", "bg"} {
+			against, ok := b.tokens[surface]
+			if !ok {
+				continue
+			}
+			checked++
+			if got := contrastRatio(accent, against); got < 3.0 {
+				t.Errorf("%s: --head-accent %s on --%s %s is %.2f:1, below the 3:1 WCAG 1.4.11 floor for a focus indicator — a keyboard user cannot see which stat tile has focus",
+					b.selector, accent, surface, against, got)
+			}
+		}
+		// The led clock's date paints in this token, and that is text.
+		//
+		// No exemptions. Pink light used to miss this by a hundredth and a half
+		// at 4.33:1 and was carried as a documented exception, on the precedent
+		// the --rule-hi guard sets: record the finding, leave the owner's palette
+		// alone. The owner then asked for it fixed, so the exception is gone and
+		// every shipped block clears both floors on its own. Do not reintroduce a
+		// skip list to make a new pack pass; a block that cannot clear 4.5:1 here
+		// is painting unreadable text.
+		if head, ok := b.tokens["head"]; ok {
+			checked++
+			if got := contrastRatio(accent, head); got < 4.5 {
+				t.Errorf("%s: --head-accent %s on --head %s is %.2f:1, below 4.5:1 — `.hclock.clock-led .hclock-date` paints text in this token",
+					b.selector, accent, head, got)
+			}
+		}
+	}
+	t.Logf("checked %d pairs across %d token blocks", checked, len(blocks))
 }
 
 // Every /art/ URL the template paints must name a file that is actually embedded.
