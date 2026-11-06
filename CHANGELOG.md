@@ -5,6 +5,44 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (39) · Black Bombay (baby) · 2026-11-05
+
+Tag `v0.2.39`.
+
+- **The four numbers that answer "where do I stand" now sit above the grid.** Needs
+  you, open pull requests, repositories tracked and API headroom were split across
+  three panel headings and the footer, so the one question you open the dashboard to
+  ask was the one thing it never answered in one place. They are now a compact
+  full-width row above the panels, and none of them is new: every figure was already
+  computed server-side, so the rail adds no polling and no GitHub calls. Repos and
+  API appear twice on purpose — the rail reads the number you want first, the footer
+  keeps the breakdown and the gauge that goes hot at ninety percent. The rail joins
+  the existing layout mechanism for full-width modules, so it shows and hides from
+  the Layout dialog like anything else and no preset changed. Before the first poll
+  arrives a tile shows a dimmed dash and says what it has not fetched yet, rather
+  than a confident zero that would read as "quota exhausted" or "nothing waiting".
+
+- **The Your work panel stops cutting a row in half.** It is the dashboard's answer
+  to "what needs me" and it sits first, but the Everything preset pinned it to 360px
+  while the queue behind it ran to thirty-eight items: three rows and a fourth sliced
+  through its own title. A mid-row clip does not read as "scroll for more", it reads
+  as a render fault. The preset heights are raised — Everything to 720, Contributor
+  to 680, Maintainer to 600 — and any height applied to the panel is now rounded down
+  to a whole number of rows plus its chrome, counting the borders and the sticky
+  resize handle that were eating the last row's bottom edge. Rounding down means a
+  height you dragged yourself stays within one row of what you chose. Heights you set
+  by hand are otherwise untouched; only the presets moved.
+
+- **An empty Conversations panel now tells you something.** One sentence sat in a
+  280px box, so the panel was mostly void and the panels under it hung below that
+  void instead of under the thing they follow. The empty state says three things
+  instead: that nothing needs you, what the panel would hold and how much of it is
+  sitting quiet, and where to go to see it. The panel also stops reserving its preset
+  height when its body is nothing but that block, whether the template found nothing
+  to show or filtering hid every row. For Muertos V2 users the Luz cameo follows the
+  block rather than disappearing with the paragraph it used to be attached to — a
+  decoration that stops appearing looks like one nobody added.
+
 ## v0.2.0 (38) · Black Bombay (baby) · 2026-11-05
 
 Tag `v0.2.38`.
