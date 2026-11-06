@@ -109,10 +109,15 @@ export function KpiRail({ tiles }: { tiles: KpiTile[] }) {
   const artMap = TILE_ART[identity] ?? {}
 
   return (
-    <div
-      className="grid gap-4"
-      style={{ gridTemplateColumns: `repeat(${tiles.length}, minmax(0, 1fr))` }}
-    >
+    /*
+      Two columns up to `lg`, then one per tile. The inline
+      `repeat(tiles.length, minmax(0, 1fr))` this replaces held four columns at
+      every width. `minmax(0, 1fr)` kept it from overflowing, so nothing looked
+      wrong in the markup — but at 390px each tile was about 90px wide and
+      "4,755 / API left" was clipped inside it. A grid that never overflows can
+      still be unreadable.
+    */
+    <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
       {tiles.map((tile) => {
         const artSrc = artMap[tile.id]
         const numeralColor = toneVar(tile.tone)

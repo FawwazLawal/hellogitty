@@ -34,7 +34,14 @@ export function NavTabs() {
     <nav
       aria-label="Primary"
       id={navId}
-      className="relative flex items-stretch gap-1 border-b px-4"
+      /*
+        `overflow-x-auto` so eight tabs scroll inside the bar instead of
+        widening the document. At 390px the row is 822px long, and without this
+        it set the page's scrollWidth and dragged every other panel out with it.
+        Horizontal scrolling is the right answer for a tab bar specifically —
+        wrapping to two rows moves the content below it on every narrow load.
+      */
+      className="relative flex items-stretch gap-1 overflow-x-auto border-b px-4 [scrollbar-width:none] [&::-webkit-scrollbar]{display:none}"
       style={{ borderColor: 'var(--hg-line)', background: 'color-mix(in srgb, var(--hg-canvas) 82%, transparent)' }}
     >
       {TABS.map(({ id, label, Icon }) => {
@@ -45,7 +52,7 @@ export function NavTabs() {
             type="button"
             onClick={() => setActive(id)}
             aria-current={isActive ? 'page' : undefined}
-            className="relative flex items-center gap-1.5 px-3 py-2.5 text-[12.5px] transition-colors"
+            className="relative flex shrink-0 items-center gap-1.5 px-3 py-2.5 text-[12.5px] transition-colors"
             style={{
               color: isActive ? 'var(--hg-text)' : 'var(--hg-text-muted)',
               fontWeight: isActive ? 600 : 400,

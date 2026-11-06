@@ -50,7 +50,16 @@ export function Masthead({ data }: { data: DashboardData }) {
     .toUpperCase()
 
   return (
-    <header className="relative isolate overflow-hidden" style={{ height: 'var(--spacing-masthead)' }}>
+    /*
+     * `height` only above the narrow breakpoint. At 390px the brand, clock and
+     * eleven controls cannot share one row: pinning the height made them
+     * overlap rather than wrap, and the first mobile capture had the wordmark
+     * sitting on top of the clock with 432px of horizontal overflow behind it.
+     * Below `md` the band grows to fit its content instead.
+     */
+    <header
+      className="relative isolate overflow-hidden md:h-[var(--spacing-masthead)]"
+    >
       {/* Scene. Anchored to the bottom so the horizon holds as the window widens. */}
       <div
         aria-hidden="true"
@@ -67,7 +76,7 @@ export function Masthead({ data }: { data: DashboardData }) {
         }}
       />
 
-      <div className="flex h-full items-start gap-6 px-5 pt-3">
+      <div className="flex h-full flex-wrap items-start gap-x-6 gap-y-3 px-5 py-3 md:flex-nowrap md:py-0 md:pt-3">
         <div className="min-w-0">
           <h1 className="text-[19px] font-bold leading-tight" style={{ color: 'var(--hg-text)' }}>
             HelloGitty
@@ -77,7 +86,7 @@ export function Masthead({ data }: { data: DashboardData }) {
           </p>
         </div>
 
-        <div className="mx-auto flex items-center gap-1 pt-1">
+        <div className="flex items-center gap-1 pt-1 md:mx-auto">
           <ClockBracket side="left" />
           <div className="text-center">
             <time
@@ -95,7 +104,7 @@ export function Masthead({ data }: { data: DashboardData }) {
           <ClockBracket side="right" />
         </div>
 
-        <div className="flex items-center gap-2 pt-1">
+        <div className="flex flex-wrap items-center gap-2 pt-1">
           {CONTROLS.map(({ id, label, Icon }) => (
             <button
               key={id}

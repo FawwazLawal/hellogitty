@@ -110,7 +110,7 @@ export function Panel({
 }) {
   return (
     <section
-      className={`relative border ${className}`}
+      className={`relative min-w-0 border ${className}`}
       style={{
         background: sunken ? 'var(--hg-surface-sunken)' : 'var(--hg-surface)',
         borderColor: 'var(--hg-line)',

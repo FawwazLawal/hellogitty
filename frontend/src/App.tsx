@@ -43,7 +43,7 @@ export default function App() {
       <Masthead data={DASHBOARD} />
       <NavTabs />
 
-      <main className="px-4 pb-[200px] pt-3">
+      <main className="min-w-0 overflow-x-hidden px-4 pb-[200px] pt-3">
         <KpiRail tiles={DASHBOARD.kpis} />
 
         <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
