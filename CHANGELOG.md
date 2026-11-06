@@ -5,6 +5,56 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (40) · Black Bombay (baby) · 2026-11-06
+
+Tag `v0.2.40`.
+
+- **The header stopped sticking for anyone using Muertos V2, and nobody noticed.**
+  That pack set `position: relative` on the site header to get a containing block
+  its ornament needed. The base stylesheet makes that header `position: sticky`,
+  and the pack's selector was the more specific of the two, so the pack won and the
+  header scrolled away with the content. `sticky` is itself a positioned value and
+  already provided the containing block, so the declaration bought nothing and cost
+  the behaviour. It had shipped. Nothing caught it, because the pack's colours, both
+  of its registries and its true-black block were all correct and the only symptom
+  was a header that stopped staying put — invisible in a diff, and invisible in a
+  screenshot of the top of the page. A test now rejects any pack that sets
+  `position`, `display` or `overflow` on the header element.
+
+- **A fourth visual pack, Azure Oni, whose surfaces are generated rather than flat.**
+  Lacquered cobalt over obsidian, in three appearances: the default dark, a
+  true-black mode that stays blue instead of going neutral, and a light mode designed
+  from bone paper rather than inverted from the dark one. What makes it a pack rather
+  than a palette is that its surfaces are made rather than filled — a wave pattern
+  across the canvas and breaking along the bottom of the brand row, a riveted seam on
+  the panel chrome, a lacquered sheen on the selected tab, a stone grain on the raised
+  surfaces. All of it is CSS gradients and masked SVG written inline, so there are no
+  image files, nothing is fetched over the network, and nothing animates. Contrast was
+  measured across every rendered text pair in all three appearances before any of it
+  was written.
+
+- **A fifth pack, Azure Oni V2, where all six of the direction's named materials are
+  real.** The first pack builds one of its source's eight texture recipes as a
+  genuinely generated surface and approximates two more. This one builds them all:
+  obsidian under the whole canvas, azure lacquer on the selected tab, ember haze on
+  empty panels, a vertical armour seam with rivets on the chrome, a rim light that is
+  the focus and hover language, and a brushed alloy micrograin. Both packs stay
+  selectable; they are different objects, the way the two Muertos packs are. Four
+  defects were found by reading the running page rather than the diff, including a
+  focus ring that vanished entirely in high-contrast mode and a haze layer that was
+  painting over the dashboard instead of behind it.
+
+- **Three packs claimed a contrast ratio their colours did not have.** The same
+  sentence appeared in three true-black blocks: that the panel rule was raised to
+  clear 3:1 against black. Measured, it is true in one of them and false in the other
+  two, one of which had shipped. The colours are fine — a soft inner hairline on a
+  black canvas is a reasonable choice, and the standard exempts inactive container
+  boundaries. What was wrong was a comment asserting a number, in a file where those
+  comments are the record of what was measured; one false figure there makes the rest
+  unciteable. The comments now say what is true and name the token that does carry the
+  boundary, and a test computes the ratio instead of trusting the prose.
+
+
 ## v0.2.0 (39) · Black Bombay (baby) · 2026-11-05
 
 Tag `v0.2.39`.
