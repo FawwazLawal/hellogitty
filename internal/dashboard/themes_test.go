@@ -404,20 +404,14 @@ func TestHeadAccentCarriesAVisibleFocusIndicator(t *testing.T) {
 		}
 		// The led clock's date paints in this token, and that is text.
 		//
-		// One shipped block misses, by a hundredth and a half: the pink light
-		// theme at 4.33:1. It is recorded here rather than silently passed,
-		// and it is NOT fixed in this change, on the precedent the --rule-hi
-		// guard above already sets — raising it means recolouring a theme the
-		// owner designed, which is the owner's call and not a side effect of
-		// fixing the focus indicator. It bites only when the viewer has also
-		// chosen the non-default "led" clock style.
-		//
-		// Widen this map when that call is made. Never widen it by lowering
-		// the floor, and never add a block to it to make a new pack pass.
-		textFloorMiss := map[string]bool{
-			`:root[data-theme="light"][data-visual-theme="pink"]`: true,
-		}
-		if head, ok := b.tokens["head"]; ok && !textFloorMiss[b.selector] {
+		// No exemptions. Pink light used to miss this by a hundredth and a half
+		// at 4.33:1 and was carried as a documented exception, on the precedent
+		// the --rule-hi guard sets: record the finding, leave the owner's palette
+		// alone. The owner then asked for it fixed, so the exception is gone and
+		// every shipped block clears both floors on its own. Do not reintroduce a
+		// skip list to make a new pack pass; a block that cannot clear 4.5:1 here
+		// is painting unreadable text.
+		if head, ok := b.tokens["head"]; ok {
 			checked++
 			if got := contrastRatio(accent, head); got < 4.5 {
 				t.Errorf("%s: --head-accent %s on --head %s is %.2f:1, below 4.5:1 — `.hclock.clock-led .hclock-date` paints text in this token",
