@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "hg-phase1",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--root", "frontend", "--port", "5174", "--strictPort"],
+      "port": 5174
+    }
+  ]
+}
