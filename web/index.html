@@ -890,6 +890,61 @@
     --pack-sakura: #d98fb4;
     color-scheme: light;
   }
+  /* Vermilion Dark. The identity from the owner's reference render: obsidian and
+     oxblood planes, crimson signal, scenery supplied as raster art rather than
+     drawn in CSS.
+
+     Two crimsons on purpose. --pack-crimson is the identity MARK and appears at
+     rivet size where nothing sits on top of it. --pack-crimson-fill is the
+     surface variant, two steps darker, used wherever text sits on crimson: white
+     ink measures 3.69:1 on the identity colour and fails, and 4.95:1 on the fill.
+     The reference render shows white ink on that tab, so darkening the surface is
+     the correction that keeps the design; inverting to black ink would not have. */
+  :root[data-visual-theme="vermilion"] {
+    --bg: #0a0f1c; --panel: #161020; --raised: #241826; --rule: #4a2430; --rule-hi: #8c5260;
+    --text: #f7eef0; --dim: #c9aab1; --track: #2a1a22;
+    --nom: #5fd3a6; --caution: #ffbf5c; --caution-text: #ffbf5c; --warn: #ff6b78;
+    --caution-fill: #2e2210; --caution-ink: #ffdfa8; --warn-fill: #33111a; --warn-ink: #ffd3d8;
+    --tag-fill: #2a1620; --tag-ink: #ffb0b8; --tag-rule: #5a2c38;
+    --head: #120b16; --head-dim: #c9aab1; --head-accent: #ff5f6d;
+    --mascot-bg: #161020;
+    --pack-crimson: #ff2d3d;       /* identity mark: 6.95:1 on --panel            */
+    --pack-crimson-fill: #d9242f;  /* text-bearing surface: white ink 4.95:1      */
+    color-scheme: dark;
+  }
+  /* AMOLED is this same identity with the canvas unlit — the owner's own framing,
+     and the right one: the red stays red, the black pixels switch off. --rule-hi is
+     #815059 rather than the #7d4a56 first tried, which measured 2.99:1 against black
+     and missed the 3:1 floor by a hundredth. */
+  :root[data-theme="amoled"][data-visual-theme="vermilion"] {
+    --bg: #000000; --panel: #0b0710; --raised: #17101b; --rule: #3d1d27; --rule-hi: #815059;
+    --text: #f7eef0; --dim: #c4a4ab; --track: #180f14;
+    --nom: #5fd3a6; --caution: #ffc266; --caution-text: #ffc266; --warn: #ff7b86;
+    --caution-fill: #1d1408; --caution-ink: #ffe2b0; --warn-fill: #210a12; --warn-ink: #ffd8dd;
+    --tag-fill: #190d14; --tag-ink: #ffb8c0; --tag-rule: #4a2430;
+    --head: #070409; --head-dim: #c4a4ab; --head-accent: #ff6f7c;
+    --mascot-bg: #0b0710;
+    --pack-crimson: #ff3d4c; --pack-crimson-fill: #d9242f;
+  }
+  /* Bone Light. A pale porcelain identity, and the canvas really is near-white:
+     #f9f8fd sampled from the reference gutter, #ffffff from a panel body. An earlier
+     brief of mine told the implementer the canvas was #c7d6f7 — that value came from
+     a different image, the Azure Oni light mockup, and was wrong here. The blue you
+     read in the reference is sky and wave INK painted on paper, not the paper. */
+  :root[data-theme="light"][data-visual-theme="bone"] {
+    --bg: #e2e9f6; --panel: #ffffff; --raised: #eef2fb; --rule: #7788b0; --rule-hi: #51639010;
+    --text: #0a0f1c; --dim: #3a4868; --track: #d7dff4;
+    --nom: #05704c; --caution: #7a4500; --caution-text: #6b3c00; --warn: #a81f35;
+    --caution-fill: #fdeccd; --caution-ink: #553100; --warn-fill: #ffe0e4; --warn-ink: #73101f;
+    --tag-fill: #e6edfc; --tag-ink: #0d3a9b; --tag-rule: #aec4e8;
+    --head: #f2f5fd; --head-dim: #3a4868; --head-accent: #0d3a9b;
+    --mascot-bg: #ffffff;
+    --pack-crimson: #a81f35;
+    --pack-wave: #2a4f9c; --pack-wave-deep: #13306c; --pack-ridge: #335a9b;
+    --pack-blossom: #b32030; --pack-branch: #6b4a3a;
+    --pack-steel-top: #4e7dd5; --pack-steel-bottom: #2a4f9c; --pack-rivet: #f3e3c6;
+    color-scheme: light;
+  }
   * { box-sizing: border-box; }
   html { background: var(--bg); scrollbar-color: var(--rule-hi) var(--bg); scroll-padding-top: 60px; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--sans); caret-color: var(--text);
@@ -929,7 +984,7 @@
     if (window.matchMedia) try { window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function(e) { var s; try { s = localStorage.getItem("hellogitty-theme"); } catch(x) {} if (!s) { if (e.matches) root.dataset.theme = "light"; else delete root.dataset.theme; } }); } catch(e) {}
 
     // Visual (collaboration) theme: a colour overlay on top of Auto/Light/Dark.
-    var VISUAL_THEMES = { pink: { label: "(pinky v2)" }, muertos: { label: "(muertos)", amoled: true }, "muertos-v2": { label: "(la noche viva)", amoled: true }, "azure-oni": { label: "(ao-oni)", amoled: true }, "azure-oni-v2": { label: "(ao-oni ii)", amoled: true } };
+    var VISUAL_THEMES = { pink: { label: "(pinky v2)" }, muertos: { label: "(muertos)", amoled: true }, "muertos-v2": { label: "(la noche viva)", amoled: true }, "azure-oni": { label: "(ao-oni)", amoled: true }, "azure-oni-v2": { label: "(ao-oni ii)", amoled: true }, vermilion: { label: "(vermilion)", amoled: true }, bone: { label: "(bone)" } };
     // A pack that declares amoled offers a third appearance: true black, a variant of dark.
     // The button is added here rather than in every page's header, so one change covers them all.
     function amoledButton(on) {
