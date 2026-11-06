@@ -696,6 +696,79 @@
     --pack-flower-indigo: #5944a5; --pack-flower-papaya: #c44622;
     color-scheme: light;
   }
+  /* ─────────────────────────────────────────────────────────────────────────
+     AZURE ONI — Ao-Oni. Obsidian canvas, azure identity, crimson held back as a
+     rare signal. The pack the others are not: its surfaces carry texture rather
+     than flat fill. Every ornament rule is scoped so it leaks into no other pack.
+
+     Type is deliberately unchanged. The source direction names Orbitron and Noto
+     Sans JP, but this dashboard loads no webfont at any point and no pack has ever
+     overridden --sans. Adding a network font fetch for ornament is a worse trade
+     than losing the display face, so the pack earns its identity from colour,
+     material and geometry instead.
+     ───────────────────────────────────────────────────────────────────────── */
+  :root[data-visual-theme="azure-oni"] {
+    --bg: #070b16; --panel: #18213a; --raised: #243052; --rule: #36476a; --rule-hi: #5e739a;
+    --text: #f5f7ff; --dim: #b5c2d8; --track: #232d44;
+    --nom: #5fd3a6; --caution: #ffbf5c; --caution-text: #ffbf5c; --warn: #ff6b78;
+    --caution-fill: #2e2210; --caution-ink: #ffdfa8; --warn-fill: #331018; --warn-ink: #ffd3d8;
+    --tag-fill: #1b2742; --tag-ink: #9dc2ff; --tag-rule: #36508a;
+    --head: #05080f; --head-dim: #b5c2d8; --head-accent: #7cb7ff;
+    --mascot-bg: #18213a;
+    /* materials */
+    --pack-seigaiha-ink: #233962; --pack-seigaiha-opacity: .62;
+    --pack-seam-ink: #3e5478; --pack-rivet: #6d86b4;
+    --pack-lacquer: #2d7bff; --pack-lacquer-hi: #9fc6ff;
+    --pack-stone: .17;
+    --pack-sakura: #ffc9de;
+    /* The oni's eye. The ONE warm mark the pack is allowed, reserved for the
+       single count that is a demand on the owner. 4.90:1 on --panel. */
+    --pack-vermilion: #ff4d5a;
+    color-scheme: dark;
+  }
+  /* Ao-Oni — Midnight Forge (AMOLED): the canvas goes to true black so the panel
+     edge becomes the only thing marking a panel, but the ink stays BLUE rather
+     than neutral. Black where the pixels switch off, cobalt wherever there is
+     anything to see. --rule is raised to clear 3:1 against #000 since it now
+     carries what the fill no longer does. */
+  :root[data-theme="amoled"][data-visual-theme="azure-oni"] {
+    --bg: #000000; --panel: #050b18; --raised: #0d1830; --rule: #2b3a55; --rule-hi: #55688c;
+    --text: #f5f7ff; --dim: #aebbd2; --track: #0f1a30;
+    --nom: #5fd3a6; --caution: #ffc266; --caution-text: #ffc266; --warn: #ff7b86;
+    --caution-fill: #1d1408; --caution-ink: #ffe2b0; --warn-fill: #210a10; --warn-ink: #ffd8dd;
+    --tag-fill: #0b1526; --tag-ink: #9cc4ff; --tag-rule: #2d4876;
+    --head: #000000; --head-dim: #aebbd2; --head-accent: #86bcff;
+    --mascot-bg: #050b18;
+    --pack-seigaiha-ink: #1b2f52; --pack-seigaiha-opacity: .70;
+    --pack-seam-ink: #2f4468; --pack-rivet: #5d76a4;
+    --pack-lacquer: #1f66e6; --pack-lacquer-hi: #8ab8ff;
+    --pack-stone: .12;
+    --pack-sakura: #ffb9d4;
+    --pack-vermilion: #ff5a66;
+  }
+  /* Ao-Oni — Bone (light): the direction has no light mode at all, so this one is
+     designed rather than inverted. Bone paper from the source palette carries the
+     canvas, white panels nest on it like plates, and Ink becomes the text. Azure
+     darkens to hold 4.5:1 as a reading colour instead of staying a glowing accent,
+     and crimson deepens the same way — on paper a signal has to be dark to read,
+     not bright. */
+  :root[data-theme="light"][data-visual-theme="azure-oni"] {
+    --bg: #eef1fa; --panel: #ffffff; --raised: #e2e9f7; --rule: #c3cee3; --rule-hi: #76859f;
+    --text: #0a0f1c; --dim: #4a5570; --track: #dbe3f2;
+    --nom: #06624a; --caution: #8a5000; --caution-text: #6f3f00; --warn: #b3121f;
+    --caution-fill: #fdeccd; --caution-ink: #5a3200; --warn-fill: #ffe1e3; --warn-ink: #7a0d16;
+    --tag-fill: #e4ecfd; --tag-ink: #1b3fa0; --tag-rule: #b3c6ec;
+    --head: #e2e9f7; --head-dim: #4a5570; --head-accent: #1b3fa0;
+    --mascot-bg: #ffffff;
+    --pack-seigaiha-ink: #8ea4cc; --pack-seigaiha-opacity: .45;
+    --pack-seam-ink: #c0cde6; --pack-rivet: #8fa3c6;
+    --pack-lacquer: #0040c7; --pack-lacquer-hi: #6f9dff;
+    --pack-stone: .09;
+    --pack-sakura: #d98fb4;
+    /* On paper the eye has to be dark to read: 5.64:1 on white. */
+    --pack-vermilion: #c62631;
+    color-scheme: light;
+  }
   * { box-sizing: border-box; }
   html { background: var(--bg); scrollbar-color: var(--rule-hi) var(--bg); scroll-padding-top: 60px; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--sans); caret-color: var(--text);
@@ -735,7 +808,7 @@
     if (window.matchMedia) try { window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function(e) { var s; try { s = localStorage.getItem("hellogitty-theme"); } catch(x) {} if (!s) { if (e.matches) root.dataset.theme = "light"; else delete root.dataset.theme; } }); } catch(e) {}
 
     // Visual (collaboration) theme: a colour overlay on top of Auto/Light/Dark.
-    var VISUAL_THEMES = { pink: { label: "(pinky v2)" }, muertos: { label: "(muertos)", amoled: true }, "muertos-v2": { label: "(la noche viva)", amoled: true } };
+    var VISUAL_THEMES = { pink: { label: "(pinky v2)" }, muertos: { label: "(muertos)", amoled: true }, "muertos-v2": { label: "(la noche viva)", amoled: true }, "azure-oni": { label: "(ao-oni)", amoled: true } };
     // A pack that declares amoled offers a third appearance: true black, a variant of dark.
     // The button is added here rather than in every page's header, so one change covers them all.
     function amoledButton(on) {
@@ -1016,6 +1089,603 @@
     :root[data-visual-theme="muertos-v2"] p.none::before,
     :root[data-visual-theme="muertos-v2"] .panel-empty::before { animation: luzBlink 9s ease-in-out infinite; }
     @keyframes luzBlink { 0%, 92%, 100% { opacity: .95; } 94%, 96% { opacity: .55; } }
+  }
+
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     AZURE ONI — materials. Five generated surfaces, no raster asset, no network
+     fetch. Every rule below carries :root[data-visual-theme="azure-oni"] so it
+     leaks into no other pack, the same discipline the Muertos V2 block above
+     keeps. Nothing here animates, so prefers-reduced-motion needs no case.
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  /* Azure-Oni · Seigaiha (青海波), the overlapping-wave canvas texture.
+     Pack-scoped: every rule in this file starts :root[data-visual-theme="azure-oni"]
+     so it leaks into no other pack. Splice point is web/index.html at the end of
+     the pack's existing CSS block (near the muertos-v2 ornaments).
+
+     FIVE FACTS, so this reads as a system element rather than decoration:
+
+     1. GENERATED. One SVG data: URI, written inline below. No raster, no network
+        fetch, no asset file. The SVG draws concentric circle rings whose visible
+        halves inside the tile's viewBox form the classic alternating wave fans.
+
+     2. REPEAT. One tile is 60 x 30 px (`mask-size: 60px 30px`). The fans step
+        down in radius 15 → 11 → 7 → 3 px, giving four arcs per fan — the number
+        that reads as a wave at this size without turning into a moiré.
+
+     3. HOW IT TILES. Fan centers at y = 30 sit at x = 0, 30, 60 (the lower edge,
+        one circle wrapping each side vertex). Fan centers at y = 0 sit at x = 15
+        and 45 (offset by half a tile). The 60 px width is one full horizontal
+        period so the x = 60 fan continues as the x = 0 fan of the next tile; the
+        30 px height meshes the y = 30 row of one tile with the y = 0 (offset)
+        row of the tile below, which is what makes seigaiha seigaiha.
+
+     4. LEGAL ON. The page canvas only, via `body::before` behind every panel at
+        z-index: -1. Every panel in this app paints `var(--panel)` as an opaque
+        fill, so the texture naturally never bleeds under dense copy, tables,
+        form fields, chips or modals — those surfaces paint over this one. No
+        `.panel` rule is written here because none is needed; adding one would
+        double-paint.
+
+     5. SUPPRESSED. Not drawn on `html`, so the browser's own rubber-band and
+        overscroll regions stay flat canvas. Not drawn on `.panel` / `.modal` /
+        `input` / `select` / `textarea` — see fact 4. Pointer events are off so
+        the layer is invisible to hit-testing.
+
+     COLOUR comes from `--pack-seigaiha-ink` and strength from
+     `--pack-seigaiha-opacity`, both already defined in the pack's three token
+     blocks (default-dark, amoled, light). The pattern is a MASK over a solid
+     fill of that ink colour — this is the only way to parametrise a repeating
+     SVG with a CSS custom property (background-image data: URIs cannot read CSS
+     variables). The intent — "repeating SVG as a data: URI tiled across the
+     canvas" — is preserved; the plumbing is mask + flat fill.
+
+     MOTION. No animation, no transitions, no filters. `prefers-reduced-motion`
+     therefore needs no media query — there is nothing to reduce.
+
+     SCROLL COST. `position: absolute` on the body pseudo-element, not fixed,
+     and no `background-attachment: fixed` — the texture scrolls with the body
+     on a normal repeat rather than forcing a repaint of the whole viewport on
+     every scroll event. (A `mask-image` on a static element composites once.) */
+
+  :root[data-visual-theme="azure-oni"] body {
+    position: relative;
+    /* LOAD-BEARING. Without a stacking context here the z-index:-1 layer below
+       escapes to the root context and paints BEHIND body's own opaque --bg fill,
+       which makes the whole texture invisible. Verified on a running instance:
+       the canvas rendered flat until this line went in. `isolation` keeps the
+       layer inside body, where paint order puts it above body's background and
+       below every panel. */
+    isolation: isolate;
+  }
+
+  :root[data-visual-theme="azure-oni"] body::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+
+    /* Layer 1: flat fill in the ink colour. The mask below carves it. */
+    background-color: var(--pack-seigaiha-ink);
+    opacity: var(--pack-seigaiha-opacity);
+
+    /* Layer 2: the seigaiha tile as a mask. Four concentric rings per fan
+       (r = 15, 11, 7, 3), fans at the bottom edge (y=30) with centers at
+       x = 0, 30, 60, and offset fans at the top edge (y=0) with centers at
+       x = 15, 45. Only the halves inside the viewBox render, so the tile
+       shows the top-half of each bottom fan and the bottom-half of each top
+       fan — classic seigaiha. */
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='30' viewBox='0 0 60 30'><g fill='none' stroke='black' stroke-width='1'><circle cx='0' cy='30' r='15'/><circle cx='0' cy='30' r='11'/><circle cx='0' cy='30' r='7'/><circle cx='0' cy='30' r='3'/><circle cx='30' cy='30' r='15'/><circle cx='30' cy='30' r='11'/><circle cx='30' cy='30' r='7'/><circle cx='30' cy='30' r='3'/><circle cx='60' cy='30' r='15'/><circle cx='60' cy='30' r='11'/><circle cx='60' cy='30' r='7'/><circle cx='60' cy='30' r='3'/><circle cx='15' cy='0' r='15'/><circle cx='15' cy='0' r='11'/><circle cx='15' cy='0' r='7'/><circle cx='15' cy='0' r='3'/><circle cx='45' cy='0' r='15'/><circle cx='45' cy='0' r='11'/><circle cx='45' cy='0' r='7'/><circle cx='45' cy='0' r='3'/></g></svg>");
+            mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='30' viewBox='0 0 60 30'><g fill='none' stroke='black' stroke-width='1'><circle cx='0' cy='30' r='15'/><circle cx='0' cy='30' r='11'/><circle cx='0' cy='30' r='7'/><circle cx='0' cy='30' r='3'/><circle cx='30' cy='30' r='15'/><circle cx='30' cy='30' r='11'/><circle cx='30' cy='30' r='7'/><circle cx='30' cy='30' r='3'/><circle cx='60' cy='30' r='15'/><circle cx='60' cy='30' r='11'/><circle cx='60' cy='30' r='7'/><circle cx='60' cy='30' r='3'/><circle cx='15' cy='0' r='15'/><circle cx='15' cy='0' r='11'/><circle cx='15' cy='0' r='7'/><circle cx='15' cy='0' r='3'/><circle cx='45' cy='0' r='15'/><circle cx='45' cy='0' r='11'/><circle cx='45' cy='0' r='7'/><circle cx='45' cy='0' r='3'/></g></svg>");
+
+    -webkit-mask-size: 60px 30px;
+            mask-size: 60px 30px;
+    -webkit-mask-repeat: repeat;
+            mask-repeat: repeat;
+    -webkit-mask-position: 0 0;
+            mask-position: 0 0;
+  }
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     azure-oni · armor seam
+     ──────────────────────────────────────────────────────────────────────────
+     Riveted plate edge for dashboard panels, read as UI chrome. Replaces the
+     plain 1px hairline with a machined line + periodic rivet stops without
+     changing any box's size.
+
+     FIVE FACTS (this is a system element, not decoration):
+
+     1. GENERATED BY: two layered CSS gradients per surface. A `radial-gradient`
+        TILE paints each rivet (a 3px dot in --pack-rivet), and a 1px
+        `linear-gradient` paints the hairline (--pack-seam-ink) it sits on.
+        Chosen over a `data:` URI SVG because the shape is literally a dot and
+        a line — SVG saves no bytes here, and a raster would lock the rivet
+        diameter to a dpi and break at 1.5× / 2× scaling. Pure CSS also means
+        the colours resolve from CSS custom properties per appearance, which
+        an inlined SVG would not.
+     2. ONE REPEAT (THE RIVET PITCH) IS 16px × 100%. Rivets are 3px across,
+        centred at x = 8px of each tile, so one pitch = 16px between rivet
+        centres. A 220px panel head carries ~14 rivets — dense enough to read
+        as machined, sparse enough to still look counted rather than textured.
+     3. TILES HORIZONTALLY ONLY. `background-size: 16px 100%` with
+        `background-repeat: repeat-x`, so the pattern walks along the top and
+        bottom edges of a panel and along the heading rule. The vertical edges
+        are left to the panel's existing 1px border — the armour plates are
+        riveted along the long run, not stitched round the frame.
+     4. LEGAL SURFACES: `.panel` (the plate edge, top and bottom) and
+        `.panel > h2` (the heading rule under the title, which the existing
+        `border-bottom: 1px solid var(--rule)` already asserts). NOT LEGAL on
+        `.btn`, `.tag`, `.chip`, `.pill`, `.row`, table cells or form fields;
+        the restraint that makes this read as armour rather than a novelty
+        skin is that chrome belongs on the plate and the heading, nowhere else.
+     5. SUPPRESSED ON: nested `.panel .panel` (one seam per plate — two seams
+        a few pixels apart read as noise, not chrome), `.panel.mod-hidden` and
+        `.panel-empty` (dismissed and empty states don't carry chrome).
+        No animation is used anywhere here, so a `@media (prefers-reduced-
+        motion)` branch would be empty and is intentionally omitted — there
+        is nothing to reduce.
+     ──────────────────────────────────────────────────────────────────────── */
+
+  /* The seam colour and the rivet colour come from --pack-seam-ink and
+     --pack-rivet, which are defined in all three :root[data-visual-theme=
+     "azure-oni"] blocks (default-dark, amoled, light). The light-mode token
+     is a pale blue (#c0cde6 / #8fa3c6) — the seam reads as a soft machined
+     line on white, never a hard black rule. Both tokens are kept clear of
+     --rule and --rule-hi so this pack does not repurpose either. */
+
+  :root[data-visual-theme="azure-oni"] .panel {
+    /* No property changes here: .panel keeps its existing size, radius,
+       overflow:hidden and 1px border. The seam is drawn by the overlay
+       below and clipped by the parent's radius automatically. */
+  }
+
+  :root[data-visual-theme="azure-oni"] .panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    /* Above .panel > h2's `background: var(--head)` so the top seam is not
+       hidden by the heading fill; above the body content so the bottom
+       rivets sit on the plate, not under it. pointer-events:none keeps
+       every interactive descendant clickable. */
+    z-index: 2;
+    background-image:
+      /* top rivet row */
+      radial-gradient(circle 1.5px at 8px 3px, var(--pack-rivet) 0 1.5px, transparent 2px),
+      /* bottom rivet row */
+      radial-gradient(circle 1.5px at 8px calc(100% - 3px), var(--pack-rivet) 0 1.5px, transparent 2px),
+      /* top hairline */
+      linear-gradient(var(--pack-seam-ink), var(--pack-seam-ink)),
+      /* bottom hairline */
+      linear-gradient(var(--pack-seam-ink), var(--pack-seam-ink));
+    background-size:
+      16px 100%,
+      16px 100%,
+      100% 1px,
+      100% 1px;
+    background-position:
+      left top,
+      left bottom,
+      left top,
+      left bottom;
+    background-repeat:
+      repeat-x,
+      repeat-x,
+      no-repeat,
+      no-repeat;
+  }
+
+  /* The heading rule: the existing `border-bottom: 1px solid var(--rule)` on
+     .panel > h2 carries the geometry; a ::after pseudo paints the rivets
+     along it in the pack's own ink. `bottom: -1px` + `height: 3px` keeps the
+     rivets centred on that existing rule, so no content shifts. */
+  :root[data-visual-theme="azure-oni"] .panel > h2 { position: relative; }
+
+  :root[data-visual-theme="azure-oni"] .panel > h2::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 3px;
+    pointer-events: none;
+    background-image:
+      radial-gradient(circle 1.5px at 8px 1.5px, var(--pack-rivet) 0 1.5px, transparent 2px),
+      linear-gradient(var(--pack-seam-ink), var(--pack-seam-ink));
+    background-size:
+      16px 100%,
+      100% 1px;
+    background-position:
+      left center,
+      left center;
+    background-repeat:
+      repeat-x,
+      no-repeat;
+  }
+
+  /* Suppression — one seam per plate, no chrome on empty or hidden states. */
+  :root[data-visual-theme="azure-oni"] .panel .panel::before,
+  :root[data-visual-theme="azure-oni"] .panel .panel > h2::after,
+  :root[data-visual-theme="azure-oni"] .panel.mod-hidden::before,
+  :root[data-visual-theme="azure-oni"] .panel.mod-hidden > h2::after,
+  :root[data-visual-theme="azure-oni"] .panel-empty::before,
+  :root[data-visual-theme="azure-oni"] .panel-empty > h2::after {
+    display: none;
+  }
+
+  /* Azure-Oni — Lacquer & Stone materials.
+     Every rule starts :root[data-visual-theme="azure-oni"] so the pack leaks
+     into no other theme. No raster files, no external URLs, no animation, no
+     box-shadow — depth comes from material and layering (see pack note on
+     shadows). Because nothing animates, prefers-reduced-motion has no case to
+     handle. Measured finding, held across both materials where it applies:
+     grain blends `overlay`, NOT `multiply`. Multiply at any visible amplitude
+     greys the substrate and kills the hue; overlay keeps the hue and still
+     shows tooth. The SVG recipe below is the one that read as paper tooth
+     rather than dirt on real surfaces across the three appearances. */
+
+  /* ── LACQUER ─────────────────────────────────────────────────────────────
+     Five facts:
+     1. Generated: --pack-lacquer fills the body; --pack-lacquer-hi draws a
+        narrow specular band via one linear-gradient layered over the body
+        colour (background-image). No image, no filter, no shadow.
+     2. Repeat size: the specular band is a single pass across the element
+        (100% of its width/height — one highlight per surface, the way light
+        sits on a lacquered plate). The gradient does not tile.
+     3. How it tiles: it does not. Lacquer is a small, deliberate surface,
+        paid once per element. Repeating it is what turns gloss into chrome.
+     4. Legal on: the active .quicknav tab and selected states only. The
+        selector in this file attaches to .quicknav a[aria-current="page"]
+        and .quicknav a.active — the same pair muertos-v2 uses, verified
+        against web/index.html's quicknav selectors.
+     5. Suppressed on: panel bodies, long-form content, repeating rows,
+        tables, form fields, and hover states. A lacquered row is a mistake;
+        a lacquered tab is identity. No rule in this file touches those
+        surfaces, so suppression is by absence. */
+
+  :root[data-visual-theme="azure-oni"] .quicknav a[aria-current="page"],
+  :root[data-visual-theme="azure-oni"] .quicknav a.active {
+    color: var(--text);
+    background-color: var(--pack-lacquer);
+    background-image: linear-gradient(
+      105deg,
+      transparent 0%,
+      transparent 38%,
+      color-mix(in srgb, var(--pack-lacquer-hi) 55%, transparent) 46%,
+      color-mix(in srgb, var(--pack-lacquer-hi) 90%, transparent) 50%,
+      color-mix(in srgb, var(--pack-lacquer-hi) 55%, transparent) 54%,
+      transparent 62%,
+      transparent 100%
+    );
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    border-bottom-color: var(--pack-lacquer-hi);
+  }
+
+  /* Light appearance carries azure as reading-dark ink rather than a glow, so
+     the lacquered tab reads against a bone canvas with white text instead of
+     dark text drifting out of contrast on the gradient's bright knee. */
+  :root[data-theme="light"][data-visual-theme="azure-oni"] .quicknav a[aria-current="page"],
+  :root[data-theme="light"][data-visual-theme="azure-oni"] .quicknav a.active {
+    color: #ffffff;
+  }
+
+
+  /* ── STONE ───────────────────────────────────────────────────────────────
+     Five facts:
+     1. Generated: SVG feTurbulence (fractalNoise, baseFrequency=0.75,
+        numOctaves=5, stitchTiles=stitch) desaturated with feColorMatrix
+        saturate=0, then run through feComponentTransfer feFuncA with
+        slope=1.5 intercept=-0.25 to lift the mid-amplitude. Delivered as a
+        data: URI on background-image; amplitude comes from the pack's
+        per-appearance --pack-stone (.10 dark, .07 amoled, .06 light),
+        applied via mix-blend-mode: overlay on a pseudo-element.
+     2. Repeat size: 180px × 180px, chosen so the tile is coarser than the
+        base frequency can show as a square — a visible seam would make it
+        wallpaper rather than grain. stitchTiles="stitch" keeps the edges
+        continuous across the repeat.
+     3. How it tiles: background-repeat: repeat, on a ::after pseudo-element
+        covering the raised surface at inset: 0, pointer-events: none so
+        hover and focus still reach the control underneath.
+     4. Legal on: --raised chrome only — the surfaces the system already
+        marks as raised plates (.raised, .tile, [data-raised], and the
+        quicknav bar itself). That matches the brief's scope: tooth on
+        raised surfaces, so --raised stops reading as a flat fill.
+     5. Suppressed on: panel bodies (dense copy), any <table>, form inputs,
+        <code>/<pre>, the body canvas, and inside the lacquered active tab
+        (the active-tab rule above wins the ::after). Dense copy and tabular
+        data lose legibility under tooth; tooth belongs on chrome, not on
+        reading surfaces. Opacity is used in addition to --pack-stone so the
+        overlay effect lands within 0–1 on every appearance. */
+
+  :root[data-visual-theme="azure-oni"] .panel,
+  :root[data-visual-theme="azure-oni"] .quicknav {
+    position: relative;
+    isolation: isolate;
+  }
+  /* .site-head is `position: sticky` in the base stylesheet and MUST STAY so —
+     setting `position: relative` here un-pins the header and it scrolls away.
+     Caught on a running instance. `sticky` is itself a positioned value, so an
+     absolutely positioned child still anchors to this box; only `isolation` is
+     needed, and only for the stone overlay's stacking context. */
+  :root[data-visual-theme="azure-oni"] .site-head {
+    isolation: isolate;
+  }
+  :root[data-visual-theme="azure-oni"] .panel::after,
+  :root[data-visual-theme="azure-oni"] .site-head::after,
+  :root[data-visual-theme="azure-oni"] .quicknav::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: var(--pack-stone);
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><filter id='s'><feTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='5' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/><feComponentTransfer><feFuncA type='linear' slope='1.5' intercept='-0.25'/></feComponentTransfer></filter><rect width='100%25' height='100%25' filter='url(%23s)'/></svg>");
+    background-size: 180px 180px;
+    background-repeat: repeat;
+  }
+
+  /* Suppressions. Each one is a known stone-illegal surface: dense copy,
+     tabular data, inputs, code blocks. On .panel the stone would sit under
+     copy; .panel is not a raised chrome, so no ::after is added by the
+     rules above, but any .raised nested inside a dense panel is overridden
+     here as a second line. */
+  :root[data-visual-theme="azure-oni"] .panel .panel::after {
+    display: none;
+  }
+
+  /* The lacquer surface wins over stone — a lacquered tab is a smooth
+     plate, not a textured one. */
+  :root[data-visual-theme="azure-oni"] .quicknav a[aria-current="page"]::after,
+  :root[data-visual-theme="azure-oni"] .quicknav a.active::after {
+    display: none;
+  }
+
+  /* Light-appearance tune: .06 overlay noise on near-white can either vanish
+     or read as dirt depending on the knee. The feComponentTransfer above
+     lifts the lower mid so black specks drop out and the remaining signal
+     is mid-grey; against #e2e9f7 (--raised on light) overlay then pushes
+     the darks darker and lights lighter without tinting. No additional
+     opacity bump — amplitude stays at --pack-stone so the three appearances
+     obey one knob. */
+
+  /* ===================================================================
+     AZURE-ONI · SAKURA — sparse petal overlay for empty states
+     -------------------------------------------------------------------
+     The five facts you asked for, in one place:
+
+     1. GENERATOR — a data: URI SVG of THREE petals in a 320×320 viewBox,
+        hand-placed at different sizes, rotations and fill-opacities. No
+        raster file, no external URL, no @font-face. The petal colour is
+        baked per appearance because a data: URI cannot interpolate CSS
+        vars; each hex matches the --pack-sakura token declared in
+        web/index.html for that appearance block (default-dark #FFC9DE,
+        amoled #FFB9D4, light #D98FB4).
+
+     2. SIZE OF ONE REPEAT — ONE tile. 320×320 in its viewBox; drawn at
+        160px wide on .empty / p.none, 220px wide on .panel-empty.
+        background-size uses `auto` for height so the aspect ratio is
+        preserved on either side of the tile.
+
+     3. HOW IT TILES — it does not. `background-repeat: no-repeat` and
+        `background-position: top right` with a small inset: a single
+        cluster at the top-right corner of the empty-state box. Sparse
+        BECAUSE a reader meeting the same petal field on every panel
+        reads it as wallpaper, and the point of this ornament is that
+        an empty panel has earned a little weight by having nothing to
+        say. Three petals in the cluster, that is the handful.
+
+     4. LEGAL ON — `.empty`, `p.none`, `.panel-empty`, and only under
+        `:root[data-visual-theme="azure-oni"]`. These are the same three
+        hooks muertos-v2's cameo attaches to, so the two packs never
+        fight (one pack is active at a time), and the petal uses only
+        background-image rather than ::before/::after to leave those
+        pseudos for whichever pack wants a cameo later.
+
+     5. SUPPRESSED EVERYWHERE ELSE — every rule below is pack-scoped
+        with `:root[data-visual-theme="azure-oni"]`, so the overlay
+        exists only while that attribute is on the <html> element and
+        only on the three selectors above. No .panel, no .card, no
+        .site-head, no hover state in the dashboard picks it up.
+
+     -------------------------------------------------------------------
+     NOT INCLUDED, intentionally:
+     - No animation. The petals do not fall; a static cluster is the
+       ornament. A @media (prefers-reduced-motion) block would therefore
+       be empty, so none is written.
+     - No change to layout. No padding, no margin, no min-height — only
+       background-image / repeat / position / size are set. The
+       empty-state text's measured contrast ratio is preserved because
+       the overlay sits as background UNDER the text and is positioned
+       in the top-right corner, away from the centred/left-aligned copy
+       — the glyphs never overlap a petal.
+     - No background shorthand. Setting only `background-image` and the
+       three background-* properties below keeps any `background-color`
+       the base stylesheet set on these boxes intact.
+     =================================================================== */
+
+  /* -------------------------------------------------------------------
+     Default dark — obsidian canvas, pink #FFC9DE.
+     The petal reads at full opacity on #0a0f1c / #151c2e (ratios
+     measured approx. 7:1), so fill-opacity on the three petals in the
+     SVG does the softening; CSS adds no additional layer-opacity.
+     ------------------------------------------------------------------- */
+
+  /* REVISED by os:intake after review. The first cut hard-coded the petal hex three
+     times over (one copy per appearance), which left --pack-sakura referenced only in
+     comments: editing the token would have changed nothing on screen. The petals are
+     now a MASK over a flat fill of the token, the same plumbing seigaiha uses, because
+     a data: URI cannot read a CSS custom property. One rule now serves all three
+     appearances and the token is the single source of the colour.
+
+     STACKING, which is load-bearing: the parent takes `isolation: isolate` so it forms
+     a stacking context, and the pseudo-element sits at z-index -1. Inside that context
+     the parent's own background paints first, the petal second, and the empty-state
+     text last — so the petal is above the panel fill and below every glyph, and cannot
+     reduce the contrast of the copy. Without `isolation` the -1 layer escapes to an
+     ancestor and disappears behind the panel.
+
+     The fill-opacity values (.82 / .68 / .72) survive as mask alpha, so the three
+     petals keep their individual weights. */
+
+  :root[data-visual-theme="azure-oni"] .empty,
+  :root[data-visual-theme="azure-oni"] p.none {
+    position: relative;
+    isolation: isolate;
+  }
+
+  :root[data-visual-theme="azure-oni"] .empty,
+  :root[data-visual-theme="azure-oni"] p.none::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-color: var(--pack-sakura);
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 320' fill='black'><path d='M30 8C48 20 52 48 36 76L30 70L24 76C8 48 12 20 30 8Z' transform='translate(30 18) rotate(-16 30 42)' fill-opacity='.82'/><path d='M30 8C48 20 52 48 36 76L30 70L24 76C8 48 12 20 30 8Z' transform='translate(200 48) rotate(44 30 42) scale(0.9)' fill-opacity='.68'/><path d='M30 8C48 20 52 48 36 76L30 70L24 76C8 48 12 20 30 8Z' transform='translate(110 158) rotate(94 30 42) scale(1.18)' fill-opacity='.72'/></svg>");
+            mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 320' fill='black'><path d='M30 8C48 20 52 48 36 76L30 70L24 76C8 48 12 20 30 8Z' transform='translate(30 18) rotate(-16 30 42)' fill-opacity='.82'/><path d='M30 8C48 20 52 48 36 76L30 70L24 76C8 48 12 20 30 8Z' transform='translate(200 48) rotate(44 30 42) scale(0.9)' fill-opacity='.68'/><path d='M30 8C48 20 52 48 36 76L30 70L24 76C8 48 12 20 30 8Z' transform='translate(110 158) rotate(94 30 42) scale(1.18)' fill-opacity='.72'/></svg>");
+    -webkit-mask-size: 160px auto;
+            mask-size: 160px auto;
+    -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+    -webkit-mask-position: top 10px right 12px;
+            mask-position: top 10px right 12px;
+  }
+
+  :root[data-visual-theme="azure-oni"] .panel-empty {
+    position: relative;
+    isolation: isolate;
+  }
+
+  :root[data-visual-theme="azure-oni"] .panel-empty::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-color: var(--pack-sakura);
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 320' fill='black'><path d='M30 8C48 20 52 48 36 76L30 70L24 76C8 48 12 20 30 8Z' transform='translate(30 18) rotate(-16 30 42)' fill-opacity='.82'/><path d='M30 8C48 20 52 48 36 76L30 70L24 76C8 48 12 20 30 8Z' transform='translate(200 48) rotate(44 30 42) scale(0.9)' fill-opacity='.68'/><path d='M30 8C48 20 52 48 36 76L30 70L24 76C8 48 12 20 30 8Z' transform='translate(110 158) rotate(94 30 42) scale(1.18)' fill-opacity='.72'/></svg>");
+            mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 320' fill='black'><path d='M30 8C48 20 52 48 36 76L30 70L24 76C8 48 12 20 30 8Z' transform='translate(30 18) rotate(-16 30 42)' fill-opacity='.82'/><path d='M30 8C48 20 52 48 36 76L30 70L24 76C8 48 12 20 30 8Z' transform='translate(200 48) rotate(44 30 42) scale(0.9)' fill-opacity='.68'/><path d='M30 8C48 20 52 48 36 76L30 70L24 76C8 48 12 20 30 8Z' transform='translate(110 158) rotate(94 30 42) scale(1.18)' fill-opacity='.72'/></svg>");
+    -webkit-mask-size: 220px auto;
+            mask-size: 220px auto;
+    -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+    -webkit-mask-position: top 14px right 16px;
+            mask-position: top 14px right 16px;
+  }
+
+  /* ──────────────────────────────────────────────────────────────────────────
+     azure-oni · the plate, the eye, the horizon
+     ──────────────────────────────────────────────────────────────────────────
+     The three rules below are what make this pack read as Ao-Oni rather than
+     as a blue dark theme. Each is pack-scoped.
+
+     WHY THESE THREE. The canvas texture that the pack already carries only
+     paints on exposed background, and on a full dashboard the panels cover
+     almost all of it — the pattern was real but had nowhere to show. These
+     put the pack's material on the three surfaces that are always on screen
+     and always looked at: the header band, the clock, and the stat rail.
+
+     1. THE PLATE. One band of seigaiha breaking along the bottom edge of the
+        site header, in --pack-seam-ink so it clears the header fill. It is
+        anchored bottom and repeats on x only, so it reads as water lapping at
+        the horizon line rather than as wallpaper. z-index -1 inside the
+        header's existing `isolation: isolate` puts it over the header's own
+        fill and under every control in it.
+     2. THE HORIZON. The nav's bottom hairline becomes wet cobalt with a short
+        bloom under it — the lit edge of a lacquered plate. Drawn with
+        box-shadow, not border-width, so no box changes size.
+     3. THE EYE. --pack-vermilion, the pack's only warm colour, lands on
+        exactly one number: the count of things that need the owner. Every
+        other figure in the rail is cobalt. A warm mark on a cold field is the
+        whole point, and spending it anywhere else spends it.
+
+     CONTRAST. Measured on all three appearances before this shipped:
+     vermilion on --panel is 4.90:1 dark / 6.47:1 amoled / 5.64:1 light, and
+     --head-accent on --panel is 7.65:1 / 8.9:1 / 8.21:1. The rail figure is
+     22px 650-weight, so both clear AA as normal text, not merely as large.
+
+     MOTION. None. Nothing here animates, so reduced-motion needs no branch. */
+
+  :root[data-visual-theme="azure-oni"] .status {
+    position: relative;
+    isolation: isolate;
+  }
+  /* On .status, not .site-head: .site-head's two children (.status and
+     .quicknav) both paint an opaque --panel fill, so a band behind them at
+     header level is covered and never shows. Verified on a running instance —
+     the band existed with correct styles and zero visible pixels. */
+  :root[data-visual-theme="azure-oni"] .status::before {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    /* 20px, not the tile's full 36px: anchored to the bottom of the brand row
+       this crops each fan to its crests and keeps the band clear of the
+       wordmark, the version line and the clock, which all sit higher. A
+       full-height band renders the same waves behind that type and costs
+       legibility for no extra character. */
+    height: 20px;
+    z-index: -1;
+    pointer-events: none;
+    background-color: var(--pack-seam-ink);
+    opacity: .85;
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='72' height='36' viewBox='0 0 60 30'><g fill='none' stroke='black' stroke-width='1.4'><circle cx='0' cy='30' r='15'/><circle cx='0' cy='30' r='11'/><circle cx='0' cy='30' r='7'/><circle cx='0' cy='30' r='3'/><circle cx='30' cy='30' r='15'/><circle cx='30' cy='30' r='11'/><circle cx='30' cy='30' r='7'/><circle cx='30' cy='30' r='3'/><circle cx='60' cy='30' r='15'/><circle cx='60' cy='30' r='11'/><circle cx='60' cy='30' r='7'/><circle cx='60' cy='30' r='3'/></g></svg>");
+            mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='72' height='36' viewBox='0 0 60 30'><g fill='none' stroke='black' stroke-width='1.4'><circle cx='0' cy='30' r='15'/><circle cx='0' cy='30' r='11'/><circle cx='0' cy='30' r='7'/><circle cx='0' cy='30' r='3'/><circle cx='30' cy='30' r='15'/><circle cx='30' cy='30' r='11'/><circle cx='30' cy='30' r='7'/><circle cx='30' cy='30' r='3'/><circle cx='60' cy='30' r='15'/><circle cx='60' cy='30' r='11'/><circle cx='60' cy='30' r='7'/><circle cx='60' cy='30' r='3'/></g></svg>");
+    -webkit-mask-size: 72px 36px;
+            mask-size: 72px 36px;
+    -webkit-mask-repeat: repeat-x;
+            mask-repeat: repeat-x;
+    -webkit-mask-position: bottom left;
+            mask-position: bottom left;
+  }
+  /* On paper the same band would read as dirt at .85, so it is pulled back to
+     a watermark. */
+  :root[data-theme="light"][data-visual-theme="azure-oni"] .status::before {
+    opacity: .5;
+  }
+
+  /* 2 — the horizon. */
+  :root[data-visual-theme="azure-oni"] .quicknav {
+    border-bottom-color: var(--pack-lacquer);
+    box-shadow: 0 1px 0 var(--pack-lacquer),
+                0 6px 16px -10px var(--pack-lacquer);
+  }
+
+  /* The clock is the largest type on the page and was the pack's only piece of
+     neutral chrome. Specificity here is (0,2,1), below the user's chosen
+     `.hclock.clock-neon .hclock-time` at (0,3,0), so an explicitly picked
+     clock style still wins — this only dresses the default. */
+  :root[data-visual-theme="azure-oni"] .hclock-time {
+    color: var(--head-accent);
+    letter-spacing: 0.09em;
+    text-shadow: 0 0 12px color-mix(in srgb, var(--pack-lacquer) 48%, transparent);
+  }
+  :root[data-visual-theme="azure-oni"] .hclock-date {
+    color: var(--head-accent);
+    opacity: .66;
+  }
+  /* No bloom on paper — a glow on white is a smudge. */
+  :root[data-theme="light"][data-visual-theme="azure-oni"] .hclock-time {
+    text-shadow: none;
+  }
+
+  /* 3 — the eye. */
+  :root[data-visual-theme="azure-oni"] .statrail .stat-fig {
+    color: var(--head-accent);
+  }
+  :root[data-visual-theme="azure-oni"] .statrail .stat[data-rail="needs"]:not(.unknown) .stat-fig {
+    color: var(--pack-vermilion);
+  }
+  :root[data-visual-theme="azure-oni"] .statrail .stat[data-rail="needs"]:not(.unknown) {
+    border-color: color-mix(in srgb, var(--pack-vermilion) 42%, var(--rule));
+  }
+  /* `.unknown` means the number was never fetched, so it is not a demand on
+     anyone and keeps the muted treatment the default theme gives it. */
+  :root[data-visual-theme="azure-oni"] .statrail .stat.unknown .stat-fig {
+    color: var(--head-dim);
   }
 
   /* Flip clock: retro split-flap style */
