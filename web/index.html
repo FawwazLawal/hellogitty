@@ -627,7 +627,9 @@
   }
   /* Muertos — true black (AMOLED). A variant of dark, never of light: only the ground moves.
      The panel fill collapses into the page, so the panel's border becomes the only thing marking
-     it, and --rule is raised to clear 3:1 against black to carry what the fill no longer carries. */
+     it. --rule is raised to #5c5c62, which measures 3.16:1 against black and so carries the
+     boundary on its own; --rule-hi is 4.93:1. This pack is the only one of the three AMOLED
+     packs whose --rule clears 3:1 unaided — see the other two. */
   :root[data-theme="amoled"][data-visual-theme="muertos"] {
     --bg: #000000; --panel: #000000; --raised: #120f18; --rule: #5c5c62; --rule-hi: #7a7a82;
     --head: #000000; --mascot-bg: #000000;
@@ -663,8 +665,12 @@
     color-scheme: dark;
   }
   /* Muertos V2 — Eclipse (AMOLED): a true-black outer canvas; panel collapses into the
-     page so the border becomes the only thing marking it. --rule is raised to clear 3:1
-     against #000 since it now carries what the fill no longer does. No wide dark-purple
+     page so the border becomes the only thing marking it. --rule is #353035, which measures
+     1.63:1 against #000 — a deliberately soft inner edge, not a 3:1 boundary, and the earlier
+     claim here that it cleared 3:1 was simply wrong. The token that carries the boundary is
+     --rule-hi at 3.06:1, which is what the active separators use. WCAG 2.2 SC 1.4.11 exempts
+     inactive container boundaries, so the soft --rule is a choice rather than a defect — but
+     it should be described as one. No wide dark-purple
      gradients. Decorative flower tokens are slightly dimmed from Dark so precise accents
      punch without screen-spanning glow. */
   :root[data-theme="amoled"][data-visual-theme="muertos-v2"] {
@@ -729,8 +735,11 @@
   /* Ao-Oni — Midnight Forge (AMOLED): the canvas goes to true black so the panel
      edge becomes the only thing marking a panel, but the ink stays BLUE rather
      than neutral. Black where the pixels switch off, cobalt wherever there is
-     anything to see. --rule is raised to clear 3:1 against #000 since it now
-     carries what the fill no longer does. */
+     anything to see. --rule is #2b3a55, 1.84:1 against #000: a deliberately soft panel edge,
+     which is the point of true black. The boundary that has to be seen is --rule-hi at 3.75:1.
+     An earlier version of this comment claimed --rule itself cleared 3:1; it does not, and
+     TestRuleHiClearsThreeToOne now measures the token that actually does. If a harder panel
+     edge is ever wanted here, #4a5e82 computes to 3.21:1. */
   :root[data-theme="amoled"][data-visual-theme="azure-oni"] {
     --bg: #000000; --panel: #050b18; --raised: #0d1830; --rule: #2b3a55; --rule-hi: #55688c;
     --text: #f5f7ff; --dim: #aebbd2; --track: #0f1a30;
