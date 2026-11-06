@@ -37,3 +37,4 @@ docs/profile-capture.png
 # Written by the app as it runs, and by the extension build
 unreplied.json
 monitor/extension/dist/
+frontend/node_modules/

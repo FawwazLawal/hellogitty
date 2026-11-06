@@ -421,3 +421,41 @@ func TestHeadAccentCarriesAVisibleFocusIndicator(t *testing.T) {
 	}
 	t.Logf("checked %d pairs across %d token blocks", checked, len(blocks))
 }
+
+// Every /art/ URL the template paints must name a file that is actually embedded.
+//
+// This exists because a missing background-image is the quietest possible defect:
+// the browser requests it, gets a 404, and paints nothing. The pack simply looks
+// flatter than intended, which is indistinguishable from a pack that was designed
+// flat. Nothing in the Go suite, the screenshot gate or a visual review reliably
+// catches it — the screenshot gate would only catch it if a baseline had been
+// captured while the file existed, and a pack's first baseline is captured after
+// it is written.
+//
+// It went red on its first run, on /art/footer-bone.webp, which is a live rule in
+// the oni light appearance whose asset had not yet been generated. That is the
+// check earning its place rather than being asserted into existence.
+func TestEveryArtURLInTemplateIsEmbedded(t *testing.T) {
+	// Only real rules, never the slot specs inside comment blocks: the oni pack
+	// documents five future asset slots per appearance in prose, and counting
+	// those as references would make this permanently and wrongly red.
+	body := regexp.MustCompile(`(?s)/\*.*?\*/`).ReplaceAllString(web.Index, "")
+
+	refs := regexp.MustCompile(`url\(\s*["']?(/art/[^"')\s]+)["']?\s*\)`).FindAllStringSubmatch(body, -1)
+	if len(refs) == 0 {
+		t.Fatal("no /art/ url() references found in web/index.html outside comments — either the packs stopped painting art, or this test's parser has drifted and it is now passing vacuously")
+	}
+
+	seen := map[string]bool{}
+	for _, m := range refs {
+		name := strings.TrimPrefix(m[1], "/art/")
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		if _, err := web.Art.ReadFile("art/" + name); err != nil {
+			t.Errorf("web/index.html paints %s but web/art/%s is not embedded — the browser will 404 and paint nothing, which looks like a pack that was designed flat", m[1], name)
+		}
+	}
+	t.Logf("checked %d distinct art file(s)", len(seen))
+}

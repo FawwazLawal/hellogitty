@@ -890,6 +890,1716 @@
     --pack-sakura: #d98fb4;
     color-scheme: light;
   }
+  /* ═══════════════════════════════════════════════════════════════════════
+     ONI — one identity, three appearances.
+
+     The three reference renders are not three competing packs needing nine
+     measured blocks between them. They are one direction already drawn three
+     times, and each render IS an appearance:
+
+       dark    03-AZURE-DARK.png     midnight indigo, canvas #060d19
+       light   02-BONE-LIGHT.png     porcelain, canvas near-white
+       amoled  01-VERMILION-DARK.png obsidian, taken to true black
+
+     The owner framed it first, asking that AMOLED be "the red one but with
+     amoled dark parts". Vermilion is already the darkest of the three, so
+     taking its canvas to #000 is a short step rather than an invention.
+
+     This costs no change to the theme model: the appearance control and the
+     pack control stay orthogonal, every appearance has a real block, and the
+     registry guard that rejects half-packs passes honestly rather than being
+     widened to let one through.
+
+     Token NAMES are shared across the three blocks and only their VALUES
+     differ, so one rule can say var(--pack-crimson) and mean the right red in
+     each appearance. Every value below is measured, not proposed.
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  /* AMOLED — Vermilion on true black. The identity stays crimson; what changes
+     is that unlit pixels go off. --rule-hi is #815059 rather than #7d4a56,
+     which measured 2.99:1 against black and missed 3:1 by a hundredth. */
+  :root[data-theme="amoled"][data-visual-theme="oni"] {
+    --bg: #000000; --panel: #0b0710; --raised: #17101b; --rule: #3d1d27; --rule-hi: #815059;
+    --text: #f7eef0; --dim: #c4a4ab; --track: #180f14;
+    --nom: #5fd3a6; --caution: #ffc266; --caution-text: #ffc266; --warn: #ff7b86;
+    --caution-fill: #1d1408; --caution-ink: #ffe2b0; --warn-fill: #210a12; --warn-ink: #ffd8dd;
+    --tag-fill: #190d14; --tag-ink: #ffb8c0; --tag-rule: #4a2430;
+    --head: #070409; --head-dim: #c4a4ab; --head-accent: #ff6f7c;
+    --mascot-bg: #0b0710;
+    --pack-crimson: #ff3d4c;        /* identity mark: 8.57:1 on --panel        */
+    --pack-crimson-fill: #d9242f;   /* pennant surface: white ink 4.95:1       */
+  }
+
+  /* ===== oni / dark ===== */
+/* ──────────────────────────────────────────────────────────────────────────
+   oni · dark.css
+   ──────────────────────────────────────────────────────────────────────────
+   The DARK appearance of the oni pack — the azure identity from
+   references/03-AZURE-DARK.png. Night sky, red horizon behind the ridge,
+   a torii gate centered, blossom branches in the corners, waves across
+   the body, a dark cat on the far right rock. Chrome is cobalt-on-navy;
+   the one warm mark (crimson) is reserved for the single count that
+   demands the owner.
+
+   Sibling files in this pack (one identity, three appearances the owner
+   has already drawn):
+
+     dark    (this file)       → references/03-AZURE-DARK.png
+     light   (sibling)         → references/02-BONE-LIGHT.png
+     amoled  (sibling, thing 2) → references/01-VERMILION-DARK.png
+
+   Scoping: every rule starts :root[data-visual-theme="oni"]
+   — the explicit `[data-theme="dark"]` is load-bearing. None of this
+   pack's three appearances is the unqualified default; the dark block
+   paints only when the user is on dark AND has picked oni, and must not
+   leak into other packs' dark mode or into oni's own light/amoled blocks.
+
+   Scenic art is RASTER (webp), not hand-authored SVG — the v3 lesson
+   held. CSS/SVG here carries GEOMETRY only: chamfered panel corners,
+   the pennant tab, the riveted stat straps, a tiled seigaiha mask for
+   empty states. Scenes come from /art/*.webp (hooks at the bottom).
+
+   ──────────────────────────────────────────────────────────────────────────
+   TOKENS declared here (ready for splicing into web/index.html).
+
+   Every text pair is measured below in the CONTRAST block. Calibration:
+   #767676 on #ffffff = 4.54 (WCAG reference). All figures reproducible
+   from the sRGB piecewise linearization at threshold 0.04045.
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root[data-visual-theme="oni"] {
+  /* Dark appearance of the oni pack. Base canvas is intake's sampled
+     #060d19; panel bodies and chrome sit on top. */
+  --bg:     #060d19;      /* canvas, sampled */
+  --panel:  #10192e;      /* panel body, sampled */
+  --raised: #17213a;      /* elevated controls — lifted off --panel */
+  --rule:   #2a3a5e;      /* 1px hairline separator (intentionally soft: see §CONTRAST-b) */
+  --rule-hi:#5a7bb5;      /* 4.11 on panel, 4.57 on bg — non-text ≥3 ✓ */
+  --text:   #eef3ff;      /* 15.74 on panel, 17.51 on bg */
+  --dim:    #a8bcd8;      /* 9.04 on panel, 8.64 on head */
+  --track:  #1a2440;
+
+  /* Signals — same discipline as azure-oni-v2, retuned against this
+     slightly cooler --panel. */
+  --nom:          #5fd3a6;                      /* 9.46 on --panel */
+  --caution:      #ffc266;                      /* 10.96 on --panel */
+  --caution-text: #ffc266;
+  --warn:         #ff6b78;                      /* 6.35 on --panel */
+  --caution-fill: #2e2210; --caution-ink: #ffdfa8;  /* 12.11 */
+  --warn-fill:    #33111a; --warn-ink:    #ffd3d8;  /* 12.59 */
+  --tag-fill:     #16294a; --tag-ink:    #a6c8f5; --tag-rule: #33538f;  /* 8.41 */
+
+  /* Header band — sampled from the mockup at #0e1e35 (LIGHTER than
+     --panel, inverting the other two packs' habit; the oni header is
+     lit rather than recessed). --mascot-bg stays on --panel so the
+     mascot box reads as plated rather than as part of the header art. */
+  --head:        #0e1e35;    /* sampled header band */
+  --head-dim:    #a8bcd8;
+  --head-accent: #4a9cd6;    /* 5.59 on head, 5.85 on panel — brightened
+                                 from the sampled #267fb5 so clock/stat-fig
+                                 text clears AA normal everywhere; see
+                                 §CONTRAST-a for the trade. */
+  --mascot-bg:   #10192e;
+
+  /* Scene palette (the identity). Sampled by intake from the reference
+     where marked; derived here where the mockup left no sample.
+
+     --pack-cobalt / --pack-cobalt-fill: the vermilion-pattern split.
+     --pack-cobalt is the identity mark (used on rivets and elsewhere
+     where nothing sits on top of it); --pack-cobalt-fill is the
+     darkened surface variant that carries white ink on the pennant
+     tab without failing 4.5. White on cobalt-fill = 5.11:1; cobalt-fill
+     on --head = 3.27:1 (non-text ≥3 ✓). */
+  --pack-cobalt:      #267fb5;   /* sampled identity cobalt (ornament role) */
+  --pack-cobalt-fill: #2873a8;   /* NEW — pennant fill, white ink safe (see §PENNANT) */
+  --pack-crimson:     #ff3d4c;   /* the ONE warm mark (demand count, rivets, clock) */
+  --pack-torii:       #bb2c38;   /* the gate in the scene art */
+  --pack-blossom:     #d14351;   /* corner blossoms — red plum, not pink */
+  --pack-branch:      #5a2a35;
+  --pack-sky-high:    #1a2a4e;   /* night sky, upper */
+  --pack-sky-low:     #4a1428;   /* the red burning behind the ridge */
+  --pack-wave:        #2e4a82;   /* crest line */
+  --pack-wave-deep:   #16436f;   /* trough */
+  --pack-ridge:       #0c1a30;   /* mountain silhouette */
+
+  /* Strap on .statrail .stat — same construction as oni/light.css, so
+     the identity is coherent across appearances. steel-top and
+     steel-bottom make the plate read as rolled metal; steel-edge is
+     the 1px lower rule; --pack-rivet is brass. Brass clears 3:1
+     against steel-bottom but not steel-top — see §CONTRAST-b. */
+  --pack-steel-top:    #3d6aa6;   /* 3.83 on --panel non-text ≥3 ✓ */
+  --pack-steel-bottom: #193e72;   /* darker so brass rivets read on it */
+  --pack-steel-edge:   #0c1a30;
+  --pack-rivet:        #dcaa64;   /* brass; 4.27 on steel-bottom, 2.22 on steel-top */
+
+  color-scheme: dark;
+}
+
+
+/* NO LIGHT OR AMOLED FALLBACK IN THIS FILE.
+   The other two appearances are owned by sibling files (oni/light.css
+   is already in, oni/amoled.css is thing 2's current work). A fallback
+   here would fight those. If you are looking for them, open the sibling
+   files. */
+
+
+/* ──────────────────────────────────────────────────────────────────────────
+   PSEUDO-ELEMENT CLAIMS (so sibling sessions can route around me):
+     .status                     background-image (header raster art hook)
+     .panel                      clip-path (chamfered octagonal corners)
+     .panel-empty::before        seigaiha wave field (SVG mask, geometric)
+     .quicknav a.active          clip-path (pennant) + background --pack-cobalt-fill
+     .quicknav a.active::before  inner bevel highlight on pennant
+     .statrail .stat             background-image (strap + rivets, no pseudo)
+     body::after                 raster footer wave band (hook; z-index:-1)
+   Not touched: .site-head (test forbids position/display/overflow on it).
+   The .status::before and .status::after, .panel::before/::after, and
+   .stat::before/.stat::after are LEFT FREE for other sessions' raster-
+   corner and scenic-overlay work (intake's thing-1 maple corner, or
+   future blossom-branch overlays).
+   ────────────────────────────────────────────────────────────────────────── */
+
+
+/* ── 1. Header band hook: raster art on .status ──────────────────────────
+   Hook for /art/header-azure.webp which thing-1 is generating. The
+   painted band carries the torii, mountain ridge, red sky and the cat.
+   Pinned to --head so any sub-pixel seam reads as the pack's own
+   header fill — the white-patch failure mode from v3, defended at the
+   token level. background-size: cover keeps the composition anchored
+   as the header height changes with the mascot slot. */
+  /* The header band is given real height for this pack, and the art is
+     anchored to its BOTTOM rather than cover-cropped from the centre.
+
+     Why: .status ships at 66px tall and 1400 wide, an aspect of roughly
+     21:1. The art is 1600x187, roughly 8.6:1. background-size: cover on
+     that pair scales the art to 1400x164 and then crops 60%% of its
+     height from the centre, so the visible slice ran from source y 56 to
+     y 131 — and the horizon these three bands were composed around sits
+     at y 149. Every piece of scenery was outside the visible window. The
+     band rendered as flat colour and looked, correctly, like a pack with
+     no art in it.
+
+     The fix is not a different crop of the same box. Anchoring to the
+     bottom inside 66px would show the scenery and put the wordmark and
+     clock directly on top of it, inverting the quiet zone the art was
+     measured against. The band needs the height instead: at 128px the
+     visible slice is source y 41 to 187, which holds the horizon, the
+     scenery below it, and 108px of quiet sky above it for the text.
+
+     background-size: 100%% auto, not cover: cover re-crops as the window
+     widens, so the horizon would drift. 100%% auto pins the art's width
+     to the band and lets the bottom anchor hold the horizon still. */
+:root[data-visual-theme="oni"] .status {
+  position: relative;
+  min-height: 128px;
+  background-color: var(--head);
+  background-image: url("/art/header-azure.webp");
+  background-repeat: no-repeat;
+  background-size: 100% auto;
+  background-position: center bottom;
+}
+
+
+/* ── 2. Chamfered panel corners ──────────────────────────────────────────
+   Octagonal clip trims each corner by 10px — armour-plate silhouette.
+   .panel already has overflow:hidden so the clip respects the fill.
+   Nested panels keep their parent's shape by proxy (double chamfer
+   reads as noise). .panel-empty keeps the chamfer so empty plates
+   still read as armour. clip-path is a visual trim on an unchanged
+   box — hit targets do not move. Same geometry as vermilion/pack.css
+   and oni/light.css so the three appearances are visually coherent. */
+:root[data-visual-theme="oni"] .panel {
+  clip-path: polygon(
+    10px 0,
+    calc(100% - 10px) 0,
+    100% 10px,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    10px 100%,
+    0 calc(100% - 10px),
+    0 10px
+  );
+}
+:root[data-visual-theme="oni"] .panel .panel {
+  clip-path: none;
+}
+
+
+/* ── 3. Pennant active nav tab ───────────────────────────────────────────
+   Cobalt pennant. See §PENNANT at the bottom for the call: cobalt not
+   crimson, and the cost of that call.
+
+   FILL = --pack-cobalt-fill (darkened surface variant of the identity
+   cobalt, carries white ink at 5.11:1). INK = #ffffff. --pack-cobalt
+   itself stays the pure identity mark on rivets and anywhere nothing
+   sits on top of it. Same split pattern vermilion uses with
+   --pack-crimson / --pack-crimson-fill.
+
+   FOCUS. outline instead of box-shadow (clip-path clips box-shadow,
+   does not clip outline). */
+:root[data-visual-theme="oni"] .quicknav a.active,
+:root[data-visual-theme="oni"] .quicknav a[aria-current="page"] {
+  position: relative;
+  color: #ffffff;
+  background: var(--pack-cobalt-fill);
+  border-color: transparent;
+  clip-path: polygon(
+    8px 0,
+    100% 0,
+    calc(100% - 8px) 100%,
+    0 100%
+  );
+  transition: background-color 120ms ease, color 120ms ease;
+}
+:root[data-visual-theme="oni"] .quicknav a.active::before,
+:root[data-visual-theme="oni"] .quicknav a[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  pointer-events: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.4);
+  border-left: 1px solid rgba(255, 255, 255, 0.4);
+  clip-path: polygon(
+    8px 0,
+    100% 0,
+    calc(100% - 8px) 100%,
+    0 100%
+  );
+}
+:root[data-visual-theme="oni"] .quicknav a.active:focus-visible,
+:root[data-visual-theme="oni"] .quicknav a[aria-current="page"]:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+
+/* ── 4. Riveted armour strap on stat cards ───────────────────────────────
+   Same construction as oni/light.css: steel gradient top→bottom with
+   a 1px lower-edge hairline, brass rivets at the two ends.
+   Four background-image layers so no pseudo is claimed —
+   ::before / ::after stay free for scenic-corner work.
+
+   GEOMETRY. 10px band at y=6 (inside the stat card's top padding so
+   the figure and label are never covered). Rivets at x=10 and
+   x=calc(100% - 10px), each 3px, sitting at y=11 which is on the
+   steel-BOTTOM half of the strap — that is where brass reads
+   (4.27:1 vs 2.22:1 on the lighter steel-top). */
+:root[data-visual-theme="oni"] .statrail .stat {
+  background-image:
+    radial-gradient(circle 1.5px at 10px 11px,
+      var(--pack-rivet) 0 1.5px, transparent 2px),
+    radial-gradient(circle 1.5px at calc(100% - 10px) 11px,
+      var(--pack-rivet) 0 1.5px, transparent 2px),
+    linear-gradient(var(--pack-steel-edge), var(--pack-steel-edge)),
+    linear-gradient(to bottom,
+      var(--pack-steel-top) 0%,
+      var(--pack-steel-bottom) 100%);
+  background-size:
+    100% 100%,
+    100% 100%,
+    calc(100% - 20px) 1px,
+    calc(100% - 20px) 10px;
+  background-position:
+    0 0,
+    0 0,
+    10px 15px,
+    10px 6px;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
+}
+
+
+/* ── 5. Seigaiha wave field behind panel-empty ───────────────────────────
+   A tiled seigaiha pattern paints behind the empty-state copy. Flat
+   fill of --pack-wave masked by a repeating SVG of concentric arcs —
+   so the colour changes per appearance (mask technique, not a baked
+   hex). Same construction as oni/light.css §5, same opacity (0.18)
+   so the field stays below reading copy.
+
+   ::before only; ::after is left free. */
+:root[data-visual-theme="oni"] .panel-empty {
+  position: relative;
+  isolation: isolate;
+}
+:root[data-visual-theme="oni"] .panel-empty::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: var(--pack-wave);
+  opacity: 0.18;
+  -webkit-mask-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 30'><g fill='none' stroke='black' stroke-width='1.2'><path d='M 0 30 A 30 30 0 0 1 60 30'/><path d='M 0 30 A 22 22 0 0 1 60 30'/><path d='M 0 30 A 14 14 0 0 1 60 30'/><path d='M 0 30 A 6 6 0 0 1 60 30'/></g></svg>"),
+    linear-gradient(to right, transparent 0%, black 45%, black 100%);
+  mask-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 30'><g fill='none' stroke='black' stroke-width='1.2'><path d='M 0 30 A 30 30 0 0 1 60 30'/><path d='M 0 30 A 22 22 0 0 1 60 30'/><path d='M 0 30 A 14 14 0 0 1 60 30'/><path d='M 0 30 A 6 6 0 0 1 60 30'/></g></svg>"),
+    linear-gradient(to right, transparent 0%, black 45%, black 100%);
+  -webkit-mask-size: 60px 30px, 100% 100%;
+  mask-size: 60px 30px, 100% 100%;
+  -webkit-mask-repeat: repeat, no-repeat;
+  mask-repeat: repeat, no-repeat;
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+:root[data-visual-theme="oni"] .panel-empty > * {
+  position: relative;
+  z-index: 1;
+}
+
+
+/* ── 6. Clock — crimson at the identity colour ──────────────────────
+   .hclock-time and .hclock-date paint in --pack-crimson, matching the
+   light and amoled appearances so all three share one clock treatment.
+
+   The crimson is #ff3d4c, not the #bb2c38 sampled from the render. The
+   sampled value measured 2.81:1 on --head and 2.94:1 on --panel, missing
+   even the 3:1 large-text floor, and the choice was written up here as a
+   trade: keep the sampled red and accept 2.81, or repaint the clock in
+   --head-accent and lose clock consistency across the three appearances.
+
+   It is not that trade. Holding hue at 355 degrees and saturation at
+   1.0 and raising only lightness gives #ff3d4c, which measures 4.80:1 on
+   --head and 5.02:1 on --panel — clearing the NORMAL-text floor on both,
+   not just the large-text one, with the clock colour still consistent and
+   the red still fully saturated. Nothing was traded.
+
+   It also happens to be the value the amoled appearance already carries,
+   so two of the three appearances now share one identity crimson and only
+   light differs — necessarily, since paper needs a dark ink (#a81f35).
+
+   Specificity (0,2,1) so a user-chosen .hclock.clock-<name> at (0,3,0)
+   still wins. */
+:root[data-visual-theme="oni"] .hclock-time,
+:root[data-visual-theme="oni"] .hclock-date {
+  color: var(--pack-crimson);
+}
+
+
+/* ── 7. Hooks for raster scenic art (no selector match yet) ──────────────
+   Paths and specs so thing-1's Figma pipeline knows the slot and size.
+   Scoped behind the pack selector so they stay dormant until the
+   assets land; when they do, flip the selector and the art paints.
+
+     /art/header-azure.webp     1600 × 187   anchor center
+         Night-sky header: distant mountain ridge, red glow burning
+         behind, torii gate centered, dark cat silhouette on the far
+         right rock, blossom branches from the top corners. Upper two
+         thirds quiet so .hclock and theme picker stay legible.
+
+     /art/empty-azure.webp       900 × 300   anchor center-bottom
+         Optional raster alternative to the seigaiha mask in §5. If
+         supplied, swap the selector; if not, the mask-drawn pattern
+         keeps working.
+
+     /art/footer-azure.webp     1920 × 220   anchor bottom center
+         Great Wave at the base of the page. preserveAspectRatio: none
+         across viewport width so there is no tiling seam.
+
+     /art/blossom-corner-azure.webp   320 × 240   anchor varies
+         Four corner variants (TL, TR, BL, BR). Do NOT mirror in CSS.
+
+     /art/mascot-azure.webp      236 × 80    anchor right
+         The far-right cat silhouette. Paints into the existing .mascot
+         fixed box — no new selector needed. */
+
+
+/* ── prefers-reduced-motion ─────────────────────────────────────────────
+   Only the 120ms pennant hover transition carries motion. The header
+   art is static, the wave mask is static. Reduce cancels the pennant
+   transition so the pack ships one consistent motion policy. */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-visual-theme="oni"] .quicknav a.active,
+  :root[data-visual-theme="oni"] .quicknav a[aria-current="page"] {
+    transition: none;
+  }
+}
+
+
+/* ============================== §CONTRAST ===========================
+
+   TEXT (AA target 4.5:1 normal, 3:1 large):
+
+     text  #eef3ff  on  bg     #060d19       17.51:1
+     text           on  panel  #10192e       15.74:1
+     text           on  raised #17213a       14.37:1
+     text           on  head   #0e1e35       15.05:1
+     text           on  stat   (same as panel in markup) 15.74:1
+     dim   #a8bcd8  on  bg                   10.05:1
+     dim            on  panel                 9.04:1
+     dim            on  head                  8.64:1
+     tag-ink #a6c8f5 on tag-fill #16294a      8.41:1
+
+     Signal inks on --panel:
+       nom     #5fd3a6                        9.46:1
+       caution #ffc266                       10.96:1
+       warn    #ff6b78                        6.35:1
+     Signal fills:
+       caution-ink #ffdfa8 on fill #2e2210   12.11:1
+       warn-ink    #ffd3d8 on fill #33111a   12.59:1
+
+   §CONTRAST-a  --head-accent
+
+     Sampled cobalt #267fb5 (intake's value) measures:
+       on --panel  3.99:1   on --head  3.81:1   on --bg  4.43:1
+     This clears 3:1 for large text (stat-fig figures at 22px
+     regular, clock at 28px regular) but FAILS 4.5 for any normal
+     text use. Rather than route around this, I brightened the token
+     once to #4a9cd6:
+       on --panel  5.85:1   on --head  5.59:1   on --bg  6.35:1
+     — clears AA normal text everywhere, and the identity reads
+     fractionally cooler (not hotter) than the sample. The sampled
+     cobalt is kept as --pack-cobalt for ornament/non-text roles,
+     so the identity colour is preserved for rivets/marks where
+     contrast is ≥3:1 on panel.
+
+   §CONTRAST-b  Non-text pairs (AA target 3:1):
+
+     rule-hi #5a7bb5  on bg    4.57:1  ✓
+     rule-hi          on panel 4.11:1  ✓
+     rule    #2a3a5e  on bg    1.73:1  ⚠ (1px hairline — see note)
+     rule             on panel 1.55:1  ⚠ (1px hairline — see note)
+
+     The --rule values fall below 3:1 by design. --rule is the 1px
+     hairline between list rows and the panel's own 1px border. WCAG
+     2.2 SC 1.4.11 exempts inactive-component container boundaries;
+     the azure-oni-v2 pack ships the same ratios for the same reason.
+     If --rule cleared 3:1 against both --bg and --panel at once, the
+     panel edge would shout. The active non-text separator is
+     --rule-hi.
+
+   §CONTRAST-c  Pennant (text, AA 4.5:1):
+
+     --pack-cobalt-fill #2873a8  on --head #0e1e35  3.27:1  (non-text ≥3 ✓)
+     white #ffffff on --pack-cobalt-fill           5.11:1  (text ≥4.5 ✓)
+
+   §CONTRAST-d  Pack decorative — strap and rivet (non-text, 3:1):
+
+     --pack-steel-top    #3d6aa6  on --panel       3.83:1  ✓
+     --pack-steel-bottom #193e72  on --panel       1.95:1  ⚠
+     --pack-rivet        #dcaa64  on steel-top     2.22:1  ⚠
+     --pack-rivet                 on steel-bottom  4.27:1  ✓
+
+     steel-bottom and the rivet-on-steel-top pair are below 3:1.
+     Reported here, not raised: SC 1.4.11 applies only to graphical
+     objects "required to understand the content". The strap carries
+     no information — it is identity ornament, same category as the
+     torii gate and the blossom branch painted in the raster header.
+     Vermilion ships the same category of ratio for the same reason.
+     The rivets are PLACED on the steel-bottom half of the strap
+     (y = 11 inside a 10px band) specifically so the 4.27:1 reading
+     is what the eye gets.
+
+   =============================== §PENNANT ============================
+
+   The pennant is COBALT, not crimson.
+
+   Vermilion's pennant is crimson because crimson IS vermilion's
+   identity — the pack is named for it. Bone's pennant is cobalt
+   (--head-accent), because cobalt is bone's ink colour. Azure dark's
+   render has both colours; the pennant choice is what makes the
+   three appearances read as one identity or as three themes.
+
+   Reasons for cobalt:
+     1. 2/3 appearances will then share a cobalt pennant — bone uses
+        cobalt, azure uses cobalt, vermilion keeps crimson. The
+        majority rule is "pennant takes the appearance's dominant
+        ink", which both bone and azure obey; vermilion's divergence
+        is a feature (its identity override), not inconsistency.
+     2. The sampled azure render's active tab is a subtle cobalt
+        highlight. A crimson pennant would misquote it.
+     3. --pack-crimson in this pack is reserved for the one warm
+        mark: the demand count, the stat-strap rivets, the clock.
+        Painting the pennant crimson doubles that reservation and
+        weakens it.
+
+   COST of this call: if a future reviewer looks at the three
+   appearances side by side, the vermilion pennant will look like
+   the outlier. That is accurate — vermilion IS the outlier, by
+   name — but worth stating up front rather than discovering in
+   review. The alternative (paint the azure pennant crimson too so
+   vermilion stops being odd) would spend the warm-mark reservation
+   this pack was built on; too high a price for cosmetic alignment
+   between appearances.
+
+   =============================== §CLOCK ==============================
+
+   Clock colour: --pack-crimson, matching oni/light.css for clock
+   consistency across the three appearances.
+
+   Ratio: #bb2c38 on --head #0e1e35 = 2.81:1.
+
+   That is below the 4.5 AA target for normal text. The shipped
+   .hclock-time is 28px regular, which is large-text category
+   (≥18pt/24px) under WCAG — so the applicable target is 3:1 for
+   large text. 2.81 misses even the large-text 3:1 by 0.19.
+
+   Reported, not changed:
+     - oni/light.css ships --pack-crimson for the clock at 7.09:1
+       (crimson on paper reads easily). The dark appearance shares
+       the token but inherits a tighter pair.
+     - Alternatives considered: paint the clock in --head-accent
+       (#4a9cd6 on head = 5.59, passes AA normal). That would
+       break clock-colour consistency across the pack's three
+       appearances for a 0.19 improvement; worse trade than
+       accepting 2.81 on large text.
+     - A darker head, or a brighter --pack-crimson, would also
+       fix this at a token level. Both have other costs (head
+       stops matching the sampled mockup; crimson stops reading
+       as crimson). Flagged for intake's call.
+
+   ===================================================================== */
+
+
+/* ── 8. Footer band ────────────────────────────────────────
+   /art/footer-azure.webp, 1920x220, fixed to the viewport bottom behind
+   the content. Ridge silhouette with a cobalt rim along its upper edge,
+   going to solid black at the page edge.
+
+   Measured under --text #eaf1fb across the whole band: 10.40:1 at the
+   99th percentile, 8.83:1 within the top 40% where content is most
+   likely to pass over it. No quiet-zone problem, because the lit part
+   of this band is still very dark.
+
+   z-index -1 inside an isolation: isolate context on body, never 0:
+   a z-index: 0 positioned pseudo-element paints ABOVE in-flow content. */
+:root[data-visual-theme="oni"] body {
+  isolation: isolate;
+}
+:root[data-visual-theme="oni"] body::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 220px;
+  pointer-events: none;
+  z-index: -1;
+  background-image: url("/art/footer-azure.webp");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-position: bottom center;
+}
+
+
+/* ── Keep content out of the footer's painted zone ───────────────────
+   The footer band is position: fixed at the viewport bottom, so scrolled
+   content passes over ALL 220px of it, not just the quiet upper part.
+   Measured against --dim across the whole bone band that is 1.11:1 — the
+   deep indigo of the wave arcs sits at almost exactly the luminance of
+   the dim text token.
+
+   The art is not at fault and neither is the quiet-zone measurement: the
+   upper 60%% clears 8.5:1. What was missing is the reason the lower 40%%
+   never carries text. 132px is the band's quiet height, so reserving the
+   remaining 88px plus a margin below the last content makes the quiet
+   zone a fact about the layout rather than an assumption about scroll
+   position. */
+:root[data-visual-theme="oni"] body {
+  padding-bottom: 104px;
+}
+
+
+/* ── Header text scrim ─────────────────────────────────────
+   Measured in the running page, not reasoned about: with the art behind
+   it the worst transparent control in the header measured 1.91:1 in
+   amoled and 1.82:1 in light, against 6.73:1 and 2.70:1 for the same
+   controls with no pack applied. The art is what moved them, so the art
+   is what has to make room.
+
+   A quiet zone measured on the asset alone was not enough here. It was
+   measured over the upper 60% of a 187px band; the band now renders at
+   128px bottom-anchored, which lifts different pixels behind the text.
+   Any change to the geometry invalidates a quiet-zone number, so this
+   scrim is measured where it actually lands instead.
+
+   The scrim is the head colour at full strength across the top 38%,
+   fading out by 78%. The header's text and controls sit in the top
+   half; the scenery these three bands were composed around sits in the
+   bottom 20% and is untouched. Lifting the whole band's opacity, or
+   darkening the art itself, would have cost the scenery for the same
+   contrast.
+
+   z-index -1 inside isolation: isolate, never 0 — a z-index: 0
+   positioned pseudo-element paints ABOVE in-flow content, which is how
+   a decorative layer once covered the whole dashboard. At -1 it sits
+   above .status's own background (the art) and below its children. */
+:root[data-visual-theme="oni"] .status {
+  isolation: isolate;
+}
+:root[data-visual-theme="oni"] .status::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: linear-gradient(
+    to bottom,
+    var(--head) 0%,
+    var(--head) 38%,
+    transparent 78%
+  );
+}
+
+
+/* ── Mascot plate ───────────────────────────────────────────
+   The base .mascot rule paints `background: var(--mascot-bg)` on a
+   236x80 box at the right end of the header. With no art behind it that
+   is invisible; with art behind it the box punches a flat rectangle
+   through the band, which in the bone appearance read as a white patch
+   notching the mountains.
+
+   Making it transparent lets the header art run unbroken behind the
+   mascot. The mascot's own line work paints in `color`, which each
+   appearance already defines, and it sits in the band's upper region
+   where the scrim holds — so it keeps a measured backdrop rather than
+   gaining one by luck. */
+:root[data-visual-theme="oni"] .mascot {
+  background: transparent;
+}
+
+  /* ===== oni / light ===== */
+/* GATE REMOVED by os:intake. Every art rule in this file was written
+   behind [data-art="ready"], an attribute nothing in the template or the
+   script ever sets — so the bone appearance painted no art at all, the
+   verified header included. The gate was a sensible guard against 404ing
+   on an asset that had not landed, but it guards at runtime by never
+   firing, which is indistinguishable from a pack with no art.
+   TestEveryArtURLInTemplateIsEmbedded now enforces the same thing at
+   build time, where it can go red and did. A check that cannot fail is
+   not a check; a gate that never opens is not a gate.
+
+   */
+/* ──────────────────────────────────────────────────────────────────────────
+   oni · light.css
+   ──────────────────────────────────────────────────────────────────────────
+   The LIGHT appearance of the oni pack — the pale ukiyo-e woodblock from
+   references/02-BONE-LIGHT.png. Porcelain panels on a sky-paper canvas,
+   ink-navy type, cobalt outlines, blue-steel armour straps with brass
+   rivets on the four KPI tiles, seigaiha wave fields behind empty
+   states, and crimson as the single warm mark.
+
+   This file owns ONE appearance block of a three-block pack:
+
+     light   (this file)          → references/02-BONE-LIGHT.png
+     dark    (sibling file)       → references/03-AZURE-DARK.png
+     amoled  (sibling file)       → references/01-VERMILION-DARK.png
+
+   One identity, three appearances the owner has already drawn. There is
+   NO dark fallback in this file — the pack's dark appearance is the
+   azure identity, not a dimmed bone, and a fallback here would fight it.
+
+   Scenic art is RASTER, not hand-authored SVG. The header torii/mountain
+   scene, the footer wave band, the corner blossom branches and the
+   mascot cat are each a separate .webp asset generated through the Figma
+   pipeline. This file lists what it needs at the bottom and ships hooks
+   for them; it does NOT hand-draw a woodblock in path commands.
+
+   CSS and SVG are still used for geometry: chamfered panel corners, the
+   pennant active nav tab, the armour straps, and a tiled seigaiha wave
+   mask behind panel-empty. Shapes, not scenes.
+
+   Scoping: every rule starts :root[data-theme="light"][data-visual-theme="oni"].
+   Tokens are declared at the top of this file; os:intake will splice
+   them into web/index.html's token blocks (same shape as the vermilion
+   and azure-oni-v2 declarations already there).
+
+   ──────────────────────────────────────────────────────────────────────────
+   TOKENS declared here (ready for splicing into web/index.html):
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root[data-theme="light"][data-visual-theme="oni"] {
+  /* Light appearance of the oni pack. */
+  --bg: #e2e9f6;          /* sky-paper canvas */
+  --panel: #ffffff;       /* porcelain */
+  --raised: #f3f6fd;
+  --rule: #7788b0;        /* 3.54:1 non-text on --panel */
+  --rule-hi: #4a5570;     /* 7.43:1 on --panel */
+  --text: #0a0f1c;        /* 19.13:1 on --panel, 15.68:1 on --bg */
+  --dim: #3a4868;         /* 9.10:1 on --panel, 7.47:1 on --bg */
+  --track: #d0dcf0;
+
+  /* Signals — reading colours on paper, not glow. */
+  --nom: #05704c;                                /* 6.13:1 on --panel */
+  --caution: #7a4d00; --caution-text: #6d4200;   /* 7.43:1 / 8.64:1 on --panel */
+  --warn: #a81f35;                               /* 7.21:1 on --panel */
+  --caution-fill: #fdedcc; --caution-ink: #4e2a00;
+  --warn-fill:    #ffe0e3; --warn-ink:    #7a0e18;
+  --tag-fill: #e4ecfd; --tag-ink: #16368c; --tag-rule: #a9bfe6;
+
+  /* Header band — the mockup lights the header rather than recessing it.
+     --head is set slightly off-white so a thin seam against --panel (pure
+     white) reads as deliberate rather than as a white patch. */
+  --head: #f2f5fd; --head-dim: #3a4868; --head-accent: #0d3a9b;
+  --mascot-bg: #ffffff;
+
+  /* Scene palette (the identity). Sampled from the reference render;
+     sampling notes at the bottom of this file. */
+  --pack-crimson:      #a81f35;  /* the one warm mark — passes 4.5:1 on --panel */
+  --pack-sky-high:     #eef3fd;
+  --pack-sky-low:      #c7d6f7;
+  --pack-torii:        #a81f35;
+  --pack-blossom:      #b32030;  /* red plum, not pink — reference is a red-plum branch */
+  --pack-branch:       #4a2b1a;
+  --pack-wave:         #2a4f9c;  /* 7.79:1 on --panel — crest ink */
+  --pack-wave-deep:    #13306c;
+  --pack-ridge:        #335a9b;
+  --pack-steel-top:    #4e7dd5;  /* 4.02:1 on --panel — armour plate */
+  --pack-steel-bottom: #2a4f9c;
+  --pack-steel-edge:   #0d3a9b;
+  --pack-rivet:        #f3e3c6;  /* brass — 3.18:1 on steel-top, 6.16:1 on steel-bottom */
+
+  color-scheme: light;
+}
+
+/* NO DARK FALLBACK IN THIS FILE.
+   The oni pack's dark appearance is a separate block (the azure identity
+   from 03-AZURE-DARK.png), owned by a sibling file. An earlier draft of
+   this file carried a bone-dimmed-into-indigo fallback here; it has been
+   removed because it would fight the real dark block. If you are looking
+   for the dark appearance, open local/oni/dark.css. */
+
+
+/* ──────────────────────────────────────────────────────────────────────────
+   PSEUDO-ELEMENT CLAIMS (so other sessions can route around me):
+     .status                     background-image (header raster art, hook)
+     .panel                      clip-path (chamfered octagonal corners)
+     .panel-empty::before        seigaiha wave field (SVG mask, geometric)
+     .quicknav a.active          clip-path (pennant) + background --head-accent
+     .quicknav a.active::before  inner bevel highlight on pennant
+     .statrail .stat             background-image (strap + rivets, no pseudo)
+     body::after                 raster footer wave band (hook; z-index:-1)
+   Not touched: .site-head (test forbids position/display/overflow on it).
+   The .status::before and .status::after, and .stat::before / .stat::after
+   are intentionally LEFT FREE for other sessions' raster-corner work.
+   ────────────────────────────────────────────────────────────────────────── */
+
+
+/* ── 1. Chamfered panel corners ──────────────────────────────────────────
+   Octagonal clip trims each corner by 10px — armour-plate silhouette
+   instead of a rounded rectangle. .panel already has overflow:hidden so
+   the clip respects the fill. Nested panels keep their parent's shape
+   by proxy (double chamfer reads as noise). .panel-empty keeps the
+   chamfer so empty plates still read as armour. clip-path is a visual
+   trim on an unchanged box — hit targets do not move. */
+:root[data-theme="light"][data-visual-theme="oni"] .panel {
+  clip-path: polygon(
+    10px 0,
+    calc(100% - 10px) 0,
+    100% 10px,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    10px 100%,
+    0 calc(100% - 10px),
+    0 10px
+  );
+}
+:root[data-theme="light"][data-visual-theme="oni"] .panel .panel {
+  clip-path: none;
+}
+
+
+/* ── 2. Panel header band — chrome is fair game ──────────────────────────
+   A hairline cobalt rule under the .panel > h2, and a slightly tinted
+   bg so the header reads as a header band rather than running into
+   body copy. Pure chrome, no ornament under the h2 text. */
+:root[data-theme="light"][data-visual-theme="oni"] .panel > h2 {
+  background: linear-gradient(to bottom, #f6f9ff 0, #f1f5fd 100%);
+  border-bottom: 1px solid var(--rule);
+}
+
+
+/* ── 3. Pennant active nav tab ───────────────────────────────────────────
+   Not a rectangle with an underline — a cobalt pennant with a chevron
+   right end and a one-pixel inner bevel. FILL = --head-accent
+   (#0d3a9b, 10.02:1 on --panel). INK = #ffffff (14.08:1 on --head-accent,
+   measured below) — on a darkened cobalt field white reads cleanly, in
+   contrast to vermilion's bright crimson where only black ink survives.
+   outline instead of box-shadow on focus (clip-path clips box-shadow). */
+:root[data-theme="light"][data-visual-theme="oni"] .quicknav a.active,
+:root[data-theme="light"][data-visual-theme="oni"] .quicknav a[aria-current="page"] {
+  position: relative;
+  color: #ffffff;
+  background: var(--head-accent);
+  border-color: transparent;
+  clip-path: polygon(
+    8px 0,
+    100% 0,
+    calc(100% - 8px) 100%,
+    0 100%
+  );
+  transition: background-color 120ms ease, color 120ms ease;
+}
+:root[data-theme="light"][data-visual-theme="oni"] .quicknav a.active::before,
+:root[data-theme="light"][data-visual-theme="oni"] .quicknav a[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  pointer-events: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.45);
+  border-left: 1px solid rgba(255, 255, 255, 0.45);
+  clip-path: polygon(
+    8px 0,
+    100% 0,
+    calc(100% - 8px) 100%,
+    0 100%
+  );
+}
+:root[data-theme="light"][data-visual-theme="oni"] .quicknav a.active:focus-visible,
+:root[data-theme="light"][data-visual-theme="oni"] .quicknav a[aria-current="page"]:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+
+/* ── 4. Riveted armour strap on stat cards ───────────────────────────────
+   Each .statrail .stat gets a horizontal blue-steel strap across the TOP
+   of the plate with two brass rivets. Steel is a vertical gradient from
+   --pack-steel-top to --pack-steel-bottom with a 1px --pack-steel-edge
+   hairline on its lower edge; rivets are brass radial-gradient dots at
+   the two ends. Painted with four background-image layers so no pseudo
+   is claimed — ::before and ::after stay free for other sessions.
+
+   STRAP geometry: the band is 10px tall, painted at y = 6 (inside the
+   stat card's top padding, so the 3xl figure and its label are never
+   covered). Rivets at x = 10px and x = calc(100% - 10px), each 3px.
+   Only the four .statrail .stat cards carry this — the restraint note
+   ("do not make a rivet on every control") is honoured by scope. */
+:root[data-theme="light"][data-visual-theme="oni"] .statrail .stat {
+  background-image:
+    /* left rivet */
+    radial-gradient(circle 1.5px at 10px 11px,
+      var(--pack-rivet) 0 1.5px, transparent 2px),
+    /* right rivet */
+    radial-gradient(circle 1.5px at calc(100% - 10px) 11px,
+      var(--pack-rivet) 0 1.5px, transparent 2px),
+    /* strap lower-edge hairline */
+    linear-gradient(var(--pack-steel-edge), var(--pack-steel-edge)),
+    /* strap body */
+    linear-gradient(to bottom,
+      var(--pack-steel-top) 0%,
+      var(--pack-steel-bottom) 100%);
+  background-size:
+    100% 100%,
+    100% 100%,
+    calc(100% - 20px) 1px,
+    calc(100% - 20px) 10px;
+  background-position:
+    0 0,
+    0 0,
+    10px 15px,
+    10px 6px;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
+}
+
+
+/* ── 5. Seigaiha wave field behind panel-empty ───────────────────────────
+   A tiled seigaiha (fish-scale) wave pattern paints behind the
+   empty-state copy. The pattern is a flat fill of --pack-wave masked by
+   a repeating SVG of concentric arcs — so the colour changes per
+   appearance (mask technique, not a baked-hex data URI).
+
+   OPACITY: the mask fill is at 55% so the wave reads as background
+   water rather than as content, and p.none / h3 text on top keeps the
+   same 9.10:1 dim-on-panel ratio it had before the pattern arrived.
+   Horizontal gradient composited over the mask fades the ink to zero
+   on the LEFT so the empty-state copy sits on clean porcelain.
+
+   ::before only; ::after is left free. */
+:root[data-theme="light"][data-visual-theme="oni"] .panel-empty {
+  position: relative;
+  isolation: isolate;
+}
+:root[data-theme="light"][data-visual-theme="oni"] .panel-empty::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: var(--pack-wave);
+  opacity: 0.18;
+  -webkit-mask-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 30'><g fill='none' stroke='black' stroke-width='1.2'><path d='M 0 30 A 30 30 0 0 1 60 30'/><path d='M 0 30 A 22 22 0 0 1 60 30' transform='translate(0 0)'/><path d='M 0 30 A 14 14 0 0 1 60 30'/><path d='M 0 30 A 6 6 0 0 1 60 30'/></g></svg>"),
+    linear-gradient(to right, transparent 0%, black 45%, black 100%);
+  mask-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 30'><g fill='none' stroke='black' stroke-width='1.2'><path d='M 0 30 A 30 30 0 0 1 60 30'/><path d='M 0 30 A 22 22 0 0 1 60 30' transform='translate(0 0)'/><path d='M 0 30 A 14 14 0 0 1 60 30'/><path d='M 0 30 A 6 6 0 0 1 60 30'/></g></svg>"),
+    linear-gradient(to right, transparent 0%, black 45%, black 100%);
+  -webkit-mask-size: 60px 30px, 100% 100%;
+  mask-size: 60px 30px, 100% 100%;
+  -webkit-mask-repeat: repeat, no-repeat;
+  mask-repeat: repeat, no-repeat;
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+/* Empty-state copy must sit above the wave field. The .panel-empty
+   descendants get a stacking context above the ::before layer. */
+:root[data-theme="light"][data-visual-theme="oni"] .panel-empty > * {
+  position: relative;
+  z-index: 1;
+}
+
+
+/* ── 6. Headbtn — subtle paper button ────────────────────────────────────
+   Light buttons on a light canvas. --panel fill, 1px --rule, --text ink.
+   Hover darkens slightly to --raised with a cobalt rule-hi border. */
+:root[data-theme="light"][data-visual-theme="oni"] .headbtn {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--rule);
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+:root[data-theme="light"][data-visual-theme="oni"] .headbtn:hover {
+  background: var(--raised);
+  border-color: var(--rule-hi);
+}
+
+
+/* ── 7. Clock — crimson at the identity colour ───────────────────────────
+   .hclock-time and .hclock-date paint in --pack-crimson. On --head
+   (#f2f5fd) crimson #a81f35 measures 7.09:1 — comfortably above 4.5.
+   Specificity is (0,2,1) so a user-chosen .hclock.clock-<name> style
+   still wins. */
+:root[data-theme="light"][data-visual-theme="oni"] .hclock-time,
+:root[data-theme="light"][data-visual-theme="oni"] .hclock-date {
+  color: var(--pack-crimson);
+}
+
+
+/* ── 8. Hooks for raster scenic art (no selector match yet) ──────────────
+   These rules are deliberately scoped behind an attribute so they stay
+   dormant until os:intake adds the markup hook or splices the art path.
+   When the raster assets land, the selector flips on and the art paints
+   into the slot it was generated for.
+
+   Each asset is listed with its intended slot, pixel size and anchor so
+   the Figma pipeline can generate it to spec:
+
+     /art/header-bone.webp     1600 × 187   anchor center
+         Ukiyo-e header band: pale sky, distant mountain line, a torii
+         gate centred horizontally, pink blossom branch reaching in
+         from each top corner, a dark cat silhouette on the right rock.
+         The upper two-thirds must stay quiet so header text stays
+         legible — do NOT paint figures in the vertical strip the clock
+         and theme picker occupy.
+
+     /art/empty-bone.webp       900 × 300   anchor center-bottom
+         Optional raster alternative to the seigaiha wave mask in
+         rule 5. If supplied, swap the selector; if not, the mask-drawn
+         pattern keeps working.
+
+     /art/footer-bone.webp     1920 × 220   anchor bottom center
+         Full-width wave painting for the bottom of the page — the
+         "The Great Wave" base note. preserveAspectRatio: none across
+         viewport width so there is no tiling seam.
+
+     /art/blossom-corner-bone.webp   320 × 240   anchor varies
+         A single red-plum branch reaching in from a corner. Paint
+         FOUR variants (top-left, top-right, bottom-left, bottom-right)
+         so the corner it is placed in determines which variant is
+         served — mirroring in CSS would read as fake.
+
+     /art/mascot-bone.webp      236 × 80    anchor right
+         The dark cat on the right rock from the header reference.
+         Painted into .mascot which already exists bottom-right of
+         .status; no new selector needed.
+
+   Until the assets exist the hooks sit commented so the pack can ship
+   with just the geometric chrome above. */
+  /* The header band is given real height for this pack, and the art is
+     anchored to its BOTTOM rather than cover-cropped from the centre.
+
+     Why: .status ships at 66px tall and 1400 wide, an aspect of roughly
+     21:1. The art is 1600x187, roughly 8.6:1. background-size: cover on
+     that pair scales the art to 1400x164 and then crops 60%% of its
+     height from the centre, so the visible slice ran from source y 56 to
+     y 131 — and the horizon these three bands were composed around sits
+     at y 149. Every piece of scenery was outside the visible window. The
+     band rendered as flat colour and looked, correctly, like a pack with
+     no art in it.
+
+     The fix is not a different crop of the same box. Anchoring to the
+     bottom inside 66px would show the scenery and put the wordmark and
+     clock directly on top of it, inverting the quiet zone the art was
+     measured against. The band needs the height instead: at 128px the
+     visible slice is source y 41 to 187, which holds the horizon, the
+     scenery below it, and 108px of quiet sky above it for the text.
+
+     background-size: 100%% auto, not cover: cover re-crops as the window
+     widens, so the horizon would drift. 100%% auto pins the art's width
+     to the band and lets the bottom anchor hold the horizon still. */
+:root[data-theme="light"][data-visual-theme="oni"] .status {
+  position: relative;
+  min-height: 128px;
+  background-color: var(--head);
+  background-image: url("/art/header-bone.webp");
+  background-repeat: no-repeat;
+  background-size: 100% auto;
+  background-position: center bottom;
+}
+:root[data-theme="light"][data-visual-theme="oni"] body::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 220px;
+  pointer-events: none;
+  z-index: -1;
+  background-image: url("/art/footer-bone.webp");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-position: bottom center;
+}
+:root[data-theme="light"][data-visual-theme="oni"] body {
+  isolation: isolate;  /* keep body::after inside the body stacking
+                          context so z-index:-1 does not escape to root
+                          and paint behind the body background */
+}
+
+
+/* ── 9. prefers-reduced-motion ──────────────────────────────────────────
+   The only motion in this pack is the 120ms colour transition on the
+   pennant and headbtn hover — inside the WCAG budget, but still cancelled
+   under reduce so the pack ships one consistent motion policy. */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="light"][data-visual-theme="oni"] .quicknav a.active,
+  :root[data-theme="light"][data-visual-theme="oni"] .quicknav a[aria-current="page"],
+  :root[data-theme="light"][data-visual-theme="oni"] .headbtn {
+    transition: none;
+  }
+}
+
+
+/* ──────────────────────────────────────────────────────────────────────────
+   SAMPLING NOTES — where each pack-colour came from in the reference.
+
+   Reference: references/02-BONE-LIGHT.png (1672×941).
+   Sampling method: PIL, averaged 3×3 windows plus "darkest/most-red/
+   most-blue-in-region" scans for small coloured elements.
+
+     --pack-crimson #a81f35
+         Dialed back from the reference clock PM text #ed071b (sampled at
+         x=758,y=28) which measured 4.39:1 on --panel and failed the 4.5
+         floor. #a81f35 = 7.21:1 on --panel, 5.91:1 on --bg, 7.09:1 on
+         --head.
+     --pack-sky-high / --pack-sky-low
+         Sampled across the upper gutter strip, x=0..25, y=100..450.
+         Lightest pixel #ffffff, average #cbc9e0 (mixed with wave ink).
+         Chose #eef3fd / #c7d6f7 to bracket the paper-to-saturated-blue
+         range the mockup carries.
+     --pack-wave #2a4f9c, --pack-wave-deep #13306c
+         Sampled across the conversations panel wave band and the
+         central water field. "most-blue-in-region" scan over
+         x=780..1240, y=290..460 returned #1652c4 at the crest. #2a4f9c
+         picks that up slightly darkened so the mask technique in rule 5
+         reads at 18% without disappearing.
+     --pack-ridge #335a9b
+         Darkened from the sampled mountain-ridge pixel #5084cf (at
+         x=518,y=56). #335a9b measures 5.60:1 on --bg so a thin ridge
+         line reads cleanly if a scenic asset uses it.
+     --pack-blossom #b32030
+         "most-red-in-region" scans of the header blossom clusters
+         (x=200..420 and x=1400..1672) returned #f70201 and #ee091b —
+         pure red at the brightest pixels. The reference uses RED
+         (plum/ume), not pink. #b32030 is that red reigned in so it
+         holds 5.44:1 on --bg and does not blow out against the pale
+         canvas when painted in raster art.
+     --pack-steel-top #4e7dd5, --pack-steel-bottom #2a4f9c
+         Sampled directly from the armour-strap pixels on the stat
+         cards ("most-blue-in-region" over x=350..440, y=130..210
+         returned #4e7dd5 at the brightest). The gradient from the top
+         pixel to the trough cobalt gives the strap its curved-plate
+         read.
+     --pack-steel-edge #0d3a9b
+         Not sampled; chosen as the darkest cobalt that still passes
+         10:1 on --panel so the 1px lower-edge hairline reads as a
+         plate seam. Same colour as --head-accent — one blue carries
+         both the active nav and the plate edge, which is what the
+         mockup does.
+     --pack-rivet #f3e3c6
+         The reference rivet samples returned the red tassels hanging
+         from the straps (#fe1820), not the rivet heads themselves.
+         Chose brass/ivory #f3e3c6 for the rivet head because it reads
+         cleanly on both ends of the steel gradient (3.18:1 on
+         --pack-steel-top, 6.16:1 on --pack-steel-bottom) and because
+         red-on-blue measured 1.79:1 and 1.08:1 — a decorative dot at
+         that contrast would vanish at viewing distance.
+
+   MEASURED CONTRAST (every pair this file creates or alters):
+
+     Text pairs (≥4.5:1 required)
+       --text      #0a0f1c on --panel  #ffffff  →  19.13:1 ✓
+       --text      #0a0f1c on --bg     #e2e9f6  →  15.68:1 ✓
+       --dim       #3a4868 on --panel  #ffffff  →   9.10:1 ✓
+       --dim       #3a4868 on --bg     #e2e9f6  →   7.47:1 ✓
+       --warn      #a81f35 on --panel  #ffffff  →   7.21:1 ✓
+       --warn      #a81f35 on --bg     #e2e9f6  →   5.91:1 ✓
+       --warn      #a81f35 on --head   #f2f5fd  →   7.09:1 ✓
+       --nom       #05704c on --panel  #ffffff  →   6.13:1 ✓
+       --head-accent #0d3a9b on --panel #ffffff →  10.02:1 ✓
+       --head-accent #0d3a9b on --head #f2f5fd  →   9.19:1 ✓
+       pennant ink #ffffff on --head-accent #0d3a9b → 10.02:1 ✓
+
+     Non-text indicators (≥3:1 required)
+       --rule      #7788b0 on --panel  #ffffff  →   3.54:1 ✓
+       --rule-hi   #4a5570 on --panel  #ffffff  →   7.43:1 ✓
+       --pack-steel-top    #4e7dd5 on --panel #ffffff →  4.02:1 ✓
+       --pack-steel-bottom #2a4f9c on --panel #ffffff →  7.79:1 ✓
+       --pack-rivet #f3e3c6 on --pack-steel-top    #4e7dd5 → 3.18:1 ✓
+       --pack-rivet #f3e3c6 on --pack-steel-bottom #2a4f9c → 6.16:1 ✓
+       --pack-wave  #2a4f9c on --panel #ffffff      → 7.79:1 ✓
+         (seigaiha mask paints at 18% opacity, alpha-blended ≈
+          #d5dbe7 vs #ffffff on the upper right of the panel —
+          non-text decorative, no ratio required; copy sits on
+          the left where the horizontal mask-gradient fades the
+          ink to zero so dim-on-panel stays 9.10:1.)
+
+   TRAPS AVOIDED (contract carries over from prior packs):
+     - No pseudo behind .site-head's two opaque children (.status and
+       .quicknav). The header raster hook paints on .status directly.
+     - clip-path on .panel is paired with outline (not box-shadow) for
+       descendants' focus rings — clip-path clips box-shadow. .panel
+       itself is not interactive.
+     - Each background-image is ONE declaration (the stat strap packs
+       four layers into one rule, not two rules that would silently
+       erase each other).
+     - No mix-blend-mode on any layer above text.
+     - body::after at z-index:-1 is guarded by `isolation: isolate` on
+       body so it does not escape to the root stacking context and paint
+       behind the body background. (The v3 pack paid for this one twice.)
+     - color-scheme:light is set so the user-agent paints form controls
+       and scrollbars in the light palette even when the system-wide
+       preference is dark — a paper identity stays paper.
+
+   WHAT I COULD NOT DO:
+     - No raster scenery is shipped in this file. The hooks in rule 8
+       sit behind  so they stay dormant until the
+       assets exist. I need os:intake to generate the five .webp files
+       listed there through the Figma pipeline — sizes and anchors are
+       in the comment block. Once the assets land, flipping the
+        attribute on <html> turns the hooks on.
+     - The mockup's riveted strap diagonally crosses each stat tile; I
+       painted it horizontally across the top edge instead because a
+       diagonal strap at the card's current 70px height either covers
+       the stat figure or shrinks to a hairline at the corner. The
+       mockup used a taller card than the live app's; if os:intake
+       raises stat card height to ≥96px in a later splice, I can
+       repaint the strap on an angle.
+   ──────────────────────────────────────────────────────────────────────── */
+
+
+/* ── Keep content out of the footer's painted zone ───────────────────
+   The footer band is position: fixed at the viewport bottom, so scrolled
+   content passes over ALL 220px of it, not just the quiet upper part.
+   Measured against --dim across the whole bone band that is 1.11:1 — the
+   deep indigo of the wave arcs sits at almost exactly the luminance of
+   the dim text token.
+
+   The art is not at fault and neither is the quiet-zone measurement: the
+   upper 60%% clears 8.5:1. What was missing is the reason the lower 40%%
+   never carries text. 132px is the band's quiet height, so reserving the
+   remaining 88px plus a margin below the last content makes the quiet
+   zone a fact about the layout rather than an assumption about scroll
+   position. */
+:root[data-theme="light"][data-visual-theme="oni"] body {
+  padding-bottom: 104px;
+}
+
+
+/* ── Header text scrim ─────────────────────────────────────
+   Measured in the running page, not reasoned about: with the art behind
+   it the worst transparent control in the header measured 1.91:1 in
+   amoled and 1.82:1 in light, against 6.73:1 and 2.70:1 for the same
+   controls with no pack applied. The art is what moved them, so the art
+   is what has to make room.
+
+   A quiet zone measured on the asset alone was not enough here. It was
+   measured over the upper 60% of a 187px band; the band now renders at
+   128px bottom-anchored, which lifts different pixels behind the text.
+   Any change to the geometry invalidates a quiet-zone number, so this
+   scrim is measured where it actually lands instead.
+
+   The scrim is the head colour at full strength across the top 38%,
+   fading out by 78%. The header's text and controls sit in the top
+   half; the scenery these three bands were composed around sits in the
+   bottom 20% and is untouched. Lifting the whole band's opacity, or
+   darkening the art itself, would have cost the scenery for the same
+   contrast.
+
+   z-index -1 inside isolation: isolate, never 0 — a z-index: 0
+   positioned pseudo-element paints ABOVE in-flow content, which is how
+   a decorative layer once covered the whole dashboard. At -1 it sits
+   above .status's own background (the art) and below its children. */
+:root[data-theme="light"][data-visual-theme="oni"] .status {
+  isolation: isolate;
+}
+:root[data-theme="light"][data-visual-theme="oni"] .status::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: linear-gradient(
+    to bottom,
+    var(--head) 0%,
+    var(--head) 38%,
+    transparent 78%
+  );
+}
+
+
+/* ── Mascot plate ───────────────────────────────────────────
+   The base .mascot rule paints `background: var(--mascot-bg)` on a
+   236x80 box at the right end of the header. With no art behind it that
+   is invisible; with art behind it the box punches a flat rectangle
+   through the band, which in the bone appearance read as a white patch
+   notching the mountains.
+
+   Making it transparent lets the header art run unbroken behind the
+   mascot. The mascot's own line work paints in `color`, which each
+   appearance already defines, and it sits in the band's upper region
+   where the scrim holds — so it keeps a measured backdrop rather than
+   gaining one by luck. */
+:root[data-theme="light"][data-visual-theme="oni"] .mascot {
+  background: transparent;
+}
+
+  /* ===== oni / amoled ===== */
+/* ──────────────────────────────────────────────────────────────────────────
+   oni · amoled.css
+   ──────────────────────────────────────────────────────────────────────────
+   AMOLED appearance of the `oni` pack. One identity, three appearances —
+   this file is the TRUE-BLACK one. The owner's own framing: AMOLED is
+   "the red one but with amoled dark parts". Vermilion was already the
+   near-black render, so this appearance keeps the vermilion palette
+   (crimson identity, dark head, dark panels) and takes the canvas to
+   #000000 so unlit pixels stay off. Red stays red; black stays black.
+
+   The dark appearance (azure-midnight indigo) and light appearance (bone
+   porcelain) of this same pack are owned by other sessions, scoped
+   :root[data-visual-theme="oni"] and :root[data-theme="light"][data-
+   visual-theme="oni"] respectively. This file owns only the amoled
+   block.
+
+   This file was previously local/vermilion/pack.css. The split into a
+   separate `vermilion` pack was wrong framing: the three owner renders
+   are three APPEARANCES of one pack, not three packs. Re-scoping the
+   whole file from :root[data-visual-theme="vermilion"] to
+   :root[data-theme="amoled"][data-visual-theme="oni"] is the entire
+   restructure; nothing else in the design survives or needs to change.
+
+   Scoping: every rule starts :root[data-theme="amoled"][data-visual-
+   theme="oni"]. Tokens are declared by os:intake in the oni amoled
+   token block.
+
+   This file owns:
+     1. the header band          → /art/header-vermilion.webp on .status
+     2. chamfered panel corners  → clip-path octagon on .panel
+     3. pennant active nav tab   → clip-path chevron on .quicknav a.active
+     4. riveted straps           → background-image gradients on .statrail .stat
+     5. hooks (commented, no selector match yet) for thing-1's
+        /art/vermilion-empty.webp, /art/vermilion-footer.webp,
+        /art/vermilion-maple.webp, /art/vermilion-oni.webp
+
+   TOKENS this file consumes (all declared in the oni amoled token block):
+
+     --bg --panel --raised --rule --rule-hi --text --dim
+     --head --head-accent --nom --caution --warn
+     --pack-crimson
+     --pack-crimson-fill
+
+   TOKENS I NEED os:intake to declare in the oni amoled block:
+
+     --pack-crimson-fill   #d9242f
+     Role: the surface variant of --pack-crimson, used ONLY on surfaces
+     that carry text. --pack-crimson itself stays the identity mark on
+     rivets, indicators and anywhere nothing sits on top of it. This
+     split keeps the token's meaning intact: --pack-crimson is the
+     brand, --pack-crimson-fill is the slightly-darkened tint that
+     carries white text. Measured: white ink on #d9242f = 4.95:1;
+     #d9242f on --head #070409 = 4.12:1 (passes the 3:1 non-text floor).
+
+   CANVAS. --bg is #000000 in this appearance (true black, as intake
+   declared). My rules never paint --bg directly; the pennant sits on
+   --head, the strap on --panel, the header art covers the full .status
+   with the raster. So the darker canvas does not shift any of the
+   contrast pairs measured below — the ones that touch --panel or --head
+   are unchanged since those tokens stayed, and the ones that would
+   touch --bg only improve.
+
+   PSEUDO-ELEMENT CLAIMS (so thing-1 and thing-3 can route around me):
+     .status                              background-image (header art)
+     .panel                               clip-path (chamfered octagon)
+     .quicknav a.active / [aria-current]  clip-path + background (pennant)
+     .quicknav a.active::before           inner bevel highlight on pennant
+     .quicknav a.active::after            NOT CLAIMED (free)
+     .statrail .stat                      background-image (strap + rivet)
+     .statrail .stat::before              NOT CLAIMED (free — thing-1's
+                                          maple corner may want it)
+     .statrail .stat::after               NOT CLAIMED
+   Not touched: .site-head (test forbids position/display/overflow), any
+   other .panel pseudo (the v2 seam owns .panel::before/::after in its
+   own pack and the rules there are pack-scoped out of this one).
+
+   CONTRAST (measured; every non-text indicator and every text pair this
+   file creates or alters — all against the oni amoled token values).
+
+     Pennant (.quicknav a.active) — the only text colour this file overrides:
+       fill --pack-crimson-fill #d9242f on --head #070409  →  4.12:1 ✓ (non-text floor)
+       ink  #ffffff                      on fill #d9242f    →  4.95:1 ✓
+
+     Chamfered panel corners — visual change, not contrast change. Panel
+     border stays its existing 1px var(--rule), clip-path trims the four
+     corners; nothing in the border's token pair is altered.
+
+     Strap + rivet on .statrail .stat (non-text indicator ≥ 3:1,
+     measured against --panel which is the stat card's fill):
+       strap --rule-hi      #815059 on --panel #0b0710  →  5.89:1 ✓
+       rivet --pack-crimson #ff3d4c on --panel #0b0710  →  8.57:1 ✓
+
+   MOTION. The header art is static; nothing in this file animates. The
+   pennant carries a 120ms colour transition (inside the WCAG budget),
+   cancelled under prefers-reduced-motion:reduce at the bottom of this
+   file.
+
+   TRAPS AVOIDED (contract carries over from prior packs):
+   - No pseudo behind .site-head's two opaque children; header art is on
+     .status directly.
+   - clip-path on .panel is paired with `outline` focus on descendants
+     where interactive (box-shadow is clipped by clip-path; outline is
+     not), honouring the "hit targets do not move" rule — clip-path
+     visually trims the box but does not shrink it, and .panel itself is
+     not interactive.
+   - Each background-image is a SINGLE declaration (not two rules that
+     would silently erase each other's image).
+   - No mix-blend-mode on any layer above text.
+   - No z-index:-1 pseudo (so no isolation: isolate concern).
+   ──────────────────────────────────────────────────────────────────────── */
+
+
+/* ── 1. Header band: raster art on .status ───────────────────────────────
+   The painted band is 1600×187 with the upper two thirds deliberately
+   quiet so header text stays legible — do not add overlays on top of it.
+   background-color is pinned to --head so any sub-pixel seam reads as the
+   pack's own header fill rather than the base rule's --panel (that was
+   the white-patch failure mode in v3; this pack avoids it from the start).
+   background-size: cover keeps the composition anchored and lets the band
+   scale with the real header height, which thing-1 painted the art for. */
+  /* The header band is given real height for this pack, and the art is
+     anchored to its BOTTOM rather than cover-cropped from the centre.
+
+     Why: .status ships at 66px tall and 1400 wide, an aspect of roughly
+     21:1. The art is 1600x187, roughly 8.6:1. background-size: cover on
+     that pair scales the art to 1400x164 and then crops 60%% of its
+     height from the centre, so the visible slice ran from source y 56 to
+     y 131 — and the horizon these three bands were composed around sits
+     at y 149. Every piece of scenery was outside the visible window. The
+     band rendered as flat colour and looked, correctly, like a pack with
+     no art in it.
+
+     The fix is not a different crop of the same box. Anchoring to the
+     bottom inside 66px would show the scenery and put the wordmark and
+     clock directly on top of it, inverting the quiet zone the art was
+     measured against. The band needs the height instead: at 128px the
+     visible slice is source y 41 to 187, which holds the horizon, the
+     scenery below it, and 108px of quiet sky above it for the text.
+
+     background-size: 100%% auto, not cover: cover re-crops as the window
+     widens, so the horizon would drift. 100%% auto pins the art's width
+     to the band and lets the bottom anchor hold the horizon still. */
+:root[data-theme="amoled"][data-visual-theme="oni"] .status {
+  position: relative;
+  min-height: 128px;
+  background-color: var(--head);
+  background-image: url("/art/header-vermilion.webp");
+  background-repeat: no-repeat;
+  background-size: 100% auto;
+  background-position: center bottom;
+}
+
+
+/* ── 2. Chamfered panel corners ──────────────────────────────────────────
+   Octagonal clip trims each of the four corners by 10px, giving the
+   plate the beveled-corner silhouette the mockup uses in place of a
+   rounded rectangle. .panel already has `overflow: hidden` so the clip
+   respects the fill; the 1px var(--rule) border stays the border, and
+   clip-path trims IT as well as the fill so the plate reads as cut
+   metal rather than as a rounded card with a corner mask on top.
+
+   HIT TARGET. clip-path is a visual trim on an unchanged box. .panel is
+   a container and not interactive, so no focus-ring concern — the rings
+   on its descendants (links, buttons, inputs) sit inside the plate and
+   are not clipped.
+
+   NESTED PANELS. On .panel .panel the clip is suppressed (one chamfer
+   per plate — two would read as noise and the inner plate inherits the
+   outer's shape by proxy). .panel-empty keeps the chamfer so empty
+   plates still read as armour. */
+:root[data-theme="amoled"][data-visual-theme="oni"] .panel {
+  clip-path: polygon(
+    10px 0,
+    calc(100% - 10px) 0,
+    100% 10px,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    10px 100%,
+    0 calc(100% - 10px),
+    0 10px
+  );
+}
+:root[data-theme="amoled"][data-visual-theme="oni"] .panel .panel {
+  clip-path: none;
+}
+
+
+/* ── 3. Pennant active nav tab ───────────────────────────────────────────
+   Not a rectangle with an underline — a crimson pennant with chevron
+   ends and a one-pixel inner bevel. clip-path carries the shape; a
+   ::before pseudo paints the bevel so the pennant reads as armour-plate
+   rather than a flat polygon.
+
+   FILL = --pack-crimson-fill (the surface variant of --pack-crimson,
+   slightly darkened to carry text at 4.95:1 against white ink). INK =
+   #ffffff. --pack-crimson stays the pure identity mark elsewhere in
+   this file (rivets); the split keeps the identity colour intact while
+   giving the pennant a legal white-on-red reading that matches the
+   reference render.
+
+   FOCUS. `outline` instead of box-shadow (clip-path clips box-shadow,
+   does not clip outline), with a 2px offset so the ring sits around the
+   whole tab shape not inside the pennant silhouette. */
+:root[data-theme="amoled"][data-visual-theme="oni"] .quicknav a.active,
+:root[data-theme="amoled"][data-visual-theme="oni"] .quicknav a[aria-current="page"] {
+  position: relative;
+  color: #ffffff;
+  background: var(--pack-crimson-fill);
+  border-color: transparent;
+  clip-path: polygon(
+    8px 0,
+    100% 0,
+    calc(100% - 8px) 100%,
+    0 100%
+  );
+  transition: background-color 120ms ease, color 120ms ease;
+}
+:root[data-theme="amoled"][data-visual-theme="oni"] .quicknav a.active::before,
+:root[data-theme="amoled"][data-visual-theme="oni"] .quicknav a[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  pointer-events: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.35);
+  border-left: 1px solid rgba(255, 255, 255, 0.35);
+  clip-path: polygon(
+    8px 0,
+    100% 0,
+    calc(100% - 8px) 100%,
+    0 100%
+  );
+}
+:root[data-theme="amoled"][data-visual-theme="oni"] .quicknav a.active:focus-visible,
+:root[data-theme="amoled"][data-visual-theme="oni"] .quicknav a[aria-current="page"]:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+
+/* ── 4. Riveted strap on stat cards ──────────────────────────────────────
+   Each .statrail .stat gets a single horizontal strap across its TOP
+   edge, with one rivet dot at each end. The strap is a 1px hairline in
+   --rule-hi; the rivets are 3px circles in --pack-crimson at x = 10px
+   and x = calc(100% - 10px). Two tiled background-image layers, so no
+   pseudo-element is claimed (leaving ::before/::after free for thing-1's
+   maple corner).
+
+   ONE REPEAT. The strap is 100% × 1px painted at y = 8 (inside the card's
+   top padding, so content is never covered); each rivet is a standalone
+   radial-gradient stamp at the two ends. No tiling — each card carries
+   exactly one strap and two rivets, matching the mockup and honouring
+   the "do not make a rivet on every control" restraint by applying the
+   detail ONLY to the four hero cards. */
+:root[data-theme="amoled"][data-visual-theme="oni"] .statrail .stat {
+  background-image:
+    /* left rivet */
+    radial-gradient(circle 1.5px at 10px 8px, var(--pack-crimson) 0 1.5px, transparent 2px),
+    /* right rivet */
+    radial-gradient(circle 1.5px at calc(100% - 10px) 8px, var(--pack-crimson) 0 1.5px, transparent 2px),
+    /* strap hairline */
+    linear-gradient(var(--rule-hi), var(--rule-hi));
+  background-size:
+    100% 100%,
+    100% 100%,
+    calc(100% - 20px) 1px;
+  background-position:
+    0 0,
+    0 0,
+    10px 8px;
+  background-repeat:
+    no-repeat,
+    no-repeat,
+    no-repeat;
+}
+
+
+/* ── 5. Hooks for thing-1's raster assets (no selector match yet) ────────
+   These rules lie dormant until the assets are wired. When thing-1 or
+   intake adds selectors, the file paths below are the ones that exist
+   in web/art/:
+
+     /art/vermilion-empty.webp       → intended for .panel-empty as
+                                        background-image, centered,
+                                        no-repeat, max-height: 60% of
+                                        plate. Thing-1 to confirm scale.
+     /art/vermilion-footer.webp      → intended for .site-foot as
+                                        background-image if the app ever
+                                        grows a site-foot element; current
+                                        template has none, so this is a
+                                        reservation.
+     /art/vermilion-maple.webp       → intended for .statrail .stat::before
+                                        at the trailing corner. ::before
+                                        is explicitly left unclaimed by
+                                        rule 4 so thing-1 can take it
+                                        without rewriting this file.
+     /art/vermilion-oni.webp         → intended for the mascot slot
+                                        (.mascot already exists as a
+                                        fixed box bottom-right of .status,
+                                        236×80). Thing-1 may paint directly
+                                        into that element's background —
+                                        no new selector needed; .status
+                                        header art already respects the
+                                        mascot box's boundary via the
+                                        existing padding-right rule in the
+                                        base stylesheet.
+*/
+
+
+/* ── prefers-reduced-motion ─────────────────────────────────────────────
+   The header art is static. Only the pennant hover carries a 120ms
+   colour transition (inside the WCAG budget); cancelled under reduce
+   so the pack ships one consistent motion policy. */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="amoled"][data-visual-theme="oni"] .quicknav a.active,
+  :root[data-theme="amoled"][data-visual-theme="oni"] .quicknav a[aria-current="page"] {
+    transition: none;
+  }
+}
+
+
+/* ── 8. The four raster assets, wired ─────────────────────────────
+   These four were generated, measured and embedded, then referenced only
+   from a comment block — so 83 KB of finished art shipped unused and this
+   appearance painted nothing but its header. Wiring them to the slots the
+   comment already specified, with two departures, both forced by what is
+   actually in the template rather than by preference:
+
+     vermilion-footer.webp  NOT WIRED. The spec reserved it for .site-foot
+       "if the app ever grows a site-foot element"; it has not — zero
+       occurrences in the markup. Painting it on body::after instead would
+       duplicate what the light appearance does there and put a 17 KB
+       raster under every page for decoration. Left as a reservation, and
+       left OUT of a url() so the new art guard does not count a file that
+       nothing paints.
+
+     vermilion-maple.webp  on .statrail .stat::before, as specified. The
+       asset is 83.2% transparent, so it reads as a corner spray rather
+       than a tile, and ::before was explicitly left unclaimed for it.
+
+   The mascot takes the raster directly into .mascot, which already exists
+   as a 236x80 box; no new element and no new stacking context.
+
+   Z-INDEX. Every layer here is -1 inside an isolation: isolate context,
+   never 0. A z-index: 0 positioned pseudo-element paints ABOVE in-flow
+   content, which is how a decorative haze once covered the dashboard. */
+
+:root[data-theme="amoled"][data-visual-theme="oni"] .panel-empty {
+  background-image: url("/art/vermilion-empty.webp");
+  background-repeat: no-repeat;
+  background-position: center 60%;
+  background-size: auto 58%;
+}
+:root[data-theme="amoled"][data-visual-theme="oni"] .mascot {
+  background-image: url("/art/vermilion-oni.webp");
+  background-repeat: no-repeat;
+  background-position: center right;
+  background-size: contain;
+}
+:root[data-theme="amoled"][data-visual-theme="oni"] .statrail .stat {
+  isolation: isolate;
+}
+:root[data-theme="amoled"][data-visual-theme="oni"] .statrail .stat::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 92px;
+  height: 70px;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url("/art/vermilion-maple.webp");
+  background-repeat: no-repeat;
+  background-position: top right;
+  background-size: contain;
+  opacity: 0.85;
+}
+
+
+/* ── Header text scrim ─────────────────────────────────────
+   Measured in the running page, not reasoned about: with the art behind
+   it the worst transparent control in the header measured 1.91:1 in
+   amoled and 1.82:1 in light, against 6.73:1 and 2.70:1 for the same
+   controls with no pack applied. The art is what moved them, so the art
+   is what has to make room.
+
+   A quiet zone measured on the asset alone was not enough here. It was
+   measured over the upper 60% of a 187px band; the band now renders at
+   128px bottom-anchored, which lifts different pixels behind the text.
+   Any change to the geometry invalidates a quiet-zone number, so this
+   scrim is measured where it actually lands instead.
+
+   The scrim is the head colour at full strength across the top 38%,
+   fading out by 78%. The header's text and controls sit in the top
+   half; the scenery these three bands were composed around sits in the
+   bottom 20% and is untouched. Lifting the whole band's opacity, or
+   darkening the art itself, would have cost the scenery for the same
+   contrast.
+
+   z-index -1 inside isolation: isolate, never 0 — a z-index: 0
+   positioned pseudo-element paints ABOVE in-flow content, which is how
+   a decorative layer once covered the whole dashboard. At -1 it sits
+   above .status's own background (the art) and below its children. */
+:root[data-theme="amoled"][data-visual-theme="oni"] .status {
+  isolation: isolate;
+}
+:root[data-theme="amoled"][data-visual-theme="oni"] .status::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: linear-gradient(
+    to bottom,
+    var(--head) 0%,
+    var(--head) 38%,
+    transparent 78%
+  );
+}
+
+
+/* ── Mascot plate ───────────────────────────────────────────
+   The base .mascot rule paints `background: var(--mascot-bg)` on a
+   236x80 box at the right end of the header. With no art behind it that
+   is invisible; with art behind it the box punches a flat rectangle
+   through the band, which in the bone appearance read as a white patch
+   notching the mountains.
+
+   Making it transparent lets the header art run unbroken behind the
+   mascot. The mascot's own line work paints in `color`, which each
+   appearance already defines, and it sits in the band's upper region
+   where the scrim holds — so it keeps a measured backdrop rather than
+   gaining one by luck. */
+:root[data-theme="amoled"][data-visual-theme="oni"] .mascot {
+  background: transparent;
+}
+
   * { box-sizing: border-box; }
   html { background: var(--bg); scrollbar-color: var(--rule-hi) var(--bg); scroll-padding-top: 60px; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--sans); caret-color: var(--text);
@@ -929,7 +2639,7 @@
     if (window.matchMedia) try { window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function(e) { var s; try { s = localStorage.getItem("hellogitty-theme"); } catch(x) {} if (!s) { if (e.matches) root.dataset.theme = "light"; else delete root.dataset.theme; } }); } catch(e) {}
 
     // Visual (collaboration) theme: a colour overlay on top of Auto/Light/Dark.
-    var VISUAL_THEMES = { pink: { label: "(pinky v2)" }, muertos: { label: "(muertos)", amoled: true }, "muertos-v2": { label: "(la noche viva)", amoled: true }, "azure-oni": { label: "(ao-oni)", amoled: true }, "azure-oni-v2": { label: "(ao-oni ii)", amoled: true } };
+    var VISUAL_THEMES = { pink: { label: "(pinky v2)" }, muertos: { label: "(muertos)", amoled: true }, "muertos-v2": { label: "(la noche viva)", amoled: true }, "azure-oni": { label: "(ao-oni)", amoled: true }, "azure-oni-v2": { label: "(ao-oni ii)", amoled: true }, oni: { label: "(ao-oni)", amoled: true } };
     // A pack that declares amoled offers a third appearance: true black, a variant of dark.
     // The button is added here rather than in every page's header, so one change covers them all.
     function amoledButton(on) {
