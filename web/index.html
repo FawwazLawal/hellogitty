@@ -2172,9 +2172,15 @@
         var h2 = p.querySelector(":scope > h2");
         var sort = p.querySelector(":scope > .wsort, :scope > .thead, :scope > .tbar");
         var presize = p.querySelector(":scope > .presize");
+        // The height we set lands on the BORDER box (box-sizing: border-box), so the panel's
+        // own top and bottom borders eat into the space the rows get. Leaving them out put the
+        // boundary two pixels past the clip and let a sliver of the next row show at the edge.
+        var cs = getComputedStyle(p);
+        var border = (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0);
         var chrome = (h2 ? h2.getBoundingClientRect().height : 0) +
                      (sort ? sort.getBoundingClientRect().height : 0) +
-                     (presize ? presize.getBoundingClientRect().height : 0);
+                     (presize ? presize.getBoundingClientRect().height : 0) +
+                     border;
         var avail = wanted - chrome;
         if (avail <= 0) return wanted;
         var acc = 0, lastFit = -1, firstRow = 0;
