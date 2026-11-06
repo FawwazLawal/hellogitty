@@ -1,3 +1,4 @@
+import { useId, useState } from 'react'
 import { MessageCircle, ChevronDown } from 'lucide-react'
 import { Panel, PanelHeader } from './chrome/Chrome'
 import { useTheme } from '../theme/ThemeProvider'
@@ -46,6 +47,19 @@ export function ConversationsPanel({ data }: { data: { quiet: number; total: num
   const { identity } = useTheme()
   const showArt = identity === 'vermilion'
 
+  /*
+    The collapse control is real state rather than an affordance-shaped
+    decoration. It shipped as a <button> carrying aria-label="Collapse
+    Conversations" with no handler: focusable, announced to a screen reader as
+    a collapse control, and inert when activated. A dead control is worse than
+    no control, because nothing distinguishes the two until it has been tried.
+
+    The sibling chevron in TrackedRepos is the acceptable version of the same
+    thing — plain `aria-hidden` decoration, never focusable and never announced.
+  */
+  const [collapsed, setCollapsed] = useState(false)
+  const bodyId = useId()
+
   return (
     <Panel>
       <PanelHeader
@@ -69,7 +83,10 @@ export function ConversationsPanel({ data }: { data: { quiet: number; total: num
         </button>
         <button
           type="button"
-          aria-label="Collapse Conversations"
+          aria-label={collapsed ? 'Expand Conversations' : 'Collapse Conversations'}
+          aria-expanded={!collapsed}
+          aria-controls={bodyId}
+          onClick={() => setCollapsed((c) => !c)}
           className="border p-1 transition-colors"
           style={{
             borderColor: 'var(--hg-line-strong)',
@@ -77,7 +94,14 @@ export function ConversationsPanel({ data }: { data: { quiet: number; total: num
             background: 'var(--hg-surface-raised)',
           }}
         >
-          <ChevronDown size={14} aria-hidden="true" />
+          <ChevronDown
+            size={14}
+            aria-hidden="true"
+            style={{
+              transform: collapsed ? 'rotate(-90deg)' : 'none',
+              transition: 'transform 120ms cubic-bezier(0.2, 0, 0, 1)',
+            }}
+          />
         </button>
       </PanelHeader>
 
@@ -87,7 +111,11 @@ export function ConversationsPanel({ data }: { data: { quiet: number; total: num
         behind the page canvas and vanish. `min-h` reserves a safe zone for the
         scene even when the copy is short.
       */}
-      <div className="relative isolate overflow-hidden min-h-[260px] px-6 py-10">
+      <div
+        id={bodyId}
+        hidden={collapsed}
+        className="relative isolate overflow-hidden min-h-[260px] px-6 py-10"
+      >
         {showArt && (
           <>
             <img
