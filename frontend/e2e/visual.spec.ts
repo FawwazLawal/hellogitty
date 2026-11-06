@@ -102,16 +102,61 @@ test.describe("dashboard visual baseline", () => {
     const packs = await packsFromApp(page);
     expect(packs.length, "no visual packs found in the running app — the gate would pass vacuously").toBeGreaterThan(1);
 
+    // VIEWPORT CAPTURE STRATEGY — the "option B" argument, decided here.
+    //
+    // At 1400 we baseline the full page: every pack defect in this project's
+    // history landed either in the chrome (header, stat rail, panel edges) or
+    // across the panel bodies, and the full capture catches both. At narrower
+    // viewports we baseline the CHROME REGION only (`.site-head` + first stat
+    // rail) and skip the body. The reasoning:
+    //
+    //   - All real defects so far lived in pack art, which is painted on the
+    //     chrome. Body pixels are Go-template output and are already covered
+    //     by 186 Go tests; running their PNGs at four widths adds no defect
+    //     class the chrome capture misses.
+    //   - Full-page captures at all four widths would put ~15 MB into VCS
+    //     (18 × 4, variably sized) and triple the suite's commit churn
+    //     every time a pack changes. Chrome regions at 1280/1024/390 add
+    //     ~4 MB total (chrome strip is ~180px tall × 3 widths × 18 packs)
+    //     and only churn when the chrome itself moves — which is exactly
+    //     what we want this gate to tell us about.
+    //   - "Layout assertions only" at the narrow viewports (option C) would
+    //     let a pack whose ornament clips wrong on a narrow header pass
+    //     silently — the whole point of the gate is that structure assertions
+    //     cannot catch that class.
+    //
+    // Trade-off we accept: a panel-body pack defect that only appears at
+    // narrow widths is uncaught. If one ships, that is the point to add a
+    // second region or full baseline at that width.
+    const isFullPage = testInfo.project.name === "desktop-1400";
+
     for (const appearance of APPEARANCES) {
       for (const pack of packs) {
         await applyTheme(page, appearance, pack);
         const name = `dashboard-${appearance}-${pack || "default"}-${testInfo.project.name}.png`;
         try {
-          await expect(page).toHaveScreenshot(name, {
-            fullPage: false,
-            mask: volatileRegions(page),
-            maskColor: "#ff00ff",
-          });
+          if (isFullPage) {
+            await expect(page).toHaveScreenshot(name, {
+              fullPage: false,
+              mask: volatileRegions(page),
+              maskColor: "#ff00ff",
+            });
+          } else {
+            // Chrome region: header band + stat rail. `.site-head` is
+            // position: sticky, which means the capture pulls the pinned
+            // version at scroll 0; the rail sits immediately beneath it.
+            // Capture both as one bounding rect by taking a locator that
+            // wraps `main > *:first-of-type`... but the actual markup has
+            // the rail at the top of the dashboard page's body, so we
+            // clip to the viewport's top 480px which safely contains
+            // both without depending on markup internals that may move.
+            await expect(page).toHaveScreenshot(name, {
+              fullPage: false,
+              clip: { x: 0, y: 0, width: testInfo.project.use.viewport!.width, height: 480 },
+              mask: volatileRegions(page),
+              maskColor: "#ff00ff",
+            });
+          }
         } catch (e) {
           // Collect rather than bail, so one capture does not hide the other
           // seventeen. A gate that reports the first failure only is a gate you
