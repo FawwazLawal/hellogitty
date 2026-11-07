@@ -6,6 +6,7 @@ import { WorkPage } from './components/WorkPage'
 import { IssuesPage } from './components/IssuesPage'
 import { ReposPage } from './components/ReposPage'
 import { YourReposPage } from './components/YourReposPage'
+import { ConversationsPage } from './components/ConversationsPage'
 import { KpiRail } from './components/KpiRail'
 import { ConversationsPanel } from './components/ConversationsPanel'
 import { TrackedRepos } from './components/TrackedRepos'
@@ -37,7 +38,7 @@ import { DASHBOARD } from './fixtures/dashboard'
  * of what a router would do for us. The moment a third view needs nested
  * routes or params, this becomes an argument for one — until then it is not.
  */
-type View = 'dashboard' | 'settings' | 'pipeline' | 'work' | 'issues' | 'repos' | 'your-repos'
+type View = 'dashboard' | 'settings' | 'pipeline' | 'work' | 'issues' | 'repos' | 'your-repos' | 'conversations'
 
 /**
  * Still not a router.
@@ -47,6 +48,12 @@ type View = 'dashboard' | 'settings' | 'pipeline' | 'work' | 'issues' | 'repos' 
  * document the server renders, with no nested routes and no params. The moment
  * one of those is needed, this becomes the argument for a router rather than
  * an excuse not to have one.
+ *
+ * ORDERING MATTERS where one prefix prefixes another. `viewFor` walks this
+ * list in order and takes the first prefix match, so a longer path that
+ * starts with a shorter one must come first — e.g. `/your-repos` has to sit
+ * before `/repos` or it gets swallowed. Nothing currently in the table does,
+ * but new entries are the moment that silently breaks.
  */
 const ROUTES: { prefix: string; view: View }[] = [
   { prefix: '/settings', view: 'settings' },
@@ -59,6 +66,7 @@ const ROUTES: { prefix: string; view: View }[] = [
   // /repos nor starts with /repos/. Order here is harmless either way.
   { prefix: '/your-repos', view: 'your-repos' },
   { prefix: '/repos', view: 'repos' },
+  { prefix: '/conversations', view: 'conversations' },
 ]
 
 function viewFor(pathname: string): View {
@@ -168,6 +176,7 @@ export default function App() {
       {view === 'issues' && <IssuesPage />}
       {view === 'repos' && <ReposPage />}
       {view === 'your-repos' && <YourReposPage />}
+      {view === 'conversations' && <ConversationsPage />}
 
       {view === 'dashboard' && (
       <main className="min-w-0 overflow-x-hidden px-4 pb-[200px] pt-3">

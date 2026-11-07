@@ -806,6 +806,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveAppIndex(w, r)
 	case r.URL.Path == "/legacy/your-repos":
 		h.serveYourReposPage(w, r)
+	case r.URL.Path == "/conversations" && h.ReactIsDefault && h.App != nil:
+		// Converted. The templated conversations page stays compiled in and
+		// reachable at /legacy/conversations — same reasoning as the pages
+		// above: deep links survive the flag being flipped, and the two pages
+		// can be compared one tab each while the React version is bedded in.
+		h.serveAppIndex(w, r)
+	case r.URL.Path == "/legacy/conversations":
+		h.serveConversationsPage(w, r)
 	case r.URL.Path == "/" && h.ReactIsDefault && h.App != nil:
 		// The React shell, served at the front door. Its assets still live
 		// under /app/ — the bundle is built with that base — so this needs no

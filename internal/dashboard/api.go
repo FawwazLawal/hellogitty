@@ -673,6 +673,17 @@ type WorkRow struct {
 	Ago      string   `json:"ago"`
 	AgoTitle string   `json:"agoTitle"`
 	Labels   []string `json:"labels"`
+	// SinceUnix is the row's last-updated instant in epoch seconds. A number,
+	// not a formatted string, so the client can sort by time without parsing
+	// Ago — which prints "a day" and "yesterday" and would compare lexically.
+	// Zero means the server did not have the timestamp, which is not the same
+	// as 1970: the client must sort those last rather than first.
+	SinceUnix int64 `json:"sinceUnix"`
+	// Attn is the attention cue: "new" (unread activity), "caution" (your
+	// move) or empty. Carries the server's reason the row should stand out;
+	// the client renders boldness and colour from it rather than inferring
+	// either. Omitted when empty so the schema change is backward-compatible.
+	Attn string `json:"attn,omitempty"`
 }
 
 // WorkPageAPI backs the "Your work" page.
@@ -696,6 +707,19 @@ type WorkPageAPI struct {
 	Them      []WorkRow `json:"them"`
 	Done      []WorkRow `json:"done"`
 	Dismissed []WorkRow `json:"dismissed"`
+
+	// Conversations: threads the owner joined without opening. Kept apart from
+	// You/Them because they aren't the owner's to finish — they close and leave
+	// the board — and because /conversations is their own page. ADR-UI-002 §4:
+	// "add fields to the existing projection if needed; do not create a second
+	// endpoint computing the same thing."
+	//
+	// ConvYou asks something of the owner, ConvThem is quiet. ConvNew counts
+	// rows with unread activity across both, so the "Unread" overview card does
+	// not have to peek inside each row to find them.
+	ConvYou  []WorkRow `json:"convYou"`
+	ConvThem []WorkRow `json:"convThem"`
+	ConvNew  int       `json:"convNew"`
 }
 
 func toWorkRows(rows []workRow) []WorkRow {
@@ -710,6 +734,7 @@ func toWorkRows(rows []workRow) []WorkRow {
 			Title: w.Title, URL: w.URL, Why: w.Why, Status: w.Status,
 			Level: w.Level, Personal: w.Personal,
 			Ago: w.Ago, AgoTitle: w.AgoTitle, Labels: labels,
+			SinceUnix: w.SinceUnix, Attn: w.Attn,
 		})
 	}
 	return out
@@ -737,6 +762,9 @@ func (h *Handler) serveWorkAPI(w http.ResponseWriter, r *http.Request) {
 		Them:      toWorkRows(p.Work.Them),
 		Done:      toWorkRows(p.Work.Done),
 		Dismissed: toWorkRows(p.DismissedWork),
+		ConvYou:   toWorkRows(p.Work.ConvYou),
+		ConvThem:  toWorkRows(p.Work.ConvThem),
+		ConvNew:   p.ConvNew,
 	}
 
 	w.Header().Set("Cache-Control", "no-store")
