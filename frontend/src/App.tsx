@@ -5,8 +5,8 @@ import { ConversationsPanel } from './components/ConversationsPanel'
 import { TrackedRepos } from './components/TrackedRepos'
 import { PipelinePanel } from './components/PipelinePanel'
 import { YourWorkPanel } from './components/YourWorkPanel'
-import { useTheme } from './theme/ThemeProvider'
 import { useDashboard } from './data/dashboard'
+import { useArt } from './art'
 import { DASHBOARD } from './fixtures/dashboard'
 
 /**
@@ -24,7 +24,9 @@ import { DASHBOARD } from './fixtures/dashboard'
  * because the pipeline grid stops being readable below about 300px.
  */
 export default function App() {
-  const { identity } = useTheme()
+  // No `identity` read here any more: the registry resolves per identity, so
+  // this component no longer needs to know which one it is in.
+  const footerArt = useArt('footer')
 
   /*
     PHASE 3, the first vertical slice on real Go data.
@@ -56,10 +58,7 @@ export default function App() {
         aria-hidden="true"
         className="hg-decor pointer-events-none fixed inset-x-0 bottom-0 -z-10 h-[180px] bg-bottom bg-no-repeat"
         style={{
-          backgroundImage:
-            identity === 'vermilion'
-              ? 'url(/art/vermilion-footer.webp)'
-              : `url(/art/footer-${identity}.webp)`,
+          backgroundImage: footerArt.kind === 'present' ? `url(${footerArt.url})` : undefined,
           backgroundSize: '100% 100%',
         }}
       />

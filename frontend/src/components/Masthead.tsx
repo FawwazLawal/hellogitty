@@ -3,6 +3,7 @@ import { ClockOrnament, OniMark } from './chrome/Ornament'
 import { useTheme } from '../theme/ThemeProvider'
 import type { Appearance } from '../theme/ThemeProvider'
 import type { DashboardData } from '../fixtures/dashboard'
+import { useArt } from '../art'
 
 /**
  * The application masthead: brand, scenic band, clock, controls.
@@ -38,7 +39,7 @@ const APPEARANCES: { value: Appearance; label: string }[] = [
 
 export function Masthead({ data }: { data: DashboardData }) {
   const { identity, identities, order, setIdentity, appearance, setAppearance } = useTheme()
-  const art = identities[identity].id
+  const headerArt = useArt('header')
 
   const time = new Date(data.generatedAt)
   const hh = String(time.getUTCHours() % 12 || 12).padStart(2, '0')
@@ -64,7 +65,13 @@ export function Masthead({ data }: { data: DashboardData }) {
       <div
         aria-hidden="true"
         className="hg-decor absolute inset-0 -z-20 bg-bottom bg-no-repeat"
-        style={{ backgroundImage: `url(/art/header-${art}.webp)`, backgroundSize: '100% auto' }}
+        style={{
+          // Registry-resolved. The identity-interpolated URL this replaces
+          // could name a file that does not exist, which 404s and paints
+          // nothing — indistinguishable from a pack with no art.
+          backgroundImage: headerArt.kind === 'present' ? `url(${headerArt.url})` : undefined,
+          backgroundSize: '100% auto',
+        }}
       />
       {/* Scrim: full strength across the top 38%, gone by 78%. Measured, not guessed. */}
       <div

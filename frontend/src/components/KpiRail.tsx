@@ -4,6 +4,7 @@ import type { KpiTile } from '../fixtures/dashboard'
 import { CHAMFER, AccentRail, Rivet } from './chrome/Chrome'
 import { ArmourPlate, CornerBracket, seigaihaDataUri } from './chrome/Ornament'
 import { useTheme } from '../theme/ThemeProvider'
+import { resolveArt, type ArtSlot } from '../art'
 
 /**
  * The four-tile KPI rail that sits under the masthead.
@@ -67,12 +68,24 @@ import { useTheme } from '../theme/ThemeProvider'
  * Art slots per identity, per tile id. Null and "not listed" are the same
  * thing: no art for this cell, degrade to a clean tile.
  */
-const TILE_ART: Record<string, Partial<Record<KpiTile['id'], string>>> = {
-  vermilion: {
-    prs: '/art/vermilion-maple.webp',
-    repos: '/art/vermilion-oni.webp',
-  },
-  // azure and bone intentionally omitted — the pack has no art cut yet.
+/**
+ * Which registry SLOT each tile draws from.
+ *
+ * The file paths this replaces hard-coded both the asset vocabulary and
+ * today's inventory: azure and bone were "intentionally omitted" in a comment,
+ * which meant adding art for them later required finding and editing this
+ * table rather than just registering a file.
+ *
+ * The mapping that remains is the honest one — which ROLE suits which tile —
+ * and it belongs here rather than in the registry. The registry's job is to
+ * say what art exists by role; deciding that the repos tile wears the mascot
+ * is a layout decision this component owns. Splitting ArtSlot into per-tile
+ * slots would couple the asset vocabulary to one component's tile order, and
+ * reordering the rail would then break the vocabulary.
+ */
+const TILE_SLOT: Partial<Record<KpiTile['id'], ArtSlot>> = {
+  prs: 'ornament',
+  repos: 'mascot',
 }
 
 /** The rivet strap: four rivets set in from the chamfered corners. */
@@ -145,7 +158,18 @@ export function KpiRail({
     if (v) setWaveColor(v)
   }, [identity])
 
-  const artMap = TILE_ART[identity] ?? {}
+  /*
+    Resolved per tile through the registry. An identity with no asset for a
+    slot yields a typed `absent`, which this renders as a clean tile — a
+    deliberate outcome rather than a 404 that paints nothing and looks like a
+    pack nobody finished.
+  */
+  const artFor = (id: KpiTile['id']): string | undefined => {
+    const slot = TILE_SLOT[id]
+    if (!slot) return undefined
+    const r = resolveArt(identity, slot)
+    return r.kind === 'present' ? r.url : undefined
+  }
 
   return (
     /*
@@ -158,7 +182,7 @@ export function KpiRail({
     */
     <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
       {tiles.map((tile) => {
-        const artSrc = artMap[tile.id]
+        const artSrc = artFor(tile.id)
         const numeralColor = toneVar(tile.tone)
         /*
           NO aria-label. It had one — `${label}: ${value}` — and axe caught it

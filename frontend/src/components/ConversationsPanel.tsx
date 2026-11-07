@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import { MessageCircle, ChevronDown } from 'lucide-react'
 import { Panel, PanelHeader } from './chrome/Chrome'
-import { useTheme } from '../theme/ThemeProvider'
+import { useArt } from '../art'
 
 /**
  * Conversations panel and its illustrated empty state.
@@ -44,8 +44,14 @@ import { useTheme } from '../theme/ThemeProvider'
  */
 
 export function ConversationsPanel({ data }: { data: { quiet: number; total: number } }) {
-  const { identity } = useTheme()
-  const showArt = identity === 'vermilion'
+  /*
+    The registry decides, not an identity check. `identity === 'vermilion'` was
+    true only because vermilion is the one identity with an empty-state asset
+    today — it encoded today's inventory as a rule, and adding bone art later
+    would have meant finding and changing this line.
+  */
+  const emptyArt = useArt('empty')
+  const showArt = emptyArt.kind === 'present'
 
   /*
     The collapse control is real state rather than an affordance-shaped
@@ -119,7 +125,7 @@ export function ConversationsPanel({ data }: { data: { quiet: number; total: num
         {showArt && (
           <>
             <img
-              src="/art/vermilion-empty.webp"
+              src={emptyArt.kind === 'present' ? emptyArt.url : undefined}
               alt=""
               aria-hidden="true"
               className="hg-decor pointer-events-none absolute inset-0 -z-20 hidden h-full w-full object-cover object-right [@container(min-width:600px)]:block min-[600px]:block"
