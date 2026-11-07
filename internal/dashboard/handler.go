@@ -860,6 +860,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveAppIndex(w, r)
 	case r.URL.Path == "/issues":
 		h.serveIssues(w, r)
+	case r.URL.Path == "/repos" && h.ReactIsDefault && h.App != nil && !wantsJSON(r):
+		// Converted. /legacy/repos keeps the templated page.
+		//
+		// GET only: /repos is also the path the write endpoints hang off
+		// (/repos/add, /repos/remove), which are matched separately and are not
+		// affected — this case is the exact path, not a prefix.
+		h.serveAppIndex(w, r)
+	case r.URL.Path == "/legacy/repos":
+		h.serveReposPage(w, r)
 	case r.URL.Path == "/repos":
 		h.serveReposPage(w, r)
 	case r.URL.Path == "/pipeline":
