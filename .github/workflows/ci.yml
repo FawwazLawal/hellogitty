@@ -41,3 +41,69 @@ jobs:
 
       - name: Test
         run: go test ./...
+
+  # THE FRONTEND HAD NO CI AT ALL.
+  #
+  # Every check on this repository was Go-only: build, vet, test. The React
+  # app — its types, its unit tests, and the bundle the Go binary embeds —
+  # was verified on contributors' machines and nowhere else.
+  #
+  # That let a specific thing through. Pages are converted on branches that
+  # commit source without rebuilding `web/app`, because two branches that each
+  # commit a bundle conflict on every single merge. The bundle is then rebuilt
+  # once at integration. Nothing enforced the "once at integration" half, so
+  # `dev` could carry a React page whose code was not in the bundle its own
+  # binary serves — the page simply would not exist at runtime, while every
+  # check stayed green and the diff looked complete.
+  #
+  # The last step is the one that catches it: build the bundle and require the
+  # result to match what is committed. A rebuild that changes a byte fails.
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      # --frozen-lockfile so the bundle is built from the resolution that is
+      # committed. Without it a float in a transitive dependency changes the
+      # output and the comparison below fails for a reason nobody introduced.
+      - name: Install
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        working-directory: frontend
+        run: pnpm exec tsc --noEmit
+
+      - name: Unit tests
+        working-directory: frontend
+        run: pnpm exec vitest run
+
+      - name: Build
+        working-directory: frontend
+        run: pnpm run build
+
+      - name: The committed bundle must match the source
+        run: |
+          if ! git diff --quiet -- web/app; then
+            echo "::error::web/app does not match a fresh build of frontend/src."
+            echo
+            echo "The Go binary embeds web/app, so whatever is committed there is what"
+            echo "the product actually serves. A source change without a rebuild means"
+            echo "the code you added is not in the running app, and nothing else notices."
+            echo
+            echo "Fix: cd frontend && pnpm run build, then commit web/app."
+            echo
+            git diff --stat -- web/app
+            exit 1
+          fi
+          echo "web/app matches frontend/src."
