@@ -82,6 +82,78 @@ type Repo struct {
 	Error string `json:"error,omitempty"`
 }
 
+// StageCount is one column of the pipeline rail.
+type StageCount struct {
+	Abbr  string `json:"abbr"`
+	Name  string `json:"name"`
+	Count int    `json:"count"`
+}
+
+// Pipeline is the pipeline rail.
+//
+// `Rate` arrives as the server's own formatted string rather than a number.
+// It is computed as merged / (merged + closed), deliberately excluding open
+// pull requests, and the panel prints a note saying so. Sending the ratio for
+// the client to format would put that definition in two places, and the
+// definition is the part that is easy to get subtly wrong.
+type Pipeline struct {
+	Counts []StageCount `json:"counts"`
+	Opened int          `json:"opened"`
+	Open   int          `json:"open"`
+	Merged int          `json:"merged"`
+	Closed int          `json:"closed"`
+	Rate   string       `json:"rate"`
+	// Known separates "no pull requests moved" from "the pipeline has not run".
+	Known bool   `json:"known"`
+	Error string `json:"error,omitempty"`
+}
+
+// WorkItem is one row of the "your work" rail.
+type WorkItem struct {
+	Key    string `json:"key"`
+	Kind   string `json:"kind"`
+	Repo   string `json:"repo"`
+	Number int    `json:"number"`
+	Title  string `json:"title"`
+	URL    string `json:"url"`
+	// Why it is on the board at all: "You opened it", "Assigned to you".
+	Why string `json:"why"`
+	// Ago is the server's phrasing ("3 days"), with the exact instant beside
+	// it so the client can show one and title the other without reformatting.
+	Ago      string `json:"ago"`
+	AgoTitle string `json:"agoTitle"`
+	// Level is the server's severity word: "caution", "ok" or empty.
+	Level string `json:"level"`
+	// YourMove is whether this is waiting on the owner rather than on someone
+	// else. The rail's whole purpose is that distinction.
+	YourMove bool   `json:"yourMove"`
+	Status   string `json:"status"`
+}
+
+// Work is the "your work" rail.
+type Work struct {
+	// Known is false before the first work refresh; Partial is true when the
+	// refresh failed halfway and the list is new but incomplete. The two are
+	// different and the panel should say so differently — "not fetched yet" is
+	// not "here is some of it".
+	Known   bool       `json:"known"`
+	Partial bool       `json:"partial"`
+	Login   string     `json:"login"`
+	NeedYou int        `json:"needYou"`
+	Total   int        `json:"total"`
+	Items   []WorkItem `json:"items"`
+	Error   string     `json:"error,omitempty"`
+}
+
+// Conversations counts threads joined but not opened by the owner.
+type Conversations struct {
+	Known bool `json:"known"`
+	// Quiet is waiting on someone else; NeedYou is waiting on the owner.
+	Quiet   int `json:"quiet"`
+	NeedYou int `json:"needYou"`
+	Total   int `json:"total"`
+}
+
 // DashboardAPI is the document served at /app/api/dashboard.json.
 type DashboardAPI struct {
 	// GeneratedAt is when the snapshot this is derived from was written, in
@@ -98,6 +170,9 @@ type DashboardAPI struct {
 		NewCount  int `json:"newCount"`
 		RepoCount int `json:"repoCount"`
 	} `json:"repoTotals"`
+	Pipeline      Pipeline      `json:"pipeline"`
+	Work          Work          `json:"work"`
+	Conversations Conversations `json:"conversations"`
 
 	// Partial says that this document covers the KPI slice only, and that the
 	// repository table, pipeline and work rails are still rendered from
@@ -185,6 +260,54 @@ func (h *Handler) serveDashboardAPI(w http.ResponseWriter, r *http.Request) {
 		doc.RepoTotals.NewCount += r.NewCount
 	}
 	doc.RepoTotals.RepoCount = len(p.Rows)
+
+	// Pipeline.
+	doc.Pipeline = Pipeline{
+		Counts: []StageCount{},
+		Opened: p.Pipeline.Opened,
+		Open:   p.Pipeline.Open,
+		Merged: p.Pipeline.Merged,
+		Closed: p.Pipeline.Closed,
+		Rate:   p.Pipeline.Rate,
+		Known:  p.Pipeline.Known,
+		Error:  p.Pipeline.Err,
+	}
+	for _, c := range p.Pipeline.Counts {
+		doc.Pipeline.Counts = append(doc.Pipeline.Counts, StageCount{Abbr: c.Abbr, Name: c.Name, Count: c.Count})
+	}
+
+	// Your work. `You` is what waits on the owner; that is the rail's point, so
+	// it leads and carries YourMove true.
+	doc.Work = Work{
+		Known:   p.Work.Known,
+		Partial: p.Work.Partial,
+		Login:   p.Work.Login,
+		NeedYou: len(p.Work.You),
+		Total:   len(p.Work.You) + len(p.Work.Them),
+		Items:   []WorkItem{},
+		Error:   p.Work.Err,
+	}
+	appendWork := func(rows []workRow, yourMove bool) {
+		for _, w := range rows {
+			doc.Work.Items = append(doc.Work.Items, WorkItem{
+				Key: w.Key, Kind: w.Kind, Repo: w.Repo, Number: w.Number,
+				Title: w.Title, URL: w.URL, Why: w.Why,
+				Ago: w.Ago, AgoTitle: w.AgoTitle, Level: w.Level,
+				YourMove: yourMove, Status: w.Status,
+			})
+		}
+	}
+	appendWork(p.Work.You, true)
+	appendWork(p.Work.Them, false)
+
+	// Conversations: joined, not opened. ConvYou asks something of the owner,
+	// ConvThem is quiet.
+	doc.Conversations = Conversations{
+		Known:   p.Work.Known,
+		Quiet:   len(p.Work.ConvThem),
+		NeedYou: len(p.Work.ConvYou),
+		Total:   len(p.Work.ConvYou) + len(p.Work.ConvThem),
+	}
 
 	// No caching. These figures move on every poll, and a cached document is a
 	// dashboard that quietly stops updating — the failure mode hardest to
