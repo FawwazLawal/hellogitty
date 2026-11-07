@@ -80,6 +80,18 @@ const ReposPage = lazy(() =>
   import('./components/ReposPage').then((m) => ({ default: m.ReposPage })),
 )
 
+/*
+  ListPage is lazy for the same reason as ReposPage: it is not an entry
+  point. Readers arrive at /list from a pipeline number or a /your-repos
+  overview tile, and the fetch happens while they are already reading. The
+  page itself is small, but keeping it out of the entry chunk leaves the
+  150 KB budget with the headroom it needs for the pages that are entry
+  points.
+*/
+const ListPage = lazy(() =>
+  import('./components/ListPage').then((m) => ({ default: m.ListPage })),
+)
+
 /**
  * Which view this URL is.
  *
@@ -100,6 +112,7 @@ type View =
   | 'help'
   | 'alerts'
   | 'feed'
+  | 'list'
 
 /**
  * Still not a router.
@@ -134,6 +147,7 @@ const ROUTES: { prefix: string; view: View }[] = [
   // destination is a document the server also serves.
   { prefix: '/alerts', view: 'alerts' },
   { prefix: '/feed', view: 'feed' },
+  { prefix: '/list', view: 'list' },
 ]
 
 function viewFor(pathname: string): View {
@@ -255,6 +269,11 @@ export default function App() {
         </Suspense>
       )}
       {view === 'feed' && <FeedPage />}
+      {view === 'list' && (
+        <Suspense fallback={<main data-loading="true" className="px-4 py-10 text-[12px]" style={{ color: 'var(--hg-text-muted)' }}>Loading…</main>}>
+          <ListPage />
+        </Suspense>
+      )}
 
       {view === 'dashboard' && (
       <main className="min-w-0 overflow-x-hidden px-4 pb-[200px] pt-3">
