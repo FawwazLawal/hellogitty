@@ -250,15 +250,18 @@ func run() int {
 		return 1
 	}
 	versionLabel, versionBaby := dashboardVersion()
-	artFS, err := iofs.Sub(web.Art, "art")
-	if err != nil {
-		log.Printf("art assets: %v", err)
-		artFS = nil // a pack without scenery still renders; this is not fatal
-	}
-	// The built React app, served under /app/. Non-fatal for the same reason the
-	// art is: a binary whose frontend was never built should still serve the
-	// dashboard it has, rather than refusing to start over a page nobody asked
-	// for yet.
+	// The built React app, served under /app/, AND the scenic art under
+	// /art/ — both come from this one embed, because Vite copies
+	// `frontend/public/art/` into its bundle on build. The old parallel
+	// `//go:embed art` pointed at a hand-maintained mirror of the same
+	// files; closing that mirror leaves one source of truth and one
+	// freshness gate (CI's `git diff --quiet -- web/app`) for both.
+	//
+	// Non-fatal: a binary whose frontend was never built should still
+	// serve the templated dashboard it has, rather than refusing to
+	// start over a page nobody asked for yet. The /art/ route in
+	// dashboard.Handler is already guarded by `h.App != nil` for
+	// exactly this case.
 	appFS, err := iofs.Sub(web.App, "app")
 	if err != nil {
 		log.Printf("app bundle: %v", err)
@@ -283,7 +286,6 @@ func run() int {
 			Baby:                           versionBaby,
 			Favicon:                        web.Favicon,
 			Mascot:                         mascotFS,
-			Art:                            artFS,
 			HelpTemplate:                   web.Help,
 			FeedTemplate:                   web.Feed,
 			ListTemplate:                   web.List,
