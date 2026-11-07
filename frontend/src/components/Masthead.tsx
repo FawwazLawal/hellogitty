@@ -4,6 +4,7 @@ import { useTheme } from '../theme/ThemeProvider'
 import type { Appearance } from '../theme/ThemeProvider'
 import type { DashboardData } from '../fixtures/dashboard'
 import { useArt } from '../art'
+import { formatClock, formatInTz, useClockPreferences, useLiveClock, useWorldClocks } from '../data/clock'
 
 /**
  * The application masthead: brand, scenic band, clock, controls.
@@ -40,15 +41,6 @@ const APPEARANCES: { value: Appearance; label: string }[] = [
 export function Masthead({ data }: { data: DashboardData }) {
   const { identity, identities, order, setIdentity, appearance, setAppearance } = useTheme()
   const headerArt = useArt('header')
-
-  const time = new Date(data.generatedAt)
-  const hh = String(time.getUTCHours() % 12 || 12).padStart(2, '0')
-  const mm = String(time.getUTCMinutes()).padStart(2, '0')
-  const ss = String(time.getUTCSeconds()).padStart(2, '0')
-  const meridiem = time.getUTCHours() >= 12 ? 'PM' : 'AM'
-  const datestamp = time
-    .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
-    .toUpperCase()
 
   return (
     /*
@@ -96,22 +88,13 @@ export function Masthead({ data }: { data: DashboardData }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-1 pt-1 md:mx-auto">
-          <ClockOrnament side="left" />
-          <div className="text-center">
-            <time
-              className="block font-mono text-[27px] font-bold leading-none tabular-nums tracking-tight"
-              style={{ color: 'var(--hg-accent)' }}
-              dateTime={data.generatedAt}
-            >
-              {hh}:{mm}:{ss}{' '}
-              <span className="text-[16px]">{meridiem}</span>
-            </time>
-            <span className="mt-1 block text-[10px] tracking-widest" style={{ color: 'var(--hg-text-muted)' }}>
-              {datestamp}
-            </span>
+        <div className="flex flex-col items-center gap-1 pt-1 md:mx-auto">
+          <div className="flex items-center gap-1">
+            <ClockOrnament side="left" />
+            <LiveClock />
+            <ClockOrnament side="right" />
           </div>
-          <ClockOrnament side="right" />
+          <WorldClocks />
         </div>
 
         <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -192,5 +175,79 @@ export function Masthead({ data }: { data: DashboardData }) {
         </div>
       </div>
     </header>
+  )
+}
+
+/**
+ * The live clock, isolated from the Masthead so each tick re-renders only
+ * its own subtree instead of the whole band.
+ *
+ * It owns the preferences (format, seconds, date) and ticks at the rate the
+ * seconds preference asks for — a visitor who turned seconds off doesn't want
+ * React to pass through reconciliation once per second to draw the same
+ * minute digit.
+ *
+ * The <time> dateTime attribute is the full ISO instant; what's rendered is
+ * what the viewer asked for. That split keeps the machine-readable value
+ * honest regardless of the display format.
+ */
+function LiveClock() {
+  const { prefs } = useClockPreferences()
+  const now = useLiveClock({ seconds: prefs.seconds })
+  const { time, meridiem, date, iso } = formatClock(now, prefs)
+  return (
+    <div className="text-center">
+      <time
+        className="block font-mono text-[27px] font-bold leading-none tabular-nums tracking-tight"
+        style={{ color: 'var(--hg-accent)' }}
+        dateTime={iso}
+      >
+        {time}
+        {meridiem && <> <span className="text-[16px]">{meridiem}</span></>}
+      </time>
+      {date && (
+        <span
+          className="mt-1 block text-[10px] uppercase tracking-widest"
+          style={{ color: 'var(--hg-text-muted)' }}
+        >
+          {date}
+        </span>
+      )}
+    </div>
+  )
+}
+
+/**
+ * The world-clocks chip row.
+ *
+ * Renders nothing when the viewer has none configured — the templated page
+ * does the same, and an empty row would push the main clock up for no reason.
+ * The chips update at the same 15-second cadence as a quiet main clock, which
+ * is more than enough for timezone-offset precision (every chip's minute is
+ * already an offset-away from local minutes; sub-minute updates have no
+ * meaning).
+ */
+function WorldClocks() {
+  const { clocks } = useWorldClocks()
+  const now = useLiveClock({ seconds: false })
+  if (clocks.length === 0) return null
+  return (
+    <ul
+      aria-label="World clocks"
+      className="flex max-w-[640px] flex-wrap items-center justify-center gap-x-3 gap-y-1 px-2"
+    >
+      {clocks.map((c) => (
+        <li
+          key={c.tz}
+          className="flex items-baseline gap-1 text-[10px]"
+          style={{ color: 'var(--hg-text-muted)' }}
+        >
+          <span className="font-mono tabular-nums" style={{ color: 'var(--hg-text)' }}>
+            {formatInTz(now, c.tz)}
+          </span>
+          <span className="tracking-widest">{c.label}</span>
+        </li>
+      ))}
+    </ul>
   )
 }
