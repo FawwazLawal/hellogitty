@@ -195,12 +195,6 @@ type DashboardAPI struct {
 	Pipeline      Pipeline      `json:"pipeline"`
 	Work          Work          `json:"work"`
 	Conversations Conversations `json:"conversations"`
-
-	// Partial says that this document covers the KPI slice only, and that the
-	// repository table, pipeline and work rails are still rendered from
-	// fixtures on the client. It exists so the frontend cannot quietly assume
-	// it has everything — Phase 4 sets it false as each section lands.
-	Partial bool `json:"partial"`
 }
 
 // serveDashboardAPI writes the KPI slice as JSON.
@@ -236,7 +230,6 @@ func (h *Handler) serveDashboardAPI(w http.ResponseWriter, r *http.Request) {
 	doc := DashboardAPI{
 		GeneratedAt: generated,
 		Version:     p.Version,
-		Partial:     true,
 		KPIs: []KPI{
 			{ID: "needs", Value: p.RailNeedsYou, Label: "Needs you", Known: p.RailKnown},
 			{ID: "prs", Value: p.RailOpenPRs, Label: "Open PRs", Sublabel: "non-draft, state OPEN", Known: p.RailKnown},

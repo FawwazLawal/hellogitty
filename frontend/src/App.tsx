@@ -68,13 +68,23 @@ export default function App() {
   const footerArt = useArt('footer')
 
   /*
-    PHASE 3, the first vertical slice on real Go data.
+    EVERY SECTION OF THIS PAGE IS LIVE.
 
-    Only the KPI rail is live. Everything below still renders from the frozen
-    fixture, and the server says which is which in `partial` rather than
-    leaving the client to infer it. That is the "safe legacy path" §7 asks for,
-    held inside one build: if the endpoint is unreachable the rail degrades and
-    the rest of the dashboard is untouched.
+    This began as Phase 3's single vertical slice — the KPI rail on real Go
+    data, everything below it still drawn from the frozen fixture, with the
+    document carrying a `partial` flag so the client could not quietly assume
+    it had everything. Phases 3 and 4 landed the rest: repositories, pipeline,
+    work and conversations all read from the same document now.
+
+    The flag outlived the staging it described. It stayed hardcoded `true`
+    long after the last section went live, so a document that carried
+    everything kept announcing that it did not — the same shape of error as
+    rendering unknown as zero, pointing the other way. It is gone rather than
+    pinned to `false`, because a flag that can only hold one value is a signal
+    nobody can trust and someone will eventually branch on.
+
+    The fixture remains, but only as the fallback for NO ANSWER — see
+    `answered` below, which is the distinction that replaced it.
   */
   const dashboard = useDashboard()
 

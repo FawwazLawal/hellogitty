@@ -8,8 +8,10 @@ import { useQuery } from '@tanstack/react-query'
  * slice to real, typed Go data with correct loading/empty/error states ...
  * Maintain a safe legacy path, feature flag or branch rollback until proven."
  *
- * The slice is the KPI rail. Everything else still renders from the fixture,
- * and the server says so in `partial` rather than leaving the client to guess.
+ * That slice was the KPI rail; the rest followed in Phase 4, and every section
+ * of this document is now live. The `partial` flag that marked the staging has
+ * been removed — it stayed hardcoded `true` after the last section landed, so
+ * it told the client the document was incomplete when it was not.
  *
  * VALIDATED AT THE BOUNDARY, not trusted. The endpoint is ours and runs in the
  * same binary, which is exactly the situation where it is tempting to cast the
@@ -157,8 +159,6 @@ export const DashboardApiDoc = z.object({
   pipeline: PipelineFromApi,
   work: WorkFromApi,
   conversations: ConversationsFromApi,
-  /** True while sections beyond the KPI rail still come from fixtures. */
-  partial: z.boolean(),
 })
 export type DashboardApiDoc = z.infer<typeof DashboardApiDoc>
 
