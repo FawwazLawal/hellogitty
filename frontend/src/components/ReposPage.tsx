@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Calendar, AlertTriangle, ExternalLink } from 'lucide-react'
+import { LayoutGroup, motion, useReducedMotion } from 'motion/react'
 import { Panel, PanelHeader } from './chrome/Chrome'
 import { useDashboard, type RepoFromApi } from '../data/dashboard'
 
@@ -63,7 +64,7 @@ function Tag({ children, tone }: { children: React.ReactNode; tone?: 'ok' | 'war
   )
 }
 
-function RepoCard({ repo }: { repo: RepoFromApi }) {
+function RepoCard({ repo, animate }: { repo: RepoFromApi; animate: boolean }) {
   const health = (repo.health || 'UNKNOWN') as Health
   const stats: { n: number; label: string; href: string }[] = [
     { n: repo.open, label: 'Open', href: `${repo.url}/issues` },
@@ -75,8 +76,40 @@ function RepoCard({ repo }: { repo: RepoFromApi }) {
     { n: repo.unassigned, label: 'Unassigned', href: `${repo.url}/issues?q=is%3Aopen+no%3Aassignee` },
   ]
 
+  /*
+    The `layout` prop is the whole reason motion is here: when the user picks
+    a different sort, the browser cannot animate the resulting DOM reorder,
+    because the layout change happens discretely. motion measures each card's
+    position before and after the change and tweens between them (FLIP). With
+    `prefers-reduced-motion: reduce`, we render a plain <li> and skip the
+    layout machinery entirely — not a shorter duration, which is still motion.
+  */
+  if (!animate) {
+    return (
+      <li className="border" style={{ borderColor: 'var(--hg-line)', background: 'var(--hg-surface)' }}>
+        {renderCardBody(repo, health, stats)}
+      </li>
+    )
+  }
   return (
-    <li className="border" style={{ borderColor: 'var(--hg-line)', background: 'var(--hg-surface)' }}>
+    <motion.li
+      layout="position"
+      transition={{ duration: 0.14, ease: [0.2, 0, 0, 1] }}
+      className="border"
+      style={{ borderColor: 'var(--hg-line)', background: 'var(--hg-surface)' }}
+    >
+      {renderCardBody(repo, health, stats)}
+    </motion.li>
+  )
+}
+
+function renderCardBody(
+  repo: RepoFromApi,
+  health: Health,
+  stats: { n: number; label: string; href: string }[],
+) {
+  return (
+    <>
       <div
         className="flex items-center gap-2.5 border-b border-l-[3px] px-3.5 py-2.5"
         style={{
@@ -157,7 +190,7 @@ function RepoCard({ repo }: { repo: RepoFromApi }) {
           {repo.error}
         </p>
       )}
-    </li>
+    </>
   )
 }
 
@@ -166,6 +199,11 @@ export function ReposPage() {
   const [search, setSearch] = useState('')
   const [health, setHealth] = useState<'' | Health>('')
   const [sort, setSort] = useState<Sort>('name')
+  // ADR-UI-002 §8: motion respects `prefers-reduced-motion` as a P0. `null`
+  // (the initial SSR-safe value before the media query reads) is treated as
+  // "unknown but assume allowed"; the first paint is static either way.
+  const reduce = useReducedMotion()
+  const animate = reduce !== true
 
   const all = q.data?.repos ?? []
 
@@ -310,11 +348,20 @@ export function ReposPage() {
           </p>
         )}
 
-        <ul className="grid gap-3 p-4 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
-          {shown.map((r) => (
-            <RepoCard key={`${r.owner}/${r.name}`} repo={r} />
-          ))}
-        </ul>
+        {/*
+          `LayoutGroup` coordinates the FLIP animation across sibling cards on
+          a sort change — when the user picks a different sort each card
+          measures its old and new position and tweens between them. The
+          `useReducedMotion` hook returns the OS setting; when true, every
+          card falls through to its plain <li> branch and no measurement runs.
+        */}
+        <LayoutGroup>
+          <ul className="grid gap-3 p-4 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
+            {shown.map((r) => (
+              <RepoCard key={`${r.owner}/${r.name}`} repo={r} animate={animate} />
+            ))}
+          </ul>
+        </LayoutGroup>
       </Panel>
     </main>
   )
