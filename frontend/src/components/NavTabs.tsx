@@ -43,7 +43,7 @@ const TABS: Tab[] = [
   { id: 'dashboard', label: 'Dashboard', href: '/', Icon: Home, react: true },
   { id: 'work', label: 'Your work', href: '/work', Icon: Briefcase, react: true },
   { id: 'pipeline', label: 'PR Pipeline', href: '/pipeline', Icon: GitPullRequest, react: true },
-  { id: 'issues', label: 'Issues', href: '/issues', Icon: CircleDot, react: false },
+  { id: 'issues', label: 'Issues', href: '/issues', Icon: CircleDot, react: true },
   { id: 'tracked', label: 'Tracked repos', href: '/repos', Icon: Calendar, react: false },
   { id: 'conversations', label: 'Conversations', href: '/conversations', Icon: MessageSquare, react: false },
   { id: 'repos', label: 'Your repositories', href: '/your-repos', Icon: Boxes, react: false },
