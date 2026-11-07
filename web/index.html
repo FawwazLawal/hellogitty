@@ -4646,8 +4646,27 @@
         var label = typeof c === "string" ? c : (c.label || c.tz);
         var span = document.createElement("span");
         span.className = "wclock";
-        span.innerHTML = '<span class="wclock-time" data-tz="' + tz + '">' + tzTime(tz) + '</span>' +
-          '<span class="wclock-label">' + label + '</span>';
+        // Built with createElement and textContent, NOT innerHTML.
+        //
+        // tz and label come straight out of localStorage, and the previous
+        // version concatenated them into an HTML string: a stored value of
+        // '"><img src=x onerror=...>' executed on every render. The settings
+        // UI only offers a fixed ZONES list, so nothing in the product can
+        // put a hostile value there — but "the only writer is well behaved"
+        // is a property of today's callers, not of this function, and it is
+        // the kind of assumption that quietly stops being true.
+        //
+        // textContent cannot be reinterpreted as markup, so the question
+        // does not arise.
+        var t = document.createElement("span");
+        t.className = "wclock-time";
+        t.setAttribute("data-tz", tz);
+        t.textContent = tzTime(tz);
+        var l = document.createElement("span");
+        l.className = "wclock-label";
+        l.textContent = label;
+        span.appendChild(t);
+        span.appendChild(l);
         wcWrap.appendChild(span);
       });
     }
