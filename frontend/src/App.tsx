@@ -1,14 +1,13 @@
+import { lazy, Suspense } from 'react'
 import { Masthead } from './components/Masthead'
 import { NavTabs } from './components/NavTabs'
 import { SettingsPage } from './components/SettingsPage'
 import { PipelinePage } from './components/PipelinePage'
 import { WorkPage } from './components/WorkPage'
 import { IssuesPage } from './components/IssuesPage'
-import { ReposPage } from './components/ReposPage'
 import { HelpPage } from './components/HelpPage'
 import { YourReposPage } from './components/YourReposPage'
 import { ConversationsPage } from './components/ConversationsPage'
-import { AlertsRouter } from './components/alerts/AlertsRouter'
 import { FeedPage } from './components/FeedPage'
 import { KpiRail } from './components/KpiRail'
 import { ConversationsPanel } from './components/ConversationsPanel'
@@ -33,6 +32,54 @@ import { DASHBOARD } from './fixtures/dashboard'
  * widths the right rail drops under the main column rather than shrinking,
  * because the pipeline grid stops being readable below about 300px.
  */
+/**
+ * ReposPage is LOADED ON DEMAND, and that is a size decision, not a style one.
+ *
+ * It is the only page that imports `motion`, and motion costs 44 KB gzipped —
+ * measured, by building the commit before it and the commit after. Imported at
+ * the top level it rode in the single shared chunk, so every reader of every
+ * page paid 44 KB for one card-reorder animation on /repos that most of them
+ * never see. That is what pushed the bundle from 137 KB to 181 KB, through a
+ * 150 KB ceiling nobody was watching.
+ *
+ * Splitting it here puts motion in the /repos chunk, where the people who use
+ * /repos pay for it and nobody else does.
+ *
+ * The other pages stay eagerly imported on purpose: none of them carries a
+ * dependency worth a second network round trip, and a Suspense flash on a page
+ * that would have rendered instantly is a worse trade than the bytes.
+ */
+/**
+ * The eleven /alerts/* pages, also on demand.
+ *
+ * Same reasoning, different shape: these are never an entry point. A reader
+ * arrives at an alert from a link because something needs attention, which
+ * means the fetch happens while they are already reading a sentence about
+ * what went wrong. Eleven components' worth of markup does not belong in the
+ * chunk that renders the dashboard.
+ */
+/*
+  EVERY SUSPENSE FALLBACK CARRIES data-loading="true", and nothing else does.
+
+  A page that has not arrived yet still renders a <main>, so any check that
+  enumerates a page's contents can land on the placeholder and find nothing
+  wrong with it — passing by finding nothing, which is the same failure as a
+  gate whose selector stopped matching. The nav lives in the shell outside
+  these boundaries, so waiting for the nav does not help: it resolves while
+  the real <main> is still a fallback.
+
+  `main:not([data-loading])` is the signal that real content has painted. It
+  works for every page without a per-page marker, and a future lazy page gets
+  it for free by using this same fallback shape.
+*/
+const AlertsRouter = lazy(() =>
+  import('./components/alerts/AlertsRouter').then((m) => ({ default: m.AlertsRouter })),
+)
+
+const ReposPage = lazy(() =>
+  import('./components/ReposPage').then((m) => ({ default: m.ReposPage })),
+)
+
 /**
  * Which view this URL is.
  *
@@ -194,11 +241,19 @@ export default function App() {
       {view === 'pipeline' && <PipelinePage />}
       {view === 'work' && <WorkPage />}
       {view === 'issues' && <IssuesPage />}
-      {view === 'repos' && <ReposPage />}
+      {view === 'repos' && (
+        <Suspense fallback={<main data-loading="true" className="px-4 py-10 text-[12px]" style={{ color: 'var(--hg-text-muted)' }}>Loading repositories…</main>}>
+          <ReposPage />
+        </Suspense>
+      )}
       {view === 'your-repos' && <YourReposPage />}
       {view === 'conversations' && <ConversationsPage />}
       {view === 'help' && <HelpPage />}
-      {view === 'alerts' && <AlertsRouter pathname={pathname} />}
+      {view === 'alerts' && (
+        <Suspense fallback={<main data-loading="true" className="px-4 py-10 text-[12px]" style={{ color: 'var(--hg-text-muted)' }}>Loading…</main>}>
+          <AlertsRouter pathname={pathname} />
+        </Suspense>
+      )}
       {view === 'feed' && <FeedPage />}
 
       {view === 'dashboard' && (
