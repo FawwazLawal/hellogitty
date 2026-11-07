@@ -601,6 +601,18 @@ type PipelinePageAPI struct {
 	Error        string        `json:"error,omitempty"`
 	PullRequests []PullRequest `json:"pullRequests"`
 	Repos        []string      `json:"repos"`
+
+	// HasPipeline is true only when `pipeline_command` is configured and the
+	// per-stage board has something to say. The templated page gates its own
+	// Stages section the same way — a dashboard without a pipeline never had
+	// one, and a Stages panel showing zero stages would be worse than hiding
+	// the section entirely.
+	HasPipeline bool `json:"hasPipeline"`
+	// Stages is the per-stage count row: one entry per configured stage, in
+	// the pipeline's own order. Reused from the StageCount type the dashboard
+	// document already carries, so a stage definition cannot drift between
+	// the dashboard panel and this page.
+	Stages []StageCount `json:"stages"`
 }
 
 func (h *Handler) servePipelineAPI(w http.ResponseWriter, r *http.Request) {
@@ -647,6 +659,12 @@ func (h *Handler) servePipelineAPI(w http.ResponseWriter, r *http.Request) {
 
 	doc.Repos = []string{}
 	doc.Repos = append(doc.Repos, p.Pipeline.Repos...)
+
+	doc.HasPipeline = p.HasPipeline
+	doc.Stages = []StageCount{}
+	for _, c := range p.Pipeline.Counts {
+		doc.Stages = append(doc.Stages, StageCount{Abbr: c.Abbr, Name: c.Name, Count: c.Count})
+	}
 
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
