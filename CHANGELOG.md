@@ -5,6 +5,73 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (43) · Black Bombay (baby) · 2026-11-07
+
+Tag `v0.2.43`.
+
+- **Every page is React now.** The conversion that v0.2.0 (42) began behind a
+  switch is finished: issues, tracked repositories, your repositories,
+  conversations, help, the live feed, the cross-reference list and the eleven
+  alert pages all serve from the same single binary. Each one keeps its
+  templated original at `/legacy/…`, because a replacement cannot be approved
+  against an original nobody can open — and a test now reads the route table
+  and fails if a converted page loses its way back. That test was written after
+  the issues conversion quietly dropped its mirror and nothing noticed: the page
+  answered 200 and rendered correctly while the original had become unreachable.
+
+- **Unknown is still not zero, and saying so found real defects.** Two tracked
+  repositories had never polled successfully, so their open, good-first and
+  unassigned counts were zero because nobody had looked — and the old page
+  printed them, telling you those repositories need nothing from you in exactly
+  the state where that is unknowable. They now read as absent. The live feed had
+  the same error pointing the other way: it treated "no poll since this process
+  started" as "nothing to show" and hid 150 real, recent events behind an empty
+  state. A feed that knows something and renders nothing is the worse direction,
+  on the one page whose whole job is telling you what happened.
+
+- **A cross-site scripting hole in the world clocks.** The templated dashboard
+  built its clock markup by concatenating the stored timezone and label into an
+  HTML string, both read from browser storage, so a stored label containing a
+  tag executed on every render. The Content-Security-Policy did not help, since
+  it permits inline handlers. Reachability was limited — the settings page only
+  offers a fixed list of zones — but "the only writer is well behaved" is a
+  property of today's callers, not of the function. It is built from elements
+  and text now, so the question does not arise rather than being answered by an
+  escaping step someone has to remember.
+
+- **Fifteen controls that looked interactive and did nothing.** Four statistic
+  tiles linked to page anchors that did not exist. Two masthead buttons had no
+  behaviour at all. A panel's search field and its add-a-repository form were
+  never wired to anything. A link labelled "the templated settings page" opened
+  the templated dashboard instead. They are now either connected, or rendered as
+  plain readouts, or gone — and a gate walks every page asserting that no anchor
+  has an empty target, that every internal link actually resolves rather than
+  merely being non-empty, and that nothing claims a role it cannot perform.
+
+- **The segmented pickers can be used with the arrow keys.** Five of them —
+  appearance, visual identity and the settings equivalents — responded to Tab
+  and Space but not to arrows, so crossing the masthead's two pickers cost six
+  key presses instead of two. They follow the standard pattern now. Automated
+  accessibility checking cannot see this class of defect: it validates roles and
+  contrast, and has no opinion about whether focus moves.
+
+- **The frontend had no continuous integration at all.** Every check was Go-only,
+  so the interface's types, its unit tests, and the bundle the binary embeds were
+  verified on contributors' machines and nowhere else. One consequence had
+  already shipped: a page whose code was not in the bundle its own binary serves,
+  with every check green and the diff looking complete. Builds now run in CI, and
+  the committed bundle must match a fresh build of its source.
+
+- **A performance budget that was correct and never ran.** An animation library
+  added 44 KB to every page for one list transition on one screen, pushing first
+  load from 137 KB to 197 KB through a 150 KB ceiling — the check that would have
+  caught it lives in the browser test suite, which CI does not execute. The two
+  heaviest pages load on demand, first load is back to 147 KB, and the ceiling is
+  enforced where code actually merges. The budget now separates what a reader
+  downloads to see a page from what exists on disk, so splitting work out cannot
+  become a way to hide weight.
+
+
 ## v0.2.0 (42) · Black Bombay (baby) · 2026-11-07
 
 Tag `v0.2.42`.
