@@ -5,6 +5,57 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (42) · Black Bombay (baby) · 2026-11-07
+
+Tag `v0.2.42`.
+
+- **A React dashboard, served by the same single binary, behind a switch that
+  defaults to off.** `"ui": "react"` in the config moves the front door to a
+  Vite-built React application; `"legacy"`, the default, leaves the templated
+  dashboard exactly where it was. Both are compiled into one binary and both stay
+  reachable — `/legacy` and `/app/` are stable whichever way the switch points —
+  so rolling back is editing one word and restarting rather than deploying a
+  different build. Every page the React app does not yet replace keeps serving
+  from its own route, which is what makes this a conversion rather than a
+  cut-over. The binary needs no Node at runtime and reaches no network: that was
+  verified by starting it with an empty environment and nothing but /usr/bin and
+  /bin on the PATH.
+
+- **The figures the dashboard cannot know are now drawn as unknown, not as
+  zero.** The poller runs on an interval, so before its first cycle completes
+  every count is genuinely unfetched — and a dashboard that renders unfetched as
+  `0` tells you nothing needs you, which is the most consequential thing it could
+  get wrong and looks completely normal while doing it. The server has always
+  tracked the difference internally; it now travels to the browser, and the rail
+  shows an em dash until a real figure arrives. The same distinction reaches the
+  repository table, where a repository that could not be read shows no commit age
+  rather than claiming it was committed today.
+
+- **A defect of exactly that kind shipped and was caught within minutes of going
+  live.** The new table fell back to sample data whenever the server returned no
+  repositories — which conflated "you track nothing yet" with "the server did not
+  answer", and filled the dashboard with repositories the owner has never tracked.
+  Sample data wearing the clothes of real data is worse than an empty table,
+  because an empty table is obviously empty. A fallback now stands in only for no
+  answer, never for a quiet one.
+
+- **Six more defects found by gates rather than by reading the code**, because
+  the new UI ships with checks that run against the built binary rather than a
+  development server. Four statistic tiles whose accessible names did not contain
+  their visible text, so speaking what is on screen matched nothing. Menu items
+  whose only focus cue measured 2.73:1 and 2.29:1 against a 3:1 floor. A modal
+  veil that turned the light theme's paper into a dead grey. A repository with no
+  commit date rendering as `NaN`. A pipeline stage the server calls `todo` and
+  the interface called `empty`. Empty lists arriving as `null` rather than as
+  empty lists, which crashes anything that iterates them.
+
+- **The ornament is drawn rather than photographed.** Armour plates, rivets,
+  corner brackets, the clock flourish, the brand mark and the wave pattern are
+  scalable geometry that takes its colour from whichever theme is active. That is
+  also what closed a gap the earlier work could not: scenic artwork existed for
+  one appearance only, so the other two rendered bare, and geometry serves all
+  three from one definition.
+
 ## v0.2.0 (41) · Black Bombay (baby) · 2026-11-06
 
 Tag `v0.2.41`.
