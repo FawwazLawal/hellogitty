@@ -21,6 +21,9 @@ export const SettingsDoc = z.object({
     reposFile: z.string(),
     inbox: z.string(),
     layoutDefault: z.string(),
+    /** `maintain:` entries from hellogitty.json — orgs ("owner") and
+     * repositories ("owner/name") whose PRs land under "Waiting on you". */
+    maintain: z.array(z.string()),
   }),
   polling: z.object({
     intervalMinutes: z.number().int(),
@@ -42,8 +45,15 @@ export const SettingsDoc = z.object({
     count: z.number().int(),
     /** Removed here but still in the snapshot until the next poll. */
     removed: z.array(z.string()),
+    /** How many of them the pipeline command knows about. Only meaningful
+     * when `hasPipeline` is true — zero without a configured pipeline reads
+     * the same as zero with one and no matches, and conflating the two is
+     * the "unknown is not zero" trap applied to pipeline configuration. */
     inPipeline: z.number().int(),
   }),
+  /** True when `pipeline_command` is configured and a per-stage board exists.
+   * Gates the "pipeline targets" readout on the React settings page. */
+  hasPipeline: z.boolean(),
 })
 export type SettingsDoc = z.infer<typeof SettingsDoc>
 

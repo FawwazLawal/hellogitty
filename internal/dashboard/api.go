@@ -433,6 +433,14 @@ type SettingsAPI struct {
 		Inbox     string `json:"inbox"`
 		// LayoutDefault is JSON from the config file, or empty when unset.
 		LayoutDefault string `json:"layoutDefault"`
+		// Maintain is the `maintain:` list from hellogitty.json — orgs and
+		// repositories ("owner" or "owner/name") whose open PRs and issues
+		// land under "Waiting on you" on top of the owner's own. Read-only
+		// here; editing it means editing the config file and restarting.
+		// Empty when the list is empty — the React page gates the display
+		// on length rather than a separate `hasMaintain` flag, matching how
+		// the templated page gated on `{{if .ConfigMaintain}}`.
+		Maintain []string `json:"maintain"`
 	} `json:"config"`
 
 	Polling struct {
@@ -467,8 +475,17 @@ type SettingsAPI struct {
 		// that happened rather than one that did nothing.
 		Removed []string `json:"removed"`
 		// InPipeline is how many of them the pipeline command knows about.
+		// Only meaningful when `hasPipeline` is true — zero without a
+		// configured pipeline is ambiguous with zero WITH one and no
+		// matches, and conflating the two is exactly the "unknown is zero"
+		// trap the React side is careful to avoid.
 		InPipeline int `json:"inPipeline"`
 	} `json:"repos"`
+
+	// HasPipeline gates the "pipeline targets" readout. False for a dashboard
+	// with no `pipeline_command` configured; the React page hides the line
+	// rather than showing "0 targets" against a user who has no pipeline.
+	HasPipeline bool `json:"hasPipeline"`
 }
 
 func (h *Handler) serveSettingsAPI(w http.ResponseWriter, r *http.Request) {
@@ -496,6 +513,8 @@ func (h *Handler) serveSettingsAPI(w http.ResponseWriter, r *http.Request) {
 	// explicitly rather than silently: whatever reads this field is doing its
 	// own escaping.
 	doc.Config.LayoutDefault = string(p.LayoutDefault)
+	doc.Config.Maintain = []string{}
+	doc.Config.Maintain = append(doc.Config.Maintain, p.ConfigMaintain...)
 
 	doc.Polling.IntervalMinutes = p.PollInterval
 	doc.Polling.LastPollUTC = p.LastPollUTC
@@ -526,6 +545,7 @@ func (h *Handler) serveSettingsAPI(w http.ResponseWriter, r *http.Request) {
 	}
 	doc.Repos.Count = len(doc.Repos.Tracked)
 	doc.Repos.InPipeline = p.TargetCount
+	doc.HasPipeline = p.HasPipeline
 
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
