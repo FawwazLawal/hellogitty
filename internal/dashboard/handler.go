@@ -766,6 +766,16 @@ func (h *Handler) now() time.Time {
 	return time.Now().UTC()
 }
 
+// wantsJSON reports whether the caller asked for JSON rather than a document.
+//
+// Deliberately the same test serveIssues already applies to decide which arm
+// to take, so the route and the handler cannot disagree about what a request
+// is: if this said yes where serveIssues said no, /issues would answer the
+// React shell to a fetch expecting data.
+func wantsJSON(r *http.Request) bool {
+	return strings.Contains(r.Header.Get("Accept"), "application/json")
+}
+
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("X-Frame-Options", "DENY")
@@ -836,6 +846,18 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveNoticeClear(w, r)
 	case r.URL.Path == "/watch":
 		h.serveWatch(w, r)
+	case r.URL.Path == "/issues" && h.ReactIsDefault && h.App != nil && !wantsJSON(r):
+		// Converted — but the SAME PATH still answers JSON, which is what the
+		// React page fetches from. serveIssues has carried a JSON arm all along,
+		// pagination and search included, so the migration needed no new
+		// endpoint (§4: "minimal typed endpoints if the migration actually
+		// requires them"). Splitting on Accept keeps one handler computing one
+		// page of results; two would drift the first time either was touched.
+		//
+		// A document request gets the shell. Anything asking for JSON — the page
+		// itself, curl, a script someone wrote against this — falls through
+		// unchanged, so the conversion breaks nothing that was already reading it.
+		h.serveAppIndex(w, r)
 	case r.URL.Path == "/issues":
 		h.serveIssues(w, r)
 	case r.URL.Path == "/repos":
