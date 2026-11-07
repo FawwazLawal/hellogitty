@@ -91,14 +91,31 @@ func sameOrigin(r *http.Request) bool {
 
 func (h *Handler) serveFeedJSON(w http.ResponseWriter, r *http.Request) {
 	fs, ok := h.Source.(FeedSource)
+	// Known carries the same "we have ever looked" signal the alert pages
+	// honour: an unfetched feed and an empty one are different states, and
+	// a renderer reading `len(rows) == 0` cannot tell them apart. Tied to
+	// the poller's own first-run signal — the feed is built from inbox
+	// entries, store issues, acked state and health changes, all of which
+	// are populated by the poll cycle. Before it runs, "no rows" means
+	// "we have not looked yet", not "nothing has happened".
+	//
+	// CanWatch is lifted into the document so the client doesn't have to
+	// derive it from the row shape or ask a separate endpoint — the
+	// templated page already carried the same flag as `data-watch="1"`
+	// for the same reason.
 	out := struct {
-		Rows []feed.Row `json:"rows"`
+		Known    bool       `json:"known"`
+		CanWatch bool       `json:"canWatch"`
+		Rows     []feed.Row `json:"rows"`
 	}{Rows: []feed.Row{}}
+	tel := h.Source.Telemetry()
+	out.Known = !tel.LastPoll.IsZero()
 	if ok {
 		if rows := fs.Feed(); rows != nil {
 			out.Rows = rows
 		}
 		if ws, ok := h.Source.(WatchSource); ok {
+			out.CanWatch = true
 			keys := ws.WatchedKeys()
 			for i := range out.Rows {
 				out.Rows[i].Watched = keys[out.Rows[i].Key]
@@ -107,6 +124,7 @@ func (h *Handler) serveFeedJSON(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 	json.NewEncoder(w).Encode(out)
 }
 

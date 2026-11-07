@@ -9,6 +9,7 @@ import { HelpPage } from './components/HelpPage'
 import { YourReposPage } from './components/YourReposPage'
 import { ConversationsPage } from './components/ConversationsPage'
 import { AlertsRouter } from './components/alerts/AlertsRouter'
+import { FeedPage } from './components/FeedPage'
 import { KpiRail } from './components/KpiRail'
 import { ConversationsPanel } from './components/ConversationsPanel'
 import { TrackedRepos } from './components/TrackedRepos'
@@ -40,7 +41,18 @@ import { DASHBOARD } from './fixtures/dashboard'
  * of what a router would do for us. The moment a third view needs nested
  * routes or params, this becomes an argument for one — until then it is not.
  */
-type View = 'dashboard' | 'settings' | 'pipeline' | 'work' | 'issues' | 'repos' | 'your-repos' | 'conversations' | 'help' | 'alerts'
+type View =
+  | 'dashboard'
+  | 'settings'
+  | 'pipeline'
+  | 'work'
+  | 'issues'
+  | 'repos'
+  | 'your-repos'
+  | 'conversations'
+  | 'help'
+  | 'alerts'
+  | 'feed'
 
 /**
  * Still not a router.
@@ -74,6 +86,7 @@ const ROUTES: { prefix: string; view: View }[] = [
   // from the pathname — same reasoning as the top-level dispatch: each
   // destination is a document the server also serves.
   { prefix: '/alerts', view: 'alerts' },
+  { prefix: '/feed', view: 'feed' },
 ]
 
 function viewFor(pathname: string): View {
@@ -186,6 +199,7 @@ export default function App() {
       {view === 'conversations' && <ConversationsPage />}
       {view === 'help' && <HelpPage />}
       {view === 'alerts' && <AlertsRouter pathname={pathname} />}
+      {view === 'feed' && <FeedPage />}
 
       {view === 'dashboard' && (
       <main className="min-w-0 overflow-x-hidden px-4 pb-[200px] pt-3">

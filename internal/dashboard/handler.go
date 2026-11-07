@@ -856,6 +856,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveAlertsAPI(w, r)
 	case strings.HasPrefix(r.URL.Path, "/app") && h.App != nil:
 		h.serveApp(w, r)
+	case r.URL.Path == "/feed" && h.ReactIsDefault && h.App != nil:
+		h.serveAppIndex(w, r)
+	case r.URL.Path == "/legacy/feed":
+		h.serveFeedPage(w, r)
 	case r.URL.Path == "/feed":
 		h.serveFeedPage(w, r)
 	case r.URL.Path == "/feed.json":
