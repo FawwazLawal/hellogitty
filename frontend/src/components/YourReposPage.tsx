@@ -466,15 +466,24 @@ export function YourReposPage() {
               className="border-b px-4 py-2.5 last:border-b-0"
               style={{ borderColor: 'var(--hg-line)' }}
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
+              <div className="flex min-w-0 items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  {/*
+                    `min-w-0` on every flex ancestor between <li> and the
+                    truncating span. A flex item defaults to
+                    `min-width: auto`, which lets its content push it wider
+                    than its parent — so the chain has to carry `min-w-0` end
+                    to end or truncation never happens. Caught at 390px by a
+                    title that was 387px wide inside a 214px column; the
+                    chain-level fix is the only one that works, not the span.
+                  */}
+                  <div className="flex min-w-0 items-center gap-2">
                     <GroupPill group={it.group} />
                     <a
                       href={it.url}
                       target="_blank"
                       rel="noreferrer noopener"
-                      className="flex items-center gap-1.5 text-[12.5px] no-underline hover:underline"
+                      className="flex min-w-0 items-center gap-1.5 text-[12.5px] no-underline hover:underline"
                       style={{ color: 'var(--hg-text)' }}
                     >
                       <span className="truncate">{it.title}</span>

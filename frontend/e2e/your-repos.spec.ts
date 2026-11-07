@@ -41,7 +41,17 @@ import AxeBuilder from '@axe-core/playwright'
  *     `documentElement.scrollWidth`, so the first version of this test passed
  *     anyway — a check that cannot go red is not a check. The test now
  *     measures `<main>.scrollWidth` too, and in that form it failed as
- *     expected; the `min-w` was then removed.
+ *     expected; the `min-w` was then removed. Second real break: on live
+ *     data with a long title ("fix: guard against duplicate-i…"), the row
+ *     link pushed its container to 478px inside a 214px column. That is
+ *     what `overflow-x-hidden` was hiding here even without any introduced
+ *     bug. Fix was `min-w-0` on every flex ancestor between <li> and the
+ *     truncating span (a flex item defaults to `min-width: auto`, so the
+ *     chain needs it end to end, not just the outermost). The mock below
+ *     carries a title that is unambiguously too long to render on one line
+ *     at 390px, so this check does not depend on whichever row the run's
+ *     data happens to produce — the earlier version passed for me because
+ *     my scratch titles were short.
  *
  *   [RED → GREEN] axeClean
  *     Broken: added a 32×32 `<img>` with no alt attribute. Axe reported
@@ -133,6 +143,44 @@ test.describe('the /your-repos page', () => {
   })
 
   test('no horizontal overflow at 390px', async ({ page }) => {
+    // A row with a long title is what triggers the chain-of-flex-ancestors
+    // overflow this test exists to catch. Natural data varied run to run and
+    // let this check pass against short titles while a long one would break
+    // it — so the mock supplies a title long enough to force truncation.
+    await page.route('**/app/api/your-repos.json', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          pipelineKnown: true,
+          workKnown: true,
+          partial: false,
+          login: 'FawwazLawal',
+          open: 0,
+          merged: 0,
+          reposNew: 0,
+          you: [
+            {
+              key: 'test-long-title',
+              kind: 'PR',
+              repo: 'FawwazLawal/hellogitty',
+              number: 999,
+              title:
+                'fix: a deliberately long pull request title that at 390px must truncate end to end and not push the row out of its container by even a single pixel of any kind',
+              url: 'https://example.invalid/',
+              why: 'You opened it',
+              status: 'Branch is behind main; update it',
+              level: 'caution',
+              ago: 'Yesterday 20:00',
+              agoTitle: '2026-11-05 20:00Z',
+              labels: [],
+            },
+          ],
+          done: [],
+          repoOther: [],
+        }),
+      }),
+    )
     await page.setViewportSize({ width: 390, height: 844 })
     await gotoYourRepos(page)
     // `overflow-x-hidden` on <main> hides inner overflow visually but does not

@@ -53,8 +53,10 @@ const ROUTES: { prefix: string; view: View }[] = [
   { prefix: '/pipeline', view: 'pipeline' },
   { prefix: '/work', view: 'work' },
   { prefix: '/issues', view: 'issues' },
-  // /your-repos is listed BEFORE /repos so longest-match wins — otherwise
-  // /your-repos would be swallowed by the /repos prefix.
+  // Kept longest-first as a habit, though `viewFor` matches
+  // `pathname === prefix || pathname.startsWith(prefix + '/')`, so
+  // /your-repos is never swallowed by /repos — /your-repos neither equals
+  // /repos nor starts with /repos/. Order here is harmless either way.
   { prefix: '/your-repos', view: 'your-repos' },
   { prefix: '/repos', view: 'repos' },
 ]
