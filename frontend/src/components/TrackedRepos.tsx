@@ -178,13 +178,21 @@ function Toolbar() {
         />
       </label>
 
+      {/*
+        min-w-0 on the label, and a max rather than a fixed width on the
+        input. It was `w-[300px]`, which with the Track button and the gap
+        came to 366px and could not fit a 375px phone — `<main>` ran 21px
+        wider than its container and `overflow-x-hidden` clipped the Track
+        button off the right edge. The document reported no overflow at all,
+        which is why every 390px gate stayed green over it.
+      */}
       <div className="flex items-center gap-2">
-        <label className="flex items-center">
+        <label className="flex min-w-0 flex-1 items-center">
           <span className="sr-only">Add a repository by owner/name or GitHub link</span>
           <input
             type="text"
             placeholder="Add a repo: owner/name or GitHub link"
-            className="w-[300px] border py-1.5 px-3 text-[12px]"
+            className="w-full max-w-[300px] border py-1.5 px-3 text-[12px]"
             style={{
               background: 'var(--hg-surface-sunken)',
               borderColor: 'var(--hg-line)',

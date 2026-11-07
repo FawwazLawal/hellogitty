@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
+import { expectNoHorizontalOverflow } from './overflow'
 
 /**
  * The gates, pointed at the React application.
@@ -188,18 +189,11 @@ test.describe('the React app', () => {
     }
   }
 
-  /** The document must not scroll sideways at phone width. */
+  /** Nothing may scroll sideways at phone width — document or <main>. */
   test('no horizontal overflow at 390px', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await useTheme(page, 'vermilion')
-    const overflow = await page.evaluate(() => {
-      const de = document.documentElement
-      return { scrollWidth: de.scrollWidth, clientWidth: de.clientWidth }
-    })
-    expect(
-      overflow.scrollWidth,
-      `the document is ${overflow.scrollWidth - overflow.clientWidth}px wider than the viewport`,
-    ).toBeLessThanOrEqual(overflow.clientWidth + 1)
+    await expectNoHorizontalOverflow(page, 390)
   })
 
   /**
@@ -219,14 +213,7 @@ test.describe('the React app', () => {
     await useTheme(page, 'vermilion')
     await expect(page.locator('header').first()).toBeVisible()
     await expect(page.getByRole('table')).toBeVisible()
-    const overflow = await page.evaluate(() => {
-      const de = document.documentElement
-      return { scrollWidth: de.scrollWidth, clientWidth: de.clientWidth }
-    })
-    expect(
-      overflow.scrollWidth,
-      `the document is ${overflow.scrollWidth - overflow.clientWidth}px wider than the viewport at 768px`,
-    ).toBeLessThanOrEqual(overflow.clientWidth + 1)
+    await expectNoHorizontalOverflow(page, 768)
   })
 
   /**
