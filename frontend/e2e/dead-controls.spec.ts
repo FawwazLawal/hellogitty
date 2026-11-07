@@ -1,6 +1,28 @@
 import { test, expect, type Page } from '@playwright/test'
 
 /**
+ * Navigate to a React page and wait for its real content to have rendered.
+ *
+ * The wait selector matches the one `App.tsx` sets up on purpose: every
+ * `<Suspense>` fallback renders `<main data-loading="true">`, and nothing
+ * else carries that attribute. `main:not([data-loading])` is the statement
+ * that the real page component has mounted and attached its props — not a
+ * timing heuristic like `networkidle`, which was observed to let the gate
+ * walk the placeholder on lazy routes (/repos and /alerts/*) and read empty
+ * props off DOM elements React had not yet attached handlers to. The failure
+ * shape was a false-positive "dead control" on /alerts/*, which is the
+ * class of flake that gets a gate disabled by whoever is on call that week.
+ *
+ * Combined with the per-test `candidatesOn(page)` evaluate, the DOM read
+ * and the "page is ready" signal share one tick — same-instant state and
+ * structure, which is the discipline the audit was built on.
+ */
+async function gotoAndReady(page: Page, path: string): Promise<void> {
+  await page.goto(path, { waitUntil: 'load' })
+  await page.waitForSelector('main:not([data-loading])', { state: 'attached', timeout: 15_000 })
+}
+
+/**
  * The dead-controls gate.
  *
  * This exists because the audit that preceded it found fifteen interactive
@@ -171,7 +193,7 @@ async function fragmentIds(page: Page): Promise<Set<string>> {
 test.describe('dead controls', () => {
   for (const path of REACT_PAGES) {
     test(`${path}: no anchor has a missing, empty or lone "#" href`, async ({ page }) => {
-      await page.goto(path, { waitUntil: 'networkidle' })
+      await gotoAndReady(page, path)
       const list = await candidatesOn(page)
       const bad = list.filter(
         (c) => c.tag === 'a' && (c.href === null || c.href === '' || c.href === '#'),
@@ -183,7 +205,7 @@ test.describe('dead controls', () => {
     })
 
     test(`${path}: fragment-href anchors point at an element that exists`, async ({ page }) => {
-      await page.goto(path, { waitUntil: 'networkidle' })
+      await gotoAndReady(page, path)
       const list = await candidatesOn(page)
       const ids = await fragmentIds(page)
       const bad = list.filter((c) => {
@@ -198,7 +220,7 @@ test.describe('dead controls', () => {
     })
 
     test(`${path}: every <button> has a handler (submit-in-form excepted)`, async ({ page }) => {
-      await page.goto(path, { waitUntil: 'networkidle' })
+      await gotoAndReady(page, path)
       const list = await candidatesOn(page)
       const bad = list.filter((c) => {
         if (c.tag !== 'button') return false
@@ -216,7 +238,7 @@ test.describe('dead controls', () => {
     })
 
     test(`${path}: every role="button" / role="link" has a handler`, async ({ page }) => {
-      await page.goto(path, { waitUntil: 'networkidle' })
+      await gotoAndReady(page, path)
       const list = await candidatesOn(page)
       const bad = list.filter(
         (c) => (c.role === 'button' || c.role === 'link') && c.handlers.length === 0 && !c.disabled,
@@ -228,7 +250,7 @@ test.describe('dead controls', () => {
     })
 
     test(`${path}: every text or search input has an onChange`, async ({ page }) => {
-      await page.goto(path, { waitUntil: 'networkidle' })
+      await gotoAndReady(page, path)
       const list = await candidatesOn(page)
       const bad = list.filter((c) => {
         if (c.tag !== 'input') return false
@@ -265,17 +287,19 @@ test.describe('dead controls', () => {
    * are left alone — they have their own dedicated check above.
    */
   test('every internal anchor href across every React page resolves', async ({ page, request }) => {
-    // One-off longer budget because this test visits every page once. The
-    // per-page tests above use networkidle; this one uses `load` because an
-    // anchor href is in the HTML as soon as React paints, and waiting for
-    // every poll to settle on every page would multiply the whole suite's
-    // running time for a check that reads static markup.
-    test.setTimeout(120_000)
+    // One-off longer budget because this test visits every page once and
+    // then issues a GET per unique internal href. Previous versions waited
+    // for `networkidle` or just for the `nav` selector before enumerating
+    // anchors; both were wrong on the lazy routes (/repos, /alerts/*). The
+    // nav lives in the shell outside any `<Suspense>` boundary, so waiting
+    // on it resolves while `<main>` is still the placeholder and any
+    // anchors inside the real page have not yet painted. `gotoAndReady`
+    // waits for the `main:not([data-loading])` marker instead, which is a
+    // statement about what rendered.
+    test.setTimeout(240_000)
     const seen = new Map<string, Set<string>>()
     for (const path of REACT_PAGES) {
-      await page.goto(path, { waitUntil: 'load' })
-      // Give React one tick to paint the nav tree after the shell mounts.
-      await page.waitForSelector('nav[aria-label="Primary"]', { timeout: 10_000 })
+      await gotoAndReady(page, path)
       const hrefs: string[] = await page.evaluate(() =>
         [...document.querySelectorAll<HTMLAnchorElement>('a[href]')].map((a) => a.getAttribute('href') ?? ''),
       )
@@ -310,7 +334,7 @@ test.describe('dead controls', () => {
    * what word maps to what URL.
    */
   test('/settings: the "templated settings page" link points at /legacy/settings', async ({ page }) => {
-    await page.goto('/settings', { waitUntil: 'networkidle' })
+    await gotoAndReady(page, '/settings')
     const list = await candidatesOn(page)
     const link = list.find((c) => c.tag === 'a' && c.text.includes('templated settings page'))
     expect(link, 'the settings page should link to the templated settings page').toBeDefined()
