@@ -1,6 +1,7 @@
 import { Masthead } from './components/Masthead'
 import { NavTabs } from './components/NavTabs'
 import { SettingsPage } from './components/SettingsPage'
+import { PipelinePage } from './components/PipelinePage'
 import { KpiRail } from './components/KpiRail'
 import { ConversationsPanel } from './components/ConversationsPanel'
 import { TrackedRepos } from './components/TrackedRepos'
@@ -32,8 +33,10 @@ import { DASHBOARD } from './fixtures/dashboard'
  * of what a router would do for us. The moment a third view needs nested
  * routes or params, this becomes an argument for one — until then it is not.
  */
-function viewFor(pathname: string): 'dashboard' | 'settings' {
-  return pathname === '/settings' || pathname.startsWith('/settings/') ? 'settings' : 'dashboard'
+function viewFor(pathname: string): 'dashboard' | 'settings' | 'pipeline' {
+  if (pathname === '/settings' || pathname.startsWith('/settings/')) return 'settings'
+  if (pathname === '/pipeline' || pathname.startsWith('/pipeline/')) return 'pipeline'
+  return 'dashboard'
 }
 
 export default function App() {
@@ -123,6 +126,7 @@ export default function App() {
       <NavTabs pathname={pathname} />
 
       {view === 'settings' && <SettingsPage />}
+      {view === 'pipeline' && <PipelinePage />}
 
       {view === 'dashboard' && (
       <main className="min-w-0 overflow-x-hidden px-4 pb-[200px] pt-3">

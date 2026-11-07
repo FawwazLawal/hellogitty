@@ -772,6 +772,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'")
 
 	switch {
+	case r.URL.Path == "/pipeline" && h.ReactIsDefault && h.App != nil:
+		// Converted. /legacy/pipeline keeps the templated page, which still
+		// carries the per-stage board the React port does not.
+		h.serveAppIndex(w, r)
+	case r.URL.Path == "/legacy/pipeline":
+		h.servePipelinePage(w, r)
 	case r.URL.Path == "/settings" && h.ReactIsDefault && h.App != nil:
 		// Converted. The templated settings page is still compiled in and still
 		// reachable at /legacy/settings — §7 Phase 4 removes legacy "only after
@@ -810,6 +816,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveSessionAPI(w, r)
 	case r.URL.Path == "/app/api/settings.json":
 		h.serveSettingsAPI(w, r)
+	case r.URL.Path == "/app/api/pipeline.json":
+		h.servePipelineAPI(w, r)
 	case strings.HasPrefix(r.URL.Path, "/app") && h.App != nil:
 		h.serveApp(w, r)
 	case r.URL.Path == "/feed":

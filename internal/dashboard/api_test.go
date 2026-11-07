@@ -246,3 +246,89 @@ func TestSettingsAPISubtractsRemovedFromTracked(t *testing.T) {
 		}
 	}
 }
+
+// The pipeline document must keep the funnel the page was reorganised into.
+//
+// PR #222 fixed the owner's complaint that eleven numbers sat as peers and
+// "do not seem like they're coherent numbers" — several were subsets of Open,
+// so they summed to nothing. The fix separated lifetime totals from what is
+// open now and demoted the subsets to table filters.
+//
+// A flat document would let a React page quietly reintroduce exactly that, by
+// rendering the subsets beside their own parent again. The shape is the fix,
+// so the shape is what this holds.
+func TestPipelineAPIKeepsTheFunnelSeparation(t *testing.T) {
+	h := handler(fakeSource{pipe: pipeFixture(t)})
+
+	rec := httptest.NewRecorder()
+	h.servePipelineAPI(rec, httptest.NewRequest(http.MethodGet, "/app/api/pipeline.json", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(rec.Body.Bytes(), &raw); err != nil {
+		t.Fatalf("bad JSON: %v", err)
+	}
+
+	// Lifetime and open-now are separate objects, not eleven sibling integers.
+	for _, group := range []string{"lifetime", "openNow"} {
+		if _, ok := raw[group]; !ok {
+			t.Errorf("no %q group — the funnel separation is the fix for the owner's complaint, and a flat document loses it", group)
+		}
+	}
+	// The subsets live under openNow, never at the top level beside it.
+	for _, subset := range []string{"pending", "approved", "draft", "open", "opened", "merged", "closed"} {
+		if _, ok := raw[subset]; ok {
+			t.Errorf("%q is a top-level field; it belongs inside lifetime or openNow, because a subset rendered beside its parent is what made these numbers incoherent", subset)
+		}
+	}
+
+	var doc PipelinePageAPI
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("bad JSON: %v", err)
+	}
+	if doc.PullRequests == nil || doc.Repos == nil {
+		t.Error("pullRequests or repos is null; both must be [] so a client can iterate without a guard")
+	}
+	// Each subset counts a subset of Open — never more than it.
+	if doc.OpenNow.Open > 0 {
+		for name, n := range map[string]int{
+			"pending":  doc.OpenNow.Pending,
+			"approved": doc.OpenNow.Approved,
+			"draft":    doc.OpenNow.Draft,
+		} {
+			if n > doc.OpenNow.Open {
+				t.Errorf("%s is %d with only %d open; a subset cannot exceed the set it is part of", name, n, doc.OpenNow.Open)
+			}
+		}
+	}
+}
+
+// Derived predicates are computed once, on the server.
+//
+// "A requested review waits on the reviewer, so it does not count as pending"
+// is a rule. Restating it in TypeScript gives it two homes and one of them
+// will drift.
+func TestPipelineAPIDerivesPredicatesServerSide(t *testing.T) {
+	h := handler(fakeSource{pipe: pipeFixture(t)})
+	rec := httptest.NewRecorder()
+	h.servePipelineAPI(rec, httptest.NewRequest(http.MethodGet, "/app/api/pipeline.json", nil))
+
+	var doc PipelinePageAPI
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("bad JSON: %v", err)
+	}
+	for _, pr := range doc.PullRequests {
+		if pr.ChecksFailing != (pr.Checks == "FAILURE" || pr.Checks == "ERROR") {
+			t.Errorf("%s#%d: checksFailing=%v disagrees with checks=%q", pr.Repo, pr.Number, pr.ChecksFailing, pr.Checks)
+		}
+		if pr.Approved != (pr.ReviewDecision == "APPROVED") {
+			t.Errorf("%s#%d: approved=%v disagrees with reviewDecision=%q", pr.Repo, pr.Number, pr.Approved, pr.ReviewDecision)
+		}
+		// A pull request waiting only on a reviewer is not pending on us.
+		if pr.Pending && pr.UnresolvedThreads == 0 && pr.ReviewDecision != "CHANGES_REQUESTED" && !pr.ChecksFailing {
+			t.Errorf("%s#%d is marked pending with nothing waiting on us", pr.Repo, pr.Number)
+		}
+	}
+}

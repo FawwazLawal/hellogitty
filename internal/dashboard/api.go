@@ -517,3 +517,122 @@ func (h *Handler) serveSettingsAPI(w http.ResponseWriter, r *http.Request) {
 	enc.SetIndent("", "  ")
 	enc.Encode(doc)
 }
+
+// PullRequest is one row of the pipeline table.
+//
+// The booleans are the page's own derived predicates (Pending, ChecksFailing),
+// computed here rather than in the client. They encode rules — "a requested
+// review waits on the reviewer, so it does not count as pending" — and a rule
+// restated in TypeScript is a rule with two places to drift.
+type PullRequest struct {
+	Repo   string `json:"repo"`
+	Number int    `json:"number"`
+	Title  string `json:"title"`
+	URL    string `json:"url"`
+	State  string `json:"state"`
+	Opened string `json:"opened"`
+
+	ReviewDecision    string `json:"reviewDecision"`
+	Checks            string `json:"checks"`
+	Conflict          bool   `json:"conflict"`
+	Draft             bool   `json:"draft"`
+	UnresolvedThreads int    `json:"unresolvedThreads"`
+	Requested         bool   `json:"requested"`
+
+	/* Derived server-side, so the filters cannot disagree with the counts. */
+	Pending       bool `json:"pending"`
+	ChecksFailing bool `json:"checksFailing"`
+	Approved      bool `json:"approved"`
+
+	// LastActivity is the newest of any comment, review, review-thread reply,
+	// bot finding or our own commit — not GitHub's updated_at, which includes
+	// label edits and other noise. Empty when the board has nothing to go on,
+	// which is not the same as "no activity".
+	LastActivity string `json:"lastActivity"`
+}
+
+// PipelinePageAPI backs the PR Pipeline page.
+//
+// THE SHAPE IS THE FUNNEL, deliberately. PR #222 reorganised this page after
+// the owner's complaint that eleven numbers sat as peers and "do not seem like
+// they're coherent numbers" — several were subsets of Open, so they summed to
+// nothing. The fix separated lifetime totals from what is open now, and demoted
+// the subsets to filters over the table.
+//
+// This document keeps that separation rather than flattening it back into a
+// list of integers. A React page built from a flat list would quietly
+// reintroduce exactly the thing that was fixed.
+type PipelinePageAPI struct {
+	Lifetime struct {
+		Opened int    `json:"opened"`
+		Merged int    `json:"merged"`
+		Closed int    `json:"closed"`
+		Rate   string `json:"rate"`
+	} `json:"lifetime"`
+
+	// OpenNow and the subsets OF it. `Pending`, `Approved` and `Draft` each
+	// count a subset of `Open`, never a sibling of it — one pull request can be
+	// open and pending and conflicted at once.
+	OpenNow struct {
+		Open     int `json:"open"`
+		Pending  int `json:"pending"`
+		Approved int `json:"approved"`
+		Draft    int `json:"draft"`
+	} `json:"openNow"`
+
+	Known        bool          `json:"known"`
+	Error        string        `json:"error,omitempty"`
+	PullRequests []PullRequest `json:"pullRequests"`
+	Repos        []string      `json:"repos"`
+}
+
+func (h *Handler) servePipelineAPI(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		w.Header().Set("Allow", "GET, HEAD")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	p, err := h.build()
+	if err != nil {
+		http.Error(w, "pipeline unavailable", http.StatusInternalServerError)
+		return
+	}
+
+	var doc PipelinePageAPI
+	doc.Known = p.Pipeline.Known
+	doc.Error = p.Pipeline.Err
+	doc.Lifetime.Opened = p.Pipeline.Opened
+	doc.Lifetime.Merged = p.Pipeline.Merged
+	doc.Lifetime.Closed = p.Pipeline.Closed
+	doc.Lifetime.Rate = p.Pipeline.Rate
+	doc.OpenNow.Open = p.Pipeline.Open
+	doc.OpenNow.Pending = p.Pipeline.Pending
+	doc.OpenNow.Approved = p.Pipeline.Approved
+	doc.OpenNow.Draft = p.Pipeline.Drafts
+
+	doc.PullRequests = []PullRequest{}
+	for _, pr := range p.Pipeline.All {
+		row := PullRequest{
+			Repo: pr.Repo, Number: pr.Number, Title: pr.Title, URL: pr.URL,
+			State: pr.State, Opened: pr.Opened,
+			ReviewDecision: pr.ReviewDecision, Checks: pr.Checks,
+			Conflict: pr.Conflict, Draft: pr.Draft,
+			UnresolvedThreads: pr.UnresolvedThreads, Requested: pr.Requested,
+			Pending:       pr.Pending(),
+			ChecksFailing: pr.ChecksFailing(),
+			Approved:      pr.ReviewDecision == "APPROVED",
+		}
+		if pr.LastActivity != nil {
+			row.LastActivity = pr.LastActivity.UTC().Format(time.RFC3339)
+		}
+		doc.PullRequests = append(doc.PullRequests, row)
+	}
+
+	doc.Repos = []string{}
+	doc.Repos = append(doc.Repos, p.Pipeline.Repos...)
+
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	json.NewEncoder(w).Encode(doc)
+}
