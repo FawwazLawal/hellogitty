@@ -96,9 +96,16 @@ export function PipelinePanel({ pipeline }: { pipeline: Pipeline }) {
           </p>
 
           <div className="mt-3 flex items-center gap-2">
-            <button
-              type="button"
-              className="border px-2.5 py-1 text-[11px] font-medium"
+            {/*
+              "Open" and "PR log" below are anchors to /pipeline. They shipped
+              as <button>s with no handlers — two live-looking chips at the
+              bottom of the panel that did nothing. The full PR page is where
+              the log and the open list both live, and it is React-converted,
+              so an anchor to it is the minimum move.
+            */}
+            <a
+              href="/pipeline"
+              className="border px-2.5 py-1 text-[11px] font-medium no-underline"
               style={{
                 borderColor: 'var(--hg-line-strong)',
                 background: 'var(--hg-surface-raised)',
@@ -106,7 +113,7 @@ export function PipelinePanel({ pipeline }: { pipeline: Pipeline }) {
               }}
             >
               Open
-            </button>
+            </a>
             {/*
               No link when there is nothing to link to.
 
@@ -140,9 +147,9 @@ export function PipelinePanel({ pipeline }: { pipeline: Pipeline }) {
                 —
               </span>
             )}
-            <button
-              type="button"
-              className="border px-2.5 py-1 text-[11px] font-medium"
+            <a
+              href="/pipeline"
+              className="border px-2.5 py-1 text-[11px] font-medium no-underline"
               style={{
                 borderColor: 'var(--hg-line-strong)',
                 background: 'var(--hg-surface-raised)',
@@ -150,7 +157,7 @@ export function PipelinePanel({ pipeline }: { pipeline: Pipeline }) {
               }}
             >
               PR log
-            </button>
+            </a>
           </div>
         </div>
       )}

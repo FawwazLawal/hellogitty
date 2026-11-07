@@ -1,4 +1,4 @@
-import { LayoutGrid, CircleHelp, Settings, Rows3 } from 'lucide-react'
+import { CircleHelp, Settings } from 'lucide-react'
 import { ClockOrnament, OniMark } from './chrome/Ornament'
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group'
 import { useTheme } from '../theme/ThemeProvider'
@@ -27,11 +27,18 @@ import { formatClock, formatInTz, useClockPreferences, useLiveClock, useWorldClo
  * over this art fell to 1.91:1 without it.
  */
 
-const CONTROLS = [
-  { id: 'collapse', label: 'Collapse all', Icon: Rows3 },
-  { id: 'layout', label: 'Layout', Icon: LayoutGrid },
-  { id: 'help', label: 'Help', Icon: CircleHelp },
-] as const
+/*
+ * The Masthead's "Collapse all" and "Layout" buttons from earlier passes
+ * are gone, not disabled. They had no handlers and would have needed state
+ * the React shell does not own yet — the collapse feature the templated
+ * page offers reads and writes panel-layout keys this app's dashboard does
+ * not consult. A focusable button that does nothing is the same lie this
+ * audit exists to catch, so the fix is not to style it as disabled but to
+ * not render it until the feature it represents exists. Re-add here when
+ * the collapse and layout machinery lands.
+ *
+ * `Help` and `Settings` remain. Both now navigate to the real documents.
+ */
 
 const APPEARANCES: { value: Appearance; label: string }[] = [
   { value: 'auto', label: 'Auto' },
@@ -99,25 +106,29 @@ export function Masthead({ data }: { data: DashboardData }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 pt-1">
-          {CONTROLS.map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              type="button"
-              className="flex items-center gap-1.5 border px-2.5 py-1.5 text-[12px] transition-colors"
-              style={{ borderColor: 'var(--hg-line-strong)', color: 'var(--hg-text)', background: 'var(--hg-surface)' }}
-            >
-              <Icon size={14} aria-hidden="true" />
-              {label}
-            </button>
-          ))}
-          <button
-            type="button"
+          {/*
+            Help and Settings are anchors, not buttons, because each is a
+            navigation to a document the server renders. A click handler on a
+            button here would reinvent what an <a> already gives for free —
+            including middle-click, open-in-new-tab, and the back button — and
+            that was the exact failure the nav tabs shipped with before #244.
+          */}
+          <a
+            href="/help"
+            className="flex items-center gap-1.5 border px-2.5 py-1.5 text-[12px] no-underline transition-colors"
+            style={{ borderColor: 'var(--hg-line-strong)', color: 'var(--hg-text)', background: 'var(--hg-surface)' }}
+          >
+            <CircleHelp size={14} aria-hidden="true" />
+            Help
+          </a>
+          <a
+            href="/settings"
             aria-label="Settings"
-            className="border p-1.5 transition-colors"
+            className="border p-1.5 no-underline transition-colors"
             style={{ borderColor: 'var(--hg-line-strong)', color: 'var(--hg-text)', background: 'var(--hg-surface)' }}
           >
             <Settings size={14} aria-hidden="true" />
-          </button>
+          </a>
 
           {/* Appearance: auto / light / dark. Independent of identity. */}
           <ToggleGroup

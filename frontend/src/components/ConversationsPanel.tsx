@@ -76,9 +76,16 @@ export function ConversationsPanel({ data }: { data: { quiet: number; total: num
           Issues and pull requests you joined but didn&rsquo;t open ·{' '}
           <span style={{ color: 'var(--hg-text)' }}>{data.quiet} quiet</span>
         </span>
-        <button
-          type="button"
-          className="border px-2 py-1 text-[11px] transition-colors"
+        {/*
+          "Show all" navigates to the full page. It had been a <button> with
+          no handler — the dashboard panel's summary count was a live-looking
+          chip that did nothing. An anchor to /conversations gives the
+          back-button, middle-click and open-in-new-tab the templated page
+          already carried for free.
+        */}
+        <a
+          href="/conversations"
+          className="border px-2 py-1 text-[11px] no-underline transition-colors"
           style={{
             borderColor: 'var(--hg-line-strong)',
             color: 'var(--hg-text)',
@@ -86,7 +93,7 @@ export function ConversationsPanel({ data }: { data: { quiet: number; total: num
           }}
         >
           Show all ({data.total})
-        </button>
+        </a>
         <button
           type="button"
           aria-label={collapsed ? 'Expand Conversations' : 'Collapse Conversations'}
@@ -159,7 +166,7 @@ export function ConversationsPanel({ data }: { data: { quiet: number; total: num
           </p>
           <div className="mt-5">
             <a
-              href="#conversations"
+              href="/conversations"
               className="inline-flex items-center gap-1.5 border px-3 py-1.5 text-[12px] font-medium transition-colors"
               style={{
                 borderColor: 'var(--hg-line-strong)',

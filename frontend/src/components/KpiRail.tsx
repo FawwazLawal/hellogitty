@@ -88,6 +88,31 @@ const TILE_SLOT: Partial<Record<KpiTile['id'], ArtSlot>> = {
   repos: 'mascot',
 }
 
+/**
+ * Where each tile navigates when the reader clicks the "drill in" chevron.
+ *
+ * Earlier this was `#${tile.id}` — four fragment links to ids that did not
+ * exist anywhere in the document. The tile looked like a link (cursor, hover,
+ * focus ring) and did nothing when clicked, which is the exact failure the
+ * dead-controls audit exists to catch. Pointing each at the page that owns
+ * that number is the fix:
+ *
+ *   needs  → /work      (what "Needs you" is: the work board)
+ *   prs    → /pipeline  (the PR pipeline carries open PRs)
+ *   repos  → /repos     (the tracked-repositories page)
+ *   api    → /settings  (the API quota readout lives on the settings page)
+ *
+ * The map is a single source so a new tile added to the fixture cannot ship
+ * without picking its destination — the TypeScript lookup will flag the
+ * missing key.
+ */
+const TILE_HREF: Record<KpiTile['id'], string> = {
+  needs: '/work',
+  prs: '/pipeline',
+  repos: '/repos',
+  api: '/settings',
+}
+
 /** The rivet strap: four rivets set in from the chamfered corners. */
 function RivetStrap() {
   return (
@@ -179,8 +204,35 @@ export function KpiRail({
       wrong in the markup — but at 390px each tile was about 90px wide and
       "4,755 / API left" was clipped inside it. A grid that never overflows can
       still be unreadable.
+
+      An error banner sits ABOVE the grid rather than replacing the tiles.
+      The App passes `error` + `onRetry` and every earlier version of this
+      component ignored both: a dashboard that could not reach its endpoint
+      kept the fixture figures and gave the viewer no sign the data was
+      stale and no way to retry. Surface it, as a one-line banner with a
+      Retry button that calls the handler the App already wired.
     */
-    <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
+    <div className="flex flex-col gap-3">
+      {state?.error && (
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-3 border px-3 py-2 text-[12px]"
+          style={{ borderColor: 'var(--hg-danger)', color: 'var(--hg-danger)' }}
+        >
+          <span>Could not reach the dashboard service: {state.error}</span>
+          {state.onRetry && (
+            <button
+              type="button"
+              onClick={state.onRetry}
+              className="shrink-0 border px-2 py-0.5 text-[11.5px]"
+              style={{ borderColor: 'var(--hg-danger)', color: 'var(--hg-danger)' }}
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
       {tiles.map((tile) => {
         const artSrc = artFor(tile.id)
         const numeralColor = toneVar(tile.tone)
@@ -204,7 +256,7 @@ export function KpiRail({
         return (
           <a
             key={tile.id}
-            href={`#${tile.id}`}
+            href={TILE_HREF[tile.id]}
             className="relative isolate flex items-center gap-3 overflow-hidden border px-5 no-underline transition-colors"
             style={{
               height: 'var(--spacing-tile)',
@@ -305,6 +357,7 @@ export function KpiRail({
           </a>
         )
       })}
+      </div>
     </div>
   )
 }
