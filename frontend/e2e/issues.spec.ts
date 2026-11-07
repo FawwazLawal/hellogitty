@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
+import { expectNoHorizontalOverflow } from './overflow'
 
 /**
  * The Issues page.
@@ -129,10 +130,9 @@ test.describe('issues', () => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/issues', { waitUntil: 'networkidle' })
     // Issue titles are long and arbitrary; this is the page most likely to
-    // push a phone sideways.
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    )
-    expect(overflow, `page scrolls ${overflow}px sideways at 390px`).toBeLessThanOrEqual(0)
+    // push a phone sideways — and the one where a missing min-w-0 would be
+    // hidden behind <main>'s overflow-x-hidden rather than showing up on the
+    // document. See ./overflow.
+    await expectNoHorizontalOverflow(page, 390)
   })
 })

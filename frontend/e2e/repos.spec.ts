@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
+import { expectNoHorizontalOverflow } from './overflow'
 
 /**
  * The tracked-repositories page.
@@ -135,9 +136,6 @@ test.describe('tracked repositories', () => {
   test('no horizontal overflow at 390px', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/repos', { waitUntil: 'networkidle' })
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    )
-    expect(overflow, `page scrolls ${overflow}px sideways at 390px`).toBeLessThanOrEqual(0)
+    await expectNoHorizontalOverflow(page, 390)
   })
 })
