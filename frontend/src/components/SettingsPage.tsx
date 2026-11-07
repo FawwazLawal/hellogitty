@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Plus, Trash2, AlertTriangle } from 'lucide-react'
 import { Panel, PanelHeader } from './chrome/Chrome'
+import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group'
 import { useTheme } from '../theme/ThemeProvider'
 import type { Appearance } from '../theme/ThemeProvider'
 import { useSettings, useSession, useRepoMutation } from '../data/settings'
@@ -87,27 +88,24 @@ function SegmentedControl<T extends string>({
   value: T
   onChange: (v: T) => void
 }) {
+  // Radix ToggleGroup gives the WAI-ARIA radiogroup behaviour (arrow-key
+  // navigation and roving tabindex) that the hand-rolled button row above
+  // lacked. The `v && onChange(v)` guards Radix's "unset" state — a user
+  // clicking the active item would otherwise clear the selection, which
+  // this segmented control is not meant to allow.
   return (
-    <div role="group" aria-label={label} className="flex border" style={{ borderColor: 'var(--hg-line-strong)' }}>
-      {options.map((o) => {
-        const active = o.value === value
-        return (
-          <button
-            key={o.value}
-            type="button"
-            aria-pressed={active}
-            onClick={() => onChange(o.value)}
-            className="px-3 py-1.5 text-[12px] transition-colors"
-            style={{
-              background: active ? 'var(--hg-accent-fill)' : 'var(--hg-surface)',
-              color: active ? 'var(--hg-accent-ink)' : 'var(--hg-text-muted)',
-            }}
-          >
-            {o.label}
-          </button>
-        )
-      })}
-    </div>
+    <ToggleGroup
+      aria-label={label}
+      size="md"
+      value={value}
+      onValueChange={(v) => v && onChange(v as T)}
+    >
+      {options.map((o) => (
+        <ToggleGroupItem key={o.value} value={o.value}>
+          {o.label}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
   )
 }
 

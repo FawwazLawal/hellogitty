@@ -1,5 +1,6 @@
 import { LayoutGrid, CircleHelp, Settings, Rows3 } from 'lucide-react'
 import { ClockOrnament, OniMark } from './chrome/Ornament'
+import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group'
 import { useTheme } from '../theme/ThemeProvider'
 import type { Appearance } from '../theme/ThemeProvider'
 import type { DashboardData } from '../fixtures/dashboard'
@@ -119,59 +120,30 @@ export function Masthead({ data }: { data: DashboardData }) {
           </button>
 
           {/* Appearance: auto / light / dark. Independent of identity. */}
-          <div
-            role="group"
+          <ToggleGroup
             aria-label="Appearance"
-            className="flex border"
-            style={{ borderColor: 'var(--hg-line-strong)' }}
+            value={appearance}
+            onValueChange={(v) => v && setAppearance(v as Appearance)}
           >
-            {APPEARANCES.map(({ value, label }) => {
-              const active = appearance === value
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => setAppearance(value)}
-                  className="px-2.5 py-1.5 text-[12px] transition-colors"
-                  style={{
-                    background: active ? 'var(--hg-accent-fill)' : 'var(--hg-surface)',
-                    color: active ? 'var(--hg-accent-ink)' : 'var(--hg-text-muted)',
-                  }}
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
+            {APPEARANCES.map(({ value, label }) => (
+              <ToggleGroupItem key={value} value={value}>
+                {label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
 
           {/* Identity. A separate control, by §5. */}
-          <div
-            role="group"
+          <ToggleGroup
             aria-label="Visual identity"
-            className="flex border"
-            style={{ borderColor: 'var(--hg-line-strong)' }}
+            value={identity}
+            onValueChange={(v) => v && setIdentity(v as typeof identity)}
           >
-            {order.map((id) => {
-              const active = identity === id
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => setIdentity(id)}
-                  title={identities[id].description}
-                  className="px-2.5 py-1.5 text-[12px] transition-colors"
-                  style={{
-                    background: active ? 'var(--hg-accent-fill)' : 'var(--hg-surface)',
-                    color: active ? 'var(--hg-accent-ink)' : 'var(--hg-text-muted)',
-                  }}
-                >
-                  {identities[id].label}
-                </button>
-              )
-            })}
-          </div>
+            {order.map((id) => (
+              <ToggleGroupItem key={id} value={id} title={identities[id].description}>
+                {identities[id].label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
         </div>
       </div>
     </header>
