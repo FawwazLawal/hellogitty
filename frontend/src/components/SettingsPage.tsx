@@ -397,6 +397,36 @@ export function SettingsPage() {
               </ul>
             </div>
           )}
+
+          {/*
+            MAINTAIN LIST. Read-only — the entries come from hellogitty.json's
+            `maintain:` key, which means editing them is editing the config
+            file and restarting. The templated page gated the whole section on
+            `{{if .ConfigMaintain}}`; this gates on length for the same
+            reason, so a user without a maintain list sees nothing rather
+            than an empty "Maintain list (0)" strip.
+          */}
+          {d && d.config.maintain.length > 0 && (
+            <div className="border-t px-4 py-3" style={{ borderColor: 'var(--hg-line)' }}>
+              <div className="mb-1.5 flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--hg-text-muted)' }}>
+                <span>Maintain list — orgs and repositories whose PRs land under &ldquo;Waiting on you&rdquo;</span>
+                <span
+                  className="whitespace-nowrap border px-1.5 text-[10px] uppercase tracking-wide"
+                  style={{ borderColor: 'var(--hg-line-strong)', color: 'var(--hg-text-muted)' }}
+                  title="Set in hellogitty.json; editing requires a restart"
+                >
+                  config file
+                </span>
+              </div>
+              <ul className="flex flex-col gap-1">
+                {d.config.maintain.map((slug) => (
+                  <li key={slug} className="truncate font-mono text-[12px]" style={{ color: 'var(--hg-text)' }}>
+                    {slug}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </Panel>
 
         <Panel>
@@ -434,6 +464,18 @@ export function SettingsPage() {
             <Readout value={d?.config.reposFile ?? ''} />
           </Row>
           <Row label="Inbox"><Readout value={d?.config.inbox ?? ''} /></Row>
+          {/*
+            PIPELINE TARGETS. Only meaningful when a `pipeline_command` is
+            configured; `inPipeline === 0` on a dashboard with no pipeline is
+            the same number as `inPipeline === 0` on a dashboard WITH one
+            and no matches, and the second is a useful signal while the first
+            is noise. Gating on `hasPipeline` keeps the two apart.
+          */}
+          {d?.hasPipeline && (
+            <Row label="Pipeline targets" hint="How many tracked repositories the pipeline command covers.">
+              <Readout value={String(d.repos.inPipeline)} />
+            </Row>
+          )}
           <Row label="Version"><Readout value={d?.version ?? ''} /></Row>
         </Panel>
 
