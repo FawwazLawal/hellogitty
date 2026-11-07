@@ -772,6 +772,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'")
 
 	switch {
+	case r.URL.Path == "/settings" && h.ReactIsDefault && h.App != nil:
+		// Converted. The templated settings page is still compiled in and still
+		// reachable at /legacy/settings — §7 Phase 4 removes legacy "only after
+		// replacement passes regression tests and approval", and the React page
+		// deliberately does not yet carry the clock controls.
+		h.serveAppIndex(w, r)
+	case r.URL.Path == "/legacy/settings":
+		h.serveSettingsPage(w, r)
 	case r.URL.Path == "/" && h.ReactIsDefault && h.App != nil:
 		// The React shell, served at the front door. Its assets still live
 		// under /app/ — the bundle is built with that base — so this needs no
@@ -798,6 +806,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.StripPrefix("/art/", http.FileServer(http.FS(h.Art))).ServeHTTP(w, r)
 	case r.URL.Path == "/app/api/dashboard.json":
 		h.serveDashboardAPI(w, r)
+	case r.URL.Path == "/app/api/session.json":
+		h.serveSessionAPI(w, r)
+	case r.URL.Path == "/app/api/settings.json":
+		h.serveSettingsAPI(w, r)
 	case strings.HasPrefix(r.URL.Path, "/app") && h.App != nil:
 		h.serveApp(w, r)
 	case r.URL.Path == "/feed":

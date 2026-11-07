@@ -3,6 +3,7 @@ package dashboard
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -349,4 +350,170 @@ func itoa(n int) string {
 		b[i] = '-'
 	}
 	return string(b[i:])
+}
+
+// Session is the small document carrying what the UI needs in order to act,
+// as opposed to what it needs in order to render.
+//
+// WHY THIS IS NOT PART OF THE DASHBOARD DOCUMENT. `TestDashboardAPIDoesNotLeak
+// TheToken` asserts the acknowledgement token never appears there, and that
+// test is right: the dashboard document is a read-only projection that gets
+// cached, logged and passed around, and a credential sprawled through it is a
+// credential you have stopped being able to reason about.
+//
+// The token is not secret from this page, though. The templated settings page
+// already renders it into the HTML as `{{.Token}}`, where any same-origin
+// script can read it, and the guard it provides is CSRF rather than secrecy:
+// serveRepos requires a same-origin request AND a matching header, so a page on
+// another origin cannot forge a write even knowing the endpoint. Serving it at
+// a same-origin endpoint is the identical property, not a weaker one.
+//
+// Keeping it in its own document means the one that carries it is small,
+// obviously about authorisation, and easy to audit — rather than one field
+// among forty in a document about repositories.
+type Session struct {
+	// Token authorises writes via the X-HelloGitty-Token header.
+	Token string `json:"token"`
+	// Writable says whether this build can change what is tracked at all. The
+	// UI should hide the controls rather than offer an action that 404s.
+	Writable bool `json:"writable"`
+}
+
+func (h *Handler) serveSessionAPI(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		w.Header().Set("Allow", "GET, HEAD")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	_, writable := h.Source.(RepoSource)
+
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	json.NewEncoder(w).Encode(Session{Token: h.token(), Writable: writable})
+}
+
+// SettingsAPI backs the settings page.
+//
+// Everything here is READ-ONLY. The page's two write actions — track and
+// untrack a repository — already have endpoints at /repos/add and
+// /repos/remove, guarded by same-origin plus the token header, and the React
+// page uses those rather than growing parallel ones. §4 asks for "minimal
+// typed endpoints if the migration actually requires them"; for writes it does
+// not.
+//
+// The config paths are shown so you can see where the service is reading and
+// writing. They are paths, not contents: nothing here opens a file.
+type SettingsAPI struct {
+	Version  string `json:"version"`
+	Codename string `json:"codename"`
+
+	Config struct {
+		Listen    string `json:"listen"`
+		Database  string `json:"database"`
+		Snapshot  string `json:"snapshot"`
+		ReposFile string `json:"reposFile"`
+		Inbox     string `json:"inbox"`
+		// LayoutDefault is JSON from the config file, or empty when unset.
+		LayoutDefault string `json:"layoutDefault"`
+	} `json:"config"`
+
+	Polling struct {
+		IntervalMinutes int    `json:"intervalMinutes"`
+		LastPollUTC     string `json:"lastPollUtc"`
+		NextPollUTC     string `json:"nextPollUtc"`
+		// Known is false before the first poll completes. Without it a fresh
+		// start looks identical to a stalled one.
+		Known bool `json:"known"`
+	} `json:"polling"`
+
+	API struct {
+		Known    bool   `json:"known"`
+		Used     int    `json:"used"`
+		Limit    int    `json:"limit"`
+		Percent  int    `json:"percent"`
+		ResetUTC string `json:"resetUtc"`
+	} `json:"api"`
+
+	Repos struct {
+		// Tracked is what the next poll will look at: the repositories in the
+		// last snapshot, minus any removed since.
+		//
+		// WHY THE SUBTRACTION. The snapshot is written by the poller, so a
+		// repository removed a second ago is still in it until the next cycle
+		// — up to an hour. Listing the snapshot alone made removal look like
+		// it had failed: the request returned 200, and the row stayed.
+		Tracked []string `json:"tracked"`
+		Count   int      `json:"count"`
+		// Removed lists config-file repositories dropped here but still
+		// present in the snapshot. Shown so the removal is visibly an action
+		// that happened rather than one that did nothing.
+		Removed []string `json:"removed"`
+		// InPipeline is how many of them the pipeline command knows about.
+		InPipeline int `json:"inPipeline"`
+	} `json:"repos"`
+}
+
+func (h *Handler) serveSettingsAPI(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		w.Header().Set("Allow", "GET, HEAD")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	p, err := h.build()
+	if err != nil {
+		http.Error(w, "settings unavailable", http.StatusInternalServerError)
+		return
+	}
+
+	var doc SettingsAPI
+	doc.Version = p.Version
+	doc.Config.Listen = p.ConfigListen
+	doc.Config.Database = p.ConfigDatabase
+	doc.Config.Snapshot = p.ConfigSnapshot
+	doc.Config.ReposFile = p.ConfigReposFile
+	doc.Config.Inbox = p.ConfigInbox
+	// p.LayoutDefault is template.JS — a type that exists to tell html/template
+	// this string is already safe to inline in a <script>. That marking means
+	// nothing in JSON and carries no guarantee here, so it is converted
+	// explicitly rather than silently: whatever reads this field is doing its
+	// own escaping.
+	doc.Config.LayoutDefault = string(p.LayoutDefault)
+
+	doc.Polling.IntervalMinutes = p.PollInterval
+	doc.Polling.LastPollUTC = p.LastPollUTC
+	doc.Polling.NextPollUTC = p.NextPollUTC
+	doc.Polling.Known = p.LastPollUnix > 0
+
+	doc.API.Known = p.APIKnown
+	doc.API.Used = p.APIUsed
+	doc.API.Limit = p.APILimit
+	doc.API.Percent = p.APIPct
+	doc.API.ResetUTC = p.APIResetUTC
+
+	doc.Repos.Tracked = []string{}
+	doc.Repos.Removed = []string{}
+	removed := map[string]bool{}
+	if rs, ok := h.Source.(RepoSource); ok {
+		for _, full := range rs.Removed() {
+			removed[strings.ToLower(full)] = true
+			doc.Repos.Removed = append(doc.Repos.Removed, full)
+		}
+	}
+	for _, row := range p.Rows {
+		full := row.Owner + "/" + row.Name
+		if removed[strings.ToLower(full)] {
+			continue
+		}
+		doc.Repos.Tracked = append(doc.Repos.Tracked, full)
+	}
+	doc.Repos.Count = len(doc.Repos.Tracked)
+	doc.Repos.InPipeline = p.TargetCount
+
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	enc.Encode(doc)
 }
