@@ -136,15 +136,27 @@ export function KpiRail({ tiles }: { tiles: KpiTile[] }) {
       {tiles.map((tile) => {
         const artSrc = artMap[tile.id]
         const numeralColor = toneVar(tile.tone)
-        const ariaLabel = tile.sublabel
-          ? `${tile.label}: ${tile.value.toLocaleString()}, ${tile.sublabel}`
-          : `${tile.label}: ${tile.value.toLocaleString()}`
+        /*
+          NO aria-label. It had one — `${label}: ${value}` — and axe caught it
+          as a WCAG 2.5.3 (Label in Name) failure on all four tiles.
+
+          The rule: a control's accessible name must CONTAIN its visible text,
+          in order, so that someone driving the page by voice can say what they
+          see and have it match. The visible text here reads "11" then "Needs
+          you"; the label said "Needs you: 11". Reversed order, plus a colon
+          that is in the name and not on screen, so neither "eleven" nor "needs
+          you" matched the control.
+
+          The fix is to delete the label rather than rewrite it. The tile's own
+          content already reads as a good name — "11 Needs you non-draft, state
+          OPEN" — and a name computed from content cannot drift out of sync with
+          what is rendered, which is exactly how this broke.
+        */
 
         return (
           <a
             key={tile.id}
             href={`#${tile.id}`}
-            aria-label={ariaLabel}
             className="relative isolate flex items-center gap-3 overflow-hidden border px-5 no-underline transition-colors"
             style={{
               height: 'var(--spacing-tile)',
