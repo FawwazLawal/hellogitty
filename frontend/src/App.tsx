@@ -2,6 +2,7 @@ import { Masthead } from './components/Masthead'
 import { NavTabs } from './components/NavTabs'
 import { SettingsPage } from './components/SettingsPage'
 import { PipelinePage } from './components/PipelinePage'
+import { WorkPage } from './components/WorkPage'
 import { KpiRail } from './components/KpiRail'
 import { ConversationsPanel } from './components/ConversationsPanel'
 import { TrackedRepos } from './components/TrackedRepos'
@@ -33,10 +34,26 @@ import { DASHBOARD } from './fixtures/dashboard'
  * of what a router would do for us. The moment a third view needs nested
  * routes or params, this becomes an argument for one — until then it is not.
  */
-function viewFor(pathname: string): 'dashboard' | 'settings' | 'pipeline' {
-  if (pathname === '/settings' || pathname.startsWith('/settings/')) return 'settings'
-  if (pathname === '/pipeline' || pathname.startsWith('/pipeline/')) return 'pipeline'
-  return 'dashboard'
+type View = 'dashboard' | 'settings' | 'pipeline' | 'work'
+
+/**
+ * Still not a router.
+ *
+ * §3 warns an unnecessary second router increases operational risk, and this
+ * table is the whole of what one would do for us: every destination is a
+ * document the server renders, with no nested routes and no params. The moment
+ * one of those is needed, this becomes the argument for a router rather than
+ * an excuse not to have one.
+ */
+const ROUTES: { prefix: string; view: View }[] = [
+  { prefix: '/settings', view: 'settings' },
+  { prefix: '/pipeline', view: 'pipeline' },
+  { prefix: '/work', view: 'work' },
+]
+
+function viewFor(pathname: string): View {
+  const hit = ROUTES.find((r) => pathname === r.prefix || pathname.startsWith(r.prefix + '/'))
+  return hit ? hit.view : 'dashboard'
 }
 
 export default function App() {
@@ -127,6 +144,7 @@ export default function App() {
 
       {view === 'settings' && <SettingsPage />}
       {view === 'pipeline' && <PipelinePage />}
+      {view === 'work' && <WorkPage />}
 
       {view === 'dashboard' && (
       <main className="min-w-0 overflow-x-hidden px-4 pb-[200px] pt-3">

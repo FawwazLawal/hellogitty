@@ -332,3 +332,64 @@ func TestPipelineAPIDerivesPredicatesServerSide(t *testing.T) {
 		}
 	}
 }
+
+// The work board keeps its groups apart.
+//
+// "Waiting on you" and "waiting on them" is the question this page exists to
+// answer; one merged list sorted by date answers a different one, which you
+// could get from GitHub directly. Done and Dismissed are separate for the same
+// reason — finished is not set aside, and only one of them can be restored.
+func TestWorkAPIKeepsGroupsApart(t *testing.T) {
+	h := handler(fakeSource{})
+	rec := httptest.NewRecorder()
+	h.serveWorkAPI(rec, httptest.NewRequest(http.MethodGet, "/app/api/work.json", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET = %d, want 200", rec.Code)
+	}
+
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(rec.Body.Bytes(), &raw); err != nil {
+		t.Fatalf("bad JSON: %v", err)
+	}
+	for _, group := range []string{"you", "them", "done", "dismissed"} {
+		v, ok := raw[group]
+		if !ok {
+			t.Errorf("no %q group — merging the groups answers a different question than this page asks", group)
+			continue
+		}
+		if string(v) == "null" {
+			t.Errorf("%q is null; it must be [] so the client can iterate without a guard", group)
+		}
+	}
+	// A single flat list would be the regression: it must not appear.
+	if _, ok := raw["items"]; ok {
+		t.Error("a flat `items` list is present; the groups are the page, and flattening them loses the question it answers")
+	}
+
+	var doc WorkPageAPI
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("bad JSON: %v", err)
+	}
+	// Known and Partial are different states and both must survive the wire:
+	// "no board yet" is not "half a board".
+	if !doc.Known && doc.Partial {
+		t.Error("partial is true while known is false; a board that has never been fetched cannot be half-fetched")
+	}
+	for _, r := range doc.You {
+		if r.Labels == nil {
+			t.Errorf("%s#%d has null labels; it must be []", r.Repo, r.Number)
+		}
+	}
+}
+
+// Reads only. Restoring goes to /cells/restore, which already exists.
+func TestWorkAPIIsReadOnly(t *testing.T) {
+	h := handler(fakeSource{})
+	for _, m := range []string{http.MethodPost, http.MethodDelete} {
+		rec := httptest.NewRecorder()
+		h.serveWorkAPI(rec, httptest.NewRequest(m, "/app/api/work.json", nil))
+		if rec.Code != http.StatusMethodNotAllowed {
+			t.Errorf("%s = %d, want 405", m, rec.Code)
+		}
+	}
+}
