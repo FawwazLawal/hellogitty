@@ -41,7 +41,7 @@ interface Tab {
 
 const TABS: Tab[] = [
   { id: 'dashboard', label: 'Dashboard', href: '/', Icon: Home, react: true },
-  { id: 'work', label: 'Your work', href: '/work', Icon: Briefcase, react: false },
+  { id: 'work', label: 'Your work', href: '/work', Icon: Briefcase, react: true },
   { id: 'pipeline', label: 'PR Pipeline', href: '/pipeline', Icon: GitPullRequest, react: true },
   { id: 'issues', label: 'Issues', href: '/issues', Icon: CircleDot, react: false },
   { id: 'tracked', label: 'Tracked repos', href: '/repos', Icon: Calendar, react: false },

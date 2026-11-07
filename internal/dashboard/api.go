@@ -636,3 +636,94 @@ func (h *Handler) servePipelineAPI(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	json.NewEncoder(w).Encode(doc)
 }
+
+// WorkRow is one item on the work board.
+type WorkRow struct {
+	Key    string `json:"key"`
+	Kind   string `json:"kind"`
+	Repo   string `json:"repo"`
+	Number int    `json:"number"`
+	Title  string `json:"title"`
+	URL    string `json:"url"`
+	// Why it is on the board: "You opened it", "Assigned to you".
+	Why string `json:"why"`
+	// Status is the server's sentence about where it stands.
+	Status string `json:"status"`
+	// Level is the server's severity word: "caution", "ok" or empty.
+	Level string `json:"level"`
+	// Personal is a step only the owner can take, e.g. "Sign the CLA".
+	Personal string   `json:"personal,omitempty"`
+	Ago      string   `json:"ago"`
+	AgoTitle string   `json:"agoTitle"`
+	Labels   []string `json:"labels"`
+}
+
+// WorkPageAPI backs the "Your work" page.
+//
+// THE GROUPS ARE THE POINT and they are kept apart rather than merged into one
+// list with a flag. "Waiting on you" and "waiting on them" are the question the
+// page exists to answer; a single list sorted by date answers a different one.
+//
+// `Done` and `Dismissed` are separate again for the same reason: finished is
+// not the same as set aside, and only one of them can be restored.
+type WorkPageAPI struct {
+	Known bool   `json:"known"`
+	Error string `json:"error,omitempty"`
+	// Partial: the board is new but incomplete, because a refresh failed
+	// halfway. Different from Known being false, which means none has run.
+	Partial bool   `json:"partial"`
+	Login   string `json:"login"`
+	Scope   string `json:"scope"`
+
+	You       []WorkRow `json:"you"`
+	Them      []WorkRow `json:"them"`
+	Done      []WorkRow `json:"done"`
+	Dismissed []WorkRow `json:"dismissed"`
+}
+
+func toWorkRows(rows []workRow) []WorkRow {
+	out := []WorkRow{}
+	for _, w := range rows {
+		labels := w.Labels
+		if labels == nil {
+			labels = []string{}
+		}
+		out = append(out, WorkRow{
+			Key: w.Key, Kind: w.Kind, Repo: w.Repo, Number: w.Number,
+			Title: w.Title, URL: w.URL, Why: w.Why, Status: w.Status,
+			Level: w.Level, Personal: w.Personal,
+			Ago: w.Ago, AgoTitle: w.AgoTitle, Labels: labels,
+		})
+	}
+	return out
+}
+
+func (h *Handler) serveWorkAPI(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		w.Header().Set("Allow", "GET, HEAD")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	p, err := h.build()
+	if err != nil {
+		http.Error(w, "work board unavailable", http.StatusInternalServerError)
+		return
+	}
+
+	doc := WorkPageAPI{
+		Known:     p.Work.Known,
+		Error:     p.Work.Err,
+		Partial:   p.Work.Partial,
+		Login:     p.Work.Login,
+		Scope:     p.Work.Scope,
+		You:       toWorkRows(p.Work.You),
+		Them:      toWorkRows(p.Work.Them),
+		Done:      toWorkRows(p.Work.Done),
+		Dismissed: toWorkRows(p.DismissedWork),
+	}
+
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	json.NewEncoder(w).Encode(doc)
+}

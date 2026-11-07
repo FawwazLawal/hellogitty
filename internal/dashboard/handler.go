@@ -772,6 +772,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'")
 
 	switch {
+	case r.URL.Path == "/work" && h.ReactIsDefault && h.App != nil:
+		h.serveAppIndex(w, r)
+	case r.URL.Path == "/legacy/work":
+		h.serveWorkPage(w, r)
 	case r.URL.Path == "/pipeline" && h.ReactIsDefault && h.App != nil:
 		// Converted. /legacy/pipeline keeps the templated page, which still
 		// carries the per-stage board the React port does not.
@@ -818,6 +822,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveSettingsAPI(w, r)
 	case r.URL.Path == "/app/api/pipeline.json":
 		h.servePipelineAPI(w, r)
+	case r.URL.Path == "/app/api/work.json":
+		h.serveWorkAPI(w, r)
 	case strings.HasPrefix(r.URL.Path, "/app") && h.App != nil:
 		h.serveApp(w, r)
 	case r.URL.Path == "/feed":
