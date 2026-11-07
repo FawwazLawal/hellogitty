@@ -47,6 +47,13 @@ const PullRequest = z.object({
 })
 type PullRequest = z.infer<typeof PullRequest>
 
+const Stage = z.object({
+  abbr: z.string(),
+  name: z.string(),
+  count: z.number().int(),
+})
+type Stage = z.infer<typeof Stage>
+
 const PipelineDoc = z.object({
   lifetime: z.object({
     opened: z.number().int(),
@@ -64,6 +71,14 @@ const PipelineDoc = z.object({
   error: z.string().optional(),
   pullRequests: z.array(PullRequest),
   repos: z.array(z.string()),
+  /** True only when `pipeline_command` is configured and the per-stage board
+   * has something to say. Mirrors the templated page's `{{if .HasPipeline}}`. */
+  hasPipeline: z.boolean(),
+  /** One entry per configured stage, in pipeline order. Empty when
+   * `hasPipeline` is false — but the UI should gate on the flag, not on
+   * length, so a pipeline configured with zero movement shows as "0 in each
+   * stage" rather than disappearing. */
+  stages: z.array(Stage),
 })
 
 function usePipeline() {
@@ -169,6 +184,8 @@ export function PipelinePage() {
             Rate is merged ÷ (merged + closed). Open ones don&rsquo;t count yet.
           </p>
         </Panel>
+
+        {d?.hasPipeline && <StagesPanel stages={d.stages} />}
 
         <Panel>
           <PanelHeader
@@ -307,6 +324,70 @@ export function PipelinePage() {
         </Panel>
       </div>
     </main>
+  )
+}
+
+/**
+ * The per-stage board.
+ *
+ * Mirrors the templated page's Stages section — a card per configured stage,
+ * each linking to `/list?stage=<name>`, which is still a templated route.
+ *
+ * LAYOUT AT 375PX, decided up front rather than retrofit. The templated grid
+ * used `minmax(140px, 1fr)`, which at a 375-wide viewport with 32px of
+ * padding leaves room for 2 cards per row — a readable wrap, not a scroll.
+ * This grid uses `minmax(130px, 1fr)` so a long stage name still fits on a
+ * phone, and the name itself truncates with an ellipsis for anything that
+ * doesn't. No horizontal scroll container: a row of seven cards wrapping to
+ * four rows on a phone is a cleaner read than a 640px-wide strip the viewer
+ * has to swipe through.
+ *
+ * ZERO IS DIMMED, not hidden. An empty stage is information ("nothing is in
+ * build right now") in the same way a 0-column on a stacked bar chart is; a
+ * disappearing column changes the shape of the row without saying what
+ * happened. The templated page uses `.zero` for the same reason.
+ */
+function StagesPanel({ stages }: { stages: Stage[] }) {
+  return (
+    <Panel>
+      <PanelHeader title="Stages">
+        <span className="text-[11px]" style={{ color: 'var(--hg-text-muted)' }}>
+          {stages.length} stage{stages.length === 1 ? '' : 's'}
+        </span>
+      </PanelHeader>
+      <ul
+        className="grid gap-2 px-4 py-3"
+        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))' }}
+      >
+        {stages.map((s) => (
+          <li key={s.name} className="min-w-0">
+            <a
+              href={`/list?stage=${encodeURIComponent(s.name)}`}
+              className="flex flex-col items-center justify-center gap-1 border px-3 py-3 text-center no-underline"
+              style={{
+                background: 'var(--hg-surface)',
+                borderColor: 'var(--hg-line)',
+                color: 'var(--hg-text)',
+              }}
+            >
+              <span
+                className="font-mono text-[22px] font-bold tabular-nums leading-none"
+                style={{ color: s.count === 0 ? 'var(--hg-text-muted)' : 'var(--hg-text)' }}
+              >
+                {s.count}
+              </span>
+              <span
+                className="w-full truncate text-[11px]"
+                title={s.name}
+                style={{ color: 'var(--hg-text-muted)' }}
+              >
+                {s.name}
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </Panel>
   )
 }
 
