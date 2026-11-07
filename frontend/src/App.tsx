@@ -8,6 +8,7 @@ import { ReposPage } from './components/ReposPage'
 import { HelpPage } from './components/HelpPage'
 import { YourReposPage } from './components/YourReposPage'
 import { ConversationsPage } from './components/ConversationsPage'
+import { AlertsRouter } from './components/alerts/AlertsRouter'
 import { KpiRail } from './components/KpiRail'
 import { ConversationsPanel } from './components/ConversationsPanel'
 import { TrackedRepos } from './components/TrackedRepos'
@@ -39,7 +40,7 @@ import { DASHBOARD } from './fixtures/dashboard'
  * of what a router would do for us. The moment a third view needs nested
  * routes or params, this becomes an argument for one — until then it is not.
  */
-type View = 'dashboard' | 'settings' | 'pipeline' | 'work' | 'issues' | 'repos' | 'your-repos' | 'conversations' | 'help'
+type View = 'dashboard' | 'settings' | 'pipeline' | 'work' | 'issues' | 'repos' | 'your-repos' | 'conversations' | 'help' | 'alerts'
 
 /**
  * Still not a router.
@@ -69,6 +70,10 @@ const ROUTES: { prefix: string; view: View }[] = [
   { prefix: '/repos', view: 'repos' },
   { prefix: '/conversations', view: 'conversations' },
   { prefix: '/help', view: 'help' },
+  // Every /alerts/* path, one view. AlertsRouter picks the specific alert
+  // from the pathname — same reasoning as the top-level dispatch: each
+  // destination is a document the server also serves.
+  { prefix: '/alerts', view: 'alerts' },
 ]
 
 function viewFor(pathname: string): View {
@@ -180,6 +185,7 @@ export default function App() {
       {view === 'your-repos' && <YourReposPage />}
       {view === 'conversations' && <ConversationsPage />}
       {view === 'help' && <HelpPage />}
+      {view === 'alerts' && <AlertsRouter pathname={pathname} />}
 
       {view === 'dashboard' && (
       <main className="min-w-0 overflow-x-hidden px-4 pb-[200px] pt-3">

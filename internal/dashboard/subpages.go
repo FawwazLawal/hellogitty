@@ -112,6 +112,39 @@ func (h *Handler) serveAlertRepoHealthPage(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// dispatchLegacyAlert routes one of the alert names to its templated handler.
+//
+// This exists so the routing switch in handler.go carries ONE case for the
+// whole alert surface rather than eleven. It's called from both
+// /legacy/alerts/* and from the /alerts/* fallback when ReactIsDefault is
+// off, so the legacy pages stay reachable in both shapes of the build.
+func (h *Handler) dispatchLegacyAlert(w http.ResponseWriter, r *http.Request, name string) {
+	switch name {
+	case "your-move":
+		h.serveAlertYourMove(w, r)
+	case "watched-claimed":
+		h.serveAlertWatchedClaimed(w, r)
+	case "watched-closed":
+		h.serveAlertWatchedClosed(w, r)
+	case "check-failed":
+		h.serveAlertCheckFailed(w, r)
+	case "repo-dormant", "repo-slow":
+		h.serveAlertRepoHealthPage(w, r)
+	case "unresolved-threads":
+		h.serveAlertUnresolvedThreads(w, r)
+	case "data-stale":
+		h.serveAlertDataStale(w, r)
+	case "repo-flagged":
+		h.serveAlertRepoFlagged(w, r)
+	case "stage-failed":
+		h.serveAlertStageFailed(w, r)
+	case "api-low":
+		h.serveAlertAPILow(w, r)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
 func (h *Handler) serveSubPage(w http.ResponseWriter, r *http.Request, tplSource, tplName string) {
 	tmpl, err := template.New("index").Funcs(funcs).Parse(h.Template)
 	if err == nil && tplSource != "" {

@@ -852,6 +852,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveHelpAPI(w, r)
 	case r.URL.Path == "/app/api/your-repos.json":
 		h.serveYourReposAPI(w, r)
+	case r.URL.Path == "/app/api/alerts.json":
+		h.serveAlertsAPI(w, r)
 	case strings.HasPrefix(r.URL.Path, "/app") && h.App != nil:
 		h.serveApp(w, r)
 	case r.URL.Path == "/feed":
@@ -903,28 +905,16 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveConversationsPage(w, r)
 	case r.URL.Path == "/your-repos":
 		h.serveYourReposPage(w, r)
-	case r.URL.Path == "/alerts/your-move":
-		h.serveAlertYourMove(w, r)
-	case r.URL.Path == "/alerts/watched-claimed":
-		h.serveAlertWatchedClaimed(w, r)
-	case r.URL.Path == "/alerts/watched-closed":
-		h.serveAlertWatchedClosed(w, r)
-	case r.URL.Path == "/alerts/check-failed":
-		h.serveAlertCheckFailed(w, r)
-	case r.URL.Path == "/alerts/repo-dormant":
-		h.serveAlertRepoHealthPage(w, r)
-	case r.URL.Path == "/alerts/repo-slow":
-		h.serveAlertRepoHealthPage(w, r)
-	case r.URL.Path == "/alerts/unresolved-threads":
-		h.serveAlertUnresolvedThreads(w, r)
-	case r.URL.Path == "/alerts/data-stale":
-		h.serveAlertDataStale(w, r)
-	case r.URL.Path == "/alerts/repo-flagged":
-		h.serveAlertRepoFlagged(w, r)
-	case r.URL.Path == "/alerts/stage-failed":
-		h.serveAlertStageFailed(w, r)
-	case r.URL.Path == "/alerts/api-low":
-		h.serveAlertAPILow(w, r)
+	// Alerts: converted. When ReactIsDefault is on, every /alerts/* path the
+	// React shell owns serves the shell; /legacy/alerts/* reach the same
+	// templated pages they always did through one dispatcher. The last case
+	// is the templated fallback when ReactIsDefault is off.
+	case isAlertsReactPath(r.URL.Path) && h.ReactIsDefault && h.App != nil:
+		h.serveAppIndex(w, r)
+	case legacyAlertName(r.URL.Path) != "":
+		h.dispatchLegacyAlert(w, r, legacyAlertName(r.URL.Path))
+	case isAlertsReactPath(r.URL.Path):
+		h.dispatchLegacyAlert(w, r, strings.TrimPrefix(r.URL.Path, "/alerts/"))
 	case r.URL.Path == "/list":
 		h.serveList(w, r)
 	case r.URL.Path == "/repos/add":
