@@ -92,6 +92,35 @@ jobs:
         working-directory: frontend
         run: pnpm run build
 
+      # THE SIZE BUDGET, WHERE IT CAN ACTUALLY RUN.
+      #
+      # frontend/e2e/budget.spec.ts is the real budget and it is thorough, but
+      # it is Playwright and CI does not run Playwright. So `motion` crossed a
+      # 150 KB ceiling and landed on dev at 197 KB with every check green: the
+      # gate existed, was correct, and simply never executed on the path that
+      # merges code.
+      #
+      # This duplicates only the entry-chunk number, cheaply, with no browser.
+      # The Playwright spec stays the detailed version; this is the one that
+      # stands between a regression and dev. If the two ever disagree, the
+      # spec is authoritative and this is wrong.
+      - name: First-load JavaScript budget
+        working-directory: frontend
+        run: |
+          ENTRY=$(grep -oE 'assets/[A-Za-z0-9._-]+\.js' ../web/app/index.html | head -1)
+          if [ -z "$ENTRY" ]; then
+            echo "::error::no entry script found in web/app/index.html; this check would measure nothing"
+            exit 1
+          fi
+          SIZE=$(gzip -6 -c "../web/app/$ENTRY" | wc -c)
+          LIMIT=$((150 * 1024))
+          echo "entry chunk $ENTRY: $((SIZE / 1024)) KB gzip (budget $((LIMIT / 1024)) KB)"
+          if [ "$SIZE" -gt "$LIMIT" ]; then
+            echo "::error::first-load JavaScript is $((SIZE / 1024)) KB gzip, over the $((LIMIT / 1024)) KB budget."
+            echo "Load a heavy page on demand (see App.tsx's lazy imports) or change the budget deliberately in frontend/e2e/budget.spec.ts and here."
+            exit 1
+          fi
+
       - name: The committed bundle must match the source
         run: |
           if ! git diff --quiet -- web/app; then
