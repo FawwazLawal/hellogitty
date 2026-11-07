@@ -9,6 +9,8 @@ import (
 	"testing/fstest"
 
 	"github.com/FawwazLawal/hellogitty/web"
+	"os"
+	"regexp"
 )
 
 // The /app/ route is the Phase 2 integration surface: the Go binary serving the
@@ -174,4 +176,55 @@ func TestUIFlagChoosesTheFrontDoor(t *testing.T) {
 			t.Errorf("/ = %d, want 200 — a misconfiguration must not take the product away", rec.Code)
 		}
 	})
+}
+
+// EVERY CONVERTED VIEW KEEPS A WAY BACK.
+//
+// This is the check that was missing when /issues was converted: the route
+// went in, the /legacy/ mirror did not, and the templated issues page became
+// unreachable the moment the flag was set. Nothing caught it — /issues
+// answered 200 and rendered correctly, so every other check stayed green
+// while one page had quietly lost its original.
+//
+// It matters beyond tidiness. §7 Phase 4 says legacy comes out only after the
+// replacement passes approval, and nobody can approve a replacement they
+// cannot open the original to compare against.
+//
+// WHY THIS READS THE SOURCE rather than making requests. The obvious test —
+// ask the handler for /legacy/work and expect 200 — cannot tell a missing
+// route from a test harness that has no template and no IssueSource: the
+// first attempt at this returned 500 for four views and 404 for the fifth,
+// all for reasons that had nothing to do with the mirror. The invariant being
+// protected is a property of the route table, so the route table is what gets
+// read. A new converted view with no mirror fails here on the next run.
+func TestEveryConvertedViewHasALegacyMirror(t *testing.T) {
+	src, err := os.ReadFile("handler.go")
+	if err != nil {
+		t.Fatalf("read handler.go: %v", err)
+	}
+	text := string(src)
+
+	// A converted front door: `r.URL.Path == "/x" && h.ReactIsDefault`.
+	converted := regexp.MustCompile(`r\.URL\.Path == "/([a-z-]+)" && h\.ReactIsDefault`)
+	mirrors := regexp.MustCompile(`r\.URL\.Path == "/legacy/([a-z-]+)"`)
+
+	have := map[string]bool{}
+	for _, m := range mirrors.FindAllStringSubmatch(text, -1) {
+		have[m[1]] = true
+	}
+
+	found := 0
+	for _, m := range converted.FindAllStringSubmatch(text, -1) {
+		view := m[1]
+		found++
+		if !have[view] {
+			t.Errorf("/%s is served by the React app when the flag is set, but there is no /legacy/%s route — the templated page is unreachable, and the replacement cannot be approved against an original nobody can open", view, view)
+		}
+	}
+
+	// Rule 3: a check that cannot go red is not a check. If the pattern ever
+	// stops matching the switch, this test would pass by finding nothing.
+	if found < 2 {
+		t.Fatalf("matched only %d converted routes in handler.go; the pattern has drifted from the switch and this test is no longer checking anything", found)
+	}
 }
