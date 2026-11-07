@@ -52,6 +52,24 @@ export const RepoFromApi = z.object({
   health: z.string(),
   stages: z.array(StageFromApi),
   gate: z.string(),
+  /**
+   * The program's own view: is this a pipeline target, and at which stage.
+   *
+   * Sent rather than derived from `stages`, because working out which state
+   * word means "here" is a guess, and a wrong guess would show the wrong
+   * stage rather than no stage — wrong in a way nothing on the page reveals.
+   */
+  /**
+   * Whether this repository has ever been polled successfully.
+   *
+   * When false, `open`, `goodFirst` and `unassigned` are all zero because
+   * nobody has looked — not because there is nothing there. Rendering those
+   * as counts says "this repository needs nothing from you" about a
+   * repository in exactly the state where that is unknowable.
+   */
+  polled: z.boolean(),
+  inPipeline: z.boolean(),
+  stage: z.string().optional(),
   open: z.number().int(),
   goodFirst: z.number().int(),
   unassigned: z.number().int(),

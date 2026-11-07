@@ -4,6 +4,7 @@ import { SettingsPage } from './components/SettingsPage'
 import { PipelinePage } from './components/PipelinePage'
 import { WorkPage } from './components/WorkPage'
 import { IssuesPage } from './components/IssuesPage'
+import { ReposPage } from './components/ReposPage'
 import { KpiRail } from './components/KpiRail'
 import { ConversationsPanel } from './components/ConversationsPanel'
 import { TrackedRepos } from './components/TrackedRepos'
@@ -35,7 +36,7 @@ import { DASHBOARD } from './fixtures/dashboard'
  * of what a router would do for us. The moment a third view needs nested
  * routes or params, this becomes an argument for one — until then it is not.
  */
-type View = 'dashboard' | 'settings' | 'pipeline' | 'work' | 'issues'
+type View = 'dashboard' | 'settings' | 'pipeline' | 'work' | 'issues' | 'repos'
 
 /**
  * Still not a router.
@@ -51,6 +52,7 @@ const ROUTES: { prefix: string; view: View }[] = [
   { prefix: '/pipeline', view: 'pipeline' },
   { prefix: '/work', view: 'work' },
   { prefix: '/issues', view: 'issues' },
+  { prefix: '/repos', view: 'repos' },
 ]
 
 function viewFor(pathname: string): View {
@@ -148,6 +150,7 @@ export default function App() {
       {view === 'pipeline' && <PipelinePage />}
       {view === 'work' && <WorkPage />}
       {view === 'issues' && <IssuesPage />}
+      {view === 'repos' && <ReposPage />}
 
       {view === 'dashboard' && (
       <main className="min-w-0 overflow-x-hidden px-4 pb-[200px] pt-3">
