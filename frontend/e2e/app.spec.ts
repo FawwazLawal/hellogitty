@@ -201,4 +201,93 @@ test.describe('the React app', () => {
       `the document is ${overflow.scrollWidth - overflow.clientWidth}px wider than the viewport`,
     ).toBeLessThanOrEqual(overflow.clientWidth + 1)
   })
+
+  /**
+   * The ADR §8 P0 breakpoint list includes 768 (the tablet width), which
+   * the React gate never looked at. 390 was already covered above and 1024+
+   * is where the fixture gate lives, so the gap was exactly this one: the
+   * width where the dashboard switches from the two-column grid to the
+   * stacked column. A horizontal scrollbar there is the shape of regression
+   * most likely to slip through the other sizes.
+   *
+   * Pairs with the main shell locators so that the page is not only
+   * non-overflowing but also actually rendering. A zero-wide empty document
+   * also would not overflow.
+   */
+  test('no horizontal overflow at 768px (ADR §8 P0 tablet width)', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 1024 })
+    await useTheme(page, 'vermilion')
+    await expect(page.locator('header').first()).toBeVisible()
+    await expect(page.getByRole('table')).toBeVisible()
+    const overflow = await page.evaluate(() => {
+      const de = document.documentElement
+      return { scrollWidth: de.scrollWidth, clientWidth: de.clientWidth }
+    })
+    expect(
+      overflow.scrollWidth,
+      `the document is ${overflow.scrollWidth - overflow.clientWidth}px wider than the viewport at 768px`,
+    ).toBeLessThanOrEqual(overflow.clientWidth + 1)
+  })
+
+  /**
+   * Forced-colors usability, measured through the one mechanism the browser
+   * exposes.
+   *
+   * ADR §8 P0 lists forced-colors usability alongside contrast and reduced
+   * motion, and the gate had nothing for it. The failure mode this catches
+   * is a design decision that opts out of the system palette on content —
+   * `forced-color-adjust: none` on a non-decorative element means the
+   * viewer's chosen high-contrast palette never lands, which is exactly
+   * the thing Windows High Contrast and macOS "Increase Contrast" are
+   * trying to enforce.
+   *
+   * Why not check computed colours directly: Playwright's forced-colors
+   * emulation resolves the system keywords to the palette the browser
+   * chose, and some tokens happen to coincide with those values on some
+   * identities (`--hg-text` is `#ffffff` for Vermilion, the same colour
+   * CanvasText resolves to in a dark forced-colors theme). A comparison
+   * at the pixel level cannot tell "the system did it" apart from "we
+   * did it to look the same" — which is exactly the kind of coincidence
+   * that would make the gate green on a broken design.
+   *
+   * What CAN be checked is the opt-out property itself. Decorative art is
+   * rightly `forced-color-adjust: none` and is also `aria-hidden`; a body
+   * descendant with the former and without the latter is a real break.
+   */
+  test('forced-colors: no content element opts out of the system palette', async ({ browser }) => {
+    const ctx = await browser.newContext({ forcedColors: 'active' })
+    const page = await ctx.newPage()
+    await useTheme(page, 'vermilion')
+    const offenders = await page.evaluate(() => {
+      // Decorative overlays may opt out: the art is meaningless under
+      // forced-colors and `aria-hidden` says so.
+      const isDecorative = (el: Element): boolean => {
+        for (let n: Element | null = el; n && n !== document.body; n = n.parentElement) {
+          if (n.getAttribute('aria-hidden') === 'true') return true
+        }
+        return false
+      }
+      const out: { tag: string; text: string; cls: string }[] = []
+      for (const el of document.querySelectorAll<HTMLElement>('body *')) {
+        const cs = getComputedStyle(el)
+        if (cs.visibility === 'hidden' || cs.display === 'none') continue
+        if (cs.forcedColorAdjust !== 'none') continue
+        if (isDecorative(el)) continue
+        out.push({
+          tag: el.tagName.toLowerCase(),
+          text: (el.textContent ?? '').trim().slice(0, 40),
+          cls: el.getAttribute('class')?.slice(0, 60) ?? '',
+        })
+      }
+      return out
+    })
+    try {
+      expect(
+        offenders,
+        `elements opting out of the system palette without being aria-hidden:\n${offenders.map((o) => `  <${o.tag} class="${o.cls}"> ${o.text}`).join('\n')}`,
+      ).toHaveLength(0)
+    } finally {
+      await ctx.close()
+    }
+  })
 })
