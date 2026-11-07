@@ -1,5 +1,6 @@
 import { Masthead } from './components/Masthead'
 import { NavTabs } from './components/NavTabs'
+import { SettingsPage } from './components/SettingsPage'
 import { KpiRail } from './components/KpiRail'
 import { ConversationsPanel } from './components/ConversationsPanel'
 import { TrackedRepos } from './components/TrackedRepos'
@@ -23,7 +24,21 @@ import { DASHBOARD } from './fixtures/dashboard'
  * widths the right rail drops under the main column rather than shrinking,
  * because the pipeline grid stops being readable below about 300px.
  */
+/**
+ * Which view this URL is.
+ *
+ * Not a router. §3 warns that "an unnecessary second router ... increases
+ * operational risk", and with two views a switch on the pathname is the whole
+ * of what a router would do for us. The moment a third view needs nested
+ * routes or params, this becomes an argument for one — until then it is not.
+ */
+function viewFor(pathname: string): 'dashboard' | 'settings' {
+  return pathname === '/settings' || pathname.startsWith('/settings/') ? 'settings' : 'dashboard'
+}
+
 export default function App() {
+  const pathname = typeof location !== 'undefined' ? location.pathname : '/'
+  const view = viewFor(pathname)
   // No `identity` read here any more: the registry resolves per identity, so
   // this component no longer needs to know which one it is in.
   const footerArt = useArt('footer')
@@ -105,8 +120,11 @@ export default function App() {
       />
 
       <Masthead data={DASHBOARD} />
-      <NavTabs />
+      <NavTabs pathname={pathname} />
 
+      {view === 'settings' && <SettingsPage />}
+
+      {view === 'dashboard' && (
       <main className="min-w-0 overflow-x-hidden px-4 pb-[200px] pt-3">
         <KpiRail
           tiles={tiles}
@@ -130,6 +148,7 @@ export default function App() {
           </div>
         </div>
       </main>
+      )}
     </div>
   )
 }

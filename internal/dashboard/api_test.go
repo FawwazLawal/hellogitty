@@ -158,3 +158,91 @@ func TestDashboardAPIEmptyCollectionsAreArrays(t *testing.T) {
 		}
 	}
 }
+
+// The settings document is read-only and leaks nothing it should not.
+func TestSettingsAPIIsReadOnly(t *testing.T) {
+	h := handler(fakeSource{})
+	for _, m := range []string{http.MethodPost, http.MethodPut, http.MethodDelete} {
+		rec := httptest.NewRecorder()
+		h.serveSettingsAPI(rec, httptest.NewRequest(m, "/app/api/settings.json", nil))
+		if rec.Code != http.StatusMethodNotAllowed {
+			t.Errorf("%s = %d, want 405 — this endpoint reads; writes go to /repos/add and /repos/remove", m, rec.Code)
+		}
+	}
+}
+
+// The settings document shows paths, never contents, and never the token.
+func TestSettingsAPICarriesNoSecrets(t *testing.T) {
+	h := handler(fakeSource{})
+	rec := httptest.NewRecorder()
+	h.serveSettingsAPI(rec, httptest.NewRequest(http.MethodGet, "/app/api/settings.json", nil))
+
+	body := rec.Body.String()
+	if tok := h.token(); tok != "" && strings.Contains(body, tok) {
+		t.Error("the acknowledgement token appears in the settings document; it belongs only in /app/api/session.json")
+	}
+	// The GitHub token must never appear anywhere near this.
+	if strings.Contains(strings.ToLower(body), "ghp_") || strings.Contains(strings.ToLower(body), "github_pat_") {
+		t.Error("something shaped like a GitHub token is in the settings document")
+	}
+}
+
+// The session document is the only one that carries the write token, and it
+// says whether writing is possible at all rather than offering an action that
+// 404s.
+func TestSessionAPI(t *testing.T) {
+	h := handler(fakeSource{})
+	rec := httptest.NewRecorder()
+	h.serveSessionAPI(rec, httptest.NewRequest(http.MethodGet, "/app/api/session.json", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET = %d, want 200", rec.Code)
+	}
+	if got := rec.Header().Get("Cache-Control"); got != "no-store" {
+		t.Errorf("Cache-Control = %q, want no-store — a cached credential outlives the process that issued it", got)
+	}
+	var doc Session
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("bad JSON: %v", err)
+	}
+	if doc.Token == "" && h.token() != "" {
+		t.Error("the session document carries no token, so no write from the React UI can be authorised")
+	}
+
+	rec = httptest.NewRecorder()
+	h.serveSessionAPI(rec, httptest.NewRequest(http.MethodPost, "/app/api/session.json", nil))
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Errorf("POST = %d, want 405", rec.Code)
+	}
+}
+
+// A repository removed through the UI must leave the tracked list immediately,
+// even though the snapshot still holds it until the next poll.
+//
+// Listing the snapshot alone made removal look like it had failed: the request
+// answered 200 and the row stayed, because the poller writes the snapshot and
+// had not run again. The subtraction is what makes the action visible.
+func TestSettingsAPISubtractsRemovedFromTracked(t *testing.T) {
+	h := handler(fakeSource{})
+
+	rec := httptest.NewRecorder()
+	h.serveSettingsAPI(rec, httptest.NewRequest(http.MethodGet, "/app/api/settings.json", nil))
+	var before SettingsAPI
+	if err := json.Unmarshal(rec.Body.Bytes(), &before); err != nil {
+		t.Fatalf("bad JSON: %v", err)
+	}
+	if before.Repos.Removed == nil {
+		t.Error("`removed` is null; it must be [] so the client can iterate it without a guard")
+	}
+	if before.Repos.Count != len(before.Repos.Tracked) {
+		t.Errorf("count %d does not match the tracked list of %d — the count must describe what is shown",
+			before.Repos.Count, len(before.Repos.Tracked))
+	}
+	for _, r := range before.Repos.Tracked {
+		for _, gone := range before.Repos.Removed {
+			if strings.EqualFold(r, gone) {
+				t.Errorf("%s appears in both tracked and removed; a removed repository must leave the tracked list", r)
+			}
+		}
+	}
+}
