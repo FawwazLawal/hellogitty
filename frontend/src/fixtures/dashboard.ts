@@ -25,7 +25,17 @@ export const STAGES = ['RCN', 'GTE', 'SEL', 'BLD', 'REV', 'PR', 'RSP'] as const
 export type Stage = (typeof STAGES)[number]
 
 /** A stage chip is filled, empty, or the one currently in progress. */
-export const StageState = z.enum(['done', 'current', 'empty', 'failed'])
+/**
+ * The stage vocabulary, taken from the Go side rather than invented here.
+ *
+ * `internal/pipeline` defines exactly these four: done, current, failed, todo.
+ * The fixture originally said 'todo' for the fourth, which meant the API and
+ * the UI disagreed about the name of a state they both model — and the
+ * translation would have had to live somewhere, as a second place for the
+ * vocabulary to drift. Renamed to match. The server is the source of truth for
+ * what states exist; this file only describes them.
+ */
+export const StageState = z.enum(['done', 'current', 'todo', 'failed'])
 export type StageState = z.infer<typeof StageState>
 
 export const GateResult = z.enum(['PASS', 'FAIL', 'NONE'])
@@ -123,9 +133,9 @@ export const FIXTURE: DashboardData = {
     { id: 'api', value: 4755, label: 'API left', sublabel: 'of 5000 this hour', tone: 'accent' },
   ],
   repos: [
-    { owner: 'openai', name: 'codex', health: 'ACTIVE', lastCommit: '2026-11-06T18:44:00Z', openIssuesTotal: 26591, openIssuesGoodFirst: 0, openIssuesUnassigned: 26531, watching: 0, turnedDown: 3, stages: ['current', 'empty', 'empty', 'empty', 'empty', 'empty', 'empty'], gate: 'PASS', newCount: 55 },
-    { owner: 'flutter', name: 'flutter', health: 'ACTIVE', lastCommit: '2026-11-06T18:40:00Z', openIssuesTotal: 12763, openIssuesGoodFirst: 0, openIssuesUnassigned: 12176, watching: 0, turnedDown: 366, stages: ['current', 'empty', 'empty', 'empty', 'empty', 'empty', 'empty'], gate: 'NONE', newCount: 8 },
-    { owner: 'pytorch', name: 'pytorch', health: 'ACTIVE', lastCommit: '2026-11-06T18:30:00Z', openIssuesTotal: 14227, openIssuesGoodFirst: 41, openIssuesUnassigned: 12163, watching: 0, turnedDown: 842, stages: ['current', 'empty', 'empty', 'empty', 'empty', 'empty', 'empty'], gate: 'NONE', newCount: 19 },
+    { owner: 'openai', name: 'codex', health: 'ACTIVE', lastCommit: '2026-11-06T18:44:00Z', openIssuesTotal: 26591, openIssuesGoodFirst: 0, openIssuesUnassigned: 26531, watching: 0, turnedDown: 3, stages: ['current', 'todo', 'todo', 'todo', 'todo', 'todo', 'todo'], gate: 'PASS', newCount: 55 },
+    { owner: 'flutter', name: 'flutter', health: 'ACTIVE', lastCommit: '2026-11-06T18:40:00Z', openIssuesTotal: 12763, openIssuesGoodFirst: 0, openIssuesUnassigned: 12176, watching: 0, turnedDown: 366, stages: ['current', 'todo', 'todo', 'todo', 'todo', 'todo', 'todo'], gate: 'NONE', newCount: 8 },
+    { owner: 'pytorch', name: 'pytorch', health: 'ACTIVE', lastCommit: '2026-11-06T18:30:00Z', openIssuesTotal: 14227, openIssuesGoodFirst: 41, openIssuesUnassigned: 12163, watching: 0, turnedDown: 842, stages: ['current', 'todo', 'todo', 'todo', 'todo', 'todo', 'todo'], gate: 'NONE', newCount: 19 },
     { owner: 'golang', name: 'go', health: 'ACTIVE', lastCommit: '2026-11-06T18:10:00Z', openIssuesTotal: 9282, openIssuesGoodFirst: 0, openIssuesUnassigned: 8290, watching: 0, turnedDown: 118, stages: ['done', 'done', 'done', 'done', 'done', 'done', 'current'], gate: 'PASS', newCount: 6 },
     { owner: 'MISP', name: 'MISP', health: 'ACTIVE', lastCommit: '2026-11-01T09:00:00Z', openIssuesTotal: 2709, openIssuesGoodFirst: 17, openIssuesUnassigned: 2429, watching: 0, turnedDown: 15, stages: ['done', 'done', 'done', 'done', 'done', 'done', 'current'], gate: 'PASS', newCount: 0 },
   ],

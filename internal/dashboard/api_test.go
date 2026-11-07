@@ -119,3 +119,42 @@ func TestDashboardAPIKeepsUnknownDistinctFromZero(t *testing.T) {
 		}
 	}
 }
+
+// Empty collections must be [] and never null.
+//
+// A nil Go slice encodes as JSON null, and a client writing the obvious
+// `doc.repos.map(...)` crashes on a dashboard that simply tracks nothing yet.
+// Making "none" and "some" the same shape means the empty case needs no
+// special handling on the client and so cannot be forgotten there.
+func TestDashboardAPIEmptyCollectionsAreArrays(t *testing.T) {
+	h := handler(fakeSource{})
+
+	rec := httptest.NewRecorder()
+	h.serveDashboardAPI(rec, httptest.NewRequest(http.MethodGet, "/app/api/dashboard.json", nil))
+
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(rec.Body.Bytes(), &raw); err != nil {
+		t.Fatalf("bad JSON: %v", err)
+	}
+	for _, field := range []string{"repos", "stageHeads", "kpis"} {
+		v, ok := raw[field]
+		if !ok {
+			t.Errorf("%q missing from the document", field)
+			continue
+		}
+		if string(v) == "null" {
+			t.Errorf("%q is null; it must be [] so a client can map over it without a guard", field)
+		}
+	}
+
+	// And per-row, where the same nil-slice trap repeats one level down.
+	var doc DashboardAPI
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("bad JSON: %v", err)
+	}
+	for _, r := range doc.Repos {
+		if r.Stages == nil {
+			t.Errorf("repo %s/%s has null stages; it must be []", r.Owner, r.Name)
+		}
+	}
+}

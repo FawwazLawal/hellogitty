@@ -385,7 +385,7 @@ function HealthMarker({ health }: { health: RepoHealth }) {
 
 /**
  * Stage chip. Four states, each with its own silhouette AND inner glyph:
- *   empty    outlined, no fill       — no inner mark
+ *   todo     outlined, no fill       — no inner mark (the Go side's name)
  *   done     filled muted            — inner horizontal bar (filled plateau)
  *   current  filled accent           — inner caret (▸ the active one)
  *   failed   filled danger           — inner cross
@@ -405,7 +405,7 @@ function StageChip({ stage, state }: { stage: Stage; state: StageState }) {
     borderRadius: '2px',
   }
   switch (state) {
-    case 'empty':
+    case 'todo':
       return (
         <span
           role="img"
@@ -497,7 +497,7 @@ function StageMarker({ state }: { state: StageState }) {
 }
 
 const STATE_WORD: Record<StageState, string> = {
-  empty: 'not started',
+  todo: 'not started',
   done: 'done',
   current: 'in progress',
   failed: 'failed',
@@ -536,6 +536,23 @@ function GateCell({ gate }: { gate: GateResult }) {
  * the number carries the actual value for screen readers.
  */
 function LastCommitCell({ days }: { days: number }) {
+  /*
+    An unknown age renders as an em dash, not as "NaN d" and not as "0 d".
+
+    This surfaced the moment real data arrived: the server reports
+    `ageKnown: false` for a repository it could not reach, the adapter
+    correctly refuses to invent a commit date for it, and this cell then
+    computed a relative age from nothing. "NaN d" is at least visibly broken —
+    the worse outcome was the one lurking behind it, where defaulting to 0
+    would have shown an unreachable repository as committed today.
+  */
+  if (!Number.isFinite(days)) {
+    return (
+      <span className="inline-flex items-center justify-end gap-2">
+        <span title="No commit date — this repository could not be read">—</span>
+      </span>
+    )
+  }
   // Fresh = 100%, dropping to zero at 14+ days. Decorative, no semantic floor.
   const freshness = Math.max(0, Math.min(1, 1 - days / 14))
   return (

@@ -38,11 +38,46 @@ export const KpiFromApi = z.object({
 })
 export type KpiFromApi = z.infer<typeof KpiFromApi>
 
+export const StageFromApi = z.object({
+  abbr: z.string(),
+  name: z.string(),
+  /** The Go side's own vocabulary, not a re-coded enum — one source for it. */
+  state: z.string().default(''),
+})
+
+export const RepoFromApi = z.object({
+  owner: z.string(),
+  name: z.string(),
+  url: z.string(),
+  health: z.string(),
+  stages: z.array(StageFromApi),
+  gate: z.string(),
+  open: z.number().int(),
+  goodFirst: z.number().int(),
+  unassigned: z.number().int(),
+  watching: z.number().int(),
+  turnedDown: z.number().int(),
+  newCount: z.number().int(),
+  /**
+   * Whether the last-commit age is known at all. Same reasoning as KPI.known:
+   * "committed today" and "we have not looked" are both 0, and showing the
+   * second as the first is a quiet lie about how fresh a repository is.
+   */
+  ageKnown: z.boolean(),
+  ageDays: z.number().int(),
+  /** GitHub's complaint about this repository, when it would not answer. */
+  error: z.string().optional(),
+})
+export type RepoFromApi = z.infer<typeof RepoFromApi>
+
 export const DashboardApiDoc = z.object({
   /** RFC 3339, or empty when no poll has completed. Not the request time. */
   generatedAt: z.string(),
   version: z.string(),
   kpis: z.array(KpiFromApi),
+  repos: z.array(RepoFromApi),
+  stageHeads: z.array(StageFromApi),
+  repoTotals: z.object({ newCount: z.number().int(), repoCount: z.number().int() }),
   /** True while sections beyond the KPI rail still come from fixtures. */
   partial: z.boolean(),
 })
@@ -94,4 +129,69 @@ export function useDashboard() {
     retry: 1,
     staleTime: 10_000,
   })
+}
+
+/**
+ * Map an API repository onto the shape the table renders.
+ *
+ * The two differ because the table was built against a fixture before the
+ * endpoint existed. Rather than reshape the component — which would churn a
+ * 550-line file for no behavioural gain — the seam lives here, where it is one
+ * function and visible.
+ *
+ * TWO THINGS ARE DELIBERATE.
+ *
+ * `lastCommit` is derived from `ageDays` back into an ISO instant, because the
+ * table renders a relative age and the API sends days. When `ageKnown` is
+ * false this returns an empty string rather than today's date — "we have not
+ * looked" and "committed today" are both zero days, and the second is a claim
+ * about freshness nobody has earned.
+ *
+ * An unrecognised stage state throws rather than defaulting. The vocabulary is
+ * the Go side's and the schema already mirrors it, so a new state appearing
+ * here means the server grew one and the UI has no treatment for it. Silently
+ * painting it as "not started" would hide that; the error names it.
+ */
+export function toTrackedRepo(
+  r: RepoFromApi,
+  generatedAt: string,
+): import('../fixtures/dashboard').TrackedRepo {
+  const stageState = (s: string) => {
+    if (s === 'done' || s === 'current' || s === 'failed' || s === 'todo') return s
+    throw new Error(
+      `the dashboard service sent an unknown stage state ${JSON.stringify(s)} — the UI has no treatment for it`,
+    )
+  }
+
+  let lastCommit = ''
+  if (r.ageKnown && generatedAt) {
+    const base = new Date(generatedAt)
+    if (!Number.isNaN(base.getTime())) {
+      base.setUTCDate(base.getUTCDate() - r.ageDays)
+      lastCommit = base.toISOString()
+    }
+  }
+
+  return {
+    owner: r.owner,
+    name: r.name,
+    health: (['ACTIVE', 'SLOWING', 'DORMANT', 'NOT_CHECKED'].includes(r.health)
+      ? r.health
+      : 'NOT_CHECKED') as import('../fixtures/dashboard').RepoHealth,
+    lastCommit,
+    openIssuesTotal: r.open,
+    openIssuesGoodFirst: r.goodFirst,
+    openIssuesUnassigned: r.unassigned,
+    watching: r.watching,
+    turnedDown: r.turnedDown,
+    newCount: r.newCount,
+    gate: (r.gate === 'PASS' || r.gate === 'FAIL' ? r.gate : 'NONE') as
+      import('../fixtures/dashboard').GateResult,
+    // The table renders a fixed seven-column strip. A repository outside the
+    // pipeline sends no stages at all, which is a real state, not missing data.
+    stages:
+      r.stages.length === 7
+        ? (r.stages.map((s) => stageState(s.state)) as import('../fixtures/dashboard').TrackedRepo['stages'])
+        : (['todo', 'todo', 'todo', 'todo', 'todo', 'todo', 'todo'] as import('../fixtures/dashboard').TrackedRepo['stages']),
+  }
 }

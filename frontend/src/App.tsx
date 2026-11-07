@@ -5,7 +5,7 @@ import { ConversationsPanel } from './components/ConversationsPanel'
 import { TrackedRepos } from './components/TrackedRepos'
 import { PipelinePanel } from './components/PipelinePanel'
 import { YourWorkPanel } from './components/YourWorkPanel'
-import { useDashboard } from './data/dashboard'
+import { useDashboard, toTrackedRepo } from './data/dashboard'
 import { useArt } from './art'
 import { DASHBOARD } from './fixtures/dashboard'
 
@@ -51,6 +51,22 @@ export default function App() {
 
   const unknown = new Set((liveTiles ?? []).filter((k) => !k.known).map((k) => k.id))
 
+  /*
+    PHASE 4, first increment: the repository table on live data.
+
+    The fixture stays as the fallback rather than being deleted. §7 is explicit
+    that legacy paths come out "only after replacement passes regression tests
+    and approval" — and approval has not happened. Until it does, an endpoint
+    that cannot be reached shows the fixture rather than an empty table, and
+    the dashboard degrades instead of going blank.
+  */
+  const liveRepos = dashboard.data?.repos
+  const repos =
+    liveRepos && liveRepos.length > 0
+      ? liveRepos.map((r) => toTrackedRepo(r, dashboard.data!.generatedAt))
+      : DASHBOARD.repos
+  const repoTotals = dashboard.data?.repoTotals ?? DASHBOARD.repoTotals
+
   return (
     <div className="relative isolate min-h-full" style={{ background: 'var(--hg-canvas)' }}>
       {/* The footer band, fixed to the viewport bottom, behind everything. */}
@@ -80,7 +96,7 @@ export default function App() {
         <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
           <div className="flex min-w-0 flex-col gap-3">
             <ConversationsPanel data={DASHBOARD.conversations} />
-            <TrackedRepos repos={DASHBOARD.repos} totals={DASHBOARD.repoTotals} />
+            <TrackedRepos repos={repos} totals={repoTotals} />
           </div>
 
           <div className="flex flex-col gap-3">

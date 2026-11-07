@@ -43,6 +43,45 @@ type KPI struct {
 	Known    bool   `json:"known"`
 }
 
+// Stage is one cell in a repository's pipeline strip.
+//
+// `State` is the Go side's own vocabulary rather than a re-coded enum. The
+// template and the React table should disagree about colour, never about what
+// state a thing is in, and translating here would create a second place for
+// that vocabulary to drift.
+type Stage struct {
+	Abbr  string `json:"abbr"`
+	Name  string `json:"name"`
+	State string `json:"state"`
+}
+
+// Repo is one row of the tracked repositories table.
+type Repo struct {
+	Owner  string  `json:"owner"`
+	Name   string  `json:"name"`
+	URL    string  `json:"url"`
+	Health string  `json:"health"`
+	Stages []Stage `json:"stages"`
+	Gate   string  `json:"gate"`
+
+	Open       int `json:"open"`
+	GoodFirst  int `json:"goodFirst"`
+	Unassigned int `json:"unassigned"`
+	Watching   int `json:"watching"`
+	TurnedDown int `json:"turnedDown"`
+	NewCount   int `json:"newCount"`
+
+	// AgeKnown separates "committed today" from "we have not looked". Same
+	// reasoning as KPI.Known: a zero that means absence, rendered as a zero
+	// that means freshness, is a quiet lie.
+	AgeKnown bool `json:"ageKnown"`
+	AgeDays  int  `json:"ageDays"`
+
+	// Error is GitHub's complaint about this repository, if any. The row still
+	// renders — a repository that failed to poll is information, not a gap.
+	Error string `json:"error,omitempty"`
+}
+
 // DashboardAPI is the document served at /app/api/dashboard.json.
 type DashboardAPI struct {
 	// GeneratedAt is when the snapshot this is derived from was written, in
@@ -51,6 +90,14 @@ type DashboardAPI struct {
 	GeneratedAt string `json:"generatedAt"`
 	Version     string `json:"version"`
 	KPIs        []KPI  `json:"kpis"`
+	Repos       []Repo `json:"repos"`
+	// StageHeads is the column order for the pipeline strip, from the server,
+	// so the table cannot drift out of step with the stages the rows carry.
+	StageHeads []Stage `json:"stageHeads"`
+	RepoTotals struct {
+		NewCount  int `json:"newCount"`
+		RepoCount int `json:"repoCount"`
+	} `json:"repoTotals"`
 
 	// Partial says that this document covers the KPI slice only, and that the
 	// repository table, pipeline and work rails are still rendered from
@@ -103,6 +150,41 @@ func (h *Handler) serveDashboardAPI(w http.ResponseWriter, r *http.Request) {
 	if p.APIKnown {
 		doc.KPIs[3].Sublabel = "of " + itoa(p.APILimit) + " this hour"
 	}
+
+	// Empty collections marshal as [] rather than null.
+	//
+	// A nil slice encodes as JSON null, and a client writing the obvious
+	// `doc.stageHeads.map(...)` then crashes on a dashboard that simply has no
+	// pipeline configured. Emitting [] makes "none" and "some" the same shape,
+	// so the absent case needs no special handling and cannot be forgotten.
+	doc.Repos = []Repo{}
+	doc.StageHeads = []Stage{}
+
+	for _, h := range p.Stages {
+		doc.StageHeads = append(doc.StageHeads, Stage{Abbr: h.Abbr, Name: h.Name})
+	}
+	for _, r := range p.Rows {
+		rep := Repo{
+			Owner: r.Owner, Name: r.Name, URL: r.URL, Health: r.Health,
+			Gate:       r.Label,
+			Open:       r.Open,
+			GoodFirst:  r.GFI,
+			Unassigned: r.Unassigned,
+			Watching:   len(r.Watch),
+			TurnedDown: r.DeniedTotal,
+			NewCount:   r.NewCount,
+			AgeKnown:   r.AgeKnown,
+			AgeDays:    r.AgeDays,
+			Error:      r.Error,
+		}
+		rep.Stages = []Stage{}
+		for _, ph := range r.Phases {
+			rep.Stages = append(rep.Stages, Stage{Abbr: ph.Abbr, Name: ph.Name, State: ph.State})
+		}
+		doc.Repos = append(doc.Repos, rep)
+		doc.RepoTotals.NewCount += r.NewCount
+	}
+	doc.RepoTotals.RepoCount = len(p.Rows)
 
 	// No caching. These figures move on every poll, and a cached document is a
 	// dashboard that quietly stops updating — the failure mode hardest to
