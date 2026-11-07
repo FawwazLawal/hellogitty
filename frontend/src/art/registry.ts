@@ -126,16 +126,19 @@ export interface AssetRecord {
 
 /**
  * The provenance block all nine current assets share: generated in-session
- * for this prototype, pending the owner's decision on AI asset policy.
+ * for this prototype, approved by the owner on 2026-11-06 for public release
+ * with the rest of the HelloGitty prototype. The decision closes the open
+ * question recorded in ADR-UI-002 §12 Q3.
  */
-const AI_IN_SESSION_PENDING: Provenance = {
+const AI_IN_SESSION_APPROVED: Provenance = {
   kind: 'ai-generated-in-session',
   pipeline: 'unknown',
-  ownerDecision: 'pending',
+  ownerDecision: 'approved',
   notes:
-    'Owner is deciding whether in-session AI originals need an external ' +
-    'manifest before this prototype can be used as a reference. Do not ' +
-    'copy these files out of the prototype until that lands.',
+    'Owner approved on 2026-11-06 for public distribution with this ' +
+    'prototype. Pipeline is still recorded as "unknown" because no manifest ' +
+    'was captured at generation time; a later asset generated under a known ' +
+    'pipeline should get its own provenance block rather than reusing this one.',
 }
 
 /**
@@ -156,7 +159,7 @@ export const ASSETS: readonly AssetRecord[] = [
     // third, so the top is the text-safe region.
     safeZone: { top: 0, right: 0, bottom: 62, left: 0 },
     intendedPlacement: 'Masthead scenic band (<Masthead>)',
-    provenance: AI_IN_SESSION_PENDING,
+    provenance: AI_IN_SESSION_APPROVED,
     responsiveVariants: [],
     fallback: 'Render a plain --hg-canvas band; no identity mark painted.',
   },
@@ -170,7 +173,7 @@ export const ASSETS: readonly AssetRecord[] = [
     intrinsic: { width: 1600, height: 180 },
     safeZone: { top: 0, right: 0, bottom: 55, left: 0 },
     intendedPlacement: 'Full-width wave band at the bottom of the viewport',
-    provenance: AI_IN_SESSION_PENDING,
+    provenance: AI_IN_SESSION_APPROVED,
     responsiveVariants: [],
     fallback: 'No footer scenery; the canvas colour extends to the edge.',
   },
@@ -183,7 +186,7 @@ export const ASSETS: readonly AssetRecord[] = [
     // (the scrim sits there); the scene itself lives in the right half.
     safeZone: { top: 0, right: 58, bottom: 0, left: 0 },
     intendedPlacement: 'ConversationsPanel empty state',
-    provenance: AI_IN_SESSION_PENDING,
+    provenance: AI_IN_SESSION_APPROVED,
     responsiveVariants: [],
     fallback:
       'Render a clean empty state on --hg-surface; no illustration. ' +
@@ -198,7 +201,7 @@ export const ASSETS: readonly AssetRecord[] = [
     // the numeral and label sit.
     safeZone: { top: 0, right: 0, bottom: 0, left: 50 },
     intendedPlacement: "KpiRail 'repos' tile",
-    provenance: AI_IN_SESSION_PENDING,
+    provenance: AI_IN_SESSION_APPROVED,
     responsiveVariants: [],
     fallback: 'Render the tile with chrome only (strap + rivets + plate).',
   },
@@ -209,7 +212,7 @@ export const ASSETS: readonly AssetRecord[] = [
     intrinsic: { width: 400, height: 400 },
     safeZone: { top: 0, right: 0, bottom: 0, left: 50 },
     intendedPlacement: "KpiRail 'prs' tile (maple leaves)",
-    provenance: AI_IN_SESSION_PENDING,
+    provenance: AI_IN_SESSION_APPROVED,
     responsiveVariants: [],
     fallback: 'Render the tile with chrome only.',
   },
@@ -222,7 +225,7 @@ export const ASSETS: readonly AssetRecord[] = [
     intrinsic: { width: 1600, height: 187 },
     safeZone: { top: 0, right: 0, bottom: 62, left: 0 },
     intendedPlacement: 'Masthead scenic band (<Masthead>)',
-    provenance: AI_IN_SESSION_PENDING,
+    provenance: AI_IN_SESSION_APPROVED,
     responsiveVariants: [],
     fallback: 'Render a plain --hg-canvas band.',
   },
@@ -233,7 +236,7 @@ export const ASSETS: readonly AssetRecord[] = [
     intrinsic: { width: 1920, height: 220 },
     safeZone: { top: 0, right: 0, bottom: 55, left: 0 },
     intendedPlacement: 'Full-width wave band at the bottom of the viewport',
-    provenance: AI_IN_SESSION_PENDING,
+    provenance: AI_IN_SESSION_APPROVED,
     responsiveVariants: [],
     fallback: 'No footer scenery; the canvas colour extends to the edge.',
   },
@@ -246,7 +249,7 @@ export const ASSETS: readonly AssetRecord[] = [
     intrinsic: { width: 1600, height: 187 },
     safeZone: { top: 0, right: 0, bottom: 62, left: 0 },
     intendedPlacement: 'Masthead scenic band (<Masthead>)',
-    provenance: AI_IN_SESSION_PENDING,
+    provenance: AI_IN_SESSION_APPROVED,
     responsiveVariants: [],
     fallback: 'Render a plain --hg-canvas band.',
   },
@@ -257,7 +260,7 @@ export const ASSETS: readonly AssetRecord[] = [
     intrinsic: { width: 1920, height: 220 },
     safeZone: { top: 0, right: 0, bottom: 55, left: 0 },
     intendedPlacement: 'Full-width wave band at the bottom of the viewport',
-    provenance: AI_IN_SESSION_PENDING,
+    provenance: AI_IN_SESSION_APPROVED,
     responsiveVariants: [],
     fallback: 'No footer scenery; the canvas colour extends to the edge.',
   },
