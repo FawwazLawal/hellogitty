@@ -77,9 +77,15 @@ export function YourWorkPanel({
           >
             {work.newCount} new
           </span>
-          <button
-            type="button"
-            className="ml-auto border px-2.5 py-1 text-[11px] font-medium tabular-nums"
+          {/*
+            "Show all" routes to the full work board, which is React-converted
+            and lives at /work. It had been a <button> with no handler — the
+            same dead-control pattern as the sibling Conversations panel —
+            and anchoring it is the minimum move.
+          */}
+          <a
+            href="/work"
+            className="ml-auto border px-2.5 py-1 text-[11px] font-medium no-underline tabular-nums"
             style={{
               borderColor: 'var(--hg-line-strong)',
               background: 'var(--hg-surface-raised)',
@@ -87,7 +93,7 @@ export function YourWorkPanel({
             }}
           >
             Show all ({work.total})
-          </button>
+          </a>
         </div>
 
         {/* Column headers. */}

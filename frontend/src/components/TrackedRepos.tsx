@@ -1,4 +1,4 @@
-import { Layers, Search, ChevronRight, ChevronUp } from 'lucide-react'
+import { Layers, ChevronRight, ChevronUp } from 'lucide-react'
 import { Panel, PanelHeader } from './chrome/Chrome'
 import {
   STAGES,
@@ -78,7 +78,20 @@ export function TrackedRepos({
         />
       </PanelHeader>
 
-      <Toolbar />
+      {/*
+        The toolbar that used to live here — a search field, an add-a-repo
+        text input and a Track button — is gone. All three shipped with no
+        handlers: typing in the search did not filter, typing in the add
+        field did not update state, and clicking Track did nothing. The
+        authoritative Track control lives on /settings, which is wired and
+        goes through the same /repos/add endpoint the templated page uses;
+        the dashboard panel is a compact five-row summary of what is
+        tracked, and the full search lives on /repos. Keeping the dead
+        toolbar here would mean duplicating a feature we already have in
+        the one place it works, so the fix is to remove it rather than
+        wire a second copy. (PR #257's responsive width-shrink on the
+        same add-a-repo field goes with it.)
+      */}
 
       <div className="overflow-x-auto">
         <table
@@ -145,74 +158,6 @@ function StatusLegend() {
         </li>
       ))}
     </ul>
-  )
-}
-
-/* ────────────────────────────────────────────────────────────────────────
-   TOOLBAR: search + add-a-repo + Track
-   ──────────────────────────────────────────────────────────────────────── */
-
-function Toolbar() {
-  return (
-    <div
-      className="flex items-center gap-3 border-b px-4 py-2.5"
-      style={{ borderColor: 'var(--hg-line)' }}
-    >
-      <label className="relative flex min-w-0 flex-1 items-center">
-        <span className="sr-only">Search repositories</span>
-        <Search
-          size={14}
-          aria-hidden="true"
-          className="hg-decor pointer-events-none absolute left-2.5"
-          style={{ color: 'var(--hg-text-muted)' }}
-        />
-        <input
-          type="search"
-          placeholder="Search repositories"
-          className="w-full border py-1.5 pl-8 pr-3 text-[12px]"
-          style={{
-            background: 'var(--hg-surface-sunken)',
-            borderColor: 'var(--hg-line)',
-            color: 'var(--hg-text)',
-          }}
-        />
-      </label>
-
-      {/*
-        min-w-0 on the label, and a max rather than a fixed width on the
-        input. It was `w-[300px]`, which with the Track button and the gap
-        came to 366px and could not fit a 375px phone — `<main>` ran 21px
-        wider than its container and `overflow-x-hidden` clipped the Track
-        button off the right edge. The document reported no overflow at all,
-        which is why every 390px gate stayed green over it.
-      */}
-      <div className="flex items-center gap-2">
-        <label className="flex min-w-0 flex-1 items-center">
-          <span className="sr-only">Add a repository by owner/name or GitHub link</span>
-          <input
-            type="text"
-            placeholder="Add a repo: owner/name or GitHub link"
-            className="w-full max-w-[300px] border py-1.5 px-3 text-[12px]"
-            style={{
-              background: 'var(--hg-surface-sunken)',
-              borderColor: 'var(--hg-line)',
-              color: 'var(--hg-text)',
-            }}
-          />
-        </label>
-        <button
-          type="button"
-          className="border px-3 py-1.5 text-[12px] font-medium"
-          style={{
-            background: 'var(--hg-accent-fill)',
-            borderColor: 'var(--hg-accent-fill)',
-            color: 'var(--hg-accent-ink)',
-          }}
-        >
-          Track
-        </button>
-      </div>
-    </div>
   )
 }
 
