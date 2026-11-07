@@ -47,14 +47,26 @@ not change what the React app is reachable at.
 | `/work`              | Go template            | React shell (work view)    |
 | `/pipeline`          | Go template            | React shell (pipeline view) |
 | `/settings`          | Go template            | React shell (settings view) |
+| `/issues`            | Go template            | React shell (issues view)¹ |
+| `/repos`             | Go template            | React shell (repos view)   |
 | `/legacy`            | Go template            | Go template (unchanged)    |
 | `/legacy/work`       | Go template            | Go template (unchanged)    |
 | `/legacy/pipeline`   | Go template            | Go template (unchanged)    |
 | `/legacy/settings`   | Go template            | Go template (unchanged)    |
+| `/legacy/issues`     | Go template            | Go template (unchanged)    |
+| `/legacy/repos`      | Go template            | Go template (unchanged)    |
 | `/app/` (and below)  | React shell            | React shell                |
 | `/app/api/*.json`    | typed JSON             | typed JSON                 |
 
-Everything else — `/feed`, `/issues`, `/repos`, `/conversations`,
+¹ `/issues` is the one converted route that still answers JSON on its own
+path. Its case is guarded on the `Accept` header: a document request gets the
+React shell, and `Accept: application/json` falls through to `serveIssues`
+exactly as before. That arm already carried pagination and search, which is
+why the issues conversion needed no new endpoint — §4 of the ADR asks for
+typed endpoints only "if the migration actually requires them", and here it
+did not. Anything already reading `/issues` as JSON is unaffected.
+
+Everything else — `/feed`, `/conversations`,
 `/your-repos`, `/help`, every `/alerts/*` page, `/notifications/clear`,
 `/watch`, `/feed.json`, `/feed/ack`, `/favicon.svg`, `/mascot/*`, `/art/*`,
 `/health` — serves the same handler under both flag values. Those pages have
@@ -95,11 +107,11 @@ runtime." It can: there is one binary, and the React bundle is inside it.
 
 ## 4. Converted surfaces and their endpoints
 
-The React app at `/app/` is a single document with a four-way path switch in
+The React app at `/app/` is a single document with a six-way path switch in
 [frontend/src/App.tsx:48](../frontend/src/App.tsx) — not a router in the
 `react-router` sense, which §3 of the ADR explicitly warns against adding
 early. The switch keys off `location.pathname` and chooses `dashboard |
-settings | pipeline | work`.
+settings | pipeline | work | issues | repos`.
 
 | React view   | URL (when `ui: react`) | Backing endpoint                     | Fallback when the endpoint fails |
 | ------------ | ---------------------- | ------------------------------------ | -------------------------------- |
@@ -107,6 +119,8 @@ settings | pipeline | work`.
 | work         | `/work`                | `/app/api/work.json`                 | fixture                          |
 | pipeline     | `/pipeline`            | `/app/api/pipeline.json`             | fixture                          |
 | settings     | `/settings`            | `/app/api/settings.json` (+ `/session.json`) | partial degrade              |
+| issues       | `/issues`              | `/issues` with `Accept: application/json` | error state (no fixture)    |
+| repos        | `/repos`               | `/app/api/dashboard.json` (`repos`)  | error state (no fixture)         |
 
 The dashboard fallback is deliberate: it is a fallback for *no answer*, not
 for a quiet one. Once `useDashboard` resolves with data, that data is the
@@ -134,8 +148,8 @@ the UI handles, not as `undefined` painted into a tile.
 
 - `/legacy` — the full Go-templated dashboard. Served under both flag values
   as the always-available baseline.
-- `/legacy/work`, `/legacy/pipeline`, `/legacy/settings` — the templated
-  pages for each converted view. §7 Phase 4 is explicit that legacy "comes
+- `/legacy/work`, `/legacy/pipeline`, `/legacy/settings`, `/legacy/issues`,
+  `/legacy/repos` — the templated pages for each converted view. §7 Phase 4 is explicit that legacy "comes
   out only after replacement passes regression tests and approval"; the
   settings React page does not yet carry the clock controls, and the pipeline
   React port does not yet carry the per-stage board, so the templated
@@ -151,9 +165,6 @@ template-and-static-helpers it always has, under both flag values.
 - `/feed` — the live activity feed.
 - `/feed.json`, `/feed/ack` — the feed's own JSON and acknowledgement
   endpoint (no React equivalent).
-- `/issues` — all open issues across tracked repos.
-- `/repos` — the tracked repos page as a standalone document (distinct from
-  the `TrackedRepos` panel on the React dashboard).
 - `/conversations` — the conversations page (distinct from the empty-state
   panel on the dashboard).
 - `/your-repos` — the repositories owned by the viewer.
@@ -169,14 +180,17 @@ template under `web/alert-*.html`.
 
 In rough order of effort, measured from this SHA:
 
-1. **Owner approval of the four converted React views.** §7 Phase 4 blocks
+1. **Owner approval of the six converted React views.** §7 Phase 4 blocks
    removal "only after replacement passes regression tests and approval."
    Settings and pipeline carry acknowledged feature gaps (settings' clock
-   controls, pipeline's per-stage board); work and dashboard do not.
-2. **Build the React versions of the standalone secondary pages** — feed,
-   issues, repos, conversations, your-repos, help — and their endpoints where
-   none exists. Of these, repos and conversations partially exist as
-   dashboard panels; the standalone pages are a different, denser view.
+   controls, pipeline's per-stage board); work, dashboard, issues and repos
+   do not.
+2. **Build the React versions of the remaining standalone pages** — feed,
+   conversations, your-repos, help — and their endpoints where none exists.
+   Conversations partially exists as a dashboard panel; the standalone page
+   is a different, denser view. Issues and repos are done (see §4); repos
+   needed no new endpoint, reading the dashboard document's `repos` array,
+   and issues needed none either, reading `/issues`' own JSON arm.
 3. **Build React versions of the ten alert pages.** These are static pages
    with one or two action links, so the lift per page is small, but the ten
    of them are the long tail that determines when the alert templates can be

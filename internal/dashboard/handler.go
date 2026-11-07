@@ -858,6 +858,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// itself, curl, a script someone wrote against this — falls through
 		// unchanged, so the conversion breaks nothing that was already reading it.
 		h.serveAppIndex(w, r)
+	case r.URL.Path == "/legacy/issues":
+		// The templated issues page, kept reachable like every other converted
+		// view's mirror. This was missed when /issues was converted, which
+		// made it the one converted page with no way back to the original —
+		// and §7 Phase 4 is explicit that legacy comes out only after the
+		// replacement passes approval, which it cannot do if nobody can open
+		// the thing being replaced to compare against.
+		h.serveIssues(w, r)
 	case r.URL.Path == "/issues":
 		h.serveIssues(w, r)
 	case r.URL.Path == "/repos" && h.ReactIsDefault && h.App != nil && !wantsJSON(r):
