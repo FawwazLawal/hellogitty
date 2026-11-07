@@ -1,122 +1,110 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { Masthead } from './components/Masthead'
+import { NavTabs } from './components/NavTabs'
+import { KpiRail } from './components/KpiRail'
+import { ConversationsPanel } from './components/ConversationsPanel'
+import { TrackedRepos } from './components/TrackedRepos'
+import { PipelinePanel } from './components/PipelinePanel'
+import { YourWorkPanel } from './components/YourWorkPanel'
+import { useDashboard, toTrackedRepo } from './data/dashboard'
+import { useArt } from './art'
+import { DASHBOARD } from './fixtures/dashboard'
 
-function App() {
-  const [count, setCount] = useState(0)
+/**
+ * The dashboard shell.
+ *
+ * Phase 1 of ADR-UI-002: "a self-contained React/Vite prototype of the exact
+ * dashboard shell ... The prototype is not a replacement for the live app."
+ * Nothing here talks to the Go service; everything renders from `DASHBOARD`,
+ * the parsed fixture.
+ *
+ * The layout is the render's: a full-bleed masthead, the nav beneath it, then a
+ * two-column body — the KPI rail spanning both, the conversations panel and the
+ * repo table on the left, pipeline and your-work rails on the right. At narrow
+ * widths the right rail drops under the main column rather than shrinking,
+ * because the pipeline grid stops being readable below about 300px.
+ */
+export default function App() {
+  // No `identity` read here any more: the registry resolves per identity, so
+  // this component no longer needs to know which one it is in.
+  const footerArt = useArt('footer')
+
+  /*
+    PHASE 3, the first vertical slice on real Go data.
+
+    Only the KPI rail is live. Everything below still renders from the frozen
+    fixture, and the server says which is which in `partial` rather than
+    leaving the client to infer it. That is the "safe legacy path" §7 asks for,
+    held inside one build: if the endpoint is unreachable the rail degrades and
+    the rest of the dashboard is untouched.
+  */
+  const dashboard = useDashboard()
+
+  const liveTiles = dashboard.data?.kpis
+  const tiles = liveTiles
+    ? DASHBOARD.kpis.map((fixture) => {
+        const live = liveTiles.find((k) => k.id === fixture.id)
+        return live
+          ? { ...fixture, value: live.value, label: live.label, sublabel: live.sublabel }
+          : fixture
+      })
+    : DASHBOARD.kpis
+
+  const unknown = new Set((liveTiles ?? []).filter((k) => !k.known).map((k) => k.id))
+
+  /*
+    PHASE 4, first increment: the repository table on live data.
+
+    The fixture stays as the fallback rather than being deleted. §7 is explicit
+    that legacy paths come out "only after replacement passes regression tests
+    and approval" — and approval has not happened. Until it does, an endpoint
+    that cannot be reached shows the fixture rather than an empty table, and
+    the dashboard degrades instead of going blank.
+  */
+  const liveRepos = dashboard.data?.repos
+  const repos =
+    liveRepos && liveRepos.length > 0
+      ? liveRepos.map((r) => toTrackedRepo(r, dashboard.data!.generatedAt))
+      : DASHBOARD.repos
+  const repoTotals = dashboard.data?.repoTotals ?? DASHBOARD.repoTotals
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="relative isolate min-h-full" style={{ background: 'var(--hg-canvas)' }}>
+      {/* The footer band, fixed to the viewport bottom, behind everything. */}
+      <div
+        aria-hidden="true"
+        className="hg-decor pointer-events-none fixed inset-x-0 bottom-0 -z-10 h-[180px] bg-bottom bg-no-repeat"
+        style={{
+          backgroundImage: footerArt.kind === 'present' ? `url(${footerArt.url})` : undefined,
+          backgroundSize: '100% 100%',
+        }}
+      />
 
-      <div className="ticks"></div>
+      <Masthead data={DASHBOARD} />
+      <NavTabs />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      <main className="min-w-0 overflow-x-hidden px-4 pb-[200px] pt-3">
+        <KpiRail
+          tiles={tiles}
+          state={{
+            loading: dashboard.isPending,
+            error: dashboard.error ? dashboard.error.message : null,
+            unknown,
+            onRetry: () => void dashboard.refetch(),
+          }}
+        />
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+        <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="flex min-w-0 flex-col gap-3">
+            <ConversationsPanel data={DASHBOARD.conversations} />
+            <TrackedRepos repos={repos} totals={repoTotals} />
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <PipelinePanel pipeline={DASHBOARD.pipeline} />
+            <YourWorkPanel work={DASHBOARD.work} user={DASHBOARD.user} />
+          </div>
+        </div>
+      </main>
+    </div>
   )
 }
-
-export default App

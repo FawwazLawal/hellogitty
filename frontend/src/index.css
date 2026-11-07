@@ -1,111 +1,122 @@
+@import 'tailwindcss';
+
+/**
+ * Tailwind v4 theme mapping.
+ *
+ * The tokens themselves live in `theme/tokens.ts`, which is the source of truth
+ * and the thing the contrast test reads. This file only tells Tailwind how to
+ * name them, so a component can write `bg-surface` instead of
+ * `bg-[var(--hg-surface)]` and the utility classes stay readable in the markup.
+ *
+ * Every value here is `var(--hg-*)`, never a literal. `ThemeProvider` sets
+ * those variables on :root at runtime, so switching identity repaints without
+ * rebuilding and without remounting anything.
+ */
+@theme {
+  --color-canvas: var(--hg-canvas);
+  --color-surface: var(--hg-surface);
+  --color-sunken: var(--hg-surface-sunken);
+  --color-raised: var(--hg-surface-raised);
+  --color-line: var(--hg-line);
+  --color-line-strong: var(--hg-line-strong);
+  --color-ink: var(--hg-text);
+  --color-muted: var(--hg-text-muted);
+  --color-accent: var(--hg-accent);
+  --color-accent-fill: var(--hg-accent-fill);
+  --color-accent-ink: var(--hg-accent-ink);
+  --color-success: var(--hg-success);
+  --color-warning: var(--hg-warning);
+  --color-danger: var(--hg-danger);
+  --color-focus: var(--hg-focus);
+
+  --radius-chamfer: 10px;
+
+  /* The dashboard is information-dense on purpose; these are its rhythm. */
+  --spacing-row: 38px;
+  --spacing-tile: 92px;
+  --spacing-masthead: 128px;
+}
+
+/**
+ * Fallbacks, so the page is never unstyled.
+ *
+ * ThemeProvider sets these in an effect, which runs after first paint. Without
+ * a declared default there is one frame of unresolved `var()` — transparent
+ * backgrounds and invisible text. Vermilion is the default identity and the
+ * first implementation benchmark, so it is the one declared here.
+ */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
-
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  --hg-canvas: #0a070c;
+  --hg-surface: #151016;
+  --hg-surface-sunken: #0f0b0f;
+  --hg-surface-raised: #1d1620;
+  --hg-line: #3a2730;
+  --hg-line-strong: #7d5560;
+  --hg-text: #ffffff;
+  --hg-text-muted: #cbb2b9;
+  --hg-accent: #ff3e3d;
+  --hg-accent-fill: #b81d24;
+  --hg-accent-ink: #ffffff;
+  --hg-success: #6ee7a0;
+  --hg-warning: #ffc266;
+  --hg-danger: #ff8a93;
+  --hg-focus: #ff6f7c;
+  color-scheme: dark;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
+html,
+body,
 #root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+  height: 100%;
 }
 
 body {
   margin: 0;
+  background: var(--hg-canvas);
+  color: var(--hg-text);
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+/**
+ * One focus ring for the whole prototype.
+ *
+ * The Go app suppressed the native outline on its stat tiles and drew a 1px
+ * border in a pale accent instead, which measured 2.08:1 in its light theme —
+ * a focus indicator a keyboard user could not see. That is the defect this
+ * declaration exists to not repeat: a real outline, in a token the contrast
+ * test holds to 3:1 against every surface, with an offset so it reads on both
+ * dark and light identities.
+ */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--hg-focus);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+/**
+ * ADR §5: "purposeful state feedback only ... with reduced-motion
+ * alternatives." Under reduce, transitions collapse to nothing rather than
+ * being merely shortened — a 10ms transition is still a transition.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
-}
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+/**
+ * Decorative art never intercepts a gesture. ADR §5: "Borders and decorations
+ * must not intercept pointer, keyboard, drag or resize gestures."
+ */
+.hg-decor {
+  pointer-events: none;
+  user-select: none;
 }
