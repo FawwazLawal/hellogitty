@@ -4,6 +4,12 @@ import { Panel, PanelHeader } from './chrome/Chrome'
 import { useTheme } from '../theme/ThemeProvider'
 import type { Appearance } from '../theme/ThemeProvider'
 import { useSettings, useSession, useRepoMutation } from '../data/settings'
+import {
+  WORLD_ZONES,
+  useClockPreferences,
+  useWorldClocks,
+  type ClockFormat,
+} from '../data/clock'
 
 /**
  * The settings page.
@@ -13,13 +19,20 @@ import { useSettings, useSession, useRepoMutation } from '../data/settings'
  * drag/resize/collapse, persistence, and semantics".
  *
  * WHAT CARRIES OVER AND WHAT DOES NOT. The templated page has six sections:
- * Appearance, Clock, Repositories, Polling & API, Server and About. Appearance
- * and Repositories are here. The clock controls are NOT, and that is a
- * deliberate omission rather than an oversight: they write localStorage keys
- * the React masthead does not read yet, so converting the controls without the
- * clock that obeys them would produce switches that do nothing — the exact
- * defect the navigation bar just shipped with. They stay on the templated page,
- * which is still reachable, until the clock itself moves.
+ * Appearance, Clock, Repositories, Polling & API, Server and About.
+ *
+ * Appearance, Clock and Repositories are here. The three primary clock
+ * controls (time format, show seconds, show date) write the same
+ * `hellogitty-clock` key the templated page already used, and the React
+ * Masthead now reads it — so a visitor crossing from /legacy finds their saved
+ * preference honoured, and flipping a toggle here reflects in the masthead
+ * immediately.
+ *
+ * The 15 clock-style variants and the world-clocks list stay on /legacy for
+ * now and are called out in the PR body as deliberate deferrals. The identity
+ * system already drives the clock's colour, so styles would stack a second
+ * mood on top of the first; world clocks are a functional feature with a
+ * masthead-layout cost that deserves its own change.
  *
  * Everything shown read-only is read-only on both pages. The two write actions
  * are the ones the templated page already had, calling the same endpoints.
@@ -104,6 +117,9 @@ export function SettingsPage() {
   const session = useSession()
   const repoMutation = useRepoMutation(session.data?.token)
   const [repoInput, setRepoInput] = useState('')
+  const clock = useClockPreferences()
+  const worldClocks = useWorldClocks()
+  const [worldClockPick, setWorldClockPick] = useState('')
 
   const d = settings.data
   const writable = session.data?.writable === true
@@ -146,6 +162,119 @@ export function SettingsPage() {
               options={order.map((id) => ({ value: id, label: identities[id].label }))}
             />
           </Row>
+        </Panel>
+
+        <Panel>
+          <PanelHeader title="Clock" />
+          <Row label="Time format" hint="24-hour reads unambiguously; 12-hour adds AM / PM.">
+            <SegmentedControl<ClockFormat>
+              label="Time format"
+              value={clock.prefs.format}
+              onChange={clock.setFormat}
+              options={[
+                { value: '24h', label: '24-hour' },
+                { value: '12h', label: '12-hour' },
+              ]}
+            />
+          </Row>
+          <Row label="Show seconds" hint="Off also slows the clock's tick, so a quiet masthead stays quiet.">
+            <SegmentedControl<'on' | 'off'>
+              label="Show seconds"
+              value={clock.prefs.seconds ? 'on' : 'off'}
+              onChange={(v) => clock.setSeconds(v === 'on')}
+              options={[
+                { value: 'on', label: 'On' },
+                { value: 'off', label: 'Off' },
+              ]}
+            />
+          </Row>
+          <Row label="Show date" hint="The weekday, month and date beneath the time.">
+            <SegmentedControl<'on' | 'off'>
+              label="Show date"
+              value={clock.prefs.date ? 'on' : 'off'}
+              onChange={(v) => clock.setDate(v === 'on')}
+              options={[
+                { value: 'on', label: 'On' },
+                { value: 'off', label: 'Off' },
+              ]}
+            />
+          </Row>
+        </Panel>
+
+        <Panel>
+          <PanelHeader title="World clocks">
+            <span className="text-[11px]" style={{ color: 'var(--hg-text-muted)' }}>
+              {worldClocks.clocks.length === 0 ? 'None added' : `${worldClocks.clocks.length} shown`}
+            </span>
+          </PanelHeader>
+          {/*
+            The list and the picker share one card. A fixed picker row, then
+            one row per added clock. Every row has a Remove — a chip without a
+            way to drop it collects stale timezones forever.
+          */}
+          <div className="flex items-center gap-2 border-b px-4 py-3" style={{ borderColor: 'var(--hg-line)' }}>
+            <label className="flex min-w-0 flex-1 items-center">
+              <span className="sr-only">Timezone to add</span>
+              <select
+                value={worldClockPick}
+                onChange={(e) => setWorldClockPick(e.target.value)}
+                className="w-full border px-3 py-1.5 text-[12px]"
+                style={{ background: 'var(--hg-surface-sunken)', borderColor: 'var(--hg-line)', color: 'var(--hg-text)' }}
+              >
+                <option value="">Add a timezone…</option>
+                {WORLD_ZONES.filter((z) => !worldClocks.clocks.some((c) => c.tz === z.tz)).map((z) => (
+                  <option key={z.tz} value={z.tz}>
+                    {z.long}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              disabled={!worldClockPick}
+              onClick={() => {
+                worldClocks.add(worldClockPick)
+                setWorldClockPick('')
+              }}
+              className="flex items-center gap-1.5 border px-3 py-1.5 text-[12px] font-medium disabled:opacity-50"
+              style={{ background: 'var(--hg-accent-fill)', borderColor: 'var(--hg-accent-fill)', color: 'var(--hg-accent-ink)' }}
+            >
+              <Plus size={13} aria-hidden="true" />
+              Add
+            </button>
+          </div>
+
+          {worldClocks.clocks.length === 0 && (
+            <p className="px-4 py-6 text-center text-[12px]" style={{ color: 'var(--hg-text-muted)' }}>
+              No world clocks added yet.
+            </p>
+          )}
+
+          <ul>
+            {worldClocks.clocks.map((c) => {
+              const zone = WORLD_ZONES.find((z) => z.tz === c.tz)
+              return (
+                <li
+                  key={c.tz}
+                  className="flex items-center justify-between gap-3 border-b px-4 py-2 last:border-b-0"
+                  style={{ borderColor: 'var(--hg-line)' }}
+                >
+                  <span className="truncate text-[12px]" style={{ color: 'var(--hg-text)' }}>
+                    {zone?.long ?? c.tz}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => worldClocks.remove(c.tz)}
+                    className="flex shrink-0 items-center gap-1 border px-2 py-1 text-[11px]"
+                    style={{ borderColor: 'var(--hg-line-strong)', color: 'var(--hg-text-muted)' }}
+                  >
+                    <Trash2 size={12} aria-hidden="true" />
+                    Remove<span className="sr-only"> {zone?.long ?? c.tz}</span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
         </Panel>
 
         <Panel>
@@ -311,9 +440,11 @@ export function SettingsPage() {
         </Panel>
 
         <p className="px-1 text-[11px]" style={{ color: 'var(--hg-text-muted)' }}>
-          Clock options are still on the{' '}
-          <a href="/legacy" style={{ color: 'var(--hg-accent)' }}>templated settings page</a>. They
-          write preferences the React clock does not read yet, so they are left where they work.
+          The {' '}
+          <a href="/legacy/settings" style={{ color: 'var(--hg-accent)' }}>templated settings page</a>
+          {' '}still carries the 15 clock-style variants (Neon, Matrix, Nixie, LED, Flip and so on).
+          Whether those come across is an open owner decision, called out in the PR that added this
+          page. Both pages read the same storage, so a saved style still applies on /legacy either way.
         </p>
       </div>
     </main>
