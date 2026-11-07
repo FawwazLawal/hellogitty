@@ -46,7 +46,7 @@ const TABS: Tab[] = [
   { id: 'issues', label: 'Issues', href: '/issues', Icon: CircleDot, react: true },
   { id: 'tracked', label: 'Tracked repos', href: '/repos', Icon: Calendar, react: true },
   { id: 'conversations', label: 'Conversations', href: '/conversations', Icon: MessageSquare, react: false },
-  { id: 'repos', label: 'Your repositories', href: '/your-repos', Icon: Boxes, react: false },
+  { id: 'repos', label: 'Your repositories', href: '/your-repos', Icon: Boxes, react: true },
   { id: 'settings', label: 'Settings', href: '/settings', Icon: Settings, react: true },
 ]
 

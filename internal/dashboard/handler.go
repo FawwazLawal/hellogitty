@@ -800,6 +800,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveAppIndex(w, r)
 	case r.URL.Path == "/legacy/settings":
 		h.serveSettingsPage(w, r)
+	case r.URL.Path == "/your-repos" && h.ReactIsDefault && h.App != nil:
+		// Converted. The templated page remains reachable at /legacy/your-repos
+		// until Phase 4 approval, so the comparison tab survives.
+		h.serveAppIndex(w, r)
+	case r.URL.Path == "/legacy/your-repos":
+		h.serveYourReposPage(w, r)
 	case r.URL.Path == "/" && h.ReactIsDefault && h.App != nil:
 		// The React shell, served at the front door. Its assets still live
 		// under /app/ — the bundle is built with that base — so this needs no
@@ -834,6 +840,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.servePipelineAPI(w, r)
 	case r.URL.Path == "/app/api/work.json":
 		h.serveWorkAPI(w, r)
+	case r.URL.Path == "/app/api/your-repos.json":
+		h.serveYourReposAPI(w, r)
 	case strings.HasPrefix(r.URL.Path, "/app") && h.App != nil:
 		h.serveApp(w, r)
 	case r.URL.Path == "/feed":

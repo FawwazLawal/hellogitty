@@ -5,6 +5,7 @@ import { PipelinePage } from './components/PipelinePage'
 import { WorkPage } from './components/WorkPage'
 import { IssuesPage } from './components/IssuesPage'
 import { ReposPage } from './components/ReposPage'
+import { YourReposPage } from './components/YourReposPage'
 import { KpiRail } from './components/KpiRail'
 import { ConversationsPanel } from './components/ConversationsPanel'
 import { TrackedRepos } from './components/TrackedRepos'
@@ -36,7 +37,7 @@ import { DASHBOARD } from './fixtures/dashboard'
  * of what a router would do for us. The moment a third view needs nested
  * routes or params, this becomes an argument for one — until then it is not.
  */
-type View = 'dashboard' | 'settings' | 'pipeline' | 'work' | 'issues' | 'repos'
+type View = 'dashboard' | 'settings' | 'pipeline' | 'work' | 'issues' | 'repos' | 'your-repos'
 
 /**
  * Still not a router.
@@ -52,6 +53,11 @@ const ROUTES: { prefix: string; view: View }[] = [
   { prefix: '/pipeline', view: 'pipeline' },
   { prefix: '/work', view: 'work' },
   { prefix: '/issues', view: 'issues' },
+  // Kept longest-first as a habit, though `viewFor` matches
+  // `pathname === prefix || pathname.startsWith(prefix + '/')`, so
+  // /your-repos is never swallowed by /repos — /your-repos neither equals
+  // /repos nor starts with /repos/. Order here is harmless either way.
+  { prefix: '/your-repos', view: 'your-repos' },
   { prefix: '/repos', view: 'repos' },
 ]
 
@@ -161,6 +167,7 @@ export default function App() {
       {view === 'work' && <WorkPage />}
       {view === 'issues' && <IssuesPage />}
       {view === 'repos' && <ReposPage />}
+      {view === 'your-repos' && <YourReposPage />}
 
       {view === 'dashboard' && (
       <main className="min-w-0 overflow-x-hidden px-4 pb-[200px] pt-3">
