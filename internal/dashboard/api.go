@@ -751,3 +751,118 @@ func (h *Handler) serveWorkAPI(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	json.NewEncoder(w).Encode(doc)
 }
+
+// RepoActivity is a notification about one of your own repositories that did
+// not match any item on the work board: a failed workflow run, a release, a
+// mention on a thread you are not already on.
+//
+// Separate from WorkRow deliberately: these are events about repos rather than
+// items authored by you, and merging them would lose that distinction.
+type RepoActivity struct {
+	Key    string `json:"key"`
+	Title  string `json:"title"`
+	URL    string `json:"url"`
+	Repo   string `json:"repo"`
+	Number int    `json:"number,omitempty"`
+	// Words is the server's own sentence for what happened, e.g. "New release".
+	Words    string `json:"words"`
+	Ago      string `json:"ago"`
+	AgoTitle string `json:"agoTitle"`
+	// New is 0 when read, otherwise the unix time the unread notification arrived.
+	New int64 `json:"new,omitempty"`
+	// Attn: "new" (unread), "caution" (read but still asks something of you), or "".
+	Attn string `json:"attn,omitempty"`
+}
+
+// YourReposPageAPI backs the /your-repos page.
+//
+// The templated page shows three overview counts (Open PRs, Merged, Unread) and
+// three lists (what you need to do, finished items, activity in your own
+// repositories). Each is projected from the existing `page` struct the
+// dashboard already builds — no new data source, and nothing the handler does
+// not already compute at render time.
+//
+// WHY NOT REUSE /app/api/work.json. Work has You/Them/Done/Dismissed; this
+// page needs You/Done plus a fourth list (RepoOther) that work.json does not
+// carry and that is scoped differently — activity about repos rather than
+// items authored by you. Adding RepoOther to work.json would mix the two
+// scopes in one document and pull in fields the work board does not need.
+//
+// WHY NOT REUSE /app/api/pipeline.json. Pipeline has Open and Merged but a
+// shape built for the full funnel view: per-PR rows, per-stage counts. This
+// page only needs the two totals.
+//
+// UNKNOWN IS NOT ZERO. The templated page prints `{{.Pipeline.Open}}` without
+// checking whether the pipeline has been polled — three overview tiles that
+// all show "0" before the first poll lands, saying nothing needs attention
+// about data nobody has looked at yet. `PipelineKnown` and `WorkKnown` carry
+// that distinction out to the UI so it can render "—" for unknown.
+type YourReposPageAPI struct {
+	// PipelineKnown is false until the PR board has been fetched at least once.
+	PipelineKnown bool `json:"pipelineKnown"`
+	// WorkKnown is false until the work board has been fetched at least once.
+	WorkKnown bool `json:"workKnown"`
+	// Error, when set, is the friendly sentence to render across the whole page.
+	Error string `json:"error,omitempty"`
+	// Partial: the lists below are new but incomplete — the last refresh failed
+	// halfway. Different from Known being false, which means none has run.
+	Partial bool   `json:"partial"`
+	Login   string `json:"login"`
+
+	Open     int `json:"open"`
+	Merged   int `json:"merged"`
+	ReposNew int `json:"reposNew"`
+
+	You       []WorkRow      `json:"you"`
+	Done      []WorkRow      `json:"done"`
+	RepoOther []RepoActivity `json:"repoOther"`
+}
+
+func toRepoActivity(rows []otherRow) []RepoActivity {
+	out := []RepoActivity{}
+	for _, o := range rows {
+		out = append(out, RepoActivity{
+			Key: o.Key, Title: o.Title, URL: o.URL, Repo: o.Repo, Number: o.Number,
+			Words: o.Words, Ago: o.Ago, AgoTitle: o.AgoTitle,
+			New: o.New, Attn: o.Attn,
+		})
+	}
+	return out
+}
+
+func (h *Handler) serveYourReposAPI(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		w.Header().Set("Allow", "GET, HEAD")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	p, err := h.build()
+	if err != nil {
+		http.Error(w, "your repositories unavailable", http.StatusInternalServerError)
+		return
+	}
+
+	errText := p.Work.Err
+	if errText == "" {
+		errText = p.Pipeline.Err
+	}
+
+	doc := YourReposPageAPI{
+		PipelineKnown: p.Pipeline.Known,
+		WorkKnown:     p.Work.Known,
+		Error:         errText,
+		Partial:       p.Work.Partial,
+		Login:         p.Work.Login,
+		Open:          p.Pipeline.Open,
+		Merged:        p.Pipeline.Merged,
+		ReposNew:      p.ReposNew,
+		You:           toWorkRows(p.Work.You),
+		Done:          toWorkRows(p.Work.Done),
+		RepoOther:     toRepoActivity(p.Work.RepoOther),
+	}
+
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	json.NewEncoder(w).Encode(doc)
+}
