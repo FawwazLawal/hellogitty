@@ -14,6 +14,8 @@
     "fixture:update": "curl -sf ${HG_BASE_URL:-http://127.0.0.1:7354}/ -o e2e/fixture/dashboard.html && echo 'fixture updated \u2014 re-run test:visual:update and review every changed baseline'",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
     "test:app": "playwright test -c playwright.app.config.ts",
     "build:embed": "vite build"
   },

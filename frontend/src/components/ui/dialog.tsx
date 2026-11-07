@@ -34,12 +34,14 @@ export const DialogOverlay = forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      'fixed inset-0 z-50 bg-black/60 ' +
+      'fixed inset-0 z-50 ' +
         'transition-opacity duration-150 ease-out ' +
         'data-[state=closed]:opacity-0 data-[state=open]:opacity-100',
       className,
     )}
     {...props}
+  
+    style={{ background: 'var(--hg-scrim)' }}
   />
 ))
 DialogOverlay.displayName = 'DialogOverlay'

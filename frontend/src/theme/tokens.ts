@@ -59,6 +59,17 @@ export interface ColorTokens {
   /** The focus ring. Held to 3:1 on every surface it can land on (SC 1.4.11). */
   focus: string
 
+  /**
+   * The veil behind a modal. A full rgba(), because it is translucent by
+   * definition and the alpha is part of the decision.
+   *
+   * Not `black/60`. On the two dark identities that is indistinguishable from
+   * a tint of their own canvas, but on Bone it turns porcelain paper into a
+   * dead grey (#5a5d62) that belongs to no palette in this product. Each
+   * identity veils toward its own deepest ink instead.
+   */
+  scrim: string
+
   /*
    * Metal. These four drive the armour plates, straps and rivets in
    * `chrome/Ornament.tsx`.
@@ -120,6 +131,7 @@ const VERMILION: IdentityDefinition = {
     warning: '#ffc266',
     danger: '#ff8a93',
     focus: '#ff6f7c',
+    scrim: 'rgba(6, 3, 7, 0.72)',
     plate: '#413039',
     plateHi: '#8f717e',
     plateLo: '#1a1219',
@@ -163,6 +175,7 @@ const AZURE: IdentityDefinition = {
     warning: '#ffbf5c',
     danger: '#ff8f99',
     focus: '#7cc4f0',
+    scrim: 'rgba(3, 7, 14, 0.72)',
     plate: '#2c4066',
     plateHi: '#7596c4',
     plateLo: '#121c30',
@@ -201,6 +214,7 @@ const BONE: IdentityDefinition = {
     warning: '#7a4500',
     danger: '#a81f35',
     focus: '#0d3a9b',
+    scrim: 'rgba(10, 15, 28, 0.38)',
     plate: '#aebfdd',
     plateHi: '#ffffff',
     plateLo: '#8fa0c4',

@@ -29,7 +29,16 @@ export const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup
  * the indicator.
  */
 const itemClass =
-  'relative flex cursor-default select-none items-center gap-2 px-3 py-1.5 text-[12px] outline-none ' +
+  // NO `outline-none`. Radix moves DOM focus to the highlighted item, so the
+  // global :focus-visible ring in index.css is the item's focus indicator —
+  // and it is the one the token test holds to 3:1 on every surface.
+  //
+  // The highlight tint alone is NOT sufficient: measured against the menu
+  // surface it is 2.73:1 in vermilion and 2.29:1 in azure, both under the
+  // SC 1.4.11 floor. Suppressing the outline would have left a keyboard user
+  // arrowing through a menu with a cue they can barely see in two identities
+  // out of three. The tint stays as a second, redundant cue.
+  'relative flex cursor-default select-none items-center gap-2 px-3 py-1.5 text-[12px] ' +
   // Highlighted (Radix sets `data-highlighted` as the pointer moves or the
   // arrow keys land). Keep contrast on both — `accent-fill` carries white ink.
   'data-[highlighted]:bg-[var(--hg-accent-fill)] data-[highlighted]:text-[var(--hg-accent-ink)] ' +
