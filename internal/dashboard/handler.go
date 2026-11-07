@@ -814,6 +814,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveAppIndex(w, r)
 	case r.URL.Path == "/legacy/conversations":
 		h.serveConversationsPage(w, r)
+	case r.URL.Path == "/list" && h.ReactIsDefault && h.App != nil:
+		// Converted. The templated page remains reachable at /legacy/list.
+		// /list takes ?prs=... or ?stage=... query parameters; the React
+		// shell receives them in location.search and routes on them client-
+		// side, so deep links survive.
+		h.serveAppIndex(w, r)
+	case r.URL.Path == "/legacy/list":
+		h.serveList(w, r)
 	case r.URL.Path == "/" && h.ReactIsDefault && h.App != nil:
 		// The React shell, served at the front door. Its assets still live
 		// under /app/ — the bundle is built with that base — so this needs no
