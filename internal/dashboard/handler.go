@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io/fs"
 	"log"
+	"mime"
 	"net/http"
 	"os"
 	"path"
@@ -102,7 +103,7 @@ type Handler struct {
 	// StartedAt is the process start time. /health reads it so a zero LastPoll can be judged
 	// against how long the process has been up — a first cycle still in flight is not stale.
 	StartedAt time.Time
-	Version      string
+	Version   string
 	// Baby marks a codename that has not graduated yet; the page sets it apart from the label.
 	Baby    bool
 	Favicon []byte
@@ -111,7 +112,12 @@ type Handler struct {
 	// Art holds the scenic assets visual packs paint with; nil simply means those packs render
 	// without their scenery rather than erroring, so a build without art still serves.
 	Art fs.FS
-	Now    func() time.Time
+
+	// App is the built React application, served under /app/. nil leaves the
+	// route off entirely, which is what a binary built without a frontend
+	// build should do — serve the existing dashboard and nothing else.
+	App fs.FS
+	Now func() time.Time
 
 	// Help page: its template (parsed with Template, whose base styles it shares), the guide in
 	// Markdown, the guide's screenshot, and facts about this install set at startup (files in use).
@@ -765,6 +771,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case strings.HasPrefix(r.URL.Path, "/art/") && h.Art != nil:
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		http.StripPrefix("/art/", http.FileServer(http.FS(h.Art))).ServeHTTP(w, r)
+	case strings.HasPrefix(r.URL.Path, "/app") && h.App != nil:
+		h.serveApp(w, r)
 	case r.URL.Path == "/feed":
 		h.serveFeedPage(w, r)
 	case r.URL.Path == "/feed.json":
@@ -1429,4 +1437,65 @@ func risk(status string) int {
 	default:
 		return 2
 	}
+}
+
+// serveApp serves the built React application under /app/.
+//
+// Three things here are decisions rather than defaults, and each fails quietly
+// in a way that looks like something else.
+//
+// SPA FALLBACK. A path under /app/ naming no file serves index.html rather than
+// 404, because a client-routed application owns its own URL space: /app/repos
+// is a route the app resolves, not a file on disk. Without it, every deep link
+// and every refresh away from the root 404s, which reads as a broken deploy.
+//
+// The fallback is deliberately NOT applied to asset requests. A missing .js or
+// .css must 404 honestly; serving index.html in its place hands the browser an
+// HTML document where it expected a script, and the failure surfaces as an
+// opaque MIME-type complaint rather than a 404 naming the file.
+//
+// CACHING SPLITS BY NAME. Vite fingerprints asset filenames with a content
+// hash, so those are immutable and cache for a year. index.html is not
+// fingerprinted — it is the document pointing at the current hashes — so it
+// must never be cached, or a user keeps loading a page referencing assets this
+// binary no longer contains.
+func (h *Handler) serveApp(w http.ResponseWriter, r *http.Request) {
+	const prefix = "/app"
+
+	rel := strings.TrimPrefix(r.URL.Path, prefix)
+	rel = strings.TrimPrefix(rel, "/")
+	if rel == "" {
+		rel = "index.html"
+	}
+
+	// http.FileServer would do this containment for us, but this handler
+	// resolves names itself in order to implement the fallback, so it has to.
+	rel = path.Clean(rel)
+	if rel == "." || strings.HasPrefix(rel, "..") {
+		rel = "index.html"
+	}
+
+	data, err := fs.ReadFile(h.App, rel)
+	if err != nil {
+		if ext := path.Ext(rel); ext != "" && ext != ".html" {
+			http.NotFound(w, r)
+			return
+		}
+		data, err = fs.ReadFile(h.App, "index.html")
+		if err != nil {
+			http.Error(w, "app not built into this binary", http.StatusNotFound)
+			return
+		}
+		rel = "index.html"
+	}
+
+	if rel == "index.html" {
+		w.Header().Set("Cache-Control", "no-store")
+	} else {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	}
+	if ctype := mime.TypeByExtension(path.Ext(rel)); ctype != "" {
+		w.Header().Set("Content-Type", ctype)
+	}
+	w.Write(data)
 }

@@ -106,5 +106,19 @@ var Mascot embed.FS
 // Served from the binary like the mascot clips, so the offline-first guarantee is unchanged:
 // no CDN, no network fetch, and the existing CSP (img-src 'self') already permits it.
 //
+// App is the built React application: the Vite output, compiled into the binary.
+//
+// `all:` so Vite's hashed asset directory is included — the default embed
+// pattern skips files and directories beginning with _ or ., and a build can
+// legitimately produce either.
+//
+// web/app holds a committed placeholder page, which is why this compiles in a
+// checkout where nobody has run `pnpm build`. //go:embed fails on a missing
+// directory, so without the placeholder the Go build would depend on a Node
+// build having happened first — exactly the coupling §7 says to avoid.
+//
+//go:embed all:app
+var App embed.FS
+
 //go:embed art
 var Art embed.FS

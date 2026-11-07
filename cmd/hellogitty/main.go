@@ -255,6 +255,15 @@ func run() int {
 		log.Printf("art assets: %v", err)
 		artFS = nil // a pack without scenery still renders; this is not fatal
 	}
+	// The built React app, served under /app/. Non-fatal for the same reason the
+	// art is: a binary whose frontend was never built should still serve the
+	// dashboard it has, rather than refusing to start over a page nobody asked
+	// for yet.
+	appFS, err := iofs.Sub(web.App, "app")
+	if err != nil {
+		log.Printf("app bundle: %v", err)
+		appFS = nil
+	}
 	mascotFS, err := iofs.Sub(web.Mascot, "mascot")
 	if err != nil {
 		log.Printf("mascot assets: %v", err)
@@ -263,6 +272,7 @@ func run() int {
 	srv := &http.Server{
 		Handler: &dashboard.Handler{
 			Template:                       web.Index,
+			App:                            appFS,
 			SnapshotPath:                   snapPath,
 			Source:                         src,
 			PollInterval:                   cfg.PollInterval,
@@ -600,7 +610,7 @@ type source struct {
 	ov          *overlap.Watcher
 	sec         *security.Cache
 	writes      *writeRecorder // tracks the last attempt of each configured output file
-	repoManager               // adding and removing repositories from the dashboard
+	repoManager                // adding and removing repositories from the dashboard
 }
 
 // writeRecorder collects the most recent write attempt of each configured output file, so the
