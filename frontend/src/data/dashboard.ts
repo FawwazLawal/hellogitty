@@ -70,6 +70,64 @@ export const RepoFromApi = z.object({
 })
 export type RepoFromApi = z.infer<typeof RepoFromApi>
 
+export const StageCountFromApi = z.object({
+  abbr: z.string(),
+  name: z.string(),
+  count: z.number().int(),
+})
+
+export const PipelineFromApi = z.object({
+  counts: z.array(StageCountFromApi),
+  opened: z.number().int(),
+  open: z.number().int(),
+  merged: z.number().int(),
+  closed: z.number().int(),
+  /**
+   * The server's own formatted string, not a ratio to format here.
+   *
+   * It is merged / (merged + closed), deliberately excluding open pull
+   * requests, and the panel prints a note saying so. Sending the raw numbers
+   * for the client to divide would put that definition in two places — and the
+   * definition is the part that is easy to get subtly wrong.
+   */
+  rate: z.string(),
+  known: z.boolean(),
+  error: z.string().optional(),
+})
+
+export const WorkItemFromApi = z.object({
+  key: z.string(),
+  kind: z.string(),
+  repo: z.string(),
+  number: z.number().int(),
+  title: z.string(),
+  url: z.string(),
+  why: z.string(),
+  ago: z.string(),
+  agoTitle: z.string(),
+  level: z.string(),
+  yourMove: z.boolean(),
+  status: z.string(),
+})
+
+export const WorkFromApi = z.object({
+  known: z.boolean(),
+  /** The refresh failed halfway: new but incomplete, which is not "not yet". */
+  partial: z.boolean(),
+  login: z.string(),
+  needYou: z.number().int(),
+  total: z.number().int(),
+  items: z.array(WorkItemFromApi),
+  error: z.string().optional(),
+})
+
+export const ConversationsFromApi = z.object({
+  known: z.boolean(),
+  quiet: z.number().int(),
+  needYou: z.number().int(),
+  total: z.number().int(),
+})
+
 export const DashboardApiDoc = z.object({
   /** RFC 3339, or empty when no poll has completed. Not the request time. */
   generatedAt: z.string(),
@@ -78,6 +136,9 @@ export const DashboardApiDoc = z.object({
   repos: z.array(RepoFromApi),
   stageHeads: z.array(StageFromApi),
   repoTotals: z.object({ newCount: z.number().int(), repoCount: z.number().int() }),
+  pipeline: PipelineFromApi,
+  work: WorkFromApi,
+  conversations: ConversationsFromApi,
   /** True while sections beyond the KPI rail still come from fixtures. */
   partial: z.boolean(),
 })
@@ -193,5 +254,67 @@ export function toTrackedRepo(
       r.stages.length === 7
         ? (r.stages.map((s) => stageState(s.state)) as import('../fixtures/dashboard').TrackedRepo['stages'])
         : (['todo', 'todo', 'todo', 'todo', 'todo', 'todo', 'todo'] as import('../fixtures/dashboard').TrackedRepo['stages']),
+  }
+}
+
+/**
+ * Adapters for the three rails.
+ *
+ * Each keeps the same discipline the repository adapter established: the
+ * server's distinction between "nothing" and "not yet" is preserved rather
+ * than flattened, and anything the server has not fetched is absent rather
+ * than zero.
+ */
+
+export function toPipelineView(
+  p: z.infer<typeof PipelineFromApi>,
+  repoCount: number,
+): import('../fixtures/dashboard').Pipeline & { known: boolean; rateText: string } {
+  /*
+    `rate` arrives as the server's formatted string because the definition —
+    merged / (merged + closed), excluding open — lives there and should live in
+    one place. The panel prints a number with a % sign, so a numeric field is
+    kept for it, parsed from that string rather than recomputed from the parts.
+    If the server ever says something non-numeric ("—", "n/a"), rateText is what
+    the panel should show and the number falls to 0 rather than NaN.
+  */
+  const parsed = parseInt(p.rate.replace(/[^0-9-]/g, ''), 10)
+  return {
+    repoCount,
+    byStage: p.counts.map((c) => ({ stage: c.abbr as never, count: c.count })),
+    opened: p.opened,
+    open: p.open,
+    merged: p.merged,
+    closed: p.closed,
+    ratePercent: Number.isFinite(parsed) ? parsed : 0,
+    rateText: p.rate,
+    known: p.known,
+    // The server does not send a "latest" pull request on this endpoint yet.
+    // Empty rather than invented; the panel renders no link for it.
+    latest: '',
+  }
+}
+
+export function toWorkView(
+  w: z.infer<typeof WorkFromApi>,
+): import('../fixtures/dashboard').DashboardData['work'] & { known: boolean; partial: boolean } {
+  return {
+    known: w.known,
+    partial: w.partial,
+    needYou: w.needYou,
+    // "new" is a feed concept this endpoint does not carry. 0 is honest here:
+    // it is not a count the server has and withheld, it is one it does not model.
+    newCount: 0,
+    total: w.total,
+    items: w.items.map((i) => ({
+      id: i.key,
+      title: i.title,
+      repo: i.repo,
+      number: i.number,
+      updated: i.agoTitle || i.ago,
+      yourMove: i.yourMove,
+      note: i.level === 'caution' && i.status ? i.status : undefined,
+      openedByYou: i.why.toLowerCase().includes('you opened'),
+    })),
   }
 }

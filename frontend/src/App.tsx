@@ -5,7 +5,7 @@ import { ConversationsPanel } from './components/ConversationsPanel'
 import { TrackedRepos } from './components/TrackedRepos'
 import { PipelinePanel } from './components/PipelinePanel'
 import { YourWorkPanel } from './components/YourWorkPanel'
-import { useDashboard, toTrackedRepo } from './data/dashboard'
+import { useDashboard, toTrackedRepo, toPipelineView, toWorkView } from './data/dashboard'
 import { useArt } from './art'
 import { DASHBOARD } from './fixtures/dashboard'
 
@@ -78,6 +78,20 @@ export default function App() {
     : DASHBOARD.repos
   const repoTotals = answered ? dashboard.data.repoTotals : DASHBOARD.repoTotals
 
+  /*
+    The three rails, off fixture at last.
+
+    These were the most misleading thing on the page: a pipeline showing
+    "20 17 1 14 3 3 12 / Rate 57%" and a work rail showing "11 need you", none
+    of it the owner's. Numbers that look exactly like data and are not are
+    worse than an empty panel, for the same reason the repository table was.
+  */
+  const pipeline = answered ? toPipelineView(dashboard.data.pipeline, dashboard.data.repoTotals.repoCount) : DASHBOARD.pipeline
+  const work = answered ? toWorkView(dashboard.data.work) : DASHBOARD.work
+  const conversations = answered
+    ? { quiet: dashboard.data.conversations.quiet, total: dashboard.data.conversations.total }
+    : DASHBOARD.conversations
+
   return (
     <div className="relative isolate min-h-full" style={{ background: 'var(--hg-canvas)' }}>
       {/* The footer band, fixed to the viewport bottom, behind everything. */}
@@ -106,13 +120,13 @@ export default function App() {
 
         <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
           <div className="flex min-w-0 flex-col gap-3">
-            <ConversationsPanel data={DASHBOARD.conversations} />
+            <ConversationsPanel data={conversations} />
             <TrackedRepos repos={repos} totals={repoTotals} />
           </div>
 
           <div className="flex flex-col gap-3">
-            <PipelinePanel pipeline={DASHBOARD.pipeline} />
-            <YourWorkPanel work={DASHBOARD.work} user={DASHBOARD.user} />
+            <PipelinePanel pipeline={pipeline} />
+            <YourWorkPanel work={work} user={answered ? dashboard.data.work.login || DASHBOARD.user : DASHBOARD.user} />
           </div>
         </div>
       </main>

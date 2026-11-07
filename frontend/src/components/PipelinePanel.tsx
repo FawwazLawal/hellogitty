@@ -107,16 +107,39 @@ export function PipelinePanel({ pipeline }: { pipeline: Pipeline }) {
             >
               Open
             </button>
-            <a
-              href={`https://github.com/${pipeline.latest}`}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="min-w-0 flex-1 truncate text-[11px] tabular-nums underline-offset-2 hover:underline"
-              style={{ color: 'var(--hg-accent)' }}
-              title={pipeline.latest}
-            >
-              {pipeline.latest}
-            </a>
+            {/*
+              No link when there is nothing to link to.
+
+              This rendered an <a> with an empty body whenever `latest` was
+              absent, which axe caught as link-name: a focusable control a
+              screen reader announces as "link" with no name, and a sighted
+              user cannot see at all. It surfaced the moment this panel moved
+              off fixture data, because the endpoint carries no latest pull
+              request yet — the fixture always had one, so the empty case had
+              never actually rendered.
+
+              An em dash says the same "nothing here" without putting an
+              unusable control in the tab order.
+            */}
+            {pipeline.latest ? (
+              <a
+                href={`https://github.com/${pipeline.latest}`}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="min-w-0 flex-1 truncate text-[11px] tabular-nums underline-offset-2 hover:underline"
+                style={{ color: 'var(--hg-accent)' }}
+                title={pipeline.latest}
+              >
+                {pipeline.latest}
+              </a>
+            ) : (
+              <span
+                className="min-w-0 flex-1 truncate text-[11px]"
+                style={{ color: 'var(--hg-text-muted)' }}
+              >
+                —
+              </span>
+            )}
             <button
               type="button"
               className="border px-2.5 py-1 text-[11px] font-medium"
