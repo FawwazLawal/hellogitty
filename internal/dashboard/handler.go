@@ -848,6 +848,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.servePipelineAPI(w, r)
 	case r.URL.Path == "/app/api/work.json":
 		h.serveWorkAPI(w, r)
+	case r.URL.Path == "/app/api/help.json":
+		h.serveHelpAPI(w, r)
 	case r.URL.Path == "/app/api/your-repos.json":
 		h.serveYourReposAPI(w, r)
 	case strings.HasPrefix(r.URL.Path, "/app") && h.App != nil:
@@ -943,6 +945,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveWorkDismiss(w, r, true)
 	case r.URL.Path == "/settings":
 		h.serveSettingsPage(w, r)
+	case r.URL.Path == "/help" && h.ReactIsDefault && h.App != nil:
+		h.serveAppIndex(w, r)
+	case r.URL.Path == "/legacy/help":
+		h.serveHelp(w, r)
 	case r.URL.Path == "/help":
 		h.serveHelp(w, r)
 	case r.URL.Path == "/help/screenshot.png" && len(h.Screenshot) > 0:
