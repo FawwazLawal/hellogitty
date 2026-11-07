@@ -39,7 +39,7 @@ export default function App() {
   */
   const dashboard = useDashboard()
 
-  const liveTiles = dashboard.data?.kpis
+  const liveTiles = dashboard.isSuccess ? dashboard.data?.kpis : undefined
   const tiles = liveTiles
     ? DASHBOARD.kpis.map((fixture) => {
         const live = liveTiles.find((k) => k.id === fixture.id)
@@ -60,12 +60,23 @@ export default function App() {
     that cannot be reached shows the fixture rather than an empty table, and
     the dashboard degrades instead of going blank.
   */
-  const liveRepos = dashboard.data?.repos
-  const repos =
-    liveRepos && liveRepos.length > 0
-      ? liveRepos.map((r) => toTrackedRepo(r, dashboard.data!.generatedAt))
-      : DASHBOARD.repos
-  const repoTotals = dashboard.data?.repoTotals ?? DASHBOARD.repoTotals
+  /*
+    AN EMPTY ANSWER IS AN ANSWER.
+
+    This first shipped as `liveRepos.length > 0 ? live : fixture`, which treats
+    "the server says you track nothing" the same as "the server did not
+    answer". On a live dashboard that renders openai/codex and flutter/flutter
+    to someone who tracks neither — demo data wearing the clothes of real data,
+    which is worse than an empty table because nothing about it looks wrong.
+
+    The fixture is a fallback for NO ANSWER, not for a quiet one. Once the
+    query succeeds, what it returned is the truth even when it is empty.
+  */
+  const answered = dashboard.isSuccess && dashboard.data !== undefined
+  const repos = answered
+    ? dashboard.data.repos.map((r) => toTrackedRepo(r, dashboard.data!.generatedAt))
+    : DASHBOARD.repos
+  const repoTotals = answered ? dashboard.data.repoTotals : DASHBOARD.repoTotals
 
   return (
     <div className="relative isolate min-h-full" style={{ background: 'var(--hg-canvas)' }}>
