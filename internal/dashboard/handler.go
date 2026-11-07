@@ -109,13 +109,16 @@ type Handler struct {
 	Favicon []byte
 	// Mascot holds the banner clips and rest still; nil leaves the banner without a mascot.
 	Mascot fs.FS
-	// Art holds the scenic assets visual packs paint with; nil simply means those packs render
-	// without their scenery rather than erroring, so a build without art still serves.
-	Art fs.FS
-
 	// App is the built React application, served under /app/. nil leaves the
 	// route off entirely, which is what a binary built without a frontend
 	// build should do — serve the existing dashboard and nothing else.
+	//
+	// It also holds the scenic art under `app/art/`, because Vite already
+	// copies `frontend/public/art/` into its output. One embed, one source:
+	// the old `Art fs.FS` field and its parallel `//go:embed art` have been
+	// removed to close the hand-maintained mirror the migration plan called
+	// out. If App is nil, the /art/ route 404s rather than serving stale
+	// scenery from a second embed that drifted from the real source.
 	App fs.FS
 
 	// ReactIsDefault makes "/" open onto the React application instead of the
@@ -843,9 +846,31 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case strings.HasPrefix(r.URL.Path, "/mascot/") && h.Mascot != nil:
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		http.StripPrefix("/mascot/", http.FileServer(http.FS(h.Mascot))).ServeHTTP(w, r)
-	case strings.HasPrefix(r.URL.Path, "/art/") && h.Art != nil:
+	case strings.HasPrefix(r.URL.Path, "/art/") && h.App != nil:
+		// Served from the React bundle's own `art/` folder, which Vite
+		// copies on build from `frontend/public/art/` — the single source.
+		//
+		// CACHE-CONTROL IS EXPLICIT HERE AND STAYS A DAY. These filenames
+		// are NOT fingerprinted ("header-vermilion.webp" is the whole name,
+		// not "header-vermilion.ab12cd34.webp"), so the right policy is
+		// public + max-age + revalidate, same as the old /art/ route. The
+		// serveApp code path, which runs for /app/*, correctly stamps
+		// `immutable` on hashed bundle assets; letting an unhashed art
+		// file inherit that would freeze old scenery in viewers' caches
+		// the moment a replacement landed. The two routes use the same
+		// FS and emit different headers on purpose.
 		w.Header().Set("Cache-Control", "public, max-age=86400")
-		http.StripPrefix("/art/", http.FileServer(http.FS(h.Art))).ServeHTTP(w, r)
+		sub, err := fs.Sub(h.App, "art")
+		if err != nil {
+			// Fail safe — a missing or malformed art subtree returns 404
+			// rather than panicking, same guarantee the old h.Art != nil
+			// guard offered. A build without the public/art/ directory
+			// (pre-`pnpm build` checkout, say) serves the rest of the app
+			// unchanged.
+			http.NotFound(w, r)
+			return
+		}
+		http.StripPrefix("/art/", http.FileServer(http.FS(sub))).ServeHTTP(w, r)
 	case r.URL.Path == "/app/api/dashboard.json":
 		h.serveDashboardAPI(w, r)
 	case r.URL.Path == "/app/api/session.json":

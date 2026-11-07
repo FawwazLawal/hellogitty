@@ -453,8 +453,15 @@ func TestEveryArtURLInTemplateIsEmbedded(t *testing.T) {
 			continue
 		}
 		seen[name] = true
-		if _, err := web.Art.ReadFile("art/" + name); err != nil {
-			t.Errorf("web/index.html paints %s but web/art/%s is not embedded — the browser will 404 and paint nothing, which looks like a pack that was designed flat", m[1], name)
+		// Art lives inside the React bundle now — Vite copies
+		// frontend/public/art/ into web/app/art/ on build, and that is
+		// the single source the /art/ route reads from. Checking the
+		// same embed the handler uses is what makes this a real test:
+		// if a file goes missing from the source, this assertion goes
+		// red with the file's name, which is the shape a reviewer
+		// needs.
+		if _, err := web.App.ReadFile("app/art/" + name); err != nil {
+			t.Errorf("web/index.html paints %s but web/app/art/%s is not embedded — the browser will 404 and paint nothing, which looks like a pack that was designed flat. Run `pnpm run build` in frontend/.", m[1], name)
 		}
 	}
 	t.Logf("checked %d distinct art file(s)", len(seen))

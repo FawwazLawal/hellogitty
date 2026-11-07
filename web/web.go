@@ -117,8 +117,13 @@ var Mascot embed.FS
 // directory, so without the placeholder the Go build would depend on a Node
 // build having happened first — exactly the coupling §7 says to avoid.
 //
+// App also carries the scenic art under `app/art/` — Vite copies the
+// contents of `frontend/public/art/` into its build output, which this
+// embed picks up with every bundle rebuild. There is no parallel
+// //go:embed for `web/art/` any more; that mirror was hand-maintained
+// and has been removed in favour of this single source. The handler's
+// /art/ route reads from App at the `art/` sub-FS and keeps its own
+// (shorter) Cache-Control, since those filenames are not fingerprinted.
+//
 //go:embed all:app
 var App embed.FS
-
-//go:embed art
-var Art embed.FS
