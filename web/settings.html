@@ -98,73 +98,6 @@
   .badge { display: inline-block; font: 600 11px var(--sans); color: var(--dim); background: var(--raised);
     border: 1px solid var(--rule-hi); border-radius: 4px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; }
 
-  .clock-styles { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
-  .clock-swatch { display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 14px 10px 10px; border-radius: 8px; border: 2px solid var(--rule); background: var(--bg);
-    cursor: pointer; transition: border-color .2s, box-shadow .2s; min-height: 68px; }
-  .clock-swatch:hover { border-color: var(--dim); }
-  .clock-swatch.active { border-color: var(--head-accent); box-shadow: 0 0 0 2px rgba(29,158,117,.25); }
-  .clock-swatch .cs-time { font: 700 22px/1 var(--mono); font-variant-numeric: tabular-nums; margin-bottom: 4px; }
-  .clock-swatch .cs-name { font: 500 11px/1 var(--sans); color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; }
-
-  .clock-swatch[data-style="neon"] { background: #0a0a0a; }
-  .clock-swatch[data-style="neon"] .cs-time { color: #0ff; text-shadow: 0 0 7px #0ff, 0 0 20px #0ff; }
-  .clock-swatch[data-style="neon"] .cs-name { color: #0ff; opacity: .7; }
-
-  .clock-swatch[data-style="ember"] { background: #1a0a00; }
-  .clock-swatch[data-style="ember"] .cs-time { color: #ff6b35; text-shadow: 0 0 8px rgba(255,107,53,.6); }
-  .clock-swatch[data-style="ember"] .cs-name { color: #ff9966; }
-
-  .clock-swatch[data-style="matrix"] { background: #0a0f0a; }
-  .clock-swatch[data-style="matrix"] .cs-time { color: #00ff41; text-shadow: 0 0 5px #00ff41; font-family: "Courier New", monospace; }
-  .clock-swatch[data-style="matrix"] .cs-name { color: #00cc33; }
-
-  .clock-swatch[data-style="arctic"] { background: #0a1520; }
-  .clock-swatch[data-style="arctic"] .cs-time { color: #88ccff; text-shadow: 0 0 10px rgba(136,204,255,.5); }
-  .clock-swatch[data-style="arctic"] .cs-name { color: #aaddff; }
-
-  .clock-swatch[data-style="sunset"] .cs-time { background: linear-gradient(135deg, #ff6b6b, #ffa07a, #ffd93d);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-  .clock-swatch[data-style="sunset"] .cs-name { color: #ffa07a; }
-
-  .clock-swatch[data-style="midnight"] { background: #0f0a1a; }
-  .clock-swatch[data-style="midnight"] .cs-time { color: #c4b5fd; text-shadow: 0 0 12px rgba(196,181,253,.4); }
-  .clock-swatch[data-style="midnight"] .cs-name { color: #a78bfa; }
-
-  .clock-swatch[data-style="terminal"] { background: #0a0f0a; }
-  .clock-swatch[data-style="terminal"] .cs-time { color: #4ade80; font-family: "Courier New", monospace; }
-  .clock-swatch[data-style="terminal"] .cs-time::before { content: "> "; font-weight: 400; opacity: .5; }
-  .clock-swatch[data-style="terminal"] .cs-name { color: #86efac; }
-
-  .clock-swatch[data-style="golden"] .cs-time { background: linear-gradient(180deg, #ffd700, #b8860b);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-  .clock-swatch[data-style="golden"] .cs-name { color: #daa520; }
-
-  .clock-swatch[data-style="rose"] { background: #1a0a10; }
-  .clock-swatch[data-style="rose"] .cs-time { color: #fb7185; text-shadow: 0 0 8px rgba(251,113,133,.4); }
-  .clock-swatch[data-style="rose"] .cs-name { color: #fda4af; }
-
-  .clock-swatch[data-style="ocean"] .cs-time { background: linear-gradient(135deg, #06b6d4, #3b82f6, #8b5cf6);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-  .clock-swatch[data-style="ocean"] .cs-name { color: #67e8f9; }
-
-  .clock-swatch[data-style="mono"] .cs-time { color: var(--dim); font-weight: 400; letter-spacing: 0.12em; }
-  .clock-swatch[data-style="mono"] .cs-name { color: var(--dim); opacity: .5; }
-
-  .clock-swatch[data-style="nixie"] { background: #0f0800; }
-  .clock-swatch[data-style="nixie"] .cs-time { color: #ff8c42; text-shadow: 0 0 4px #ff8c42, 0 0 12px rgba(255,140,66,.5); font-weight: 400; }
-  .clock-swatch[data-style="nixie"] .cs-name { color: #ff8c42; opacity: .6; }
-
-  .clock-swatch[data-style="led"] { background: #0a0a0a; }
-  .clock-swatch[data-style="led"] .cs-time { color: #fff; font-weight: 800; letter-spacing: 0.1em;
-    text-shadow: 0 0 6px rgba(255,255,255,.6), 0 0 18px rgba(255,255,255,.3); }
-  .clock-swatch[data-style="led"] .cs-name { color: var(--head-accent); font-weight: 600; }
-
-  .clock-swatch[data-style="flip"] { background: #111; }
-  .clock-swatch[data-style="flip"] .cs-time { color: #f5f0e8; font-weight: 700; letter-spacing: 0.14em;
-    background: #1a1a1a; padding: 3px 8px; border-radius: 3px; border: 1px solid #333; }
-  .clock-swatch[data-style="flip"] .cs-name { color: #a09880; }
-
   .clock-select { font: 13px var(--sans); color: var(--text); background: var(--bg); border: 1px solid var(--rule-hi);
     border-radius: 8px; padding: 7px 12px; margin-top: 6px; width: 100%; }
 
@@ -333,12 +266,6 @@
             <label class="toggle"><input type="checkbox" id="s-clock-date" aria-describedby="s-clock-date-desc"><span class="slider" aria-hidden="true"></span></label>
             <span class="toggle-desc" id="s-clock-date-desc">Display the date below the time</span>
           </div>
-        </div>
-      </div>
-      <div class="scard">
-        <div class="srow full">
-          <span class="slbl spaced">Clock style</span>
-          <div class="clock-styles" id="s-clock-style"></div>
         </div>
       </div>
       <div class="scard">
@@ -751,44 +678,16 @@
   dateChk.checked = cs.date !== false;
   dateChk.addEventListener("change", function() { saveClockSetting("date", dateChk.checked); });
 
-  // Clock style picker
-  var CLOCK_STYLES = [
-    { id: "default", name: "Default", desc: "Clean monospace" },
-    { id: "neon", name: "Neon", desc: "Cyan glow" },
-    { id: "ember", name: "Ember", desc: "Warm fire tones" },
-    { id: "matrix", name: "Matrix", desc: "Green terminal rain" },
-    { id: "arctic", name: "Arctic", desc: "Cool ice blue" },
-    { id: "sunset", name: "Sunset", desc: "Warm gradient" },
-    { id: "midnight", name: "Midnight", desc: "Purple haze" },
-    { id: "terminal", name: "Terminal", desc: "Retro prompt" },
-    { id: "golden", name: "Golden", desc: "Luxury gold" },
-    { id: "rose", name: "Rosé", desc: "Soft pink" },
-    { id: "ocean", name: "Ocean", desc: "Deep sea gradient" },
-    { id: "mono", name: "Mono", desc: "Minimal gray" },
-    { id: "nixie", name: "Nixie", desc: "Vintage tube glow" },
-    { id: "led", name: "LED", desc: "Wall clock bright" },
-    { id: "flip", name: "Flip", desc: "Retro split-flap" }
-  ];
-
-  var styleGrid = document.getElementById("s-clock-style");
-  var currentStyle = cs.style || "default";
-
-  CLOCK_STYLES.forEach(function(s) {
-    var swatch = document.createElement("div");
-    swatch.className = "clock-swatch" + (s.id === currentStyle ? " active" : "");
-    swatch.dataset.style = s.id;
-    swatch.innerHTML = '<span class="cs-time">12:34</span><span class="cs-name">' + s.name + '</span>';
-    swatch.addEventListener("click", function() {
-      styleGrid.querySelectorAll(".clock-swatch").forEach(function(el) { el.classList.remove("active"); });
-      swatch.classList.add("active");
-      saveClockSetting("style", s.id);
-      var hclock = document.getElementById("hg-clock");
-      if (hclock) {
-        hclock.className = "hclock" + (s.id !== "default" ? " clock-" + s.id : "");
-      }
-    });
-    styleGrid.appendChild(swatch);
-  });
+  // The clock-style picker used to live here: fifteen visual variants (Neon,
+  // Matrix, Nixie, LED, Flip, …) each adding a `.clock-<id>` class to the
+  // header clock. Dropped at the owner's call; closing the "settings' clock
+  // controls" gap on the React page superseded them, and the identity system
+  // (Vermilion / Azure / Bone) already drives the clock's colour.
+  //
+  // A saved `style` value under `hellogitty-clock` is intentionally left
+  // alone — deleting a user's stored preference to tidy up is worse than an
+  // inert key. `clock-js` ignores unknown style values, and nothing else in
+  // this page writes to it any more.
 })();
 
 // Repositories management
