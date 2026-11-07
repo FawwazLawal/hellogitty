@@ -106,7 +106,31 @@ function toneVar(tone: KpiTile['tone']): string {
   }
 }
 
-export function KpiRail({ tiles }: { tiles: KpiTile[] }) {
+/**
+ * Live state for the rail, supplied by the Phase 3 data layer.
+ *
+ * `known` per tile is the one that matters. The server distinguishes a figure
+ * it has fetched from one it has not, because the poller runs on an interval
+ * and before the first poll every count is genuinely unknown. Rendering
+ * unknown as "0" tells the viewer nothing needs them — the most consequential
+ * lie this dashboard could tell, and the reason this prop exists rather than
+ * the component flattening it.
+ */
+export interface KpiRailState {
+  loading?: boolean
+  error?: string | null
+  /** Tile ids the server has no figure for yet. */
+  unknown?: ReadonlySet<string>
+  onRetry?: () => void
+}
+
+export function KpiRail({
+  tiles,
+  state,
+}: {
+  tiles: KpiTile[]
+  state?: KpiRailState
+}) {
   const { identity } = useTheme()
   /*
     The seigaiha tile is an SVG data URI, which is parsed outside the document
@@ -223,7 +247,12 @@ export function KpiRail({ tiles }: { tiles: KpiTile[] }) {
                 className="font-mono text-[34px] font-bold leading-none tabular-nums tracking-tight"
                 style={{ color: numeralColor }}
               >
-                {tile.value.toLocaleString()}
+                {state?.loading
+                  ? /* A dash, not a zero and not a spinner. A spinner in a
+                       92px tile is noise, and a zero is a claim. */ '—'
+                  : state?.unknown?.has(tile.id)
+                    ? '—'
+                    : tile.value.toLocaleString()}
               </div>
               <div
                 className="mt-1.5 text-[13px] font-semibold leading-tight"

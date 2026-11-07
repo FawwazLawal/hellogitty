@@ -771,6 +771,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case strings.HasPrefix(r.URL.Path, "/art/") && h.Art != nil:
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		http.StripPrefix("/art/", http.FileServer(http.FS(h.Art))).ServeHTTP(w, r)
+	case r.URL.Path == "/app/api/dashboard.json":
+		h.serveDashboardAPI(w, r)
 	case strings.HasPrefix(r.URL.Path, "/app") && h.App != nil:
 		h.serveApp(w, r)
 	case r.URL.Path == "/feed":
