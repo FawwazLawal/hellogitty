@@ -273,6 +273,7 @@ func run() int {
 		Handler: &dashboard.Handler{
 			Template:                       web.Index,
 			App:                            appFS,
+			ReactIsDefault:                 cfg.UI == "react",
 			SnapshotPath:                   snapPath,
 			Source:                         src,
 			PollInterval:                   cfg.PollInterval,

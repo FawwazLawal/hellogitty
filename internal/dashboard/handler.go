@@ -117,7 +117,22 @@ type Handler struct {
 	// route off entirely, which is what a binary built without a frontend
 	// build should do — serve the existing dashboard and nothing else.
 	App fs.FS
-	Now func() time.Time
+
+	// ReactIsDefault makes "/" open onto the React application instead of the
+	// templated dashboard, which stays reachable at /legacy.
+	//
+	// The migration switch, set from the config's "ui" field. Both dashboards
+	// are always built into the binary and always reachable; this only decides
+	// which one the front door opens onto, so rolling back is editing one word
+	// and restarting rather than deploying a different build.
+	//
+	// Every route the React app has not replaced — /issues, /repos, /pipeline,
+	// /conversations, /feed, the alert pages — keeps serving from the templates
+	// either way. That is what makes the conversion incremental rather than a
+	// cut-over: you run the new front door and discover what is missing behind
+	// it by using it.
+	ReactIsDefault bool
+	Now            func() time.Time
 
 	// Help page: its template (parsed with Template, whose base styles it shares), the guide in
 	// Markdown, the guide's screenshot, and facts about this install set at startup (files in use).
@@ -757,6 +772,16 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'")
 
 	switch {
+	case r.URL.Path == "/" && h.ReactIsDefault && h.App != nil:
+		// The React shell, served at the front door. Its assets still live
+		// under /app/ — the bundle is built with that base — so this needs no
+		// separate build and the two front doors share one set of files.
+		h.serveAppIndex(w, r)
+	case r.URL.Path == "/legacy":
+		// Always present, not only when React is the default. A stable URL for
+		// the old dashboard means a bookmark survives the flag being flipped
+		// either way, and comparing the two is one tab each.
+		h.serveDashboard(w, r)
 	case r.URL.Path == "/":
 		h.serveDashboard(w, r)
 	case r.URL.Path == "/health":
@@ -1499,5 +1524,26 @@ func (h *Handler) serveApp(w http.ResponseWriter, r *http.Request) {
 	if ctype := mime.TypeByExtension(path.Ext(rel)); ctype != "" {
 		w.Header().Set("Content-Type", ctype)
 	}
+	w.Write(data)
+}
+
+// serveAppIndex serves the React document at a path outside /app/.
+//
+// It exists because serveApp resolves a file from the request path, and at "/"
+// there is no path to resolve. Sharing the caching rule matters: index.html is
+// not fingerprinted, so it must never be cached whichever door it came
+// through, or a viewer keeps loading a page pointing at assets this binary no
+// longer holds.
+func (h *Handler) serveAppIndex(w http.ResponseWriter, r *http.Request) {
+	data, err := fs.ReadFile(h.App, "index.html")
+	if err != nil {
+		// The flag says React, the bundle is not there. Fall back to the
+		// dashboard that exists rather than serving an error — a
+		// misconfiguration should not take the product away.
+		h.serveDashboard(w, r)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write(data)
 }

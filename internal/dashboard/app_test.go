@@ -117,3 +117,61 @@ func TestEmbeddedAppContainsADocument(t *testing.T) {
 		t.Fatal("the embedded index.html is empty")
 	}
 }
+
+// The migration switch. Both dashboards are always in the binary; the flag
+// only decides which one the front door opens onto.
+func TestUIFlagChoosesTheFrontDoor(t *testing.T) {
+	app := fstest.MapFS{"index.html": {Data: []byte("<!doctype html><title>react app</title>")}}
+
+	t.Run("default serves the templated dashboard", func(t *testing.T) {
+		h := handler(fakeSource{})
+		h.App = app
+		// ReactIsDefault not set — the zero value must be the safe one.
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+		if strings.Contains(rec.Body.String(), "react app") {
+			t.Error("/ served the React app without the flag being set; the default must be the dashboard that already works")
+		}
+	})
+
+	t.Run("flag flips the front door", func(t *testing.T) {
+		h := handler(fakeSource{})
+		h.App = app
+		h.ReactIsDefault = true
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+		if !strings.Contains(rec.Body.String(), "react app") {
+			t.Errorf("/ did not serve the React app with the flag set; got: %.80s", rec.Body.String())
+		}
+		if got := rec.Header().Get("Cache-Control"); got != "no-store" {
+			t.Errorf("Cache-Control = %q, want no-store — index.html is not fingerprinted whichever door it came through", got)
+		}
+	})
+
+	t.Run("legacy stays reachable either way", func(t *testing.T) {
+		for _, reactDefault := range []bool{false, true} {
+			h := handler(fakeSource{})
+			h.App = app
+			h.ReactIsDefault = reactDefault
+			rec := httptest.NewRecorder()
+			h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/legacy", nil))
+			if rec.Code != http.StatusOK {
+				t.Errorf("/legacy with ReactIsDefault=%v = %d, want 200 — a bookmark must survive the flag being flipped", reactDefault, rec.Code)
+			}
+			if strings.Contains(rec.Body.String(), "react app") {
+				t.Errorf("/legacy with ReactIsDefault=%v served the React app", reactDefault)
+			}
+		}
+	})
+
+	t.Run("a missing bundle falls back rather than erroring", func(t *testing.T) {
+		h := handler(fakeSource{})
+		h.App = fstest.MapFS{} // flag says react, nothing is built
+		h.ReactIsDefault = true
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+		if rec.Code != http.StatusOK {
+			t.Errorf("/ = %d, want 200 — a misconfiguration must not take the product away", rec.Code)
+		}
+	})
+}

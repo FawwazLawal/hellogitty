@@ -13,10 +13,10 @@ import (
 )
 
 const (
-	DefaultFile     = "hellogitty.json"
-	DefaultListen   = "localhost:7340"
-	DefaultInterval = 60 * time.Minute
-	DefaultDatabase = "hellogitty.db"
+	DefaultFile      = "hellogitty.json"
+	DefaultListen    = "localhost:7340"
+	DefaultInterval  = 60 * time.Minute
+	DefaultDatabase  = "hellogitty.db"
 	DefaultSnapshot  = "snapshot.json"
 	DefaultUnreplied = "unreplied.json"
 )
@@ -43,6 +43,21 @@ type Config struct {
 	// Unreplied names the JSON file of unreplied review threads on your open PRs, rewritten after
 	// every work board refresh so scripts can read it without calling the API per PR.
 	Unreplied string `json:"unreplied"`
+	// UI chooses which dashboard "/" serves: "legacy" (the Go-templated page) or
+	// "react" (the built React application).
+	//
+	// This is the migration switch. The React UI is always reachable at /app/
+	// whatever this says, so the choice is only about what the front door
+	// opens onto — and rolling back is editing one word and restarting, not
+	// deploying a different build.
+	//
+	// It defaults to "legacy" because the React app does not yet replace
+	// everything the templated dashboard does: feed, issues, repos, pipeline,
+	// conversations, settings, help and the alert pages have no React
+	// equivalent, and those keep serving from their own routes either way.
+	// Flipping this is how you find what is still missing by using it.
+	UI string `json:"ui"`
+
 	// Layout sets the starting layout for browsers that have not saved one yet.
 	Layout *LayoutConfig `json:"layout,omitempty"`
 
@@ -54,11 +69,11 @@ type Config struct {
 // presets ("everything", "contributor", "maintainer", "program", "focus"), or Modules lists the
 // panels to show and their columns explicitly. When both are set, Preset wins.
 type LayoutConfig struct {
-	Preset  string          `json:"preset,omitempty"`
-	Main    []string        `json:"main,omitempty"`
-	Rail    []string        `json:"rail,omitempty"`
-	Hidden  []string        `json:"hidden,omitempty"`
-	Folded  []string        `json:"folded,omitempty"`
+	Preset string   `json:"preset,omitempty"`
+	Main   []string `json:"main,omitempty"`
+	Rail   []string `json:"rail,omitempty"`
+	Hidden []string `json:"hidden,omitempty"`
+	Folded []string `json:"folded,omitempty"`
 }
 
 type Repo struct{ Owner, Name string }
@@ -99,6 +114,16 @@ func Default(dir string) (*Config, error) {
 func (c *Config) finish() error {
 	if c.Listen == "" {
 		c.Listen = DefaultListen
+	}
+	// A typo must not silently pick a UI. "reakt" meaning legacy, with no
+	// complaint, is how someone spends an afternoon wondering why the flag
+	// does nothing.
+	switch c.UI {
+	case "":
+		c.UI = "legacy"
+	case "legacy", "react":
+	default:
+		return fmt.Errorf("ui: %q is not a known dashboard; use \"legacy\" or \"react\"", c.UI)
 	}
 	if c.Database == "" {
 		c.Database = DefaultDatabase
