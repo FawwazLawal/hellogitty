@@ -65,6 +65,27 @@ type Repo struct {
 	Stages []Stage `json:"stages"`
 	Gate   string  `json:"gate"`
 
+	// Polled says whether this repository has EVER been polled successfully.
+	//
+	// It matters because when it is false, Open/GoodFirst/Unassigned are all
+	// zero — and those zeros are absences, not counts. A card rendering them
+	// as "0 open, 0 good first, 0 unassigned" tells the reader this repository
+	// needs nothing from them, about a repository nobody has ever looked at.
+	//
+	// The rule lives in store.HealthLabel: a repo with no successful poll is
+	// UNKNOWN rather than defaulting to ACTIVE. This field exists so the UI
+	// does not have to infer "the counts are meaningless" from a health label,
+	// which is an inference that would keep working right up until the
+	// vocabulary changed.
+	Polled bool `json:"polled"`
+
+	// InPipeline and Stage are the program's own view of this repository: is
+	// it a pipeline target, and which stage is it at. Derivable from Stages
+	// only by guessing which state word means "here", so they are sent rather
+	// than inferred — the guess would be invisible when it went wrong.
+	InPipeline bool   `json:"inPipeline"`
+	Stage      string `json:"stage,omitempty"`
+
 	Open       int `json:"open"`
 	GoodFirst  int `json:"goodFirst"`
 	Unassigned int `json:"unassigned"`
@@ -243,6 +264,9 @@ func (h *Handler) serveDashboardAPI(w http.ResponseWriter, r *http.Request) {
 		rep := Repo{
 			Owner: r.Owner, Name: r.Name, URL: r.URL, Health: r.Health,
 			Gate:       r.Label,
+			Polled:     r.Health != "UNKNOWN",
+			InPipeline: r.InPipeline,
+			Stage:      r.Stage,
 			Open:       r.Open,
 			GoodFirst:  r.GFI,
 			Unassigned: r.Unassigned,
