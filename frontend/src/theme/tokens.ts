@@ -58,6 +58,23 @@ export interface ColorTokens {
   danger: string
   /** The focus ring. Held to 3:1 on every surface it can land on (SC 1.4.11). */
   focus: string
+
+  /*
+   * Metal. These four drive the armour plates, straps and rivets in
+   * `chrome/Ornament.tsx`.
+   *
+   * They are deliberately NOT derived from the surface tokens. The chrome in
+   * the reference renders is a material — it catches light, has a lit edge and
+   * a shadowed under-edge — and a plate tinted from `surfaceRaised` reads as a
+   * lighter rectangle instead. It is also purely decorative and carries no
+   * text, so SC 1.4.11 does not bind it and it is free to sit close to the
+   * panel it is mounted on.
+   */
+  plate: string
+  plateHi: string
+  plateLo: string
+  plateEdge: string
+  rivet: string
 }
 
 export interface IdentityDefinition {
@@ -103,6 +120,11 @@ const VERMILION: IdentityDefinition = {
     warning: '#ffc266',
     danger: '#ff8a93',
     focus: '#ff6f7c',
+    plate: '#413039',
+    plateHi: '#8f717e',
+    plateLo: '#1a1219',
+    plateEdge: '#a77483',
+    rivet: '#f0c489',
   },
 }
 
@@ -141,6 +163,11 @@ const AZURE: IdentityDefinition = {
     warning: '#ffbf5c',
     danger: '#ff8f99',
     focus: '#7cc4f0',
+    plate: '#2c4066',
+    plateHi: '#7596c4',
+    plateLo: '#121c30',
+    plateEdge: '#8fb4dd',
+    rivet: '#e8c07f',
   },
 }
 
@@ -174,6 +201,11 @@ const BONE: IdentityDefinition = {
     warning: '#7a4500',
     danger: '#a81f35',
     focus: '#0d3a9b',
+    plate: '#aebfdd',
+    plateHi: '#ffffff',
+    plateLo: '#8fa0c4',
+    plateEdge: '#4a5c87',
+    rivet: '#a06f28',
   },
 }
 

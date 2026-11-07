@@ -1,5 +1,6 @@
 import { useId, useState } from 'react'
 import { Home, Briefcase, GitPullRequest, CircleDot, Calendar, MessageSquare, Boxes, Settings } from 'lucide-react'
+import { TAB_NOTCH } from './chrome/Ornament'
 
 /**
  * The navigation tabs.
@@ -52,7 +53,7 @@ export function NavTabs() {
             type="button"
             onClick={() => setActive(id)}
             aria-current={isActive ? 'page' : undefined}
-            className="relative flex shrink-0 items-center gap-1.5 px-3 py-2.5 text-[12.5px] transition-colors"
+            className="relative isolate flex shrink-0 items-center gap-1.5 px-3.5 py-2.5 text-[12.5px] transition-colors"
             style={{
               color: isActive ? 'var(--hg-text)' : 'var(--hg-text-muted)',
               fontWeight: isActive ? 600 : 400,
@@ -61,11 +62,29 @@ export function NavTabs() {
             <Icon size={14} aria-hidden="true" style={{ color: isActive ? 'var(--hg-accent)' : 'currentColor' }} />
             {label}
             {isActive && (
-              <span
-                aria-hidden="true"
-                className="hg-decor absolute inset-x-1 bottom-0 h-[2px]"
-                style={{ background: 'var(--hg-accent)' }}
-              />
+              <>
+                {/*
+                  The active tab is a plate seated into the bar, with its
+                  trailing edge cut at an angle — the renders do this, and a
+                  plain underline was the laziest part of the first pass.
+                  z-index -1 inside the button's own stacking context so the
+                  label and icon stay above it.
+                */}
+                <span
+                  aria-hidden="true"
+                  className="hg-decor absolute inset-0 -z-10"
+                  style={{
+                    background: 'var(--hg-surface)',
+                    clipPath: TAB_NOTCH,
+                    borderTop: '1px solid var(--hg-line-strong)',
+                  }}
+                />
+                <span
+                  aria-hidden="true"
+                  className="hg-decor absolute inset-x-0 bottom-0 h-[2px]"
+                  style={{ background: 'var(--hg-accent)' }}
+                />
+              </>
             )}
           </button>
         )

@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import type { KpiTile } from '../fixtures/dashboard'
 import { CHAMFER, AccentRail, Rivet } from './chrome/Chrome'
+import { ArmourPlate, CornerBracket, seigaihaDataUri } from './chrome/Ornament'
 import { useTheme } from '../theme/ThemeProvider'
 
 /**
@@ -106,6 +108,19 @@ function toneVar(tone: KpiTile['tone']): string {
 
 export function KpiRail({ tiles }: { tiles: KpiTile[] }) {
   const { identity } = useTheme()
+  /*
+    The seigaiha tile is an SVG data URI, which is parsed outside the document
+    and so cannot resolve `var(--hg-*)`. The accent is read off the computed
+    root style instead, after the theme has painted, and re-read whenever the
+    identity changes. This is the one place in the prototype that needs a
+    resolved colour rather than a token reference.
+  */
+  const [waveColor, setWaveColor] = useState('#ffffff')
+  useEffect(() => {
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--hg-accent').trim()
+    if (v) setWaveColor(v)
+  }, [identity])
+
   const artMap = TILE_ART[identity] ?? {}
 
   return (
@@ -150,6 +165,18 @@ export function KpiRail({ tiles }: { tiles: KpiTile[] }) {
                 Anchored to the trailing edge, 50% of the tile wide, under all
                 in-flow content at z-index -1. The numeral and labels paint
                 over it. */}
+            {/*
+              Seigaiha wash across the whole tile. Geometry, not a raster, so
+              every identity gets it — this is what closes the gap that left
+              Azure and Bone with bare tiles while Vermilion had ornament.
+            */}
+            <span
+              aria-hidden="true"
+              className="hg-decor absolute inset-0"
+              style={{ zIndex: -2, backgroundImage: seigaihaDataUri(waveColor, 0.1, 40) }}
+            />
+
+            {/* Scenic raster, where this identity has one for this tile. */}
             {artSrc && (
               <span
                 aria-hidden="true"
@@ -159,10 +186,22 @@ export function KpiRail({ tiles }: { tiles: KpiTile[] }) {
                   backgroundImage: `url(${artSrc})`,
                   backgroundSize: 'auto 100%',
                   backgroundPosition: 'right center',
-                  opacity: 0.14,
+                  opacity: 0.16,
                 }}
               />
             )}
+
+            {/*
+              The armour plate on the trailing edge. This is the piece that
+              makes a tile read as an object rather than a box, and it is the
+              single biggest difference between the first pass and the
+              reference renders. Drawn in the identity's metal tokens, so it
+              is steel on Vermilion and slate on paper for Bone.
+            */}
+            <ArmourPlate className="pointer-events-none absolute right-0 top-0" width={92} height={92} />
+
+            <CornerBracket corner="tl" className="absolute left-[3px] top-[3px]" size={14} />
+            <CornerBracket corner="br" className="absolute bottom-[3px] right-[3px]" size={14} />
 
             {/* The numeral + label stack. Sits in the leading column so it
                 is mostly off the art region, but the contrast comment above

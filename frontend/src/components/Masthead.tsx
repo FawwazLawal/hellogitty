@@ -1,5 +1,5 @@
 import { LayoutGrid, CircleHelp, Settings, Rows3 } from 'lucide-react'
-import { ClockBracket } from './chrome/Chrome'
+import { ClockOrnament, OniMark } from './chrome/Ornament'
 import { useTheme } from '../theme/ThemeProvider'
 import type { Appearance } from '../theme/ThemeProvider'
 import type { DashboardData } from '../fixtures/dashboard'
@@ -77,17 +77,20 @@ export function Masthead({ data }: { data: DashboardData }) {
       />
 
       <div className="flex h-full flex-wrap items-start gap-x-6 gap-y-3 px-5 py-3 md:flex-nowrap md:py-0 md:pt-3">
-        <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <OniMark size={34} />
+          <div className="min-w-0">
           <h1 className="text-[19px] font-bold leading-tight" style={{ color: 'var(--hg-text)' }}>
             HelloGitty
           </h1>
           <p className="text-[11px]" style={{ color: 'var(--hg-text-muted)' }}>
             {data.version} · {data.codename} <em>(baby)</em>
           </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-1 pt-1 md:mx-auto">
-          <ClockBracket side="left" />
+          <ClockOrnament side="left" />
           <div className="text-center">
             <time
               className="block font-mono text-[27px] font-bold leading-none tabular-nums tracking-tight"
@@ -101,7 +104,7 @@ export function Masthead({ data }: { data: DashboardData }) {
               {datestamp}
             </span>
           </div>
-          <ClockBracket side="right" />
+          <ClockOrnament side="right" />
         </div>
 
         <div className="flex flex-wrap items-center gap-2 pt-1">
