@@ -75,6 +75,39 @@ function gzipSize(path: string): number {
   return gzipSync(readFileSync(path), { level: 6 }).length
 }
 
+/**
+ * Every script the browser fetches before first paint, in the order the
+ * document lists them: the entry `<script type="module" src="...">` and
+ * every `<link rel="modulepreload" href="...">`. A lazy route chunk
+ * is reached through a dynamic import and is NOT in `index.html`, so it
+ * is not counted — that is the whole point of the lazy-loading work.
+ *
+ * An earlier form of this test read only the first `assets/*.js` match
+ * and silently measured one chunk of three once Vite split the shared
+ * mass. The CI step (#332) and this spec disagreed with the browser by
+ * tens of KB; both are now summing the same set.
+ */
+function readFirstPaintChunks(html: string): string[] {
+  const chunks: string[] = []
+  const seen = new Set<string>()
+  const re = new RegExp(
+    [
+      String.raw`<script[^>]*\bsrc=["']\/app\/(assets\/[^"']+?\.js)["']`,
+      String.raw`<link[^>]*\brel=["']modulepreload["'][^>]*\bhref=["']\/app\/(assets\/[^"']+?\.js)["']`,
+      String.raw`<link[^>]*\bhref=["']\/app\/(assets\/[^"']+?\.js)["'][^>]*\brel=["']modulepreload["']`,
+    ].join('|'),
+    'g',
+  )
+  for (const m of html.matchAll(re)) {
+    const path = m.slice(1).find(Boolean)
+    if (path && !seen.has(path)) {
+      seen.add(path)
+      chunks.push(path)
+    }
+  }
+  return chunks
+}
+
 test.describe('transfer budget', () => {
   test('the app shell stays within its measured baseline', () => {
     const assets = join(DIST, 'assets')
@@ -82,34 +115,32 @@ test.describe('transfer budget', () => {
     let css = 0
     const detail: string[] = []
 
-    /*
-      The entry chunk is the one index.html actually references. Everything
-      else is reached through a dynamic import, so a first visit does not pay
-      for it. Read it from the document rather than matching a filename
-      pattern: the hashed names change every build, and a pattern that stops
-      matching would silently measure zero and pass forever.
-    */
     const html = readFileSync(join(DIST, 'index.html'), 'utf8')
-    const entryName = html.match(/assets\/([A-Za-z0-9._-]+\.js)/)?.[1]
-    expect(entryName, 'no entry script found in index.html; this check would measure nothing').toBeTruthy()
+    const firstPaint = readFirstPaintChunks(html)
+    expect(
+      firstPaint.length,
+      'no first-paint scripts found in index.html; this check would measure nothing',
+    ).toBeGreaterThan(0)
+    const firstPaintSet = new Set(firstPaint)
 
     let entryJs = 0
     for (const name of readdirSync(assets)) {
       const p = join(assets, name)
       if (!statSync(p).isFile()) continue
       const g = gzipSize(p)
-      detail.push(`${name} ${(g / 1024).toFixed(1)} KB gzip${name === entryName ? '  <- entry' : ''}`)
+      const marker = firstPaintSet.has(`assets/${name}`) ? '  <- first-paint' : ''
+      detail.push(`${name} ${(g / 1024).toFixed(1)} KB gzip${marker}`)
       if (name.endsWith('.js')) {
         totalJs += g
-        if (name === entryName) entryJs = g
+        if (firstPaintSet.has(`assets/${name}`)) entryJs += g
       } else if (name.endsWith('.css')) css += g
     }
-    expect(entryJs, 'the entry chunk was not found on disk').toBeGreaterThan(0)
+    expect(entryJs, 'no first-paint chunks were found on disk').toBeGreaterThan(0)
 
     const doc = gzipSize(join(DIST, 'index.html'))
     const shell = entryJs + css + doc
 
-    expect(entryJs, `the entry chunk is ${(entryJs / 1024).toFixed(1)} KB gzip, over the ${BUDGET_GZIP.entryJs / 1024} KB first-load budget.\n  ${detail.join('\n  ')}`).toBeLessThanOrEqual(BUDGET_GZIP.entryJs)
+    expect(entryJs, `first-load JavaScript is ${(entryJs / 1024).toFixed(1)} KB gzip, over the ${BUDGET_GZIP.entryJs / 1024} KB first-load budget.\n  ${detail.join('\n  ')}`).toBeLessThanOrEqual(BUDGET_GZIP.entryJs)
     expect(totalJs, `all JavaScript is ${(totalJs / 1024).toFixed(1)} KB gzip, over the ${BUDGET_GZIP.totalJs / 1024} KB total budget.\n  ${detail.join('\n  ')}`).toBeLessThanOrEqual(BUDGET_GZIP.totalJs)
     expect(css, `CSS is ${(css / 1024).toFixed(1)} KB gzip, over the ${BUDGET_GZIP.css / 1024} KB budget`).toBeLessThanOrEqual(BUDGET_GZIP.css)
     expect(shell, `the app shell is ${(shell / 1024).toFixed(1)} KB gzip, over the ${BUDGET_GZIP.shell / 1024} KB budget`).toBeLessThanOrEqual(BUDGET_GZIP.shell)
