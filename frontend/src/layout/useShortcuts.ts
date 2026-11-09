@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
-import type { LayoutState, PanelId } from './schema'
-import type { LayoutAction } from './reducer'
+import type { LayoutState } from './schema'
+import { visiblePanelIds, type LayoutAction } from './reducer'
 
 /**
  * Window-level keyboard shortcuts for the panel layout.
@@ -94,14 +94,18 @@ export function useShortcuts(opts: UseShortcutsOptions): void {
       }
       if (e.key >= '1' && e.key <= '9') {
         const idx = parseInt(e.key, 10) - 1
-        const order: PanelId[] = [...state.main, ...state.rail]
+        // VISIBLE panels, not all panels. Hidden ids drop out so the
+        // digits always index what the viewer is looking at: pressing
+        // `1` targets the top panel on screen, pressing `2` the next,
+        // and so on. Mirrors allPanelIds at web/index.html:5705.
+        const order = visiblePanelIds(state)
         if (idx < order.length) {
           e.preventDefault()
           dispatch({ type: 'toggle-folded', id: order[idx] })
         }
-        // When idx >= order.length (a key for a panel that does not
-        // exist here), the key falls through — no preventDefault,
-        // same reasoning as ArrowUp-at-i=0 in the Grip.
+        // When idx >= order.length (a digit past the visible count),
+        // the key falls through — no preventDefault, same reasoning
+        // as ArrowUp-at-i=0 in the Grip.
       }
     }
 

@@ -65,12 +65,14 @@ export function reduce(state: LayoutState, action: LayoutAction): LayoutState {
       return asCustom(state, { folded: withToggled(state.folded, action.id) })
 
     // The `c` and `e` shortcuts at web/index.html:5732-5739. Fold-all
-    // folds every panel in `main`+`rail`; unfold-all empties the
-    // folded array. Expressed as single actions so the shortcut hook
-    // emits one dispatch, one persist, one re-render — a loop of
+    // folds every VISIBLE panel (hidden panels must not enter `folded`
+    // — a user who hid one then pressed `c` would otherwise see it
+    // come back folded on a later unhide, silently). Unfold-all empties
+    // the folded array. Expressed as single actions so the shortcut
+    // hook emits one dispatch, one persist, one re-render — a loop of
     // toggle-folded would do N of each.
     case 'fold-all':
-      return asCustom(state, { folded: [...state.main, ...state.rail] })
+      return asCustom(state, { folded: visiblePanelIds(state) })
 
     case 'unfold-all':
       if (state.folded.length === 0) return state
@@ -183,6 +185,22 @@ export function reduce(state: LayoutState, action: LayoutAction): LayoutState {
       }
     }
   }
+}
+
+/**
+ * The panels the user can actually see, in visual order: main
+ * top→bottom then rail top→bottom, hidden ids filtered out.
+ *
+ * Mirrors `allPanelIds()` at web/index.html:5705. Used by both the
+ * digit shortcut (so `1` targets the first VISIBLE panel, not a
+ * hidden one) and `fold-all` (so hiding a panel then pressing `c`
+ * does not quietly fold the hidden one, which would come back
+ * folded when the user later unhides it). One helper so both paths
+ * share a single definition — two filters that drift apart is the
+ * defect peer caught on #282 slice 1e before this helper existed.
+ */
+export function visiblePanelIds(state: LayoutState): PanelId[] {
+  return [...state.main, ...state.rail].filter((id) => !state.hidden.includes(id))
 }
 
 /**

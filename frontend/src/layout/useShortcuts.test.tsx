@@ -43,13 +43,34 @@ function keydown(key: string, opts: KeyboardEventInit = {}) {
 }
 
 describe('useShortcuts — c / e / 1-9', () => {
-  it('"c" folds every panel in main+rail order', () => {
+  it('"c" folds every VISIBLE panel in main+rail order', () => {
     const d = defaultLayout()
     const { result } = renderHook(() => useHarness(d))
     expect(result.current.folded).toEqual([])
     keydown('c')
     expect(result.current.folded).toEqual([...d.main, ...d.rail])
     expect(result.current.preset).toBe('custom')
+  })
+
+  // The critical hidden-exclusion test for fold-all. Templated `c`
+  // at web/index.html:5732 uses allPanelIds(), which filters out
+  // hidden ids. A hidden panel entering `folded` is quiet — the
+  // user does not see anything happen on screen because the panel
+  // is already not rendered — but the moment they unhide it, it
+  // comes back folded, looking like the dashboard changed on its
+  // own. That symptom is what this pin exists to catch.
+  it('"c" leaves hidden panels OUT of folded', () => {
+    const d = defaultLayout()
+    const start: LayoutState = { ...d, hidden: [d.main[0], d.rail[0]] }
+    const { result } = renderHook(() => useHarness(start))
+    keydown('c')
+    expect(result.current.folded).not.toContain(d.main[0])
+    expect(result.current.folded).not.toContain(d.rail[0])
+    // Everything else is folded.
+    const expected = [...d.main, ...d.rail].filter(
+      (id) => id !== d.main[0] && id !== d.rail[0],
+    )
+    expect(result.current.folded).toEqual(expected)
   })
 
   it('"e" unfolds everything', () => {
@@ -76,6 +97,32 @@ describe('useShortcuts — c / e / 1-9', () => {
     const order = [...d.main, ...d.rail]
     keydown('5')
     expect(result.current.folded).toEqual([order[4]])
+  })
+
+  // The digits index VISIBLE panels. A user with a panel hidden
+  // in main pressing `1` targets the first on-screen panel, NOT
+  // the hidden one — the symptom of getting this wrong is a dead
+  // key, every subsequent digit off-by-N against what the reader
+  // is looking at. Mirrors allPanelIds at web/index.html:5705.
+  it('digit targets the first VISIBLE panel when one is hidden', () => {
+    const d = defaultLayout()
+    const start: LayoutState = { ...d, hidden: [d.main[0]] }
+    const { result } = renderHook(() => useHarness(start))
+    keydown('1')
+    // d.main[0] is hidden; `1` should target d.main[1] now.
+    expect(result.current.folded).toEqual([d.main[1]])
+    expect(result.current.folded).not.toContain(d.main[0])
+  })
+
+  it('digit is inert past the VISIBLE count, even when total is higher', () => {
+    const d = defaultLayout()
+    // Hide every panel in rail; visible count is 4 (main only).
+    const start: LayoutState = { ...d, hidden: [...d.rail] }
+    const { result } = renderHook(() => useHarness(start))
+    keydown('5') // past the visible 4
+    expect(result.current.folded).toEqual([])
+    // Total main+rail is 10, so if we were indexing all panels
+    // this would have hit rail[0]. It must not.
   })
 
   // A key whose index exceeds the visible panel count MUST NOT
