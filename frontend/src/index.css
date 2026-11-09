@@ -378,3 +378,82 @@ body {
   100% { background: transparent; }
 }
 .hg-help-flash { animation: hg-help-flash-kf 1.4s ease-out; }
+
+/*
+ * The watch-eye control (#292, #295). Outlined and dim until watched,
+ * then filled — same two states and the same SVG primitives as the
+ * templated page, so the control reads identically next to the two
+ * remaining templated surfaces (/legacy/*).
+ */
+.hg-watch-eye {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  color: var(--hg-text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  vertical-align: middle;
+}
+.hg-watch-eye svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.hg-watch-eye:hover {
+  color: var(--hg-text);
+  background: var(--hg-surface-raised);
+  border-color: var(--hg-line-strong);
+}
+.hg-watch-eye:focus-visible {
+  outline: 2px solid var(--hg-text);
+  outline-offset: 1px;
+}
+.hg-watch-eye.on { color: var(--hg-text); }
+.hg-watch-eye.on circle { fill: currentColor; }
+.hg-watch-eye:disabled { opacity: .5; cursor: progress; }
+
+/*
+ * The one banner all WatchEyeButton events feed into. Fixed to the
+ * bottom-centre so any eye on any page uses the same location —
+ * matches the templated .eyemsg so a reader who learned the one
+ * reads the other without re-learning where confirmation appears.
+ */
+.hg-watch-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 20;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--hg-text);
+  background: var(--hg-surface-raised);
+  border: 1px solid var(--hg-line-strong);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .35);
+}
+.hg-watch-banner.bad { color: var(--hg-warning); }
+
+/*
+ * Fresh-row flash on /feed (#295). Matches the templated page's
+ * `fresh` animation: a one-cycle background pulse from raised to
+ * transparent, suppressed under reduced-motion.
+ */
+@keyframes hg-feed-fresh-kf {
+  from { background: var(--hg-surface-raised); }
+  to   { background: transparent; }
+}
+.hg-feed-fresh { animation: hg-feed-fresh-kf 2.4s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .hg-feed-fresh { animation: none; }
+}

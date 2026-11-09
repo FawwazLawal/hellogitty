@@ -1,41 +1,134 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
-import { useFeed, useAck, type FeedRow as FeedRowData } from '../data/feed'
+import { useFeed, useAck, type FeedRow as FeedRowData, type FeedDoc } from '../data/feed'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useSession } from '../data/settings'
+import { stepFresh } from '../lib/freshRows'
+import { WatchEyeButton, WatchStatusBanner } from './WatchEyeButton'
 
 /**
  * The live activity feed.
  *
- * ADR §4's rule — "add typed endpoints only if the port requires them" —
- * costs nothing here: `/feed.json` and `/feed/ack` already existed. The
- * only change on the server was adding a `known` flag to the document, so
- * the three states this page actually has (not fetched / empty / with
- * rows) stop collapsing into two.
+ * Reads `/feed.json`, writes `/feed/ack` and (via the eye button) `/watch`.
+ * The three states this page actually has (not fetched / empty / with rows)
+ * are kept distinct by the `known` flag — see "FOUR STATES, NOT TWO" below.
  *
- * UNKNOWN IS NOT EMPTY. The templated page rendered "Nothing new. New
+ * Features restored from the templated feed (issue #295):
+ *
+ * - **Per-row eye control.** Issues, new-issue rows and watch/overlap rows
+ *   get a `<WatchEyeButton />`, backed by the already-existing `/watch`
+ *   endpoint. The feed is the first page to use the button; the list
+ *   pages (#292) will lift the same component.
+ *
+ * - **Ack confirmation.** After acknowledging, a short string summarises
+ *   the per-id results: "N also marked read on GitHub; M kept here only;
+ *   K couldn't be marked read". Shown next to the controls (visible) as
+ *   well as announced via `role="status"` for assistive tech.
+ *
+ * - **Show-acknowledged persistence.** The filter checkbox state writes
+ *   to `localStorage("hellogitty-feed-all")` on change and reads it back
+ *   on mount — same key the templated page used, so a reader's choice
+ *   carries over whether they open the templated or the React variant.
+ *
+ * - **Fresh-row flash.** When a refetch brings in a row that wasn't in
+ *   the previous payload, it renders with a `.hg-feed-fresh` class for
+ *   one animation cycle. The first render seeds the "known" set and
+ *   flashes nothing — same rule the templated page follows so a fresh
+ *   page load isn't a sea of highlights.
+ *
+ * KNOWN IS NOT EMPTY. The templated page rendered "Nothing new. New
  * issues, comments, reviews and notifications appear here as they
  * happen." whenever `.Feed.Open == 0`, including before the first poll
  * completed. On a page whose whole job is telling you what happened,
  * that message under a known-false feed is the worst version of the
  * unknown-as-zero bug this migration keeps catching. The React page
  * renders a distinct "not fetched" state instead.
- *
- * ACKS KEEP SIMPLE. One row at a time, one bulk "acknowledge all"
- * covering the visible unacked rows. The templated page's "show
- * acknowledged" toggle survives, filtering client-side.
  */
 
 type Filter = 'unacked' | 'all'
+
+const SHOW_ACKED_KEY = 'hellogitty-feed-all'
+
+function readStoredFilter(): Filter {
+  // Try/catch because localStorage throws in a sandboxed iframe, when
+  // storage is blocked by the user, and inside a private window on
+  // some browsers. Default to the "unacked" view on any failure —
+  // same as the templated page's behaviour when the read returns null.
+  try {
+    return localStorage.getItem(SHOW_ACKED_KEY) === '1' ? 'all' : 'unacked'
+  } catch {
+    return 'unacked'
+  }
+}
+
+/** Kinds the eye applies to on the feed, same gate as the templated feed JS. */
+const EYE_KINDS = new Set(['new-issue', 'issue', 'watch', 'overlap'])
 
 export function FeedPage() {
   usePageTitle('HelloGitty live')
   const q = useFeed()
   const session = useSession()
-  const ack = useAck(session.data?.token)
-  const [filter, setFilter] = useState<Filter>('unacked')
+  const qc = useQueryClient()
+  // Lazy init for the filter: read localStorage once at mount. Updates
+  // write through on every change via the effect below.
+  const [filter, setFilter] = useState<Filter>(readStoredFilter)
+  const [ackMsg, setAckMsg] = useState<string | null>(null)
+
+  const ack = useAck(session.data?.token, (results) => {
+    // The templated page builds this exact three-part string. Keep the
+    // phrasing so a reader who already learned the templated one reads
+    // the React one at a glance.
+    const marked = results.filter((x) => x.github === 'marked').length
+    const failed = results.filter((x) => x.github.startsWith('failed')).length
+    const local = results.length - marked - failed
+    const parts: string[] = []
+    if (marked) parts.push(`${marked} also marked read on GitHub`)
+    if (local)
+      parts.push(
+        `${local} kept here only (no GitHub notification behind ${local === 1 ? 'it' : 'them'})`,
+      )
+    if (failed)
+      parts.push(`${failed} couldn't be marked read on GitHub; acknowledged here`)
+    setAckMsg(`Acknowledged: ${parts.join('; ')}.`)
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SHOW_ACKED_KEY, filter === 'all' ? '1' : '0')
+    } catch {
+      /* same reason as readStoredFilter */
+    }
+  }, [filter])
+
+  // Clear the ack confirmation after a few seconds so it doesn't linger.
+  useEffect(() => {
+    if (!ackMsg) return
+    const t = window.setTimeout(() => setAckMsg(null), 5000)
+    return () => window.clearTimeout(t)
+  }, [ackMsg])
 
   const d = q.data
+
+  // Fresh-row tracking. `knownIdsRef` is null until the first data load;
+  // the first load seeds it (so no row is "fresh") and later loads mark
+  // the difference as fresh for one animation cycle.
+  const knownIdsRef = useRef<Set<string> | null>(null)
+  const [freshIds, setFreshIds] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (!d) return
+    const { nextKnown, freshIds: newOnes } = stepFresh(
+      knownIdsRef.current,
+      d.rows.map((r) => r.id),
+    )
+    knownIdsRef.current = nextKnown
+    if (newOnes.size === 0) return
+    setFreshIds(newOnes)
+    const t = window.setTimeout(() => setFreshIds(new Set()), 2500)
+    return () => window.clearTimeout(t)
+  }, [d])
+
   const rows = useMemo<FeedRowData[]>(() => {
     if (!d) return []
     if (filter === 'all') return d.rows
@@ -48,8 +141,26 @@ export function FeedPage() {
   )
   const openCount = openIds.length
 
+  const token = session.data?.token
+  const canWatch = !!d?.canWatch
+
+  // Flip one row's `watched` optimistically in the feed cache when the
+  // eye toggles. The feed refetches every 20s anyway, so this is only
+  // the in-between-ticks correctness; without it the eye snaps back on
+  // the next re-render.
+  const onEyeToggled = (issueKey: string, next: boolean) => {
+    qc.setQueryData<FeedDoc>(['feed'], (prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        rows: prev.rows.map((r) => (r.key === issueKey ? { ...r, watched: next } : r)),
+      }
+    })
+  }
+
   return (
     <main id="main" tabIndex={-1} className="mx-auto min-w-0 max-w-[720px] px-4 pb-24 pt-4">
+      <WatchStatusBanner />
       <header className="mb-3">
         <h1 className="text-[17px] font-bold" style={{ color: 'var(--hg-text)' }}>
           HelloGitty live
@@ -144,11 +255,6 @@ export function FeedPage() {
           style={{ borderColor: 'var(--hg-line)', background: 'var(--hg-surface)' }}
         >
           {!d.known && d.rows.length > 0 && (
-            // Known-false with rows is the cold-restart case: the snapshot
-            // cache has real events; the next poll will refresh them. The
-            // banner says both — the rows are real, AND the refresh hasn't
-            // happened yet. A reader seeing this knows to treat the list
-            // as a record of what was known, not as live state.
             <p
               role="status"
               data-testid="feed-stale-banner"
@@ -176,7 +282,16 @@ export function FeedPage() {
 
           <ol className="list-none p-0" aria-live="polite">
             {rows.map((r) => (
-              <FeedRow key={r.id} row={r} onAck={() => ack.mutate([r.id])} busy={ack.isPending} />
+              <FeedRow
+                key={r.id}
+                row={r}
+                fresh={freshIds.has(r.id)}
+                canWatch={canWatch}
+                token={token}
+                onAck={() => ack.mutate([r.id])}
+                onEyeToggled={(next) => r.key && onEyeToggled(r.key, next)}
+                busy={ack.isPending}
+              />
             ))}
           </ol>
 
@@ -203,6 +318,28 @@ export function FeedPage() {
               Acknowledge all{openCount > 0 ? ` (${openCount})` : ''}
             </button>
           </footer>
+
+          {ackMsg && (
+            /*
+              The confirmation message. role="status" so assistive tech
+              announces it; visible text so a sighted reader sees it too.
+              Cleared after five seconds by the effect above — long enough
+              to read, short enough that the next ack's message isn't
+              competing with a stale one.
+            */
+            <p
+              role="status"
+              data-testid="feed-ack-msg"
+              className="border-t px-4 py-2 text-[12px]"
+              style={{
+                borderColor: 'var(--hg-line)',
+                background: 'var(--hg-surface-raised)',
+                color: 'var(--hg-text-muted)',
+              }}
+            >
+              {ackMsg}
+            </p>
+          )}
         </section>
       )}
     </main>
@@ -211,11 +348,19 @@ export function FeedPage() {
 
 function FeedRow({
   row,
+  fresh,
+  canWatch,
+  token,
   onAck,
+  onEyeToggled,
   busy,
 }: {
   row: FeedRowData
+  fresh: boolean
+  canWatch: boolean
+  token: string | undefined
   onAck: () => void
+  onEyeToggled: (next: boolean) => void
   busy: boolean
 }) {
   const ackLabel = row.acked ? 'Seen' : 'Ack'
@@ -223,10 +368,12 @@ function FeedRow({
     ? 'Acknowledge; also marks it read on GitHub'
     : 'Acknowledge; kept in HelloGitty only'
   const tone = row.acked ? 'var(--hg-text-muted)' : 'var(--hg-text)'
+  const showEye = canWatch && !!row.key && EYE_KINDS.has(row.kind)
+  const cols = showEye ? 'grid-cols-[8px_minmax(0,1fr)_auto_auto]' : 'grid-cols-[8px_minmax(0,1fr)_auto]'
   return (
     <li
       data-id={row.id}
-      className="grid grid-cols-[8px_minmax(0,1fr)_auto] items-start gap-x-2.5 border-t px-3.5 py-2"
+      className={`${cols} grid items-start gap-x-2.5 border-t px-3.5 py-2${fresh ? ' hg-feed-fresh' : ''}`}
       style={{
         borderColor: 'var(--hg-line)',
         opacity: row.acked ? 0.75 : 1,
@@ -274,6 +421,15 @@ function FeedRow({
           </time>
         </div>
       </div>
+
+      {showEye && row.key && (
+        <WatchEyeButton
+          issueKey={row.key}
+          watched={!!row.watched}
+          token={token}
+          onToggled={(next) => onEyeToggled(next)}
+        />
+      )}
 
       <button
         type="button"
