@@ -331,3 +331,36 @@ body {
 
 [data-clock-style="flip"] .hg-clock-time { color: #f5f0e8; font-weight: 700; letter-spacing: 0.14em; background: #1a1a1a; padding: 4px 10px; border-radius: 4px; border: 1px solid #333; box-shadow: 0 2px 8px rgba(0,0,0,.5); }
 [data-clock-style="flip"] .hg-clock-date { color: #a09880; }
+
+/*
+ * /help — Copy-on-every-<pre> styles, TOC scroll-spy active state, and the
+ * flash a search hit emits when the reader opens it. The DOM nodes carrying
+ * these classes are owned by HelpPage's effects (see its header comment for
+ * why), so the selectors stay here rather than inline-styled on each node.
+ */
+.hg-help-copy-wrap { position: relative; }
+.hg-help-copy {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 2px 8px;
+  font-size: 11.5px;
+  line-height: 1.3;
+  border: 1px solid var(--hg-line-strong);
+  background: var(--hg-surface-raised);
+  color: var(--hg-text);
+  cursor: pointer;
+}
+.hg-help-copy:hover { background: var(--hg-surface); }
+.hg-help-copy:focus-visible { outline: 2px solid var(--hg-accent); outline-offset: 1px; }
+
+.hg-help-toc-link[aria-current="true"] {
+  color: var(--hg-text);
+  background: var(--hg-surface-raised);
+}
+
+@keyframes hg-help-flash-kf {
+  0%   { background: var(--hg-highlight, var(--hg-accent-muted, var(--hg-surface-raised))); }
+  100% { background: transparent; }
+}
+.hg-help-flash { animation: hg-help-flash-kf 1.4s ease-out; }
