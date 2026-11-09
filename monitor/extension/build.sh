@@ -36,6 +36,13 @@ done
 # hence the separate files.
 # CSS templates (base-css, header-css, feed-css) are {{define}} blocks included by the <style>
 # block via {{template}}. Extract their contents first, then the remaining inline styles.
+#
+# The pack-and-appearance token cascade lives in a sibling file (web/themes.css) since
+# web/web.go splices it into the dashboard template at package init. Lift it here too so
+# the extension renders the same packs as the dashboard; the file is pure static CSS, so a
+# straight concatenation gets it. See web/themes.css for the rationale.
+packs="$root/web/themes.css"
+[[ -f "$packs" ]] || { echo "$packs not found — pack token cascade will be missing from dashboard.css" >&2; exit 1; }
 {
   for tpl in base-css header-css feed-css; do
     awk -v t="$tpl" '
@@ -43,6 +50,7 @@ done
       f && /\{\{end\}\}/ {f=0; next}
       f && !/\{\{/' "$page"
   done
+  cat "$packs"
   awk '/<style>/{f=1;next} /<\/style>/{f=0} f && !/\{\{/' "$page"
 } > "$out/dashboard.css"
 # theme-head define → dashboard-head.js (the before-paint theme init).

@@ -1,0 +1,391 @@
+/* Theme packs — pack-and-appearance token blocks.
+ *
+ * One copy, read by both sides:
+ *   - web/web.go splices this into the dashboard template at package init,
+ *     replacing the placeholder marker that web/index.html carries at the
+ *     top of its base-css <style> block. The replacement bypasses Go's
+ *     html/template auto-escape clone machinery, which refused to let a
+ *     nested CSS sub-template parse from inside a <style> context.
+ *   - The Vite bundle imports this file so the React app resolves the
+ *     same values through the same cascade. The bridge from these token
+ *     names (--bg, --panel, --text…) to React's own (--hg-canvas,
+ *     --hg-surface, --hg-text…) lives in frontend/src/index.css.
+ *
+ * Decorative rules — .panel, .status, .hclock-time, .quicknav a.active —
+ * stay inline in web/index.html alongside their templated class names.
+ * React does not render those class names; this file carries only the
+ * token declarations both sides actually share.
+ *
+ * Editing this file retokens the pack on both surfaces at once. Do not
+ * copy any declaration here to the React side; let the cascade resolve it.
+ */
+
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f3f3f1; --panel: #ffffff; --raised: #f1f1ee; --rule: #e2e2de; --rule-hi: #c9c9c4;
+    --text: #1c1c1d; --dim: #62625d; --track: #e3e3df;
+    --nom: #18803a; --caution: #b87a0e; --caution-text: #8a5600; --warn: #c3271c;
+    --caution-fill: #fdf3d7; --caution-ink: #6a4500; --warn-fill: #fde8e6; --warn-ink: #8a1d13;
+    --tag-fill: #fbf0c4; --tag-ink: #6a5200; --tag-rule: #ecd88a;
+    --head: #f6f6f4; --head-dim: #62625d; --head-accent: #707066;
+    --ambient: #55707f;
+    --mascot-bg: #ffffff;
+  }
+
+  :root[data-visual-theme="pink"] {
+    --nom: #f5a8c8; --head-accent: #ff69b4;
+    --bg: #1a0a12; --panel: #21101a; --raised: #2d1624; --rule: #3d2233; --rule-hi: #55304a;
+    --text: #f5e0ec; --dim: #b88aa4; --track: #3a2030;
+    --caution: #ff7a90; --caution-text: #ff7a90; --warn: #e6175d;
+    --caution-fill: #3d1820; --caution-ink: #ffd4dc; --warn-fill: #4d0a28; --warn-ink: #ffe0e8;
+    --tag-fill: #3d1530; --tag-ink: #ffb3d9; --tag-rule: #66254d;
+    --head: #261220; --head-dim: #b88aa4;
+    --mascot-bg: #21101a;
+    color-scheme: dark;
+  }
+
+  :root[data-theme="light"][data-visual-theme="pink"] {
+    --bg: #fff0f5; --panel: #ffffff; --raised: #ffe4ef; --rule: #f5c6d8; --rule-hi: #e8a0be;
+    --text: #3d0f24; --dim: #8c4468; --track: #f5d0e0;
+    --nom: #b85580; --caution: #d6336c; --caution-text: #b52850; --warn: #9b0e42;
+    --caution-fill: #ffe4ed; --caution-ink: #7a0038; --warn-fill: #fcd0de; --warn-ink: #6a0028;
+    --tag-fill: #ffe0ee; --tag-ink: #8c1050; --tag-rule: #f0a0c8;
+    --head: #fff5f9; --head-dim: #8c4468; --head-accent: #d02a64;
+    --mascot-bg: #ffffff;
+    color-scheme: light;
+  }
+
+  :root[data-visual-theme="muertos"] {
+    --bg: #0b0a10; --panel: #120f18; --raised: #1a1622; --rule: #2a2335; --rule-hi: #3d3350;
+    --text: #ece6f2; --dim: #a098ae; --track: #2a2335;
+    --nom: #6fdcbb; --caution: #f0a93b; --caution-text: #f0a93b; --warn: #ff4d6a;
+    --caution-fill: #2e2210; --caution-ink: #f7d79a; --warn-fill: #3a0f1d; --warn-ink: #ffd0d9;
+    --tag-fill: #241a33; --tag-ink: #c9a7f0; --tag-rule: #3f3058;
+    --head: #15111d; --head-dim: #a098ae; --head-accent: #b98cf0;
+    --mascot-bg: #120f18;
+    color-scheme: dark;
+  }
+
+  :root[data-theme="amoled"][data-visual-theme="muertos"] {
+    --bg: #000000; --panel: #000000; --raised: #120f18; --rule: #5c5c62; --rule-hi: #7a7a82;
+    --head: #000000; --mascot-bg: #000000;
+  }
+
+  :root[data-theme="light"][data-visual-theme="muertos"] {
+    --bg: #f2ece0; --panel: #fbf7ef; --raised: #efe7d8; --rule: #ded2bd; --rule-hi: #b9a988;
+    --text: #231b16; --dim: #6b5a4a; --track: #e3d9c6;
+    --nom: #1b6b57; --caution: #9c5c00; --caution-text: #7d4a00; --warn: #b11d34;
+    --caution-fill: #fbeccd; --caution-ink: #5c3600; --warn-fill: #fbe0e4; --warn-ink: #7a0f22;
+    --tag-fill: #efe2f5; --tag-ink: #5b2d7a; --tag-rule: #d3bde2;
+    --head: #f7f2e7; --head-dim: #6b5a4a; --head-accent: #6d3b96;
+    --mascot-bg: #fbf7ef;
+    color-scheme: light;
+  }
+
+  :root[data-visual-theme="muertos-v2"] {
+    --bg: #170f21; --panel: #261a34; --raised: #3c2a4b; --rule: #4a365a; --rule-hi: #6b4e82;
+    --text: #fff5e7; --dim: #d8c5d8; --track: #422e4e;
+    --nom: #79d8a0; --caution: #ffc050; --caution-text: #ffc050; --warn: #ff8690;
+    --caution-fill: #332410; --caution-ink: #ffdca3; --warn-fill: #3a1420; --warn-ink: #ffd6db;
+    --tag-fill: #2a1f3d; --tag-ink: #c6b8ff; --tag-rule: #4b3d6a;
+    --head: #1f1530; --head-dim: #d8c5d8; --head-accent: #a99dff;
+    --mascot-bg: #261a34;
+    --pack-flower-marigold: #ffc050; --pack-flower-pink: #ff78be; --pack-flower-jade: #6de4d0;
+    --pack-flower-indigo: #a99dff; --pack-flower-papaya: #ff7240;
+    color-scheme: dark;
+  }
+
+  :root[data-theme="amoled"][data-visual-theme="muertos-v2"] {
+    --bg: #000000; --panel: #080808; --raised: #111111; --rule: #353035; --rule-hi: #605860;
+    --text: #f8f4ef; --dim: #c2bcbe;
+    --caution: #ffbd40; --caution-text: #ffbd40; --warn: #ff7888; --nom: #68ddb5;
+    --caution-fill: #1a1308; --warn-fill: #1a0a10; --tag-fill: #16101f;
+    --head: #000000; --head-dim: #c2bcbe; --head-accent: #a397ff;
+    --mascot-bg: #000000;
+    --pack-flower-marigold: #ffbd40; --pack-flower-pink: #ff6bb5; --pack-flower-jade: #5fe2c9;
+    --pack-flower-indigo: #a397ff; --pack-flower-papaya: #ff7240;
+  }
+
+  :root[data-theme="light"][data-visual-theme="muertos-v2"] {
+    --bg: #fff3df; --panel: #ffffff; --raised: #fbe7cf; --rule: #dec7d4; --rule-hi: #b89aa8;
+    --text: #251a2b; --dim: #655468; --track: #e9d7ca;
+    --nom: #0a6b55; --caution: #8e5100; --caution-text: #6f3f00; --warn: #b12845;
+    --caution-fill: #fdebcd; --caution-ink: #5a3200; --warn-fill: #ffe0e4; --warn-ink: #7a0f22;
+    --tag-fill: #f1e3f5; --tag-ink: #4a357f; --tag-rule: #c7b4dc;
+    --head: #fbe7cf; --head-dim: #655468; --head-accent: #5944a5;
+    --mascot-bg: #ffffff;
+    --pack-flower-marigold: #b25d05; --pack-flower-pink: #a91f69; --pack-flower-jade: #006e64;
+    --pack-flower-indigo: #5944a5; --pack-flower-papaya: #c44622;
+    color-scheme: light;
+  }
+
+  :root[data-visual-theme="azure-oni"] {
+    --bg: #070b16; --panel: #18213a; --raised: #243052; --rule: #36476a; --rule-hi: #5e739a;
+    --text: #f5f7ff; --dim: #b5c2d8; --track: #232d44;
+    --nom: #5fd3a6; --caution: #ffbf5c; --caution-text: #ffbf5c; --warn: #ff6b78;
+    --caution-fill: #2e2210; --caution-ink: #ffdfa8; --warn-fill: #331018; --warn-ink: #ffd3d8;
+    --tag-fill: #1b2742; --tag-ink: #9dc2ff; --tag-rule: #36508a;
+    --head: #05080f; --head-dim: #b5c2d8; --head-accent: #7cb7ff;
+    --mascot-bg: #18213a;
+    /* materials */
+    --pack-seigaiha-ink: #233962; --pack-seigaiha-opacity: .62;
+    --pack-seam-ink: #3e5478; --pack-rivet: #6d86b4;
+    --pack-lacquer: #2d7bff; --pack-lacquer-hi: #9fc6ff;
+    --pack-stone: .17;
+    --pack-sakura: #ffc9de;
+    /* The oni's eye. The ONE warm mark the pack is allowed, reserved for the
+       single count that is a demand on the owner. 4.90:1 on --panel. */
+    --pack-vermilion: #ff4d5a;
+    color-scheme: dark;
+  }
+
+  :root[data-theme="amoled"][data-visual-theme="azure-oni"] {
+    --bg: #000000; --panel: #050b18; --raised: #0d1830; --rule: #2b3a55; --rule-hi: #55688c;
+    --text: #f5f7ff; --dim: #aebbd2; --track: #0f1a30;
+    --nom: #5fd3a6; --caution: #ffc266; --caution-text: #ffc266; --warn: #ff7b86;
+    --caution-fill: #1d1408; --caution-ink: #ffe2b0; --warn-fill: #210a10; --warn-ink: #ffd8dd;
+    --tag-fill: #0b1526; --tag-ink: #9cc4ff; --tag-rule: #2d4876;
+    --head: #000000; --head-dim: #aebbd2; --head-accent: #86bcff;
+    --mascot-bg: #050b18;
+    --pack-seigaiha-ink: #1b2f52; --pack-seigaiha-opacity: .70;
+    --pack-seam-ink: #2f4468; --pack-rivet: #5d76a4;
+    --pack-lacquer: #1f66e6; --pack-lacquer-hi: #8ab8ff;
+    --pack-stone: .12;
+    --pack-sakura: #ffb9d4;
+    --pack-vermilion: #ff5a66;
+  }
+
+  :root[data-theme="light"][data-visual-theme="azure-oni"] {
+    --bg: #eef1fa; --panel: #ffffff; --raised: #e2e9f7; --rule: #c3cee3; --rule-hi: #76859f;
+    --text: #0a0f1c; --dim: #4a5570; --track: #dbe3f2;
+    --nom: #06624a; --caution: #8a5000; --caution-text: #6f3f00; --warn: #b3121f;
+    --caution-fill: #fdeccd; --caution-ink: #5a3200; --warn-fill: #ffe1e3; --warn-ink: #7a0d16;
+    --tag-fill: #e4ecfd; --tag-ink: #1b3fa0; --tag-rule: #b3c6ec;
+    --head: #e2e9f7; --head-dim: #4a5570; --head-accent: #1b3fa0;
+    --mascot-bg: #ffffff;
+    --pack-seigaiha-ink: #8ea4cc; --pack-seigaiha-opacity: .45;
+    --pack-seam-ink: #c0cde6; --pack-rivet: #8fa3c6;
+    --pack-lacquer: #0040c7; --pack-lacquer-hi: #6f9dff;
+    --pack-stone: .09;
+    --pack-sakura: #d98fb4;
+    /* On paper the eye has to be dark to read: 5.64:1 on white. */
+    --pack-vermilion: #c62631;
+    color-scheme: light;
+  }
+
+  :root[data-visual-theme="azure-oni-v2"] {
+    --pack-vermilion: #ff4d5a;
+    --bg: #070b16; --panel: #18213a; --raised: #243052; --rule: #36476a; --rule-hi: #5e739a;
+    --text: #f5f7ff; --dim: #b5c2d8; --track: #232d44;
+    --nom: #5fd3a6; --caution: #ffbf5c; --caution-text: #ffbf5c; --warn: #ff6b78;
+    --caution-fill: #2e2210; --caution-ink: #ffdfa8; --warn-fill: #331018; --warn-ink: #ffd3d8;
+    --tag-fill: #1b2742; --tag-ink: #9dc2ff; --tag-rule: #36508a;
+    --head: #05080f; --head-dim: #b5c2d8; --head-accent: #7cb7ff;
+    --mascot-bg: #18213a;
+    /* materials */
+    --pack-obsidian-center: #141c30;
+    --pack-obsidian-edge: #070b16;
+    --pack-obsidian-radius: 90% 75%;
+    --pack-alloy-stripe: rgba(255,255,255,.025);
+    --pack-seam: #5e739a;
+    --pack-seam-rivet: #8aa0c0;
+    --pack-ember-a: rgba(255,45,61,.10);
+    --pack-ember-b: rgba(255,45,61,.06);
+    --pack-ember-amb: rgba(255,45,61,.06);
+    --pack-lacquer-top: #005bff;
+    --pack-lacquer-bottom: #1628a0;
+    --pack-lacquer-hi: #cfe3ff;
+    --pack-lacquer-ink: #ffffff;
+    --pack-rim-edge: #6ec2ff;
+    --pack-seigaiha-ink: #233962;
+    --pack-seigaiha-opacity: .62;
+    --pack-seam-ink: #3e5478;
+    --pack-sakura: #ffc9de;
+    color-scheme: dark;
+  }
+
+  :root[data-theme="amoled"][data-visual-theme="azure-oni-v2"] {
+    --pack-vermilion: #ff5a66;
+    --bg: #000000; --panel: #050b18; --raised: #0d1830; --rule: #2b3a55; --rule-hi: #55688c;
+    --text: #f5f7ff; --dim: #aebbd2; --track: #0f1a30;
+    --nom: #5fd3a6; --caution: #ffc266; --caution-text: #ffc266; --warn: #ff7b86;
+    --caution-fill: #1d1408; --caution-ink: #ffe2b0; --warn-fill: #210a10; --warn-ink: #ffd8dd;
+    --tag-fill: #0b1526; --tag-ink: #9cc4ff; --tag-rule: #2d4876;
+    --head: #000000; --head-dim: #aebbd2; --head-accent: #86bcff;
+    --mascot-bg: #050b18;
+    /* materials */
+    --pack-obsidian-center: #000000;
+    --pack-obsidian-edge: #000000;
+    --pack-obsidian-radius: 90% 75%;
+    --pack-alloy-stripe: rgba(255,255,255,.030);
+    --pack-seam: #6c7fa0;
+    --pack-seam-rivet: #96a8c8;
+    --pack-ember-a: rgba(255,45,61,.08);
+    --pack-ember-b: rgba(255,45,61,.04);
+    --pack-ember-amb: rgba(255,45,61,.05);
+    --pack-lacquer-top: #004bdb;
+    --pack-lacquer-bottom: #0f1e7a;
+    --pack-lacquer-hi: #b7d0ff;
+    --pack-lacquer-ink: #ffffff;
+    --pack-rim-edge: #7cc9ff;
+    --pack-seigaiha-ink: #1b2f52;
+    --pack-seigaiha-opacity: .70;
+    --pack-seam-ink: #2f4468;
+    --pack-sakura: #ffb9d4;
+  }
+
+  :root[data-theme="light"][data-visual-theme="azure-oni-v2"] {
+    --pack-vermilion: #c62631;
+    --bg: #eef1fa; --panel: #ffffff; --raised: #e2e9f7; --rule: #c3cee3; --rule-hi: #76859f;
+    --text: #0a0f1c; --dim: #4a5570; --track: #dbe3f2;
+    --nom: #06624a; --caution: #8a5000; --caution-text: #6f3f00; --warn: #b3121f;
+    --caution-fill: #fdeccd; --caution-ink: #5a3200; --warn-fill: #ffe1e3; --warn-ink: #7a0d16;
+    --tag-fill: #e4ecfd; --tag-ink: #1b3fa0; --tag-rule: #b3c6ec;
+    --head: #e2e9f7; --head-dim: #4a5570; --head-accent: #1b3fa0;
+    --mascot-bg: #ffffff;
+    /* materials */
+    --pack-obsidian-center: #f3f5fc;
+    --pack-obsidian-edge: #eef1fa;
+    --pack-obsidian-radius: 90% 75%;
+    --pack-alloy-stripe: rgba(10,15,28,.025);
+    --pack-seam: #3a4860;
+    --pack-seam-rivet: #1f2a3f;
+    --pack-ember-a: rgba(255,45,61,0);
+    --pack-ember-b: rgba(255,45,61,0);
+    --pack-ember-amb: rgba(255,45,61,0);
+    --pack-lacquer-top: #0040c7;
+    --pack-lacquer-bottom: #0a1c78;
+    --pack-lacquer-hi: #ffffff;
+    --pack-lacquer-ink: #ffffff;
+    --pack-rim-edge: #1b3fa0;
+    --pack-seigaiha-ink: #8ea4cc;
+    --pack-seigaiha-opacity: .45;
+    --pack-seam-ink: #c0cde6;
+    --pack-sakura: #d98fb4;
+    color-scheme: light;
+  }
+
+  :root[data-theme="amoled"][data-visual-theme="oni"] {
+    --bg: #000000; --panel: #0b0710; --raised: #17101b; --rule: #3d1d27; --rule-hi: #815059;
+    --text: #f7eef0; --dim: #c4a4ab; --track: #180f14;
+    --nom: #5fd3a6; --caution: #ffc266; --caution-text: #ffc266; --warn: #ff7b86;
+    --caution-fill: #1d1408; --caution-ink: #ffe2b0; --warn-fill: #210a12; --warn-ink: #ffd8dd;
+    --tag-fill: #190d14; --tag-ink: #ffb8c0; --tag-rule: #4a2430;
+    --head: #070409; --head-dim: #c4a4ab; --head-accent: #ff6f7c;
+    --mascot-bg: #0b0710;
+    --pack-crimson: #ff3d4c;        /* identity mark: 8.57:1 on --panel        */
+    --pack-crimson-fill: #d9242f;   /* pennant surface: white ink 4.95:1       */
+  }
+
+:root[data-visual-theme="oni"] {
+  /* Dark appearance of the oni pack. Base canvas is intake's sampled
+     #060d19; panel bodies and chrome sit on top. */
+  --bg:     #060d19;      /* canvas, sampled */
+  --panel:  #10192e;      /* panel body, sampled */
+  --raised: #17213a;      /* elevated controls — lifted off --panel */
+  --rule:   #2a3a5e;      /* 1px hairline separator (intentionally soft: see §CONTRAST-b) */
+  --rule-hi:#5a7bb5;      /* 4.11 on panel, 4.57 on bg — non-text ≥3 ✓ */
+  --text:   #eef3ff;      /* 15.74 on panel, 17.51 on bg */
+  --dim:    #a8bcd8;      /* 9.04 on panel, 8.64 on head */
+  --track:  #1a2440;
+
+  /* Signals — same discipline as azure-oni-v2, retuned against this
+     slightly cooler --panel. */
+  --nom:          #5fd3a6;                      /* 9.46 on --panel */
+  --caution:      #ffc266;                      /* 10.96 on --panel */
+  --caution-text: #ffc266;
+  --warn:         #ff6b78;                      /* 6.35 on --panel */
+  --caution-fill: #2e2210; --caution-ink: #ffdfa8;  /* 12.11 */
+  --warn-fill:    #33111a; --warn-ink:    #ffd3d8;  /* 12.59 */
+  --tag-fill:     #16294a; --tag-ink:    #a6c8f5; --tag-rule: #33538f;  /* 8.41 */
+
+  /* Header band — sampled from the mockup at #0e1e35 (LIGHTER than
+     --panel, inverting the other two packs' habit; the oni header is
+     lit rather than recessed). --mascot-bg stays on --panel so the
+     mascot box reads as plated rather than as part of the header art. */
+  --head:        #0e1e35;    /* sampled header band */
+  --head-dim:    #a8bcd8;
+  --head-accent: #4a9cd6;    /* 5.59 on head, 5.85 on panel — brightened
+                                 from the sampled #267fb5 so clock/stat-fig
+                                 text clears AA normal everywhere; see
+                                 §CONTRAST-a for the trade. */
+  --mascot-bg:   #10192e;
+
+  /* Scene palette (the identity). Sampled by intake from the reference
+     where marked; derived here where the mockup left no sample.
+
+     --pack-cobalt / --pack-cobalt-fill: the vermilion-pattern split.
+     --pack-cobalt is the identity mark (used on rivets and elsewhere
+     where nothing sits on top of it); --pack-cobalt-fill is the
+     darkened surface variant that carries white ink on the pennant
+     tab without failing 4.5. White on cobalt-fill = 5.11:1; cobalt-fill
+     on --head = 3.27:1 (non-text ≥3 ✓). */
+  --pack-cobalt:      #267fb5;   /* sampled identity cobalt (ornament role) */
+  --pack-cobalt-fill: #2873a8;   /* NEW — pennant fill, white ink safe (see §PENNANT) */
+  --pack-crimson:     #ff3d4c;   /* the ONE warm mark (demand count, rivets, clock) */
+  --pack-torii:       #bb2c38;   /* the gate in the scene art */
+  --pack-blossom:     #d14351;   /* corner blossoms — red plum, not pink */
+  --pack-branch:      #5a2a35;
+  --pack-sky-high:    #1a2a4e;   /* night sky, upper */
+  --pack-sky-low:     #4a1428;   /* the red burning behind the ridge */
+  --pack-wave:        #2e4a82;   /* crest line */
+  --pack-wave-deep:   #16436f;   /* trough */
+  --pack-ridge:       #0c1a30;   /* mountain silhouette */
+
+  /* Strap on .statrail .stat — same construction as oni/light.css, so
+     the identity is coherent across appearances. steel-top and
+     steel-bottom make the plate read as rolled metal; steel-edge is
+     the 1px lower rule; --pack-rivet is brass. Brass clears 3:1
+     against steel-bottom but not steel-top — see §CONTRAST-b. */
+  --pack-steel-top:    #3d6aa6;   /* 3.83 on --panel non-text ≥3 ✓ */
+  --pack-steel-bottom: #193e72;   /* darker so brass rivets read on it */
+  --pack-steel-edge:   #0c1a30;
+  --pack-rivet:        #dcaa64;   /* brass; 4.27 on steel-bottom, 2.22 on steel-top */
+
+  color-scheme: dark;
+}
+
+:root[data-theme="light"][data-visual-theme="oni"] {
+  /* Light appearance of the oni pack. */
+  --bg: #e2e9f6;          /* sky-paper canvas */
+  --panel: #ffffff;       /* porcelain */
+  --raised: #f3f6fd;
+  --rule: #7788b0;        /* 3.54:1 non-text on --panel */
+  --rule-hi: #4a5570;     /* 7.43:1 on --panel */
+  --text: #0a0f1c;        /* 19.13:1 on --panel, 15.68:1 on --bg */
+  --dim: #3a4868;         /* 9.10:1 on --panel, 7.47:1 on --bg */
+  --track: #d0dcf0;
+
+  /* Signals — reading colours on paper, not glow. */
+  --nom: #05704c;                                /* 6.13:1 on --panel */
+  --caution: #7a4d00; --caution-text: #6d4200;   /* 7.43:1 / 8.64:1 on --panel */
+  --warn: #a81f35;                               /* 7.21:1 on --panel */
+  --caution-fill: #fdedcc; --caution-ink: #4e2a00;
+  --warn-fill:    #ffe0e3; --warn-ink:    #7a0e18;
+  --tag-fill: #e4ecfd; --tag-ink: #16368c; --tag-rule: #a9bfe6;
+
+  /* Header band — the mockup lights the header rather than recessing it.
+     --head is set slightly off-white so a thin seam against --panel (pure
+     white) reads as deliberate rather than as a white patch. */
+  --head: #f2f5fd; --head-dim: #3a4868; --head-accent: #0d3a9b;
+  --mascot-bg: #ffffff;
+
+  /* Scene palette (the identity). Sampled from the reference render;
+     sampling notes at the bottom of this file. */
+  --pack-crimson:      #a81f35;  /* the one warm mark — passes 4.5:1 on --panel */
+  --pack-sky-high:     #eef3fd;
+  --pack-sky-low:      #c7d6f7;
+  --pack-torii:        #a81f35;
+  --pack-blossom:      #b32030;  /* red plum, not pink — reference is a red-plum branch */
+  --pack-branch:       #4a2b1a;
+  --pack-wave:         #2a4f9c;  /* 7.79:1 on --panel — crest ink */
+  --pack-wave-deep:    #13306c;
+  --pack-ridge:        #335a9b;
+  --pack-steel-top:    #4e7dd5;  /* 4.02:1 on --panel — armour plate */
+  --pack-steel-bottom: #2a4f9c;
+  --pack-steel-edge:   #0d3a9b;
+  --pack-rivet:        #f3e3c6;  /* brass — 3.18:1 on steel-top, 6.16:1 on steel-bottom */
+
+  color-scheme: light;
+}
+
