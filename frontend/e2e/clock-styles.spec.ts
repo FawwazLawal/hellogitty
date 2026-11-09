@@ -74,7 +74,12 @@ test.describe('/ + /settings — clock styles', () => {
 
   test('selecting a style in Settings applies it to the masthead in the same tab', async ({ page }) => {
     await clearPrefs(page)
-    await page.goto('/settings', { waitUntil: 'networkidle' })
+    // #clock deep-links the Clock pane behind the sidebar introduced in #309;
+    // the picker is inside that pane rather than on the default Appearance
+    // landing. Hitting `/settings` cold here would land on Appearance and the
+    // radiogroup locator would time out for a structural reason, not the
+    // behavioural one this test is about.
+    await page.goto('/settings#clock', { waitUntil: 'networkidle' })
 
     // Pick "Matrix" from the radiogroup.
     const picker = page.getByRole('radiogroup', { name: 'Clock style' })
@@ -110,7 +115,8 @@ test.describe('/ + /settings — clock styles', () => {
   test('/settings fits 390px with the full 15-swatch picker', async ({ page, viewport }, info) => {
     await clearPrefs(page)
     await page.setViewportSize({ width: 390, height: 844 })
-    await page.goto('/settings', { waitUntil: 'networkidle' })
+    // Deep-link the Clock pane: the picker lives behind the sidebar from #309.
+    await page.goto('/settings#clock', { waitUntil: 'networkidle' })
     const picker = page.getByRole('radiogroup', { name: 'Clock style' })
     await expect(picker).toBeVisible()
     await expect(picker.getByRole('radio')).toHaveCount(15)
