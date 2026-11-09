@@ -143,6 +143,19 @@ func TestSettingsAPICycleFieldsZeroBeforeFirstCycle(t *testing.T) {
 // true), then the cycle aborted on rate-limit before recording CycleDuration.
 // In that state lastCycleMs is 0 even though polling.known is true. The
 // client must gate its em-dash on `lastCycleMs == 0`, not on `!known`.
+//
+// Note on where this is enforced. This test pins the WIRE shape: that
+// lastCycleMs and callsPerCycle are both zero in the aborted-cycle state,
+// and that the companion `polling.known` is independently true. It cannot
+// catch a client that reads the zero and renders "0 ms" — that rule lives
+// in the Checks row component shipped in #281. The two tests are a pair;
+// losing either lets the "0 ms for an aborted cycle" bug back in.
+//
+// Both numbers share the same gate. `tel.CycleRequests` (the source of
+// callsPerCycle) is assigned in the same `tel.CycleDuration > 0` block
+// as CycleDuration itself in handler.go, so a rate-limited abort leaves
+// callsPerCycle at zero for the same reason. There is no path by which
+// one can be known and the other unknown.
 func TestSettingsAPICycleFieldsZeroWhenPollKnownButCycleAborted(t *testing.T) {
 	now := time.Date(2026, 11, 8, 10, 0, 0, 0, time.UTC)
 	poll := now.Add(-30 * time.Second)
