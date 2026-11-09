@@ -1,13 +1,7 @@
+import type { ReactNode } from 'react'
 import { lazy, Suspense } from 'react'
 import { Masthead } from './components/Masthead'
 import { NavTabs } from './components/NavTabs'
-import { SettingsPage } from './components/SettingsPage'
-import { PipelinePage } from './components/PipelinePage'
-import { WorkPage } from './components/WorkPage'
-import { IssuesPage } from './components/IssuesPage'
-import { YourReposPage } from './components/YourReposPage'
-import { ConversationsPage } from './components/ConversationsPage'
-import { FeedPage } from './components/FeedPage'
 import { KpiRail } from './components/KpiRail'
 import { ConversationsPanel } from './components/ConversationsPanel'
 import { TrackedRepos } from './components/TrackedRepos'
@@ -83,6 +77,24 @@ import { usePageTitle } from './hooks/usePageTitle'
   Same reasoning as /repos and /alerts below: weight that serves one destination
   belongs in that destination's chunk.
 */
+/*
+  Every page component is lazy, with ONE exception: the dashboard is the
+  landing route and lives inline in App — splitting it off would add a
+  round trip on the one page where that is felt. Everything else below
+  takes the same shape: `lazy()` wrapping a dynamic import that unwraps
+  the named export back to a default. The pattern is one line of real
+  work; the repetition is the point. A `map` would hide one piece of
+  copy-paste risk behind a worse one (a missing route silently doing
+  nothing while the entry chunk gets smaller).
+
+  The seven below were eager until #322. The size budget caught the
+  previous four one at a time, each under deadline from unrelated work;
+  converting the rest together ends it, and means ONE decision about the
+  `<Suspense>` fallback instead of seven. The fallback is load-bearing —
+  `data-loading="true"` is what lets gates wait for real content rather
+  than asserting against a spinner — so getting it wrong seven times is
+  more likely than getting it wrong once.
+*/
 const HelpPage = lazy(() =>
   import('./components/HelpPage').then((m) => ({ default: m.HelpPage })),
 )
@@ -95,17 +107,70 @@ const ReposPage = lazy(() =>
   import('./components/ReposPage').then((m) => ({ default: m.ReposPage })),
 )
 
-/*
-  ListPage is lazy for the same reason as ReposPage: it is not an entry
-  point. Readers arrive at /list from a pipeline number or a /your-repos
-  overview tile, and the fetch happens while they are already reading. The
-  page itself is small, but keeping it out of the entry chunk leaves the
-  150 KB budget with the headroom it needs for the pages that are entry
-  points.
-*/
 const ListPage = lazy(() =>
   import('./components/ListPage').then((m) => ({ default: m.ListPage })),
 )
+
+const SettingsPage = lazy(() =>
+  import('./components/SettingsPage').then((m) => ({ default: m.SettingsPage })),
+)
+
+const PipelinePage = lazy(() =>
+  import('./components/PipelinePage').then((m) => ({ default: m.PipelinePage })),
+)
+
+const WorkPage = lazy(() =>
+  import('./components/WorkPage').then((m) => ({ default: m.WorkPage })),
+)
+
+const IssuesPage = lazy(() =>
+  import('./components/IssuesPage').then((m) => ({ default: m.IssuesPage })),
+)
+
+const YourReposPage = lazy(() =>
+  import('./components/YourReposPage').then((m) => ({ default: m.YourReposPage })),
+)
+
+const ConversationsPage = lazy(() =>
+  import('./components/ConversationsPage').then((m) => ({ default: m.ConversationsPage })),
+)
+
+const FeedPage = lazy(() =>
+  import('./components/FeedPage').then((m) => ({ default: m.FeedPage })),
+)
+
+/**
+ * The one place the Suspense fallback is written.
+ *
+ * `data-loading="true"` is the signal gates and tests wait on to tell a
+ * placeholder from real content. Every lazy route goes through this
+ * component so the attribute cannot be forgotten on a new page — the same
+ * reasoning as colocating the lazy() calls above: the repetition is where
+ * mistakes land, and one source of truth for the markup means one place
+ * to audit.
+ *
+ * `label` is per-route only because the earlier manual fallbacks already
+ * varied ("Loading repositories…", "Loading help…", "Loading…"). Keeping
+ * them honours what readers were seeing before the refactor; a generic
+ * "Loading…" is the no-label default.
+ */
+function Lazy({ children, label = 'Loading…' }: { children: ReactNode; label?: string }) {
+  return (
+    <Suspense
+      fallback={
+        <main
+          data-loading="true"
+          className="px-4 py-10 text-[12px]"
+          style={{ color: 'var(--hg-text-muted)' }}
+        >
+          {label}
+        </main>
+      }
+    >
+      {children}
+    </Suspense>
+  )
+}
 
 /**
  * Which view this URL is.
@@ -273,33 +338,17 @@ export default function App() {
       <Masthead data={DASHBOARD} />
       <NavTabs pathname={pathname} />
 
-      {view === 'settings' && <SettingsPage />}
-      {view === 'pipeline' && <PipelinePage />}
-      {view === 'work' && <WorkPage />}
-      {view === 'issues' && <IssuesPage />}
-      {view === 'repos' && (
-        <Suspense fallback={<main data-loading="true" className="px-4 py-10 text-[12px]" style={{ color: 'var(--hg-text-muted)' }}>Loading repositories…</main>}>
-          <ReposPage />
-        </Suspense>
-      )}
-      {view === 'your-repos' && <YourReposPage />}
-      {view === 'conversations' && <ConversationsPage />}
-      {view === 'help' && (
-        <Suspense fallback={<main data-loading="true" className="px-4 py-10 text-[12px]" style={{ color: 'var(--hg-text-muted)' }}>Loading help…</main>}>
-          <HelpPage />
-        </Suspense>
-      )}
-      {view === 'alerts' && (
-        <Suspense fallback={<main data-loading="true" className="px-4 py-10 text-[12px]" style={{ color: 'var(--hg-text-muted)' }}>Loading…</main>}>
-          <AlertsRouter pathname={pathname} />
-        </Suspense>
-      )}
-      {view === 'feed' && <FeedPage />}
-      {view === 'list' && (
-        <Suspense fallback={<main data-loading="true" className="px-4 py-10 text-[12px]" style={{ color: 'var(--hg-text-muted)' }}>Loading…</main>}>
-          <ListPage />
-        </Suspense>
-      )}
+      {view === 'settings' && <Lazy><SettingsPage /></Lazy>}
+      {view === 'pipeline' && <Lazy><PipelinePage /></Lazy>}
+      {view === 'work' && <Lazy><WorkPage /></Lazy>}
+      {view === 'issues' && <Lazy><IssuesPage /></Lazy>}
+      {view === 'repos' && <Lazy label="Loading repositories…"><ReposPage /></Lazy>}
+      {view === 'your-repos' && <Lazy><YourReposPage /></Lazy>}
+      {view === 'conversations' && <Lazy><ConversationsPage /></Lazy>}
+      {view === 'help' && <Lazy label="Loading help…"><HelpPage /></Lazy>}
+      {view === 'alerts' && <Lazy><AlertsRouter pathname={pathname} /></Lazy>}
+      {view === 'feed' && <Lazy><FeedPage /></Lazy>}
+      {view === 'list' && <Lazy><ListPage /></Lazy>}
 
       {view === 'dashboard' && (
       <main className="min-w-0 overflow-x-hidden px-4 pb-[200px] pt-3">
