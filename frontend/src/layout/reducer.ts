@@ -28,6 +28,8 @@ export function columnOf(state: LayoutState, id: PanelId): 'main' | 'rail' | nul
 export type LayoutAction =
   | { type: 'toggle-hidden'; id: PanelId }
   | { type: 'toggle-folded'; id: PanelId }
+  | { type: 'fold-all' }
+  | { type: 'unfold-all' }
   | { type: 'move-within-column'; id: PanelId; delta: -1 | 1 }
   | { type: 'move-across-columns'; id: PanelId }
   | { type: 'set-column'; id: PanelId; column: 'main' | 'rail' }
@@ -61,6 +63,18 @@ export function reduce(state: LayoutState, action: LayoutAction): LayoutState {
 
     case 'toggle-folded':
       return asCustom(state, { folded: withToggled(state.folded, action.id) })
+
+    // The `c` and `e` shortcuts at web/index.html:5732-5739. Fold-all
+    // folds every panel in `main`+`rail`; unfold-all empties the
+    // folded array. Expressed as single actions so the shortcut hook
+    // emits one dispatch, one persist, one re-render — a loop of
+    // toggle-folded would do N of each.
+    case 'fold-all':
+      return asCustom(state, { folded: [...state.main, ...state.rail] })
+
+    case 'unfold-all':
+      if (state.folded.length === 0) return state
+      return asCustom(state, { folded: [] })
 
     case 'set-size': {
       if (!Number.isFinite(action.px) || action.px <= 0) return state
