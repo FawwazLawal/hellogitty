@@ -5,6 +5,7 @@ import { useFeed, useAck, type FeedRow as FeedRowData, type FeedDoc } from '../d
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useSession } from '../data/settings'
 import { stepFresh } from '../lib/freshRows'
+import { humanTime } from '../lib/humanTime'
 import { WatchEyeButton, WatchStatusBanner } from './WatchEyeButton'
 
 /**
@@ -417,7 +418,7 @@ function FeedRow({
           </span>
           {row.actor && <span>@{row.actor}</span>}
           <time dateTime={row.at} title={row.at}>
-            {relativeTime(row.at)}
+            {humanTime(row.at)}
           </time>
         </div>
       </div>
@@ -450,22 +451,3 @@ function FeedRow({
   )
 }
 
-/**
- * ISO 8601 → short relative-time string, against `Date.now()`.
- *
- * Deterministic in the test harness, which uses `page.clock.setFixedTime`
- * to freeze now. Nothing but this helper reads the wall clock on this
- * page — the fixed clock is what keeps a visual gate stable.
- */
-function relativeTime(iso: string): string {
-  const then = Date.parse(iso)
-  if (Number.isNaN(then)) return ''
-  const seconds = Math.max(0, Math.round((Date.now() - then) / 1000))
-  const minute = 60
-  const hour = 60 * minute
-  const day = 24 * hour
-  if (seconds < minute) return 'just now'
-  if (seconds < hour) return `${Math.round(seconds / minute)}m ago`
-  if (seconds < day) return `${Math.round(seconds / hour)}h ago`
-  return `${Math.round(seconds / day)}d ago`
-}
