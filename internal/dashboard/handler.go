@@ -249,8 +249,19 @@ type page struct {
 	LastPollUTC  string
 	NextPollUTC  string
 	PollInterval int
+	// WorkInterval is the SEPARATE work-board loop cadence (Handler.WorkRefresh
+	// in minutes). The Checks panel calls it "Your work refresh". Zero if the
+	// field was not set on the Handler (test fakes mostly).
+	WorkInterval int
 	CycleText    string
 	CycleCalls   string
+	// CycleDurationMs and CycleRequests are the raw forms of CycleText and
+	// CycleCalls — the same numbers before `duration()` and strconv ran over
+	// them. The templated page keeps using the formatted strings; the JSON API
+	// serves these so clients format consistently with the rest of the page.
+	// Both are zero before the first repo-poll cycle has completed.
+	CycleDurationMs int64
+	CycleRequests   int64
 	APIKnown     bool
 	APIUsed      int
 	APILimit     int
@@ -899,6 +910,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveYourReposAPI(w, r)
 	case r.URL.Path == "/app/api/alerts.json":
 		h.serveAlertsAPI(w, r)
+	case r.URL.Path == "/app/api/security.json":
+		h.serveSecurityAPI(w, r)
 	case strings.HasPrefix(r.URL.Path, "/app") && h.App != nil:
 		h.serveApp(w, r)
 	case r.URL.Path == "/feed" && h.ReactIsDefault && h.App != nil:
@@ -1077,6 +1090,7 @@ func (h *Handler) build() (*page, error) {
 		NowUTC:       now.Format("2006-01-02 15:04:05Z"),
 		NowUnix:      now.Unix(),
 		PollInterval: int(h.PollInterval / time.Minute),
+		WorkInterval: int(h.WorkRefresh / time.Minute),
 		RepoCount:    len(reports),
 		CycleText:    "—",
 		CycleCalls:   "—",
@@ -1109,6 +1123,8 @@ func (h *Handler) build() (*page, error) {
 	if tel.CycleDuration > 0 {
 		p.CycleText = duration(tel.CycleDuration)
 		p.CycleCalls = strconv.FormatInt(tel.CycleRequests, 10)
+		p.CycleDurationMs = tel.CycleDuration.Milliseconds()
+		p.CycleRequests = tel.CycleRequests
 	}
 	if tel.RateLimit > 0 {
 		p.APIKnown = true

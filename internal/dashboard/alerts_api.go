@@ -80,16 +80,26 @@ type AlertWork struct {
 }
 
 type WatchItem struct {
-	Repo        string `json:"repo"`
-	Number      int    `json:"number"`
-	Title       string `json:"title"`
-	URL         string `json:"url"`
+	Repo   string `json:"repo"`
+	Number int    `json:"number"`
+	Title  string `json:"title"`
+	URL    string `json:"url"`
 	// Status is the server's vocabulary — "CLAIMED", "CLOSED_FIXED",
 	// "CLOSED_WONT" — not translated. The React table should disagree about
 	// colour, never about what state a thing is in.
 	Status      string `json:"status,omitempty"`
 	ClaimDetail string `json:"claimDetail,omitempty"`
 	ChangedAt   string `json:"changedAt,omitempty"`
+	// Outside is true when the issue is in a repository the owner does not
+	// track (watched with the eye on another repo's PR). The Watched panel
+	// styles those rows so the viewer can tell the two kinds apart. The
+	// alerts endpoint pre-filters by status and leaves this zero; its
+	// omitempty keeps the field out of that document entirely.
+	Outside bool `json:"outside,omitempty"`
+	// Seen is true when the owner acknowledged this row's claim or closure;
+	// the dashboard Watched panel dims seen rows. Same omitempty reasoning
+	// as Outside: the alerts endpoint pre-filters and never carries this.
+	Seen bool `json:"seen,omitempty"`
 }
 
 type AlertWatch struct {
@@ -272,6 +282,7 @@ func toWatchItems(rows []watchRow) []WatchItem {
 		out = append(out, WatchItem{
 			Repo: w.Repo, Number: w.Number, Title: w.Title, URL: w.URL,
 			Status: w.Status, ClaimDetail: w.ClaimDetail, ChangedAt: changed,
+			Outside: w.Outside, Seen: w.Seen,
 		})
 	}
 	return out
