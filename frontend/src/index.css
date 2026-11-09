@@ -262,13 +262,27 @@ body {
  * defaults in a place the overrides can reach.
  *
  * Templated's equivalent lives at index.html .hclock-time / .hclock-date.
+ *
+ * COLOUR IS A TOKEN READ, not a bridged value. A pack that wants to paint
+ * the clock (Oni is the current one; see `--hg-clock-color` in web/themes.css)
+ * declares the token; this base rule reads it and falls back to --hg-text
+ * when a pack states nothing. The alternative — a selector-based pack rule
+ * like `[data-visual-theme="oni"] .hg-clock-time { color: ... }` — would be
+ * specificity (0,2,0), the same as the per-style rules below, and whichever
+ * stylesheet the browser applied last would win. That is a load-order race
+ * in a cascade neither stylesheet controls (one served by Go, one bundled
+ * by Vite), latent until an unrelated asset-ordering change flips it. The
+ * token approach removes the race entirely: pack sets a value, style
+ * overrides `color` directly at higher specificity than the base, default
+ * falls through to --hg-text. Style > pack > default, one cascade, no race.
+ * See #307.
  */
 .hg-clock-time {
-  color: var(--hg-text);
+  color: var(--hg-clock-color, var(--hg-text));
   letter-spacing: 0.04em;
 }
 .hg-clock-date {
-  color: var(--hg-text-muted);
+  color: var(--hg-clock-date-color, var(--hg-text-muted));
   letter-spacing: 0.05em;
 }
 
