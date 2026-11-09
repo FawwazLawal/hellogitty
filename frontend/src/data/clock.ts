@@ -223,7 +223,32 @@ export function useLiveClock(): Date {
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 1000)
-    return () => window.clearInterval(id)
+
+    /*
+     * Visibility resync. Chrome clamps background-tab `setInterval` to 1Hz
+     * and will go to one tick per minute under battery-saver or memory-
+     * saver mode; machine sleep halts timers entirely. On return to a
+     * visible tab the next interval firing can be anywhere between
+     * instant and a full throttled period away, during which the clock
+     * reads the time it last ticked. A `visibilitychange` listener closes
+     * that gap by force-sampling `new Date()` the moment the tab becomes
+     * visible, independent of whatever the interval is doing.
+     *
+     * This is a correctness improvement, NOT a known fix for the stale-
+     * clock screenshots on #307 — the cause of those was never
+     * reproduced; see #319 for the scoping. Here it's filed as "do the
+     * obvious thing a visible-tab tick ought to do" and is sabotage-
+     * proven green by `clock-visibility.spec.ts`.
+     */
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') setNow(new Date())
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+
+    return () => {
+      window.clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
   }, [])
 
   return now
