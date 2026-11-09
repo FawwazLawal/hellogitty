@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { Masthead } from './components/Masthead'
 import { NavTabs } from './components/NavTabs'
 import { KpiRail } from './components/KpiRail'
@@ -22,6 +22,21 @@ import { useDashboard, toTrackedRepo, toPipelineView, toWorkView } from './data/
 import { useArt } from './art'
 import { DASHBOARD } from './fixtures/dashboard'
 import { usePageTitle } from './hooks/usePageTitle'
+import { useLayout } from './layout/useLayout'
+import { useShortcuts } from './layout/useShortcuts'
+import type { PanelId } from './layout/schema'
+
+/*
+  The dashboard panel-layout dialog. Lazy because it opens on a
+  user action — a Layout button in the dashboard header — and
+  keeping it out of the entry chunk saves the budget for the
+  work it enables. See /src/layout/* for the storage boundary,
+  reducer, hook, Grip and keyboard shortcuts this dialog sits on
+  top of; #282 ships them together.
+*/
+const LayoutDialog = lazy(() =>
+  import('./layout/LayoutDialog').then((m) => ({ default: m.LayoutDialog })),
+)
 
 /**
  * The dashboard shell.
@@ -285,6 +300,22 @@ export default function App() {
   const recentIssues = useRecentIssues()
   const feed = useFeed()
 
+  /*
+    The panel-layout engine. `useLayout` reads storage on mount
+    (or forces `focus` in extension-popup mode via ?ext=popup),
+    and `useShortcuts` attaches one window-level listener for
+    c/e/1–9. The dialog state is here so the Layout button can
+    toggle it; the dialog is lazy, so mounting the suspense
+    boundary at `layoutOpen` means the chunk only loads when
+    the user asks.
+  */
+  const layout = useLayout({
+    configDefault: settings.data?.config.layoutDefault ?? null,
+    search: typeof location !== 'undefined' ? location.search : '',
+  })
+  useShortcuts({ state: layout.state, dispatch: layout.dispatch })
+  const [layoutOpen, setLayoutOpen] = useState(false)
+
   const liveTiles = dashboard.isSuccess ? dashboard.data?.kpis : undefined
   const tiles = liveTiles
     ? DASHBOARD.kpis.map((fixture) => {
@@ -367,44 +398,95 @@ export default function App() {
 
       {view === 'dashboard' && (
       <main className="min-w-0 overflow-x-hidden px-4 pb-[200px] pt-3">
-        <KpiRail
-          tiles={tiles}
-          state={{
-            loading: dashboard.isPending,
-            error: dashboard.error ? dashboard.error.message : null,
-            unknown,
-            onRetry: () => void dashboard.refetch(),
-          }}
-        />
-
-        <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
-          <div className="flex min-w-0 flex-col gap-3">
-            <ConversationsPanel data={conversations} />
-            <TrackedRepos repos={repos} totals={repoTotals} />
-            {recentIssues.data && (
-              <RecentIssuesPanel
-                rows={recentIssues.data.issues}
-                total={recentIssues.data.total}
-              />
-            )}
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <PipelinePanel pipeline={pipeline} />
-            <YourWorkPanel work={work} user={answered ? dashboard.data.work.login || DASHBOARD.user : DASHBOARD.user} />
-            {/*
-              YourReposPanel takes the raw WorkFromApi (needs login +
-              items), so it can filter client-side. It reads its own
-              empty/loading state off `work.known`, matching the
-              "unknown is not zero" rule every panel in this page shares.
-            */}
-            {answered && <YourReposPanel work={dashboard.data.work} />}
-            {feed.data && <FeedPanel rows={feed.data.rows} known={feed.data.known} />}
-            {answered && <WatchedPanel rows={dashboard.data.watched} />}
-            {security.data && <SecurityPanel data={security.data} />}
-            {settings.data && <ChecksPanel data={settings.data} />}
-          </div>
+        <div className="flex items-center justify-between gap-2">
+          <KpiRail
+            tiles={tiles}
+            state={{
+              loading: dashboard.isPending,
+              error: dashboard.error ? dashboard.error.message : null,
+              unknown,
+              onRetry: () => void dashboard.refetch(),
+            }}
+          />
         </div>
+
+        <div className="mt-2 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setLayoutOpen(true)}
+            className="border px-2 py-1 text-[11px]"
+            style={{
+              borderColor: 'var(--hg-line-strong)',
+              color: 'var(--hg-text)',
+              background: 'var(--hg-surface-raised)',
+            }}
+            aria-haspopup="dialog"
+          >
+            Layout
+          </button>
+        </div>
+
+        {(() => {
+          /*
+            Build the panels map once per render. Each entry is the
+            JSX for a panel id; the layout state picks which are
+            rendered, in which order, and whether hidden / folded.
+            Hidden panels are skipped entirely — they are
+            re-mountable by unhiding — folded panels render but
+            carry a data attribute the CSS reads to hide the body.
+          */
+          const panels: Partial<Record<PanelId, ReactNode>> = {
+            'your-work': <YourWorkPanel work={work} user={answered ? dashboard.data.work.login || DASHBOARD.user : DASHBOARD.user} />,
+            conversations: <ConversationsPanel data={conversations} />,
+            'your-repos': answered ? <YourReposPanel work={dashboard.data.work} /> : null,
+            tracked: <TrackedRepos repos={repos} totals={repoTotals} />,
+            feed: feed.data ? <FeedPanel rows={feed.data.rows} known={feed.data.known} /> : null,
+            watched: answered ? <WatchedPanel rows={dashboard.data.watched} /> : null,
+            issues: recentIssues.data ? <RecentIssuesPanel rows={recentIssues.data.issues} total={recentIssues.data.total} /> : null,
+            security: security.data ? <SecurityPanel data={security.data} /> : null,
+            pipeline: <PipelinePanel pipeline={pipeline} />,
+            checks: settings.data ? <ChecksPanel data={settings.data} /> : null,
+          }
+          const render = (col: 'main' | 'rail') =>
+            layout.state[col].map((id) => {
+              if (layout.state.hidden.includes(id)) return null
+              const node = panels[id]
+              if (!node) return null
+              const folded = layout.state.folded.includes(id)
+              return (
+                <div
+                  key={id}
+                  data-panel={id}
+                  data-folded={folded || undefined}
+                  className="hg-panel-slot"
+                >
+                  {node}
+                </div>
+              )
+            })
+          return (
+            <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
+              <div className="flex min-w-0 flex-col gap-3">{render('main')}</div>
+              <div className="flex flex-col gap-3">{render('rail')}</div>
+            </div>
+          )
+        })()}
+
+        {/*
+          The dialog is lazy: the Suspense boundary is only reached
+          when `layoutOpen` is true, so the chunk loads on the
+          first Layout click, not before.
+        */}
+        {layoutOpen && (
+          <Suspense fallback={null}>
+            <LayoutDialog
+              open={layoutOpen}
+              onClose={() => setLayoutOpen(false)}
+              state={layout.state}
+              dispatch={layout.dispatch}
+            />
+          </Suspense>
+        )}
       </main>
       )}
 
