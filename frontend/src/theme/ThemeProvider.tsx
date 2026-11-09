@@ -1,48 +1,67 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { IDENTITIES, IDENTITY_ORDER, cssVarsFor, type Identity } from './tokens'
+import { IDENTITIES, IDENTITY_ORDER, type Identity } from './tokens'
 
 /**
- * The theme engine.
+ * The theme engine, now reading from the shared pack cascade.
  *
- * ADR-UI-002 §5: "Theme **identity** and OS **appearance** preference must be
- * modeled independently where appropriate; faithfully preserve the app's
- * existing appearance selection behavior. Give founder-visible labels, logical
- * fallbacks and persistence. Theme switching must not reset user data, focus or
- * panel layouts."
+ * ADR-UI-002 §5 kept its two-axis model, but the facts changed underneath:
  *
- * Two controls, kept orthogonal:
+ *   - The pack values no longer live in this file. They live in
+ *     `web/themes.css`, which the Go-rendered pages and the Vite bundle
+ *     both include. React stops authoring colour; it only picks which
+ *     pack and appearance the cascade should resolve to.
+ *   - The identity names (`vermilion | azure | bone`) that shipped as
+ *     three parallel palettes are the three appearances of the Oni pack
+ *     — `light = Bone, dark = Azure, amoled = Vermilion`, per the owner.
+ *     They drifted from the pack values (templated oni-amoled renders
+ *     `--text: #f7eef0`; React's vermilion was `#ffffff`). This engine
+ *     stops owning those values so the drift becomes unrepresentable.
  *
- *   identity    vermilion | azure | bone     — which world the product is in
- *   appearance  auto | light | dark          — what the OS or the user asked for
+ * STORAGE KEYS stay the same, so `/legacy` and `/` keep using the same
+ * contract — this was the one piece the two sides already shared.
  *
- * They are not the same axis and collapsing them is the mistake worth avoiding.
- * Bone is a light identity and Vermilion a dark one, so "appearance" cannot
- * simply pick a palette. What it does instead is pick the *default* identity
- * when the founder has not chosen one, and set `color-scheme` so form controls
- * and scrollbars match. An explicitly chosen identity always wins over the OS.
+ *   hellogitty-theme         "" | "light" | "dark" | "amoled"  (appearance)
+ *   hellogitty-visual-theme  "" | "pink" | "muertos" | ...     (pack id)
  *
- * PRESERVING THE EXISTING BEHAVIOUR. The Go app stores its appearance under
- * `hellogitty-theme` and its pack under `hellogitty-visual-theme`, and its
- * pre-paint script treats a *missing* appearance key as "auto". The same keys
- * and the same semantics are used here, so a founder who has already picked a
- * theme in the live app finds it picked here too, and a later migration does
- * not strand their choice.
+ * MIGRATION. Users with a React-written `vermilion | azure | bone` in
+ * `hellogitty-visual-theme` are migrated on load, idempotently: the pack
+ * becomes `oni`, the appearance becomes the matching one, and both keys
+ * are rewritten. A later visit to `/legacy` then reads a value the
+ * templated pre-paint recognises.
  *
- * NOT RESETTING ANYTHING. Changing identity sets CSS custom properties on the
- * root element. It does not remount, so React state, scroll position, focus and
- * any panel layout survive the switch by construction rather than by care.
+ * ATTRIBUTE NAMES. React used to write `data-identity` + `data-appearance`,
+ * which no CSS anywhere actually read. It now writes `data-visual-theme` +
+ * `data-theme`, matching the templated side — the cascade in themes.css
+ * keys on exactly those names.
+ *
+ * NO MORE INLINE PAINTING. The old `root.style.setProperty(name, value)`
+ * loop beat every `:root[data-*]` rule because inline styles outweigh
+ * specificity. Removing it was non-negotiable — a bridge that resolves
+ * through a cascade it can't win against is inert.
  */
 
-export type Appearance = 'auto' | 'light' | 'dark'
+export type Appearance = 'auto' | 'light' | 'dark' | 'amoled'
 
 const APPEARANCE_KEY = 'hellogitty-theme'
-const IDENTITY_KEY = 'hellogitty-visual-theme'
+const VISUAL_KEY = 'hellogitty-visual-theme'
+
+/*
+ * The translation from React's three-identity UI (which 2b keeps unchanged)
+ * to the pack + appearance pair the cascade reads. 2c will replace the
+ * identity UI with a four-option appearance row and a separate pack picker;
+ * this map is where the current three-button model sits until then.
+ */
+const IDENTITY_TO_PAIR: Record<Identity, { pack: string; appearance: Appearance }> = {
+  vermilion: { pack: 'oni', appearance: 'amoled' },
+  azure: { pack: 'oni', appearance: 'dark' },
+  bone: { pack: 'oni', appearance: 'light' },
+}
 
 interface ThemeState {
   identity: Identity
   appearance: Appearance
-  /** What `appearance` actually resolves to right now, OS included. */
-  resolvedScheme: 'light' | 'dark'
+  /** The appearance the browser is currently painting as, OS resolved. */
+  resolvedScheme: 'light' | 'dark' | 'amoled'
   setIdentity: (id: Identity) => void
   setAppearance: (a: Appearance) => void
   identities: typeof IDENTITIES
@@ -77,26 +96,58 @@ function isIdentity(v: string | null): v is Identity {
   return v !== null && (IDENTITY_ORDER as string[]).includes(v)
 }
 
+/**
+ * Migrate a pre-2b `hellogitty-visual-theme` value to the new pack+appearance
+ * shape. Idempotent: a second call with the already-migrated value is a no-op.
+ * Only fires on the three React-authored identity names; any legitimate pack
+ * id (`oni`, `pink`, `muertos`…) passes through untouched.
+ */
+function migrateStoredIdentity(): void {
+  const stored = readStored(VISUAL_KEY)
+  if (!isIdentity(stored)) return
+  const pair = IDENTITY_TO_PAIR[stored]
+  writeStored(VISUAL_KEY, pair.pack)
+  // Only overwrite the appearance key if the identity migration implies one
+  // the user didn't set themselves. We're migrating a React identity which
+  // implicitly carried its own appearance, so the write is honest.
+  writeStored(APPEARANCE_KEY, pair.appearance)
+}
+
+/** Read the current state. The migration has already run. */
+function readState(): { identity: Identity; appearance: Appearance } {
+  const storedPack = readStored(VISUAL_KEY)
+  const storedApp = readStored(APPEARANCE_KEY)
+  const appearance: Appearance =
+    storedApp === 'light' || storedApp === 'dark' || storedApp === 'amoled' ? storedApp : 'auto'
+  // Derive the three-identity view for the UI: this is a temporary read of
+  // (pack + appearance) back into an Identity for the Masthead's buttons.
+  // When pack is `oni`, the active identity is the matching appearance's
+  // identity; for any other pack we have no identity to show as "on" and
+  // the Masthead's roving-tabindex picker simply shows no active button.
+  let identity: Identity = 'vermilion'
+  if (storedPack === 'oni' && appearance !== 'auto') {
+    identity =
+      appearance === 'amoled' ? 'vermilion' : appearance === 'dark' ? 'azure' : 'bone'
+  } else if (storedPack !== 'oni' && storedPack) {
+    // Non-oni pack: fall back to showing the appearance-matching identity
+    // for the picker, but nothing selected. 2c's pack picker fixes this.
+    identity = prefersLight() ? 'bone' : 'vermilion'
+  }
+  return { identity, appearance }
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [appearance, setAppearanceState] = useState<Appearance>(() => {
-    const stored = readStored(APPEARANCE_KEY)
-    // A missing key means auto, which is how the Go app's pre-paint reads it.
-    return stored === 'light' || stored === 'dark' ? stored : 'auto'
+  // Run the migration BEFORE reading initial state, so the first render
+  // already reflects the migrated values.
+  const [initial] = useState(() => {
+    migrateStoredIdentity()
+    return readState()
   })
 
-  const [identity, setIdentityState] = useState<Identity>(() => {
-    const stored = readStored(IDENTITY_KEY)
-    if (isIdentity(stored)) return stored
-    // No chosen identity: fall back along the appearance axis. This is the only
-    // place the two axes touch, and only ever as a default.
-    return prefersLight() ? 'bone' : 'vermilion'
-  })
-
+  const [identity, setIdentityState] = useState<Identity>(initial.identity)
+  const [appearance, setAppearanceState] = useState<Appearance>(initial.appearance)
   const [systemLight, setSystemLight] = useState(prefersLight)
 
-  // Follow the OS while the founder is on "auto", and stop following the moment
-  // they are not. A listener that keeps firing after an explicit choice is how
-  // a theme picker ends up feeling haunted.
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return
     const mq = window.matchMedia('(prefers-color-scheme: light)')
@@ -105,12 +156,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return () => mq.removeEventListener('change', onChange)
   }, [])
 
-  const resolvedScheme: 'light' | 'dark' =
+  const resolvedScheme: 'light' | 'dark' | 'amoled' =
     appearance === 'auto' ? (systemLight ? 'light' : 'dark') : appearance
 
   const setIdentity = useCallback((id: Identity) => {
     setIdentityState(id)
-    writeStored(IDENTITY_KEY, id)
+    // 2b's three-button Masthead sets Oni + the identity's matching
+    // appearance; 2c replaces this with pack and appearance as independent
+    // controls.
+    const pair = IDENTITY_TO_PAIR[id]
+    writeStored(VISUAL_KEY, pair.pack)
+    writeStored(APPEARANCE_KEY, pair.appearance)
+    setAppearanceState(pair.appearance)
   }, [])
 
   const setAppearance = useCallback((a: Appearance) => {
@@ -119,19 +176,26 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     writeStored(APPEARANCE_KEY, a === 'auto' ? null : a)
   }, [])
 
-  // Paint the tokens onto the root. Custom properties rather than a class swap,
-  // so nothing unmounts and every consumer updates in one style recalculation.
+  /*
+   * Write the attributes the cascade reads. No inline-style setProperty
+   * loop — that beat the shared cascade on every read; the bridge in
+   * index.css is the sole adapter now. `data-visual-theme` carries the
+   * pack id; `data-theme` carries the resolved appearance. `color-scheme`
+   * follows the resolved appearance so form controls and scrollbars
+   * match; amoled resolves as dark for that purpose.
+   */
   useEffect(() => {
     const root = document.documentElement
-    const vars = cssVarsFor(identity)
-    for (const [name, value] of Object.entries(vars)) root.style.setProperty(name, value)
-    root.dataset.identity = identity
-    root.dataset.appearance = appearance
-    root.style.colorScheme = IDENTITIES[identity].scheme
-    return () => {
-      for (const name of Object.keys(vars)) root.style.removeProperty(name)
-    }
-  }, [identity, appearance])
+    const pack = (readStored(VISUAL_KEY) ?? 'oni') || 'oni'
+    if (pack) root.setAttribute('data-visual-theme', pack)
+    else root.removeAttribute('data-visual-theme')
+
+    if (resolvedScheme === 'light') root.setAttribute('data-theme', 'light')
+    else if (resolvedScheme === 'amoled') root.setAttribute('data-theme', 'amoled')
+    else root.removeAttribute('data-theme')
+
+    root.style.colorScheme = resolvedScheme === 'light' ? 'light' : 'dark'
+  }, [identity, appearance, resolvedScheme])
 
   const value = useMemo<ThemeState>(
     () => ({
