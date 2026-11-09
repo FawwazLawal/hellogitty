@@ -176,22 +176,27 @@ export function Masthead({ data }: { data: DashboardData }) {
  */
 function LiveClock() {
   const { prefs } = useClockPreferences()
-  const now = useLiveClock({ seconds: prefs.seconds })
+  const now = useLiveClock()
   const { time, meridiem, date, iso } = formatClock(now, prefs)
   return (
-    <div className="text-center">
+    <div className="flex flex-col items-center gap-0.5 select-none">
       <time
-        className="block font-mono text-[27px] font-bold leading-none tabular-nums tracking-tight"
-        style={{ color: 'var(--hg-accent)' }}
+        className="block font-mono text-[28px] font-bold leading-none tabular-nums"
+        style={{ color: 'var(--hg-text)', letterSpacing: '0.04em' }}
         dateTime={iso}
       >
-        {time}
-        {meridiem && <> <span className="text-[16px]">{meridiem}</span></>}
+        {/*
+          Templated clock-js at index.html:4596 appends the meridiem into the
+          same string at the same font size (`t += suffix`), and the owner
+          reviewed the page against that. A smaller inline span reads as a
+          different design, which is what "the clock is off" picked up on.
+        */}
+        {time}{meridiem && ` ${meridiem}`}
       </time>
       {date && (
         <span
-          className="mt-1 block text-[10px] uppercase tracking-widest"
-          style={{ color: 'var(--hg-text-muted)' }}
+          className="block font-sans text-[12px] font-medium leading-none uppercase"
+          style={{ color: 'var(--hg-text-muted)', letterSpacing: '0.05em' }}
         >
           {date}
         </span>
@@ -212,7 +217,7 @@ function LiveClock() {
  */
 function WorldClocks() {
   const { clocks } = useWorldClocks()
-  const now = useLiveClock({ seconds: false })
+  const now = useLiveClock()
   if (clocks.length === 0) return null
   return (
     <ul
