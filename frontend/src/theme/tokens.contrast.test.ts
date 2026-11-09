@@ -71,6 +71,37 @@ describe.each(IDENTITY_ORDER)('identity: %s', (id) => {
   })
 
   /**
+   * Status fills promoted from the composed `color-mix(…, 20%, transparent)`
+   * React was using before and from the dangling `--hg-warning-fill` reads on
+   * ConversationsPage. Each pair carries text, so the 4.5:1 floor applies to
+   * each ink on its own fill.
+   */
+  it.each([
+    ['warningInk', 'warningFill'] as const,
+    ['dangerInk', 'dangerFill'] as const,
+    ['tagInk', 'tagFill'] as const,
+  ])('%s is readable on %s', (ink, fill) => {
+    const ratio = contrastRatio(colors[ink], colors[fill])
+    expect(
+      ratio,
+      `${label}: --${ink} ${colors[ink]} on --${fill} ${colors[fill]} is ${ratio.toFixed(2)}:1`,
+    ).toBeGreaterThanOrEqual(4.5)
+  })
+
+  /**
+   * The header band carries the clock, the controls and the brand. It is a
+   * surface that text lands on, so every text ink that lands on it is held
+   * to 4.5:1.
+   */
+  it.each(['text', 'textMuted', 'accent'] as const)('%s clears 4.5:1 on headerSurface', (ink) => {
+    const ratio = contrastRatio(colors[ink], colors.headerSurface)
+    expect(
+      ratio,
+      `${label}: --${ink} ${colors[ink]} on --headerSurface ${colors.headerSurface} is ${ratio.toFixed(2)}:1`,
+    ).toBeGreaterThanOrEqual(4.5)
+  })
+
+  /**
    * SC 1.4.11, non-text contrast. The focus ring is held to 3:1 on every
    * surface it can land on, because the Go side shipped a focus indicator at
    * 2.08:1 for exactly as long as nobody computed it.

@@ -28,6 +28,16 @@
   --color-warning: var(--hg-warning);
   --color-danger: var(--hg-danger);
   --color-focus: var(--hg-focus);
+  --color-header-surface: var(--hg-header-surface);
+  --color-header-muted: var(--hg-header-muted);
+  --color-warning-fill: var(--hg-warning-fill);
+  --color-warning-ink: var(--hg-warning-ink);
+  --color-danger-fill: var(--hg-danger-fill);
+  --color-danger-ink: var(--hg-danger-ink);
+  --color-tag-fill: var(--hg-tag-fill);
+  --color-tag-ink: var(--hg-tag-ink);
+  --color-tag-rule: var(--hg-tag-rule);
+  --color-mascot-bg: var(--hg-mascot-bg);
 
   --radius-chamfer: 10px;
 
@@ -61,6 +71,16 @@
   --hg-warning: #ffc266;
   --hg-danger: #ff8a93;
   --hg-focus: #ff6f7c;
+  --hg-header-surface: #1a131c;
+  --hg-header-muted: #cbb2b9;
+  --hg-warning-fill: #3a2410;
+  --hg-warning-ink: #ffd8a8;
+  --hg-danger-fill: #3a0f14;
+  --hg-danger-ink: #ffd0d5;
+  --hg-tag-fill: #241a22;
+  --hg-tag-ink: #e6d0db;
+  --hg-tag-rule: #4a3240;
+  --hg-mascot-bg: #151016;
   color-scheme: dark;
 }
 
