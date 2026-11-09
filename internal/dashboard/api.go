@@ -467,9 +467,21 @@ type SettingsAPI struct {
 		// on the Handler (the binary sets it from a default; a bare Default
 		// in config never ships a zero, but the field defaults to zero so
 		// the test fakes do).
-		WorkIntervalMinutes int    `json:"workIntervalMinutes"`
-		LastPollUTC         string `json:"lastPollUtc"`
-		NextPollUTC         string `json:"nextPollUtc"`
+		WorkIntervalMinutes int `json:"workIntervalMinutes"`
+		// LastPollUnix is the full unix-seconds moment of the last poll. The
+		// dashboard footer subtracts it from `Date.now()/1000` to compute
+		// "N minutes ago" at any age, matching the templated page's
+		// `data-since` mechanism at web/index.html:4739 (which emits
+		// `.LastPollUnix` and does `Date.now()/1000 - dataset.since` from
+		// JS). The alternative — sending `LastPollUTC` and reconstructing a
+		// date in the client — caps the computed age at 24 hours, since the
+		// client has to assume "today" and roll back a day if the result is
+		// in the future. A poll that actually happened three days ago then
+		// reads as "3 hours ago": confident, plausible, wrong by three
+		// days. #284.
+		LastPollUnix int64  `json:"lastPollUnix"`
+		LastPollUTC  string `json:"lastPollUtc"`
+		NextPollUTC  string `json:"nextPollUtc"`
 		// Known is false before the first poll completes. Without it a fresh
 		// start looks identical to a stalled one.
 		Known bool `json:"known"`
@@ -556,6 +568,7 @@ func (h *Handler) serveSettingsAPI(w http.ResponseWriter, r *http.Request) {
 
 	doc.Polling.IntervalMinutes = p.PollInterval
 	doc.Polling.WorkIntervalMinutes = p.WorkInterval
+	doc.Polling.LastPollUnix = p.LastPollUnix
 	doc.Polling.LastPollUTC = p.LastPollUTC
 	doc.Polling.NextPollUTC = p.NextPollUTC
 	doc.Polling.Known = p.LastPollUnix > 0

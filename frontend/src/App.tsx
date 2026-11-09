@@ -7,6 +7,7 @@ import { ConversationsPanel } from './components/ConversationsPanel'
 import { TrackedRepos } from './components/TrackedRepos'
 import { PipelinePanel } from './components/PipelinePanel'
 import { YourWorkPanel } from './components/YourWorkPanel'
+import { DashboardFooter } from './components/DashboardFooter'
 import { useDashboard, toTrackedRepo, toPipelineView, toWorkView } from './data/dashboard'
 import { useArt } from './art'
 import { DASHBOARD } from './fixtures/dashboard'
@@ -375,6 +376,18 @@ export default function App() {
         </div>
       </main>
       )}
+
+      {/*
+        Dashboard footer: Last check · GitHub API · repo count. Sits OUTSIDE
+        the <main> so its own <footer> element gets the `contentinfo` role
+        (a `<footer>` nested inside `<main>` has no landmark role; moving it
+        here is the cheapest way to make it one). Repo count comes from the
+        SAME document the repository table reads — the footer takes the
+        prop from here, not from the settings doc, so the two numbers
+        can't disagree. See DashboardFooter for the one-fact-one-source
+        rule.
+      */}
+      {view === 'dashboard' && <DashboardFooter repoCount={repoTotals.repoCount} />}
     </div>
   )
 }
