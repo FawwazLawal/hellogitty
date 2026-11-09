@@ -129,6 +129,47 @@ test.describe('/ — dashboard footer status line', () => {
     ).not.toBe(SENTINEL)
   })
 
+  test('a 3-day-old lastPoll reads as days ago, not hours (no 24h wrap)', async ({ page }) => {
+    // The defect this closes: an earlier revision read `polling.lastPollUtc`
+    // (a time-of-day string with no date) and reconstructed a moment by
+    // assuming today, capping the computed age at 24 hours. A poll three
+    // days old then rendered as "N hours ago" — a confident, plausible,
+    // wrong number in the one footer state that exists to say "the poller
+    // is stalled". Fix is `polling.lastPollUnix` + direct subtraction.
+    //
+    // Intercept /settings.json to plant a `lastPollUnix` 3 days in the past;
+    // assert the footer prints a "days" ladder entry and never "hours".
+    const THREE_DAYS_SECS = 3 * 24 * 60 * 60
+    const plantedUnix = Math.floor(Date.now() / 1000) - THREE_DAYS_SECS
+    await page.route('**/app/api/settings.json', async (route) => {
+      const response = await route.fetch()
+      const body = await response.json()
+      body.polling = body.polling ?? {}
+      body.polling.lastPollUnix = plantedUnix
+      body.polling.lastPollUtc = new Date(plantedUnix * 1000).toISOString().slice(11, 19) + 'Z'
+      body.polling.known = true
+      await route.fulfill({ response, body: JSON.stringify(body), contentType: 'application/json' })
+    })
+
+    await page.goto('/', { waitUntil: 'networkidle' })
+
+    const footer = page.getByRole('contentinfo', { name: 'Dashboard status' })
+    await expect(footer).toBeVisible({ timeout: 5000 })
+
+    // The planted moment is 3 days old; the ladder should say "3 days ago".
+    // At a minimum it must say "days" not "hours" — the exact wording may
+    // be "3 days ago" (round) or "2 days ago" (edge of a boundary).
+    await expect
+      .poll(async () => (await footer.textContent()) ?? '', { timeout: 3000 })
+      .toMatch(/days? ago/)
+
+    const text = (await footer.textContent()) ?? ''
+    expect(
+      text,
+      '3-day-old lastPoll must not render as "hours ago" — see parseIso 24h-wrap defect this test closes',
+    ).not.toMatch(/\bhours? ago/)
+  })
+
   test('/ fits 390px with the footer present (no horizontal overflow)', async ({ page, viewport }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/', { waitUntil: 'networkidle' })

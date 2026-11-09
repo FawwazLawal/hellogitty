@@ -27,6 +27,15 @@ export const SettingsDoc = z.object({
   }),
   polling: z.object({
     intervalMinutes: z.number().int(),
+    /** Full unix-seconds moment of the last poll — the fact the footer
+     * subtracts from `Date.now() / 1000` to compute "N ago" at any age.
+     * Zero or absent when no poll has completed (see `known`). Earlier
+     * revisions of the footer reconstructed a date from `lastPollUtc`
+     * (a time-of-day only), which capped the computed age at 24 hours —
+     * a poll three days old would read as hours. #284. */
+    lastPollUnix: z.number().int().default(0),
+    /** Human-formatted UTC time-of-day. Kept for the hover title; never
+     * subtract from the current time, because it has no date. */
     lastPollUtc: z.string(),
     nextPollUtc: z.string(),
     /** False before the first poll. A fresh start is not a stalled one. */

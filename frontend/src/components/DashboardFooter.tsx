@@ -20,10 +20,21 @@ import { useLiveClock } from '../data/clock'
  * settings copy here should be dropped, not maintained in parallel.
  *
  * LIVE AGO — the "N minutes ago" stamp uses `useLiveClock()` to recompute on
- * every tick, matching the templated page which runs a 60s timer on
- * `data-since`. A React component that formats once on render would say
- * "2 minutes ago" an hour later, which is worse than the templated version
- * and exactly the drift this issue exists to close.
+ * every tick, matching the templated page which runs a 15-second interval
+ * on `data-since` (web/index.html pollage tick). A React component that
+ * formats once on render would say "2 minutes ago" an hour later, which is
+ * worse than the templated version and exactly the drift this issue exists
+ * to close.
+ *
+ * The "N ago" calculation subtracts `polling.lastPollUnix` (a full epoch
+ * second from the server) from `Date.now()/1000`, matching the templated
+ * approach of `data-since={{.LastPollUnix}}`. An earlier revision read
+ * `polling.lastPollUtc` (a time-of-day string with no date) and
+ * reconstructed a moment by assuming today — that capped the age at 24
+ * hours and silently misreported a stalled or long-paused instance as
+ * "N hours ago" when it was days. One fact, two representations; the lossy
+ * one is gone. `lastPollUtc` is kept only as the hover title, which is
+ * what it is actually useful for.
  */
 
 // The templated foot-note constants. Pinned here so a test can assert React
@@ -53,8 +64,8 @@ export function DashboardFooter({ repoCount }: DashboardFooterProps) {
   const api = d.api
   const inPipeline = d.hasPipeline ? d.repos.inPipeline : null
 
-  const lastCheck = polling.known
-    ? relativeAgo(now, parseIso(polling.lastPollUtc))
+  const lastCheck = polling.known && polling.lastPollUnix > 0
+    ? relativeAgo(now, new Date(polling.lastPollUnix * 1000))
     : null
 
   return (
@@ -141,39 +152,15 @@ function ApiGauge({ percent }: { percent: number }) {
 }
 
 /**
- * The server sends `lastPollUtc` as a string already formatted for display
- * ("14:37:02", or similar). We need a `Date` to compute "N minutes ago"
- * — so we rebuild one from the UTC time it carries. The server also sends
- * a `polling.known` flag, so an unparseable string here is a shape
- * mismatch rather than a legitimate empty, and treating it as "not yet"
- * is safer than crashing on bad input.
- */
-function parseIso(s: string): Date | null {
-  if (!s) return null
-  // The settings endpoint sends "HH:MM:SS UTC"-style strings for lastPollUtc,
-  // not an ISO timestamp — we don't have the date here. The relative
-  // calculation needs a real moment, so we assume today and roll back a
-  // day if the parsed moment is in the future, which happens around the
-  // UTC day boundary.
-  const match = /^(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(s)
-  if (!match) {
-    // ISO fallback for a future server change that starts sending RFC3339.
-    const t = Date.parse(s)
-    return Number.isFinite(t) ? new Date(t) : null
-  }
-  const [, hh, mm, ss] = match
-  const base = new Date()
-  base.setUTCHours(Number(hh), Number(mm), Number(ss ?? '0'), 0)
-  // Future → yesterday. A one-minute slop lets "just now" land at zero
-  // rather than flipping to "23 hours ago".
-  if (base.getTime() > Date.now() + 60_000) base.setUTCDate(base.getUTCDate() - 1)
-  return base
-}
-
-/**
- * The templated page's own ladder — "just now", "N minutes ago", "N hours ago",
- * "N days ago". Kept in one place rather than per-row so if the owner tunes
- * the wording we move it once.
+ * The relative-time ladder — "just now", "a minute ago", "N minutes ago",
+ * "an hour ago", "N hours ago", "a day ago", "N days ago". Kept in one
+ * place so if the owner tunes the wording the dashboard moves together.
+ *
+ * NOT a port of the templated `words()` function. Templated emits mixed
+ * forms like "1 hour 20 min ago"; this ladder collapses to a single unit
+ * ("an hour ago") and reads better in a status line. ADR allows "different
+ * where better" — flagging this here so a future reviewer doesn't "fix" it
+ * back to a template it was never meant to match.
  */
 export function relativeAgo(now: Date, then: Date | null): string | null {
   if (!then) return null

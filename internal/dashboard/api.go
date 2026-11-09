@@ -460,7 +460,7 @@ type SettingsAPI struct {
 	} `json:"config"`
 
 	Polling struct {
-		IntervalMinutes int    `json:"intervalMinutes"`
+		IntervalMinutes int `json:"intervalMinutes"`
 		// WorkIntervalMinutes is the work-board loop's cadence, which is
 		// SEPARATE from the repo poll interval above. The templated Checks
 		// panel calls it "Your work refresh". Zero when the field is unset
