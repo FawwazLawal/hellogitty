@@ -129,6 +129,7 @@ export const WorkItemFromApi = z.object({
   yourMove: z.boolean(),
   status: z.string(),
 })
+export type WorkItemFromApi = z.infer<typeof WorkItemFromApi>
 
 export const WorkFromApi = z.object({
   known: z.boolean(),
@@ -140,6 +141,7 @@ export const WorkFromApi = z.object({
   items: z.array(WorkItemFromApi),
   error: z.string().optional(),
 })
+export type WorkFromApi = z.infer<typeof WorkFromApi>
 
 export const ConversationsFromApi = z.object({
   known: z.boolean(),
@@ -147,6 +149,29 @@ export const ConversationsFromApi = z.object({
   needYou: z.number().int(),
   total: z.number().int(),
 })
+
+/**
+ * Watched items — the Watched panel's rows. Shape is shared with the
+ * alerts document (both are built from the same `watchRow` on the Go
+ * side via `toWatchItems`), so the React side has one row type to
+ * render. `status` carries the server's own vocabulary string
+ * ("CLAIMED", "CLOSED_FIXED", "CLOSED_WONT", "OPEN", ...) — a React
+ * row should disagree about colour, never about what state a row is
+ * in, same reasoning as every other projection in this document.
+ */
+export const WatchItemFromApi = z.object({
+  repo: z.string(),
+  number: z.number().int(),
+  title: z.string(),
+  url: z.string(),
+  status: z.string().optional().default(''),
+  claimDetail: z.string().optional().default(''),
+  outside: z.boolean().optional().default(false),
+  seen: z.boolean().optional().default(false),
+  /** RFC 3339, empty when the backing watchRow has never transitioned. */
+  changedAt: z.string().optional().default(''),
+})
+export type WatchItemFromApi = z.infer<typeof WatchItemFromApi>
 
 export const DashboardApiDoc = z.object({
   /** RFC 3339, or empty when no poll has completed. Not the request time. */
@@ -159,6 +184,7 @@ export const DashboardApiDoc = z.object({
   pipeline: PipelineFromApi,
   work: WorkFromApi,
   conversations: ConversationsFromApi,
+  watched: z.array(WatchItemFromApi),
 })
 export type DashboardApiDoc = z.infer<typeof DashboardApiDoc>
 
