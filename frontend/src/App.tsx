@@ -473,8 +473,10 @@ export default function App() {
               const node = panels[id]
               if (!node) return null
               // Your-work is the only panel that opts in to row
-              // snapping, matching web/index.html:4952's
-              // data-snap-rows attribute. Every other panel's
+              // snapping, matching web/index.html:4506's
+              // data-snap-rows attribute (the <section> on the
+              // your-work panel; three later occurrences read the
+              // attribute from JS). Every other panel's
               // resize commits a raw height; snap is a Your-work
               // decoration for rows that would otherwise slice.
               const snap = id === 'your-work'
