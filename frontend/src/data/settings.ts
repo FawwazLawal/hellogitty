@@ -27,6 +27,12 @@ export const SettingsDoc = z.object({
   }),
   polling: z.object({
     intervalMinutes: z.number().int(),
+    /** The work-board loop cadence, in minutes — separate from
+     * `intervalMinutes`, which is the repo-poll cadence. Zero when the
+     * field was not set on the Handler (test fakes mostly; the binary
+     * always wires it from a const in main.go). Checks panel reads this
+     * as "Your work refresh". */
+    workIntervalMinutes: z.number().int(),
     /** Full unix-seconds moment of the last poll — the fact the footer
      * subtracts from `Date.now() / 1000` to compute "N ago" at any age.
      * Zero or absent when no poll has completed (see `known`). Earlier
@@ -40,6 +46,14 @@ export const SettingsDoc = z.object({
     nextPollUtc: z.string(),
     /** False before the first poll. A fresh start is not a stalled one. */
     known: z.boolean(),
+    /** Last repo-poll cycle duration, in milliseconds. Zero when no
+     * cycle has reached the point of recording a duration — the first
+     * one has not finished, or an earlier one aborted on rate-limit
+     * before the final tally. THIS IS A DIFFERENT SIGNAL FROM `known`
+     * above: `known` ticks true the moment any repo poll completes,
+     * but a rate-limited cycle still leaves `lastCycleMs` at zero.
+     * Gate the em-dash on `lastCycleMs === 0`, never on `!known`. */
+    lastCycleMs: z.number().int(),
   }),
   api: z.object({
     known: z.boolean(),
@@ -47,6 +61,12 @@ export const SettingsDoc = z.object({
     limit: z.number().int(),
     percent: z.number().int(),
     resetUtc: z.string(),
+    /** API requests charged by the last repo-poll cycle. Zero under
+     * the same conditions as polling.lastCycleMs (both fields come
+     * from the same `tel.CycleDuration > 0` block on the server), so
+     * the em-dash rule is the same: gate on `callsPerCycle === 0`,
+     * not on `!known`. */
+    callsPerCycle: z.number().int(),
   }),
   repos: z.object({
     /** What the next poll will look at: snapshot minus anything removed. */

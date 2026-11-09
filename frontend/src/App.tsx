@@ -3,6 +3,16 @@ import { lazy, Suspense } from 'react'
 import { Masthead } from './components/Masthead'
 import { NavTabs } from './components/NavTabs'
 import { KpiRail } from './components/KpiRail'
+import { ChecksPanel } from './components/ChecksPanel'
+import { SecurityPanel } from './components/SecurityPanel'
+import { WatchedPanel } from './components/WatchedPanel'
+import { RecentIssuesPanel } from './components/RecentIssuesPanel'
+import { FeedPanel } from './components/FeedPanel'
+import { YourReposPanel } from './components/YourReposPanel'
+import { useSettings } from './data/settings'
+import { useSecurity } from './data/security'
+import { useRecentIssues } from './data/recentIssues'
+import { useFeed } from './data/feed'
 import { ConversationsPanel } from './components/ConversationsPanel'
 import { TrackedRepos } from './components/TrackedRepos'
 import { PipelinePanel } from './components/PipelinePanel'
@@ -270,6 +280,10 @@ export default function App() {
     `answered` below, which is the distinction that replaced it.
   */
   const dashboard = useDashboard()
+  const settings = useSettings()
+  const security = useSecurity()
+  const recentIssues = useRecentIssues()
+  const feed = useFeed()
 
   const liveTiles = dashboard.isSuccess ? dashboard.data?.kpis : undefined
   const tiles = liveTiles
@@ -367,11 +381,28 @@ export default function App() {
           <div className="flex min-w-0 flex-col gap-3">
             <ConversationsPanel data={conversations} />
             <TrackedRepos repos={repos} totals={repoTotals} />
+            {recentIssues.data && (
+              <RecentIssuesPanel
+                rows={recentIssues.data.issues}
+                total={recentIssues.data.total}
+              />
+            )}
           </div>
 
           <div className="flex flex-col gap-3">
             <PipelinePanel pipeline={pipeline} />
             <YourWorkPanel work={work} user={answered ? dashboard.data.work.login || DASHBOARD.user : DASHBOARD.user} />
+            {/*
+              YourReposPanel takes the raw WorkFromApi (needs login +
+              items), so it can filter client-side. It reads its own
+              empty/loading state off `work.known`, matching the
+              "unknown is not zero" rule every panel in this page shares.
+            */}
+            {answered && <YourReposPanel work={dashboard.data.work} />}
+            {feed.data && <FeedPanel rows={feed.data.rows} known={feed.data.known} />}
+            {answered && <WatchedPanel rows={dashboard.data.watched} />}
+            {security.data && <SecurityPanel data={security.data} />}
+            {settings.data && <ChecksPanel data={settings.data} />}
           </div>
         </div>
       </main>
