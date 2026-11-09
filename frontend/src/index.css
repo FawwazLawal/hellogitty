@@ -457,3 +457,18 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .hg-feed-fresh { animation: none; }
 }
+
+/*
+ * Panel folding (#282). A folded panel shows only its header; the
+ * body collapses. The dashboard writes `[data-folded="true"]` on
+ * the slot wrapper and this rule hides every direct child of the
+ * panel that isn't the heading. Matches the templated `.folded`
+ * class behaviour at web/index.html around :5339 while keeping the
+ * selector DOM-structure-agnostic — the templated rule targeted
+ * `.folded > *:not(h2)`, which is the shape every panel chrome
+ * in this codebase already produces (PanelHeader renders a <header>
+ * containing an <h2>; the body is a sibling <div>).
+ */
+.hg-panel-slot[data-folded="true"] > section > *:not(header) {
+  display: none;
+}
