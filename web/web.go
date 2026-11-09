@@ -1,10 +1,50 @@
 // Package web holds the dashboard template and the banner mascot clips, compiled into the binary.
 package web
 
-import "embed"
+import (
+	"embed"
+	"strings"
+)
 
 //go:embed index.html
 var Index string
+
+// ThemePacks is the pack-and-appearance token cascade. The templated pages
+// pull it in via the themePacksMarker inside their <style> blocks, and the
+// Vite bundle imports the same file so React resolves the same values
+// through the same cascade. See frontend/src/index.css for the bridge that
+// maps template token names (--bg, --panel, --text…) to React's own
+// (--hg-canvas, --hg-surface, --hg-text…).
+//
+//go:embed themes.css
+var ThemePacks string
+
+// themePacksMarker is where init() splices ThemePacks into Index. The name
+// is a constant so the string exists in exactly one place; a marker typo in
+// index.html would otherwise silently de-theme every pack.
+const themePacksMarker = "/*!THEME-PACKS!*/"
+
+// DO NOT REPLACE THIS SPLICE WITH {{template "theme-packs"}}.
+//
+// The obvious shape — {{define "theme-packs"}}…{{end}} plus a {{template}}
+// call from base-css — hits html/template's CSS-context clone-depth guard.
+// The engine creates a per-context clone of every sub-template reached
+// from a <style> block, and base-css → theme-packs blows past the limit.
+// This splice is a build-time concatenation of content we control; no
+// escaping is needed, and bypassing the escaper is what makes it work.
+//
+// strings.Replace returns the string unchanged when the marker is absent,
+// which would silently de-theme every pack if someone reformatted
+// index.html and dropped the marker. That failure mode is this file's
+// failure class, so init() refuses to leave in that state: it panics with
+// the marker name and the file. Startup failure is loud and correct for a
+// packaging error; a running binary with no packs is not.
+func init() {
+	if !strings.Contains(Index, themePacksMarker) {
+		panic("web: " + themePacksMarker + " not found in web/index.html; every theme pack would silently fall back to the base cascade. Put the marker back in the <style> block.")
+	}
+	Index = strings.Replace(Index, themePacksMarker, ThemePacks, 1)
+}
 
 // Help is the Help page. It shares index.html's base styles and theme switch, so it is parsed
 // together with it.
