@@ -5,7 +5,6 @@ import { SettingsPage } from './components/SettingsPage'
 import { PipelinePage } from './components/PipelinePage'
 import { WorkPage } from './components/WorkPage'
 import { IssuesPage } from './components/IssuesPage'
-import { HelpPage } from './components/HelpPage'
 import { YourReposPage } from './components/YourReposPage'
 import { ConversationsPage } from './components/ConversationsPage'
 import { FeedPage } from './components/FeedPage'
@@ -73,6 +72,21 @@ import { usePageTitle } from './hooks/usePageTitle'
   works for every page without a per-page marker, and a future lazy page gets
   it for free by using this same fallback shape.
 */
+/*
+  The help page, on demand.
+
+  It carries the stemmed search ranker — a stemmer, a stop-word list, an
+  alternatives table and a scoring pass — which exists to serve one search box
+  on one page that a reader opens when they are stuck. Everyone else was paying
+  for it on every page load.
+
+  Same reasoning as /repos and /alerts below: weight that serves one destination
+  belongs in that destination's chunk.
+*/
+const HelpPage = lazy(() =>
+  import('./components/HelpPage').then((m) => ({ default: m.HelpPage })),
+)
+
 const AlertsRouter = lazy(() =>
   import('./components/alerts/AlertsRouter').then((m) => ({ default: m.AlertsRouter })),
 )
@@ -270,7 +284,11 @@ export default function App() {
       )}
       {view === 'your-repos' && <YourReposPage />}
       {view === 'conversations' && <ConversationsPage />}
-      {view === 'help' && <HelpPage />}
+      {view === 'help' && (
+        <Suspense fallback={<main data-loading="true" className="px-4 py-10 text-[12px]" style={{ color: 'var(--hg-text-muted)' }}>Loading help…</main>}>
+          <HelpPage />
+        </Suspense>
+      )}
       {view === 'alerts' && (
         <Suspense fallback={<main data-loading="true" className="px-4 py-10 text-[12px]" style={{ color: 'var(--hg-text-muted)' }}>Loading…</main>}>
           <AlertsRouter pathname={pathname} />
