@@ -822,6 +822,18 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// /list takes ?prs=... or ?stage=... query parameters; the React
 		// shell receives them in location.search and routes on them client-
 		// side, so deep links survive.
+		//
+		// REFUSE INVALID QUERIES THE WAY THE TEMPLATED PAGE DOES. Without
+		// this, the SPA fallback would answer 200 for bare /list, for the
+		// pr=open typo, and for any other junk, and the chunked ListPage
+		// would render its "Pick a count" placeholder forever behind a
+		// Suspense "Loading…" during the first lazy fetch. The templated
+		// serveList 404s all of those, and so does `listQueryIsValid` here —
+		// one check both routes share, so they cannot drift.
+		if !listQueryIsValid(r.URL.Query()) {
+			http.NotFound(w, r)
+			return
+		}
 		h.serveAppIndex(w, r)
 	case r.URL.Path == "/legacy/list":
 		h.serveList(w, r)
