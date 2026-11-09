@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { reduce, stateEq, columnOf, type LayoutAction } from './reducer'
+import { reduce, stateEq, columnOf, visibleAllFolded, type LayoutAction } from './reducer'
 import { defaultLayout, PRESETS, type LayoutState } from './schema'
 
 /**
@@ -216,5 +216,41 @@ describe('columnOf', () => {
   it('finds main and rail panels', () => {
     expect(columnOf(d, 'your-work')).toBe('main')
     expect(columnOf(d, 'feed')).toBe('rail')
+  })
+})
+
+describe('visibleAllFolded', () => {
+  // The vacuous-truth guard is the point. [].every(...) is true,
+  // so a dashboard with every panel hidden would otherwise claim
+  // "everything is folded" against zero panels — the Collapse/Expand
+  // toggle would then render "Expand all" with nothing to expand,
+  // which is a statement about the world made from an empty set.
+  it('returns false when the visible set is empty, even though [].every is vacuously true', () => {
+    const s: LayoutState = { ...d, hidden: [...d.main, ...d.rail] }
+    expect(visibleAllFolded(s)).toBe(false)
+  })
+
+  it('returns true when every visible panel is in folded', () => {
+    const s: LayoutState = { ...d, folded: [...d.main, ...d.rail] }
+    expect(visibleAllFolded(s)).toBe(true)
+  })
+
+  // Hidden panels do NOT need to be folded for allFolded to be true.
+  // The question is about the visible set only.
+  it('ignores hidden panels', () => {
+    const s: LayoutState = {
+      ...d,
+      hidden: [d.main[0]],
+      folded: [...d.main, ...d.rail].filter((id) => id !== d.main[0]),
+    }
+    expect(visibleAllFolded(s)).toBe(true)
+  })
+
+  it('returns false when one visible panel is NOT folded', () => {
+    const s: LayoutState = {
+      ...d,
+      folded: [...d.main, ...d.rail].slice(0, -1),
+    }
+    expect(visibleAllFolded(s)).toBe(false)
   })
 })

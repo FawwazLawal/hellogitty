@@ -204,6 +204,21 @@ export function visiblePanelIds(state: LayoutState): PanelId[] {
 }
 
 /**
+ * "Every visible panel is folded." Powers the Collapse/Expand all
+ * button's label — see web/index.html:5708 `allFolded`. The
+ * `ids.length > 0` guard is load-bearing: `[].every(...)` is
+ * VACUOUSLY TRUE, which would make a dashboard with every panel
+ * hidden claim "Expand all" against nothing — a quiet lie of the
+ * exact shape this codebase keeps finding (an empty set rendered
+ * as a statement about the world). Pinned by its test.
+ */
+export function visibleAllFolded(state: LayoutState): boolean {
+  const ids = visiblePanelIds(state)
+  if (ids.length === 0) return false
+  return ids.every((id) => state.folded.includes(id))
+}
+
+/**
  * Structural equality for two layout states. Preset and base are
  * ignored on purpose: this answers "do these describe the same
  * dashboard arrangement", which is the question the Reset button
