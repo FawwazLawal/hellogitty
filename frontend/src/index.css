@@ -472,3 +472,116 @@ body {
 .hg-panel-slot[data-folded="true"] > section > *:not(header) {
   display: none;
 }
+
+/*
+ * In-place panel controls (#335): grip, fold toggle, resize handle.
+ * Mirrors web/index.html:22-46 — the templated decoration CSS for
+ * .pgrip, .pfold and .presize — with the react-side peculiarity
+ * that these controls sit on the SLOT wrapper rather than inside
+ * the panel's own <section>. The slot is position: relative so
+ * the absolute-positioned grip and fold sit at the panel's own
+ * top corners; the resize handle sits at the bottom edge of the
+ * slot and can therefore cover the panel's natural flow bottom.
+ */
+
+.hg-panel-slot { position: relative; }
+
+.hg-panel-slot__grip,
+.hg-panel-slot__fold {
+  position: absolute;
+  top: 6px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--hg-text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+  cursor: pointer;
+}
+.hg-panel-slot__grip { left: 6px; cursor: grab; }
+.hg-panel-slot__fold { right: 6px; }
+
+/* Reveal on hover, focus-visible, or while resizing — same
+ * discipline as the templated page: the controls are quiet by
+ * default so they do not compete with the panel's own content,
+ * and declare themselves the moment the user approaches. */
+.hg-panel-slot:hover > .hg-panel-slot__grip,
+.hg-panel-slot:hover > .hg-panel-slot__fold,
+.hg-panel-slot__grip:focus-visible,
+.hg-panel-slot__fold:focus-visible,
+.hg-panel-slot__grip:hover,
+.hg-panel-slot__fold:hover {
+  opacity: 1;
+  color: var(--hg-text);
+  background: var(--hg-surface-raised);
+  border-color: var(--hg-line);
+}
+
+.hg-panel-slot__grip:focus-visible,
+.hg-panel-slot__fold:focus-visible,
+.hg-panel-slot .presize:focus-visible {
+  outline: 2px solid var(--hg-text);
+  outline-offset: 1px;
+}
+
+/* The fold toggle's chevron reads direction visually: points up
+ * when expanded (click to collapse), down when collapsed (click
+ * to expand). Rotation suppressed under reduced motion. */
+.hg-panel-slot__fold svg { transition: transform 120ms ease-out; }
+.hg-panel-slot__fold[aria-expanded="false"] svg { transform: rotate(180deg); }
+
+/* Resize handle. touch-action: none keeps a touch drag from
+ * scrolling the page instead of resizing the panel — the single
+ * property that makes mobile resize possible at all. */
+.hg-panel-slot .presize {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 10px;
+  z-index: 3;
+  cursor: ns-resize;
+  touch-action: none;
+  background: transparent;
+  outline-offset: -1px;
+}
+.hg-panel-slot .presize::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  width: 36px;
+  height: 3px;
+  margin-left: -18px;
+  border-radius: 2px;
+  background: var(--hg-text-muted);
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+.hg-panel-slot:hover > .presize::after,
+.hg-panel-slot .presize:focus-visible::after,
+.hg-panel-slot > section.resizing ~ .presize::after,
+.hg-panel-slot > section.resizing + .presize::after {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hg-panel-slot__grip,
+  .hg-panel-slot__fold,
+  .hg-panel-slot__fold svg,
+  .hg-panel-slot .presize::after {
+    transition: none;
+  }
+}
+
+/* A folded panel hides its resize handle — resizing a header
+ * row is meaningless. The handle itself is also removed from the
+ * DOM when folded (see PanelSlot), this rule is belt-and-braces
+ * for a future change that mounts it unconditionally. */
+.hg-panel-slot[data-folded="true"] .presize { display: none; }
