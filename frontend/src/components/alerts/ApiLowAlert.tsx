@@ -1,6 +1,7 @@
 import { useAlerts } from '../../data/alerts'
 import { AlertPage, type Stat } from '../AlertPage'
 import { AlertList, Fact } from './parts'
+import { usePageTitle } from '../../hooks/usePageTitle'
 
 /**
  * /alerts/api-low — the quota meter and a line-by-line reset breakdown.
@@ -11,6 +12,7 @@ import { AlertList, Fact } from './parts'
  * schema makes the React branch obvious.
  */
 export function ApiLowAlert() {
+  usePageTitle('API running low · HelloGitty')
   const q = useAlerts()
   const d = q.data
   const api = d?.api

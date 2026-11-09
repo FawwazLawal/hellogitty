@@ -1,6 +1,7 @@
 import { useAlerts } from '../../data/alerts'
 import { AlertPage, type Stat } from '../AlertPage'
 import { AlertList, EmptyNote, WatchRow } from './parts'
+import { usePageTitle } from '../../hooks/usePageTitle'
 
 /**
  * /alerts/watched-claimed — issues you watched that someone else claimed.
@@ -12,6 +13,7 @@ import { AlertList, EmptyNote, WatchRow } from './parts'
  * the second.
  */
 export function WatchedClaimedAlert() {
+  usePageTitle('Watched issue claimed · HelloGitty')
   const q = useAlerts()
   const d = q.data
   const watch = d?.watch

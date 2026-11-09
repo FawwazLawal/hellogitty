@@ -1,6 +1,7 @@
 import { useAlerts } from '../../data/alerts'
 import { AlertPage, type Stat } from '../AlertPage'
 import { AlertList, ItemRow, EmptyNote } from './parts'
+import { usePageTitle } from '../../hooks/usePageTitle'
 
 /**
  * /alerts/your-move — pull requests and issues that need a move from you.
@@ -11,6 +12,7 @@ import { AlertList, ItemRow, EmptyNote } from './parts'
  * page exists to show.
  */
 export function YourMoveAlert() {
+  usePageTitle('Your move · HelloGitty')
   const q = useAlerts()
   const d = q.data
   const w = d?.work

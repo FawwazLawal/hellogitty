@@ -1,9 +1,11 @@
 import { useAlerts } from '../../data/alerts'
 import { AlertPage, type Stat } from '../AlertPage'
 import { AlertList, EmptyNote, InlineNote } from './parts'
+import { usePageTitle } from '../../hooks/usePageTitle'
 
 /** /alerts/check-failed — repositories whose last poll failed. */
 export function CheckFailedAlert() {
+  usePageTitle('Check failed · HelloGitty')
   const q = useAlerts()
   const d = q.data
   const c = d?.checks

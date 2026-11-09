@@ -17,6 +17,7 @@ import { YourWorkPanel } from './components/YourWorkPanel'
 import { useDashboard, toTrackedRepo, toPipelineView, toWorkView } from './data/dashboard'
 import { useArt } from './art'
 import { DASHBOARD } from './fixtures/dashboard'
+import { usePageTitle } from './hooks/usePageTitle'
 
 /**
  * The dashboard shell.
@@ -158,6 +159,13 @@ function viewFor(pathname: string): View {
 export default function App() {
   const pathname = typeof location !== 'undefined' ? location.pathname : '/'
   const view = viewFor(pathname)
+  // The dashboard is the only view with no per-page component — it is
+  // inline JSX in this function — so App owns its title. Every other
+  // view's page component sets its own via usePageTitle, and gets the
+  // null branch here so the parent effect does not clobber the child's.
+  // The templated /legacy dashboard has `<title>HelloGitty</title>`, same
+  // as the shell's static default in index.html.
+  usePageTitle(view === 'dashboard' ? 'HelloGitty' : null)
   // No `identity` read here any more: the registry resolves per identity, so
   // this component no longer needs to know which one it is in.
   const footerArt = useArt('footer')

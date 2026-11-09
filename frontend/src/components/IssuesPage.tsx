@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
+import { usePageTitle } from '../hooks/usePageTitle'
 import { CircleDot, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Panel, PanelHeader } from './chrome/Chrome'
 
@@ -94,6 +95,7 @@ function readUrl() {
 }
 
 export function IssuesPage() {
+  usePageTitle('Open issues · HelloGitty')
   const initial = readUrl()
   const [page, setPage] = useState(initial.page)
   const [query, setQuery] = useState(initial.query)

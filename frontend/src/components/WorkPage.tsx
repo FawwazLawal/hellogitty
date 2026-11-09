@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
+import { usePageTitle } from '../hooks/usePageTitle'
 import { Briefcase, AlertTriangle, ExternalLink, Undo2 } from 'lucide-react'
 import { Panel, PanelHeader } from './chrome/Chrome'
 import { useSession } from '../data/settings'
@@ -99,6 +100,7 @@ const GROUPS: { id: Group; label: string; hint: string }[] = [
 ]
 
 export function WorkPage() {
+  usePageTitle('Your work · HelloGitty')
   const q = useWork()
   const session = useSession()
   const restore = useRestore(session.data?.token)
