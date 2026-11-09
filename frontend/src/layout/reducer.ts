@@ -106,18 +106,27 @@ export function reduce(state: LayoutState, action: LayoutAction): LayoutState {
       } as Partial<LayoutState>)
     }
 
+    // Move a panel to the END of the named column. The templated
+    // keyboard contract at web/index.html expects this: ArrowLeft from
+    // the rail places the panel at the bottom of main, not at its
+    // current rail index projected onto main (which is what
+    // `move-across-columns` does for an eventual drag-drop user). The
+    // two actions are deliberately distinct.
+    //
+    // Strips the id from BOTH columns before appending — mirrors
+    // `place` in the templated code, which does the same as a guard
+    // against an id showing up in both arrays and being rendered
+    // twice. Equivalent-mutant per the three-category rubric when
+    // state invariants are intact; kept as belt-and-braces.
     case 'set-column': {
       const cur = columnOf(state, action.id)
       if (cur === action.column) return state
-      if (!cur) return state
-      const from = cur
-      const to = action.column
-      const fromArr = state[from].filter((x) => x !== action.id)
-      const toArr = [...state[to], action.id]
-      return asCustom(state, {
-        [from]: fromArr,
-        [to]: toArr,
-      } as Partial<LayoutState>)
+      const main = state.main.filter((x) => x !== action.id)
+      const rail = state.rail.filter((x) => x !== action.id)
+      if (action.column === 'main') {
+        return asCustom(state, { main: [...main, action.id], rail })
+      }
+      return asCustom(state, { main, rail: [...rail, action.id] })
     }
 
     // Picking a preset is a wholesale replacement — the user is
