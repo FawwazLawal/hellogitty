@@ -86,6 +86,32 @@ export interface ColorTokens {
   plateLo: string
   plateEdge: string
   rivet: string
+
+  /*
+   * Promoted from composed values and from dangling unset `var(--hg-…)` reads.
+   *
+   * The CSS packs state the fill colours for status pills and tag chips
+   * outright — `pink` dark declares `--warn-fill: #4d0a28` by hand — while
+   * React was composing them inline with `color-mix(in srgb, var(--hg-warning)
+   * 20%, transparent)` or, in two places on `ConversationsPage`, reading
+   * variables that nothing ever set (`--hg-warning-fill`, `--hg-warning-ink`),
+   * leaving the background transparent instead of whatever the pack wanted.
+   *
+   * The composed and unset shapes are both lies about the palette: a
+   * designer-stated hue cannot be recovered from a mix of its peers at an
+   * invented alpha. These fields let the palette say the real value, and
+   * are what the pack-era PR will fill from each pack's own tokens.
+   */
+  headerSurface: string
+  headerMuted: string
+  warningFill: string
+  warningInk: string
+  dangerFill: string
+  dangerInk: string
+  tagFill: string
+  tagInk: string
+  tagRule: string
+  mascotBg: string
 }
 
 export interface IdentityDefinition {
@@ -137,6 +163,21 @@ const VERMILION: IdentityDefinition = {
     plateLo: '#1a1219',
     plateEdge: '#a77483',
     rivet: '#f0c489',
+    // Promotions. Header band sits a shade off the panel so the masthead
+    // reads as a band rather than a continuous sheet with the content below
+    // it. Fill-ink pairs are warm — they already live inside this red
+    // identity, where a cool fill would read as foreign — and each pair is
+    // held above 4.5:1 by the contrast test.
+    headerSurface: '#1a131c',
+    headerMuted: '#cbb2b9',
+    warningFill: '#3a2410',
+    warningInk: '#ffd8a8',
+    dangerFill: '#3a0f14',
+    dangerInk: '#ffd0d5',
+    tagFill: '#241a22',
+    tagInk: '#e6d0db',
+    tagRule: '#4a3240',
+    mascotBg: '#151016',
   },
 }
 
@@ -181,6 +222,16 @@ const AZURE: IdentityDefinition = {
     plateLo: '#121c30',
     plateEdge: '#8fb4dd',
     rivet: '#e8c07f',
+    headerSurface: '#0e1a30',
+    headerMuted: '#a9bdd8',
+    warningFill: '#3a2810',
+    warningInk: '#ffd8a8',
+    dangerFill: '#3a1220',
+    dangerInk: '#ffd0d5',
+    tagFill: '#1a2538',
+    tagInk: '#c8d5e8',
+    tagRule: '#2e4466',
+    mascotBg: '#10192e',
   },
 }
 
@@ -220,6 +271,19 @@ const BONE: IdentityDefinition = {
     plateLo: '#8fa0c4',
     plateEdge: '#4a5c87',
     rivet: '#a06f28',
+    // Light identity: header band equals surface (paper), and fills are
+    // warm-paper tints with dark inks. Ink-on-fill contrast is the gate; the
+    // contrast test asserts each pair.
+    headerSurface: '#ffffff',
+    headerMuted: '#3a4868',
+    warningFill: '#f5e4c6',
+    warningInk: '#5a3800',
+    dangerFill: '#f5d4d8',
+    dangerInk: '#6a0e22',
+    tagFill: '#eef2fb',
+    tagInk: '#1a2538',
+    tagRule: '#c3d2ea',
+    mascotBg: '#ffffff',
   },
 }
 
