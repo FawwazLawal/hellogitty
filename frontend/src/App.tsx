@@ -24,7 +24,27 @@ import { DASHBOARD } from './fixtures/dashboard'
 import { usePageTitle } from './hooks/usePageTitle'
 import { useLayout } from './layout/useLayout'
 import { useShortcuts } from './layout/useShortcuts'
+import { PanelSlot } from './layout/PanelSlot'
 import type { PanelId } from './layout/schema'
+
+/*
+  Display names for the Grip / Fold / Resize labels. Names are a
+  UI concern; the panel ids are vocabulary the storage and the Go
+  side share, so they are not reused as labels. If a panel is
+  renamed in product, only this map changes.
+*/
+const PANEL_NAMES: Record<PanelId, string> = {
+  'your-work': 'Your work',
+  conversations: 'Conversations',
+  'your-repos': 'Your repositories',
+  tracked: 'Tracked repositories',
+  feed: 'Live',
+  watched: 'Watched issues',
+  issues: 'Recent issues',
+  security: 'DevSecOps',
+  pipeline: 'Pipeline',
+  checks: 'Checks',
+}
 
 /*
   The dashboard panel-layout dialog. Lazy because it opens on a
@@ -452,16 +472,25 @@ export default function App() {
               if (layout.state.hidden.includes(id)) return null
               const node = panels[id]
               if (!node) return null
-              const folded = layout.state.folded.includes(id)
+              // Your-work is the only panel that opts in to row
+              // snapping, matching web/index.html:4506's
+              // data-snap-rows attribute (the <section> on the
+              // your-work panel; three later occurrences read the
+              // attribute from JS). Every other panel's
+              // resize commits a raw height; snap is a Your-work
+              // decoration for rows that would otherwise slice.
+              const snap = id === 'your-work'
               return (
-                <div
+                <PanelSlot
                   key={id}
-                  data-panel={id}
-                  data-folded={folded || undefined}
-                  className="hg-panel-slot"
+                  id={id}
+                  panelName={PANEL_NAMES[id]}
+                  state={layout.state}
+                  dispatch={layout.dispatch}
+                  snapRows={snap}
                 >
                   {node}
-                </div>
+                </PanelSlot>
               )
             })
           return (
