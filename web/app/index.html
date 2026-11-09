@@ -12,10 +12,45 @@
       "HelloGitty" base title.
     -->
     <title>HelloGitty</title>
-    <script type="module" crossorigin src="/app/assets/index-BvNiSzJG.js"></script>
+    <script>
+      /*
+       * Pre-paint theme init — mirrors the templated page's inline script
+       * at `web/index.html:536–538` so the two surfaces apply the same
+       * attributes before first paint.
+       *
+       * ALSO migrates pre-2b identity names (vermilion / azure / bone) to
+       * the pack+appearance pair the cascade reads — oni + amoled / dark /
+       * light respectively. Idempotent: a value that isn't one of those
+       * three passes through. ThemeProvider runs the same migration on
+       * mount as a defence in depth; this script runs first and prevents
+       * the brief flash of wrong colours on first load.
+       */
+      (function () {
+        try {
+          var vt = localStorage.getItem('hellogitty-visual-theme');
+          var oniMap = { vermilion: 'amoled', azure: 'dark', bone: 'light' };
+          if (vt && oniMap[vt]) {
+            localStorage.setItem('hellogitty-visual-theme', 'oni');
+            localStorage.setItem('hellogitty-theme', oniMap[vt]);
+            vt = 'oni';
+          }
+          if (vt) document.documentElement.setAttribute('data-visual-theme', vt);
+
+          var t = localStorage.getItem('hellogitty-theme');
+          if (t === 'light' || t === 'dark' || t === 'amoled') {
+            document.documentElement.setAttribute('data-theme', t);
+          } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+            document.documentElement.setAttribute('data-theme', 'light');
+          }
+        } catch (e) {
+          /* storage blocked: fall through to the OS-resolved default */
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/app/assets/index-dVhLQ5t4.js"></script>
     <link rel="modulepreload" crossorigin href="/app/assets/jsx-runtime-DyZJNswf.js">
     <link rel="modulepreload" crossorigin href="/app/assets/usePageTitle-BRTi_517.js">
-    <link rel="stylesheet" crossorigin href="/app/assets/index-i7HWYl7p.css">
+    <link rel="stylesheet" crossorigin href="/app/assets/index-DWxtUfcE.css">
   </head>
   <body>
     <div id="root"></div>

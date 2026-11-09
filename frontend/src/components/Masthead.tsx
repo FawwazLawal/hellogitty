@@ -44,10 +44,11 @@ const APPEARANCES: { value: Appearance; label: string }[] = [
   { value: 'auto', label: 'Auto' },
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
+  { value: 'amoled', label: 'AMOLED' },
 ]
 
 export function Masthead({ data }: { data: DashboardData }) {
-  const { identity, identities, order, setIdentity, appearance, setAppearance } = useTheme()
+  const { appearance, setAppearance, packHasAmoled } = useTheme()
   const headerArt = useArt('header')
 
   return (
@@ -130,28 +131,23 @@ export function Masthead({ data }: { data: DashboardData }) {
             <Settings size={14} aria-hidden="true" />
           </a>
 
-          {/* Appearance: auto / light / dark. Independent of identity. */}
+          {/*
+            Appearance: four options (Auto | Light | Dark | AMOLED), one
+            row. AMOLED is HIDDEN, not disabled, when the active pack
+            ships no AMOLED block — the templated side removes the fourth
+            button the same way, and a permanently-disabled control is a
+            dead button we spent #244 deleting. Pack selection lives on
+            the Settings page, matching where the templated app has
+            always put it; the Masthead carries appearance alone.
+          */}
           <ToggleGroup
             aria-label="Appearance"
             value={appearance}
             onValueChange={(v) => v && setAppearance(v as Appearance)}
           >
-            {APPEARANCES.map(({ value, label }) => (
+            {APPEARANCES.filter(({ value }) => value !== 'amoled' || packHasAmoled).map(({ value, label }) => (
               <ToggleGroupItem key={value} value={value}>
                 {label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-
-          {/* Identity. A separate control, by §5. */}
-          <ToggleGroup
-            aria-label="Visual identity"
-            value={identity}
-            onValueChange={(v) => v && setIdentity(v as typeof identity)}
-          >
-            {order.map((id) => (
-              <ToggleGroupItem key={id} value={id} title={identities[id].description}>
-                {identities[id].label}
               </ToggleGroupItem>
             ))}
           </ToggleGroup>

@@ -4,7 +4,7 @@ import { Panel, PanelHeader } from './chrome/Chrome'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group'
 import { useTheme } from '../theme/ThemeProvider'
-import type { Appearance } from '../theme/ThemeProvider'
+import type { Appearance, Pack, PackInfo } from '../theme/ThemeProvider'
 import { useSettings, useSession, useRepoMutation } from '../data/settings'
 import {
   CLOCK_STYLES,
@@ -334,31 +334,48 @@ function PaneContainer({ active }: { active: PaneId }) {
 }
 
 function AppearancePane() {
-  const { identity, identities, order, setIdentity, appearance, setAppearance } = useTheme()
+  const { pack, setPack, appearance, setAppearance, packHasAmoled, packs } = useTheme()
   return (
-    <Panel>
-      <PanelHeader title="Appearance" />
-      <Row label="Appearance" hint="Auto follows your operating system.">
-        <SegmentedControl<Appearance>
+    <>
+      <Panel>
+        <PanelHeader title="Appearance" />
+        <Row
           label="Appearance"
-          value={appearance}
-          onChange={setAppearance}
-          options={[
-            { value: 'auto', label: 'Auto' },
-            { value: 'light', label: 'Light' },
-            { value: 'dark', label: 'Dark' },
-          ]}
-        />
-      </Row>
-      <Row label="Visual identity" hint={identities[identity].description}>
-        <SegmentedControl
-          label="Visual identity"
-          value={identity}
-          onChange={setIdentity}
-          options={order.map((id) => ({ value: id, label: identities[id].label }))}
-        />
-      </Row>
-    </Panel>
+          hint="Auto follows your operating system. AMOLED is only available on packs that ship a true-black variant."
+        >
+          <SegmentedControl<Appearance>
+            label="Appearance"
+            value={appearance}
+            onChange={setAppearance}
+            options={[
+              { value: 'auto', label: 'Auto' },
+              { value: 'light', label: 'Light' },
+              { value: 'dark', label: 'Dark' },
+              ...(packHasAmoled ? [{ value: 'amoled' as Appearance, label: 'AMOLED' }] : []),
+            ]}
+          />
+        </Row>
+      </Panel>
+
+      <Panel>
+        <PanelHeader title="Theme pack" />
+        <div className="px-4 py-3">
+          <p className="mb-3 text-[11.5px]" style={{ color: 'var(--hg-text-muted)' }}>
+            A theme pack is a colour overlay on top of the Appearance setting. Each pack carries
+            its own identity and, where it ships one, its own AMOLED mode. Pick one or leave it
+            at None.
+          </p>
+          {/*
+            The swatch grid mirrors `web/settings.html`'s layout — preview
+            + name + description + badge — so the two surfaces look the
+            same and a reader can tell which pack is which by eye, not
+            by the pack id. #302 asked for this exact shape rather than
+            a list of names.
+          */}
+          <PackGrid packs={packs} current={pack} onPick={setPack} />
+        </div>
+      </Panel>
+    </>
   )
 }
 
@@ -832,3 +849,112 @@ function stylePreviewBg(id: ClockStyle): string {
 // the templated page.
 export { SETTINGS_PANE_KEY, PANES }
 export type { PaneId }
+
+/**
+ * Pack swatch gallery — the pack picker that did not exist in React.
+ *
+ * Shape matches `web/settings.html:580` exactly: a swatch preview (a dot,
+ * three bars, a name and a description), an optional corner badge, and a
+ * "None" option for the default cascade. Selected pack carries a focus
+ * ring and an aria-pressed. The swatch colours come from `PACKS` in
+ * ThemeProvider, keyed by pack id; they are intentionally stated in that
+ * file rather than reading live tokens here, because the preview should
+ * show what the pack will look like whatever the user's current theme is.
+ */
+function PackGrid({ packs, current, onPick }: { packs: PackInfo[]; current: Pack; onPick: (p: Pack) => void }) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Theme pack"
+      className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]"
+    >
+      <PackCard
+        pack=""
+        current={current}
+        onPick={onPick}
+        label="None"
+        description="Default dashboard colours"
+      />
+      {packs.map((p) => (
+        <PackCard
+          key={p.id}
+          pack={p.id}
+          current={current}
+          onPick={onPick}
+          label={p.label}
+          description={p.description}
+          badge={p.badge}
+          swatch={p.swatch}
+        />
+      ))}
+    </div>
+  )
+}
+
+function PackCard({
+  pack,
+  current,
+  onPick,
+  label,
+  description,
+  badge,
+  swatch,
+}: {
+  pack: Pack
+  current: Pack
+  onPick: (p: Pack) => void
+  label: string
+  description: string
+  badge?: PackInfo['badge']
+  swatch?: PackInfo['swatch']
+}) {
+  const active = pack === current
+  const preview = swatch ?? {
+    bg: 'var(--hg-surface-sunken)',
+    dot: 'var(--hg-text-muted)',
+    bar1: 'var(--hg-text-muted)',
+    bar2: 'var(--hg-line-strong)',
+    bar3: 'var(--hg-line)',
+    name: 'var(--hg-text)',
+    desc: 'var(--hg-text-muted)',
+  }
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={active}
+      onClick={() => onPick(pack)}
+      className="relative flex min-h-[112px] flex-col gap-2 border p-3 text-left transition-colors"
+      style={{
+        borderColor: active ? 'var(--hg-accent)' : 'var(--hg-line)',
+        background: active ? 'var(--hg-surface-raised)' : 'var(--hg-surface)',
+        boxShadow: active ? '0 0 0 2px color-mix(in srgb, var(--hg-accent) 30%, transparent)' : undefined,
+      }}
+    >
+      {badge && (
+        <span
+          className="absolute right-2 top-2 border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+          style={{ background: badge.bg, color: badge.ink, borderColor: badge.bg }}
+        >
+          {badge.text}
+        </span>
+      )}
+      <div className="flex items-center gap-2" style={{ background: preview.bg, padding: 10, border: '1px solid var(--hg-line)' }}>
+        <span aria-hidden="true" className="h-6 w-6 shrink-0 rounded-full" style={{ background: preview.dot }} />
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <span aria-hidden="true" className="block h-[4px] rounded-[2px]" style={{ background: preview.bar1, width: '80%' }} />
+          <span aria-hidden="true" className="block h-[4px] rounded-[2px]" style={{ background: preview.bar2, width: '55%' }} />
+          <span aria-hidden="true" className="block h-[4px] rounded-[2px]" style={{ background: preview.bar3, width: '70%' }} />
+        </div>
+      </div>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="truncate text-[13px] font-semibold" style={{ color: 'var(--hg-text)' }}>
+          {label}
+        </span>
+        <span className="line-clamp-2 text-[11px]" style={{ color: 'var(--hg-text-muted)' }}>
+          {description}
+        </span>
+      </div>
+    </button>
+  )
+}
