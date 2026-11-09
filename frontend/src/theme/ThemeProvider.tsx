@@ -1,76 +1,135 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { IDENTITIES, IDENTITY_ORDER, type Identity } from './tokens'
 
 /**
- * The theme engine, now reading from the shared pack cascade.
+ * The theme engine, with the owner's model surfaced to the UI.
  *
- * ADR-UI-002 §5 kept its two-axis model, but the facts changed underneath:
+ * Two axes, kept orthogonal, matching the templated page exactly:
  *
- *   - The pack values no longer live in this file. They live in
- *     `web/themes.css`, which the Go-rendered pages and the Vite bundle
- *     both include. React stops authoring colour; it only picks which
- *     pack and appearance the cascade should resolve to.
- *   - The identity names (`vermilion | azure | bone`) that shipped as
- *     three parallel palettes are the three appearances of the Oni pack
- *     — `light = Bone, dark = Azure, amoled = Vermilion`, per the owner.
- *     They drifted from the pack values (templated oni-amoled renders
- *     `--text: #f7eef0`; React's vermilion was `#ffffff`). This engine
- *     stops owning those values so the drift becomes unrepresentable.
+ *   appearance  auto | light | dark | amoled        (hellogitty-theme)
+ *   pack        '' | pink | muertos | muertos-v2
+ *               | azure-oni | azure-oni-v2 | oni    (hellogitty-visual-theme)
  *
- * STORAGE KEYS stay the same, so `/legacy` and `/` keep using the same
- * contract — this was the one piece the two sides already shared.
+ * AMOLED is pack-scoped: it only appears when the active pack ships one.
+ * Five of six packs do (every pack except `pink`). The base (no-pack)
+ * default has no amoled either — the templated app never declared one.
  *
- *   hellogitty-theme         "" | "light" | "dark" | "amoled"  (appearance)
- *   hellogitty-visual-theme  "" | "pink" | "muertos" | ...     (pack id)
+ * STRANDED APPEARANCE. When a pack switch strands the current appearance
+ * (user is on `amoled`, switches to `pink`), appearance falls to `dark`
+ * and both storage keys are rewritten. Verified against the templated
+ * page by driving: `oni + amoled → pink` leaves the stored theme as
+ * `dark`, not stranded on `amoled`.
  *
- * MIGRATION. Users with a React-written `vermilion | azure | bone` in
- * `hellogitty-visual-theme` are migrated on load, idempotently: the pack
- * becomes `oni`, the appearance becomes the matching one, and both keys
- * are rewritten. A later visit to `/legacy` then reads a value the
- * templated pre-paint recognises.
+ * MIGRATION. Users with a pre-2b React identity (`vermilion | azure | bone`)
+ * in `hellogitty-visual-theme` are mapped idempotently to the new
+ * (pack, appearance) pair on both the pre-paint script in index.html and
+ * here as a defence in depth. `vermilion → oni + amoled`,
+ * `azure → oni + dark`, `bone → oni + light`. Running twice is a no-op.
  *
- * ATTRIBUTE NAMES. React used to write `data-identity` + `data-appearance`,
- * which no CSS anywhere actually read. It now writes `data-visual-theme` +
- * `data-theme`, matching the templated side — the cascade in themes.css
- * keys on exactly those names.
- *
- * NO MORE INLINE PAINTING. The old `root.style.setProperty(name, value)`
- * loop beat every `:root[data-*]` rule because inline styles outweigh
- * specificity. Removing it was non-negotiable — a bridge that resolves
- * through a cascade it can't win against is inert.
+ * ATTRIBUTE NAMES. React writes `data-visual-theme` + `data-theme` on
+ * `<html>` — the exact attribute names the shared cascade (and the
+ * templated pre-paint) key on. Base tokens come from the cascade; chrome
+ * tokens (plate / rivet / scrim) are declared in `index.css` scoped to
+ * the packs that ship chrome.
  */
 
+export type Pack = '' | 'pink' | 'muertos' | 'muertos-v2' | 'azure-oni' | 'azure-oni-v2' | 'oni'
 export type Appearance = 'auto' | 'light' | 'dark' | 'amoled'
+export type ResolvedAppearance = 'light' | 'dark' | 'amoled'
+
+/** Which packs ship each appearance. Base (no pack) has light + dark only. */
+const PACK_AMOLED: Record<Exclude<Pack, ''>, boolean> = {
+  'pink': false,
+  'muertos': true,
+  'muertos-v2': true,
+  'azure-oni': true,
+  'azure-oni-v2': true,
+  'oni': true,
+}
+
+/*
+ * Pack metadata for the picker. Taken from the templated `VISUAL_THEMES`
+ * array at `web/settings.html` so the swatch grid on both surfaces shows
+ * the same shape — label, description, badge, preview swatch colours.
+ * Keep in order; the picker renders in declaration order.
+ */
+export interface PackInfo {
+  id: Pack
+  label: string
+  description: string
+  badge?: { text: string; bg: string; ink: string }
+  swatch: { bg: string; dot: string; bar1: string; bar2: string; bar3: string; name: string; desc: string }
+}
+
+export const PACKS: PackInfo[] = [
+  {
+    id: 'pink',
+    label: 'Pinky v2',
+    description: 'Hot pink collaboration theme',
+    badge: { text: 'Limited', bg: '#ff69b4', ink: '#ffffff' },
+    swatch: { bg: '#21101a', dot: '#ff69b4', bar1: '#ff69b4', bar2: '#55304a', bar3: '#b88aa4', name: '#f5e0ec', desc: '#b88aa4' },
+  },
+  {
+    id: 'muertos',
+    label: 'Muertos',
+    description: 'Halloween / Dia de los Muertos, with a true-black mode',
+    badge: { text: 'Seasonal', bg: '#b98cf0', ink: '#15111d' },
+    swatch: { bg: '#120f18', dot: '#f0a93b', bar1: '#b98cf0', bar2: '#3d3350', bar3: '#a098ae', name: '#ece6f2', desc: '#a098ae' },
+  },
+  {
+    id: 'muertos-v2',
+    label: 'Muertos V2',
+    description: 'La Noche Viva — a living ofrenda in violet, marigold and jade',
+    badge: { text: 'Seasonal', bg: '#a99dff', ink: '#1f1530' },
+    swatch: { bg: '#261a34', dot: '#ffc050', bar1: '#a99dff', bar2: '#4a365a', bar3: '#d8c5d8', name: '#fff5e7', desc: '#d8c5d8' },
+  },
+  {
+    id: 'azure-oni',
+    label: 'Azure Oni',
+    description: 'Ao-Oni — lacquered cobalt over obsidian, with textured surfaces and a true-black blue mode',
+    badge: { text: 'Textured', bg: '#7cb7ff', ink: '#0a0f1c' },
+    swatch: { bg: '#151c2e', dot: '#ff2d3d', bar1: '#7cb7ff', bar2: '#34445e', bar3: '#b5c2d8', name: '#f5f7ff', desc: '#b5c2d8' },
+  },
+  {
+    id: 'azure-oni-v2',
+    label: 'Azure Oni V2',
+    description: 'Six generated materials — obsidian, lacquer, ember, armor seam, rim light and brushed alloy',
+    badge: { text: 'Textured', bg: '#005bff', ink: '#f5f7ff' },
+    swatch: { bg: '#151c2e', dot: '#ff2d3d', bar1: '#005bff', bar2: '#1628a0', bar3: '#b5c2d8', name: '#f5f7ff', desc: '#b5c2d8' },
+  },
+  {
+    id: 'oni',
+    label: 'Oni',
+    description: 'One identity in three appearances — azure night, bone paper, vermilion on true black',
+    badge: { text: 'Illustrated', bg: '#e85663', ink: '#060d19' },
+    swatch: { bg: '#10192e', dot: '#e85663', bar1: '#58a8e0', bar2: '#2a4162', bar3: '#a9bdd8', name: '#eaf1fb', desc: '#a9bdd8' },
+  },
+]
+
+const PACK_IDS = new Set<Pack>(['', 'pink', 'muertos', 'muertos-v2', 'azure-oni', 'azure-oni-v2', 'oni'])
 
 const APPEARANCE_KEY = 'hellogitty-theme'
 const VISUAL_KEY = 'hellogitty-visual-theme'
 
-/*
- * The translation from React's three-identity UI (which 2b keeps unchanged)
- * to the pack + appearance pair the cascade reads. 2c will replace the
- * identity UI with a four-option appearance row and a separate pack picker;
- * this map is where the current three-button model sits until then.
- */
-const IDENTITY_TO_PAIR: Record<Identity, { pack: string; appearance: Appearance }> = {
+/** How to read the pre-2b identity-name values if they're still in storage. */
+const IDENTITY_TO_PAIR: Record<string, { pack: Pack; appearance: Appearance }> = {
   vermilion: { pack: 'oni', appearance: 'amoled' },
   azure: { pack: 'oni', appearance: 'dark' },
   bone: { pack: 'oni', appearance: 'light' },
 }
 
 interface ThemeState {
-  identity: Identity
+  pack: Pack
   appearance: Appearance
-  /** The appearance the browser is currently painting as, OS resolved. */
-  resolvedScheme: 'light' | 'dark' | 'amoled'
-  setIdentity: (id: Identity) => void
+  resolvedScheme: ResolvedAppearance
+  /** Whether the current pack carries an AMOLED block. The appearance row hides the fourth button when false. */
+  packHasAmoled: boolean
+  setPack: (p: Pack) => void
   setAppearance: (a: Appearance) => void
-  identities: typeof IDENTITIES
-  order: Identity[]
+  packs: PackInfo[]
 }
 
 const ThemeContext = createContext<ThemeState | null>(null)
 
-/** localStorage can throw (private mode, blocked site data). Never let it break a render. */
 function readStored(key: string): string | null {
   try {
     return localStorage.getItem(key)
@@ -84,7 +143,7 @@ function writeStored(key: string, value: string | null): void {
     if (value === null) localStorage.removeItem(key)
     else localStorage.setItem(key, value)
   } catch {
-    /* a viewer who blocks storage still gets a working page, just not a remembered one */
+    /* blocked storage: the page still works, it just doesn't remember */
   }
 }
 
@@ -92,59 +151,52 @@ function prefersLight(): boolean {
   return typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: light)').matches === true
 }
 
-function isIdentity(v: string | null): v is Identity {
-  return v !== null && (IDENTITY_ORDER as string[]).includes(v)
+function packHasAmoled(pack: Pack): boolean {
+  if (!pack) return false
+  return PACK_AMOLED[pack]
 }
 
 /**
- * Migrate a pre-2b `hellogitty-visual-theme` value to the new pack+appearance
- * shape. Idempotent: a second call with the already-migrated value is a no-op.
- * Only fires on the three React-authored identity names; any legitimate pack
- * id (`oni`, `pink`, `muertos`…) passes through untouched.
+ * One-shot migration of the three pre-2b identity names into pack+appearance.
+ * Idempotent: a second call with a value that isn't `vermilion | azure | bone`
+ * is a no-op. The pre-paint script in `index.html` runs the same migration
+ * before first paint; this is a defence in depth for a page that bypasses it.
  */
 function migrateStoredIdentity(): void {
   const stored = readStored(VISUAL_KEY)
-  if (!isIdentity(stored)) return
-  const pair = IDENTITY_TO_PAIR[stored]
-  writeStored(VISUAL_KEY, pair.pack)
-  // Only overwrite the appearance key if the identity migration implies one
-  // the user didn't set themselves. We're migrating a React identity which
-  // implicitly carried its own appearance, so the write is honest.
-  writeStored(APPEARANCE_KEY, pair.appearance)
+  if (stored && stored in IDENTITY_TO_PAIR) {
+    const pair = IDENTITY_TO_PAIR[stored]
+    writeStored(VISUAL_KEY, pair.pack)
+    writeStored(APPEARANCE_KEY, pair.appearance)
+  }
 }
 
-/** Read the current state. The migration has already run. */
-function readState(): { identity: Identity; appearance: Appearance } {
-  const storedPack = readStored(VISUAL_KEY)
+function readState(): { pack: Pack; appearance: Appearance } {
+  const storedPack = readStored(VISUAL_KEY) ?? ''
   const storedApp = readStored(APPEARANCE_KEY)
-  const appearance: Appearance =
-    storedApp === 'light' || storedApp === 'dark' || storedApp === 'amoled' ? storedApp : 'auto'
-  // Derive the three-identity view for the UI: this is a temporary read of
-  // (pack + appearance) back into an Identity for the Masthead's buttons.
-  // When pack is `oni`, the active identity is the matching appearance's
-  // identity; for any other pack we have no identity to show as "on" and
-  // the Masthead's roving-tabindex picker simply shows no active button.
-  let identity: Identity = 'vermilion'
-  if (storedPack === 'oni' && appearance !== 'auto') {
-    identity =
-      appearance === 'amoled' ? 'vermilion' : appearance === 'dark' ? 'azure' : 'bone'
-  } else if (storedPack !== 'oni' && storedPack) {
-    // Non-oni pack: fall back to showing the appearance-matching identity
-    // for the picker, but nothing selected. 2c's pack picker fixes this.
-    identity = prefersLight() ? 'bone' : 'vermilion'
+  const pack: Pack = PACK_IDS.has(storedPack as Pack) ? (storedPack as Pack) : ''
+  let appearance: Appearance = 'auto'
+  if (storedApp === 'light' || storedApp === 'dark' || storedApp === 'amoled') {
+    appearance = storedApp
   }
-  return { identity, appearance }
+  // Stranded amoled under a pack with no amoled: fall to dark and rewrite.
+  if (appearance === 'amoled' && !packHasAmoled(pack)) {
+    appearance = 'dark'
+    writeStored(APPEARANCE_KEY, 'dark')
+  }
+  return { pack, appearance }
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  // Run the migration BEFORE reading initial state, so the first render
-  // already reflects the migrated values.
+  // Migration runs synchronously before the first state read. The pre-paint
+  // script in index.html usually gets there first; this catches the case
+  // where it didn't, and keeps the two code paths consistent.
   const [initial] = useState(() => {
     migrateStoredIdentity()
     return readState()
   })
 
-  const [identity, setIdentityState] = useState<Identity>(initial.identity)
+  const [pack, setPackState] = useState<Pack>(initial.pack)
   const [appearance, setAppearanceState] = useState<Appearance>(initial.appearance)
   const [systemLight, setSystemLight] = useState(prefersLight)
 
@@ -156,37 +208,38 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return () => mq.removeEventListener('change', onChange)
   }, [])
 
-  const resolvedScheme: 'light' | 'dark' | 'amoled' =
+  const resolvedScheme: ResolvedAppearance =
     appearance === 'auto' ? (systemLight ? 'light' : 'dark') : appearance
 
-  const setIdentity = useCallback((id: Identity) => {
-    setIdentityState(id)
-    // 2b's three-button Masthead sets Oni + the identity's matching
-    // appearance; 2c replaces this with pack and appearance as independent
-    // controls.
-    const pair = IDENTITY_TO_PAIR[id]
-    writeStored(VISUAL_KEY, pair.pack)
-    writeStored(APPEARANCE_KEY, pair.appearance)
-    setAppearanceState(pair.appearance)
+  const setPack = useCallback((p: Pack) => {
+    setPackState(p)
+    writeStored(VISUAL_KEY, p || null)
+    // Stranded amoled → dark fallback, mirroring the templated behaviour
+    // verified by driving `oni + amoled → pink`: the template rewrites the
+    // stored theme to `dark`, not stranded on `amoled`.
+    setAppearanceState((current) => {
+      if (current === 'amoled' && !packHasAmoled(p)) {
+        writeStored(APPEARANCE_KEY, 'dark')
+        return 'dark'
+      }
+      return current
+    })
   }, [])
 
   const setAppearance = useCallback((a: Appearance) => {
     setAppearanceState(a)
-    // "auto" is the absence of a stored value, matching the Go app exactly.
+    // `auto` is the absence of a stored value, matching the templated side.
     writeStored(APPEARANCE_KEY, a === 'auto' ? null : a)
   }, [])
 
   /*
-   * Write the attributes the cascade reads. No inline-style setProperty
-   * loop — that beat the shared cascade on every read; the bridge in
-   * index.css is the sole adapter now. `data-visual-theme` carries the
-   * pack id; `data-theme` carries the resolved appearance. `color-scheme`
-   * follows the resolved appearance so form controls and scrollbars
-   * match; amoled resolves as dark for that purpose.
+   * Write the attributes the cascade reads. `data-visual-theme` carries
+   * the pack id; `data-theme` carries the resolved appearance. `auto` is
+   * the absence of the attribute, matching the templated page's convention
+   * exactly. No inline-style loop — that would beat the cascade.
    */
   useEffect(() => {
     const root = document.documentElement
-    const pack = (readStored(VISUAL_KEY) ?? 'oni') || 'oni'
     if (pack) root.setAttribute('data-visual-theme', pack)
     else root.removeAttribute('data-visual-theme')
 
@@ -195,19 +248,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     else root.removeAttribute('data-theme')
 
     root.style.colorScheme = resolvedScheme === 'light' ? 'light' : 'dark'
-  }, [identity, appearance, resolvedScheme])
+  }, [pack, appearance, resolvedScheme])
 
   const value = useMemo<ThemeState>(
     () => ({
-      identity,
+      pack,
       appearance,
       resolvedScheme,
-      setIdentity,
+      packHasAmoled: packHasAmoled(pack),
+      setPack,
       setAppearance,
-      identities: IDENTITIES,
-      order: IDENTITY_ORDER,
+      packs: PACKS,
     }),
-    [identity, appearance, resolvedScheme, setIdentity, setAppearance],
+    [pack, appearance, resolvedScheme, setPack, setAppearance],
   )
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
@@ -217,4 +270,20 @@ export function useTheme(): ThemeState {
   const ctx = useContext(ThemeContext)
   if (!ctx) throw new Error('useTheme must be used inside <ThemeProvider>')
   return ctx
+}
+
+/*
+ * Which packs ship the chrome tokens React draws plates and rivets from.
+ * The chrome was invented for the Oni direction; `azure-oni-v2` carries the
+ * same materials in a slightly different composition. The other four packs
+ * don't model chrome at all. Ornament components read this to decide
+ * whether to render — on a pack without chrome, `--hg-plate` etc. are
+ * unset, and rendering with the token fallbacks would paint the wrong
+ * thing worse than painting nothing.
+ */
+const CHROME_PACKS = new Set<Pack>(['oni', 'azure-oni-v2'])
+
+export function useChrome(): boolean {
+  const { pack } = useTheme()
+  return CHROME_PACKS.has(pack)
 }

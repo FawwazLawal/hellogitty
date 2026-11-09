@@ -18,7 +18,34 @@ import type { ArtSlot } from './registry'
  * loading, since the real event is `<img onLoad>` on whichever element
  * paints the URL. Keep that where it belongs.
  */
+/*
+ * The identity names (`vermilion | azure | bone`) that keyed the art
+ * registry were the three appearances of the Oni pack. Under the new
+ * pack+appearance model the active identity is derived rather than held:
+ * on Oni, amoled → vermilion, dark → azure, light → bone. On any other
+ * pack there is no art (no other pack ships any today), so `useArt`
+ * resolves the absent shape and callers render their fallback.
+ */
+import type { Identity } from '../theme/tokens'
+
 export function useArt(slot: ArtSlot): ResolvedArt {
-  const { identity } = useTheme()
-  return useMemo(() => resolveArt(identity, slot), [identity, slot])
+  const { pack, resolvedScheme } = useTheme()
+  const identity: Identity | null = useMemo(() => {
+    if (pack !== 'oni') return null
+    if (resolvedScheme === 'amoled') return 'vermilion'
+    if (resolvedScheme === 'light') return 'bone'
+    return 'azure'
+  }, [pack, resolvedScheme])
+  return useMemo<ResolvedArt>(() => {
+    if (identity) return resolveArt(identity, slot)
+    // Non-Oni pack: no art today. The 'absent' shape still wants an
+    // identity for logging context — use 'vermilion' as the arbitrary
+    // identity-shaped carrier since the registry's test fixtures do.
+    return {
+      kind: 'absent',
+      identity: 'vermilion',
+      slot,
+      reason: `No art for the active pack. Render the slot's non-art fallback.`,
+    }
+  }, [identity, slot])
 }
