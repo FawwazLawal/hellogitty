@@ -1,6 +1,7 @@
 import { useAlerts } from '../../data/alerts'
 import { AlertPage, type Stat } from '../AlertPage'
 import { AlertList, EmptyNote, HealthRow } from './parts'
+import { usePageTitle } from '../../hooks/usePageTitle'
 
 /**
  * /alerts/repo-dormant and /alerts/repo-slow share this component.
@@ -18,6 +19,9 @@ export function RepoHealthAlert({ health }: { health: 'DORMANT' | 'SLOW' }) {
   const filtered = h?.items.filter((i) => i.health === health) ?? []
 
   const title = health === 'DORMANT' ? 'Repo dormant' : 'Repo slowing'
+  // Templated: `<title>{{.AlertTitle}} · HelloGitty</title>`, where AlertTitle
+  // is set on the server from the same two strings.
+  usePageTitle(`${title} · HelloGitty`)
   const subtitle =
     health === 'DORMANT'
       ? 'Repositories with no recent commit activity — they may have gone quiet.'

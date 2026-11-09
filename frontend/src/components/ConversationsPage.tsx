@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 import { MessageSquare, AlertTriangle, ExternalLink } from 'lucide-react'
 import { Panel, PanelHeader } from './chrome/Chrome'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /**
  * The Conversations page.
@@ -141,6 +142,7 @@ function orderedRows(
 }
 
 export function ConversationsPage() {
+  usePageTitle('Conversations · HelloGitty')
   const q = useConversations()
   const d = q.data
   const [filter, setFilter] = useState<Filter>('all')

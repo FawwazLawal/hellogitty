@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { AlertTriangle, Copy } from 'lucide-react'
 import { useHelp, type HelpSection, type HelpTerm } from '../data/help'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /**
  * The /help page.
@@ -29,6 +30,7 @@ type SearchMatch =
   | { kind: 'term'; term: HelpTerm }
 
 export function HelpPage() {
+  usePageTitle('HelloGitty help')
   const q = useHelp()
   const [search, setSearch] = useState('')
   const [copied, setCopied] = useState(false)

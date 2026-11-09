@@ -1,6 +1,7 @@
 import { useAlerts } from '../../data/alerts'
 import { AlertPage, type Stat } from '../AlertPage'
 import { AlertList, EmptyNote } from './parts'
+import { usePageTitle } from '../../hooks/usePageTitle'
 
 /**
  * /alerts/unresolved-threads — open PRs with review threads still waiting.
@@ -11,6 +12,7 @@ import { AlertList, EmptyNote } from './parts'
  * not a flat feed.
  */
 export function UnresolvedThreadsAlert() {
+  usePageTitle('Unresolved threads · HelloGitty')
   const q = useAlerts()
   const d = q.data
   const t = d?.threads

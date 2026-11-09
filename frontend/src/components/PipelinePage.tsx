@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
+import { usePageTitle } from '../hooks/usePageTitle'
 import { GitPullRequest, AlertTriangle, ExternalLink } from 'lucide-react'
 import { Panel, PanelHeader } from './chrome/Chrome'
 
@@ -129,6 +130,7 @@ function ageFrom(iso: string, now: number): string {
 }
 
 export function PipelinePage() {
+  usePageTitle('PR Pipeline · HelloGitty')
   const q = usePipeline()
   const [filter, setFilter] = useState<Filter>('all')
   const [repo, setRepo] = useState<string>('')

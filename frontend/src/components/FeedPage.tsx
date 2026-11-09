@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { useFeed, useAck, type FeedRow as FeedRowData } from '../data/feed'
+import { usePageTitle } from '../hooks/usePageTitle'
 import { useSession } from '../data/settings'
 
 /**
@@ -28,6 +29,7 @@ import { useSession } from '../data/settings'
 type Filter = 'unacked' | 'all'
 
 export function FeedPage() {
+  usePageTitle('HelloGitty live')
   const q = useFeed()
   const session = useSession()
   const ack = useAck(session.data?.token)

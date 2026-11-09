@@ -1,9 +1,11 @@
 import { useAlerts } from '../../data/alerts'
 import { AlertPage, type Stat } from '../AlertPage'
 import { AlertList, EmptyNote, WatchRow } from './parts'
+import { usePageTitle } from '../../hooks/usePageTitle'
 
 /** /alerts/watched-closed — watched issues that got closed. */
 export function WatchedClosedAlert() {
+  usePageTitle('Watched issue closed · HelloGitty')
   const q = useAlerts()
   const d = q.data
   const watch = d?.watch

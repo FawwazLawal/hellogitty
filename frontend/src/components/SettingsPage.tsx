@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Plus, Trash2, AlertTriangle } from 'lucide-react'
 import { Panel, PanelHeader } from './chrome/Chrome'
+import { usePageTitle } from '../hooks/usePageTitle'
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group'
 import { useTheme } from '../theme/ThemeProvider'
 import type { Appearance } from '../theme/ThemeProvider'
@@ -110,6 +111,7 @@ function SegmentedControl<T extends string>({
 }
 
 export function SettingsPage() {
+  usePageTitle('Settings · HelloGitty')
   const { identity, identities, order, setIdentity, appearance, setAppearance } = useTheme()
   const settings = useSettings()
   const session = useSession()
