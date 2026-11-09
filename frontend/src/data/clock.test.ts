@@ -165,10 +165,10 @@ describe('formatInTz — midnight edge case', () => {
   })
 })
 
-describe('useLiveClock — seconds controls the tick cadence', () => {
-  it('seconds=true ticks every second', () => {
+describe('useLiveClock — always 1s cadence (matches the templated clock-js)', () => {
+  it('ticks every second', () => {
     vi.useFakeTimers()
-    const { result } = renderHook(() => useLiveClock({ seconds: true }))
+    const { result } = renderHook(() => useLiveClock())
     const start = result.current.getTime()
     act(() => {
       vi.advanceTimersByTime(1_500)
@@ -176,22 +176,22 @@ describe('useLiveClock — seconds controls the tick cadence', () => {
     expect(result.current.getTime()).toBeGreaterThan(start)
   })
 
-  it('seconds=false does NOT tick at the 1s boundary — the quieter cadence is the point', () => {
+  it('a 5-second advance moves the clock forward by ~5 seconds, not zero', () => {
+    // An earlier iteration here slowed the tick to 15s when `seconds` was off.
+    // That created a visible bug: flipping FORMAT (24h↔12h) with seconds off
+    // took up to 15 seconds to show, because the effect depended on `seconds`
+    // and nothing re-ran the tick on a format change. A clock that disagrees
+    // with its own setting after a click is worse than a few extra renders
+    // per minute on a quiet masthead. This test guards the fix.
     vi.useFakeTimers()
-    vi.setSystemTime(new Date(2026, 10, 6, 12, 0, 0))
-    const { result } = renderHook(() => useLiveClock({ seconds: false }))
+    vi.setSystemTime(new Date(2026, 10, 7, 12, 0, 0))
+    const { result } = renderHook(() => useLiveClock())
     const start = result.current.getTime()
-    // Advance 5s — still within one quiet tick window. The clock must not have
-    // rendered a new time, which is the exact noise the slower cadence saves
-    // React from. (A one-second interval would have re-rendered 5 times.)
     act(() => {
       vi.advanceTimersByTime(5_000)
     })
-    expect(result.current.getTime()).toBe(start)
-    // At the quiet cadence, the clock catches up on its own interval.
-    act(() => {
-      vi.advanceTimersByTime(15_000)
-    })
-    expect(result.current.getTime()).toBeGreaterThan(start)
+    const delta = result.current.getTime() - start
+    expect(delta).toBeGreaterThanOrEqual(4_000)
+    expect(delta).toBeLessThanOrEqual(6_000)
   })
 })

@@ -134,27 +134,27 @@ export function useClockPreferences() {
 /**
  * The live clock.
  *
- * Ticks every second when `seconds` is true, every fifteen seconds otherwise.
- * The slower interval exists because re-rendering twice a minute to flip the
- * same minute digit is noise — React does no visible work, but every tick
- * crosses a VDOM pass and schedules a reconciliation we don't need.
+ * Ticks every second, always — matching the templated clock-js at
+ * web/index.html:4596 (`setInterval(tick, 1000)`), which is what the owner's
+ * eye compares against. An earlier iteration here slowed the tick to 15s
+ * when seconds were off, which saved a handful of re-renders a minute and
+ * created a visible bug: changing the FORMAT preference (24h ↔ 12h) took up
+ * to 15 seconds to show on the masthead, because the effect depended on
+ * `seconds` and nothing re-ran the tick on a format change. A clock that
+ * disagrees with its own setting after a click is worse than 59 React
+ * reconciliations per minute on a quiet masthead.
  *
- * `now` is a `Date`, not a formatted string, because the Masthead decides how
- * it wants to display it (and the tests want to assert on parts of it
+ * `now` is a `Date`, not a formatted string, because the Masthead decides
+ * how it wants to display it (and the tests want to assert on parts of it
  * without re-implementing the formatting).
  */
-export function useLiveClock({ seconds }: { seconds: boolean }): Date {
+export function useLiveClock(): Date {
   const [now, setNow] = useState<Date>(() => new Date())
 
   useEffect(() => {
-    const periodMs = seconds ? 1000 : 15_000
-    const id = window.setInterval(() => setNow(new Date()), periodMs)
-    // One tick straight away so a prefs change takes effect without waiting
-    // for the next interval. Without this, flipping seconds-on would show a
-    // stale minute until the next second boundary — small but visible.
-    setNow(new Date())
+    const id = window.setInterval(() => setNow(new Date()), 1000)
     return () => window.clearInterval(id)
-  }, [seconds])
+  }, [])
 
   return now
 }
