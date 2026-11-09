@@ -23,7 +23,12 @@ describe('humanTime', () => {
     expect(humanTime(undefined, now)).toBe('—')
     expect(humanTime('', now)).toBe('—')
     expect(humanTime('not-a-date', now)).toBe('—')
+    // Both sentinels are honoured: JS's 1970 epoch AND Go's own
+    // `t.IsZero()` (Year 1 Jan 1 UTC, the serialized form a Go
+    // caller may emit if it forgets a nil guard). alerts_api.go:377
+    // is one such spot today — see humanTime.ts.
     expect(humanTime('1970-01-01T00:00:00Z', now)).toBe('—')
+    expect(humanTime('0001-01-01T00:00:00Z', now)).toBe('—')
   })
 
   it('less than a minute → "just now"', () => {
@@ -34,6 +39,17 @@ describe('humanTime', () => {
   it('a few minutes → "N min ago"', () => {
     const t = new Date(now.getTime() - 17 * 60_000).toISOString()
     expect(humanTime(t, now)).toBe('17 min ago')
+  })
+
+  it('truncates (floor) minutes — 119 seconds is "1 min ago", not "2 min ago"', () => {
+    // The Go function does `int(d/time.Minute)`, which truncates. The
+    // helper this file replaced used `Math.round`, which would make
+    // 119 s read as "2 min ago" and 90 s as "2 min ago". Pinning this
+    // because every other test in the file passes under floor, round
+    // and ceil — the only arithmetic choice in the module stayed
+    // unpinned until peer caught it reviewing #327.
+    const t = new Date(now.getTime() - 119_000).toISOString()
+    expect(humanTime(t, now)).toBe('1 min ago')
   })
 
   it('today → "HH:MM" (no "today" word, matching the templated form)', () => {
