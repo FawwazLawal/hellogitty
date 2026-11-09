@@ -1,16 +1,28 @@
 @import 'tailwindcss';
 
+/*
+ * The pack-and-appearance token cascade, shared with the Go-rendered pages.
+ * One source, both surfaces — see `web/themes.css`. This import brings
+ * every pack × appearance block into the Vite bundle, so a user's choice of
+ * `data-visual-theme` + `data-theme` resolves the same declared values in
+ * React that `/legacy` does.
+ *
+ * The bridge below maps the template's token names (--bg, --panel, --text…)
+ * to React's own (--hg-canvas, --hg-surface, --hg-text…) so every existing
+ * `var(--hg-*)` read keeps working. The bridge is the whole adapter; no
+ * component rewriting beyond `ThemeProvider` was needed.
+ */
+@import '../../web/themes.css';
+
 /**
  * Tailwind v4 theme mapping.
  *
- * The tokens themselves live in `theme/tokens.ts`, which is the source of truth
- * and the thing the contrast test reads. This file only tells Tailwind how to
- * name them, so a component can write `bg-surface` instead of
- * `bg-[var(--hg-surface)]` and the utility classes stay readable in the markup.
+ * Tells Tailwind how to name the React-side tokens, so a component can write
+ * `bg-surface` instead of `bg-[var(--hg-surface)]` and the utility classes
+ * stay readable in the markup.
  *
- * Every value here is `var(--hg-*)`, never a literal. `ThemeProvider` sets
- * those variables on :root at runtime, so switching identity repaints without
- * rebuilding and without remounting anything.
+ * Every value here is `var(--hg-*)`, never a literal. The bridge below
+ * resolves them from the shared cascade.
  */
 @theme {
   --color-canvas: var(--hg-canvas);
@@ -48,41 +60,139 @@
 }
 
 /**
- * Fallbacks, so the page is never unstyled.
+ * Bridge — template token names → React token names.
  *
- * ThemeProvider sets these in an effect, which runs after first paint. Without
- * a declared default there is one frame of unresolved `var()` — transparent
- * backgrounds and invisible text. Vermilion is the default identity and the
- * first implementation benchmark, so it is the one declared here.
+ * The shared cascade (web/themes.css) declares `--bg`, `--panel`, `--text`
+ * etc. Every React component already reads `--hg-canvas`, `--hg-surface`,
+ * `--hg-text` etc., so the bridge aliases one onto the other at :root.
+ * `var(fallback)` makes an unset pack value resolve to the base dark
+ * template values rather than rendering an empty string.
+ *
+ * ChromeTokens (plate / rivet / scrim / plateHi / plateLo / plateEdge) stay
+ * written by ThemeProvider as inline styles: packs don't declare them, they
+ * are React's own invention for the Oni chrome, and keeping them typed in
+ * TypeScript is the only place they exist.
+ *
+ * Order matters: @import for themes.css is above so the base `:root` block
+ * paints first; the bridge below resolves through it.
  */
 :root {
-  --hg-canvas: #0a070c;
-  --hg-surface: #151016;
-  --hg-surface-sunken: #0f0b0f;
-  --hg-surface-raised: #1d1620;
-  --hg-line: #3a2730;
-  --hg-line-strong: #7d5560;
-  --hg-text: #ffffff;
-  --hg-text-muted: #cbb2b9;
-  --hg-accent: #ff3e3d;
-  --hg-accent-fill: #b81d24;
-  --hg-accent-ink: #ffffff;
-  --hg-success: #6ee7a0;
-  --hg-warning: #ffc266;
-  --hg-danger: #ff8a93;
-  --hg-focus: #ff6f7c;
-  --hg-header-surface: #1a131c;
-  --hg-header-muted: #cbb2b9;
-  --hg-warning-fill: #3a2410;
-  --hg-warning-ink: #ffd8a8;
-  --hg-danger-fill: #3a0f14;
-  --hg-danger-ink: #ffd0d5;
-  --hg-tag-fill: #241a22;
-  --hg-tag-ink: #e6d0db;
-  --hg-tag-rule: #4a3240;
-  --hg-mascot-bg: #151016;
-  color-scheme: dark;
+  /* Bridged from the shared cascade. */
+  --hg-canvas:          var(--bg,             #0a0a0b);
+  --hg-surface:         var(--panel,          #101011);
+  /*
+   * `--hg-surface-sunken` is intentionally NOT bridged. See the authored
+   * per-pack block below — surfaceSunken is a React concept the CSS packs
+   * do not model, and bridging it onto `--track` or `--raised` either
+   * fails contrast or collapses the panel hierarchy.
+   */
+  --hg-surface-raised:  var(--raised,         #141416);
+  --hg-line:            var(--rule,           #2a2a2b);
+  --hg-line-strong:     var(--rule-hi,        #4a4a4b);
+  --hg-text:            var(--text,           #e2e2e0);
+  --hg-text-muted:      var(--dim,            #a0a09c);
+  --hg-accent:          var(--head-accent,    #7d7d75);
+  --hg-accent-fill:     var(--head-accent,    #7d7d75);
+  --hg-accent-ink:      var(--mascot-bg,      #ffffff);
+  --hg-success:         var(--nom,            #4bc67a);
+  --hg-warning:         var(--caution,        #e9aa3b);
+  --hg-danger:          var(--warn,           #c4271d);
+  --hg-focus:           var(--head-accent,    #7d7d75);
+  --hg-header-surface:  var(--head,           var(--panel, #101011));
+  --hg-header-muted:    var(--head-dim,       var(--dim, #a0a09c));
+  --hg-warning-fill:    var(--caution-fill,   var(--caution, #e9aa3b));
+  --hg-warning-ink:     var(--caution-ink,    #ffffff);
+  --hg-danger-fill:     var(--warn-fill,      var(--warn, #c4271d));
+  --hg-danger-ink:      var(--warn-ink,       #ffffff);
+  --hg-tag-fill:        var(--tag-fill,       var(--raised, #141416));
+  --hg-tag-ink:         var(--tag-ink,        var(--text, #e2e2e0));
+  --hg-tag-rule:        var(--tag-rule,       var(--rule-hi, #4a4a4b));
+  --hg-mascot-bg:       var(--mascot-bg,      var(--panel, #101011));
 }
+
+/*
+ * Chrome tokens — plate, rivet, scrim.
+ *
+ * Not in the CSS packs: these were invented for the Oni armour chrome and
+ * the two `@tanstack`-style primitives live only in React. Declared here
+ * scoped to the pack that uses them; non-Oni packs render no chrome so the
+ * tokens staying unset is correct. 2c will gate the Ornament components
+ * off the declared presence rather than the pack id, but the per-pack
+ * declaration here is the cheapest way to make them resolve today.
+ *
+ * Values are the ones React carried pre-2b for vermilion / azure / bone,
+ * renamed to the pack+appearance pair they always meant.
+ */
+:root[data-visual-theme="oni"] {
+  /* Oni dark (azure) */
+  --hg-plate:       #2c4066;
+  --hg-plate-hi:    #7596c4;
+  --hg-plate-lo:    #121c30;
+  --hg-plate-edge:  #8fb4dd;
+  --hg-rivet:       #e8c07f;
+  --hg-scrim:       rgba(3, 7, 14, 0.72);
+}
+:root[data-theme="amoled"][data-visual-theme="oni"] {
+  /* Oni amoled (vermilion) */
+  --hg-plate:       #413039;
+  --hg-plate-hi:    #8f717e;
+  --hg-plate-lo:    #1a1219;
+  --hg-plate-edge:  #a77483;
+  --hg-rivet:       #f0c489;
+  --hg-scrim:       rgba(6, 3, 7, 0.72);
+}
+:root[data-theme="light"][data-visual-theme="oni"] {
+  /* Oni light (bone) */
+  --hg-plate:       #aebfdd;
+  --hg-plate-hi:    #ffffff;
+  --hg-plate-lo:    #8fa0c4;
+  --hg-plate-edge:  #4a5c87;
+  --hg-rivet:       #a06f28;
+  --hg-scrim:       rgba(10, 15, 28, 0.38);
+}
+
+/*
+ * `--hg-surface-sunken` — the rail-panel surface, one step quieter than
+ * `--hg-surface`. Not bridged: CSS packs model only two surface levels
+ * (panel + raised + scrollbar track), none matching React's "one step
+ * quieter". Bridging onto `--track` fails contrast on four packs;
+ * bridging onto `--raised` collapses sunken into raised and loses the
+ * three-tier hierarchy React has depended on since Phase 2.
+ *
+ * So React owns it. Authored per (pack × appearance), each value picked
+ * between the pack's `--panel` and `--bg` so the surface sits BELOW
+ * `--panel` in lightness (on dark packs) or BELOW it in warmth (on light
+ * packs). The `theme-cascade.spec.ts` suite asserts text and textMuted
+ * clear 4.5:1 on every sunken value.
+ *
+ * Base (no pack) carries its own value because the templated app's base
+ * dark/light have no declared sunken either.
+ */
+:root                                { --hg-surface-sunken: #0c0c0c; }
+:root[data-theme="light"]            { --hg-surface-sunken: #ecece8; }
+
+:root[data-visual-theme="pink"]                      { --hg-surface-sunken: #1c0b15; }
+:root[data-theme="light"][data-visual-theme="pink"]  { --hg-surface-sunken: #fef1f6; }
+
+:root[data-visual-theme="muertos"]                     { --hg-surface-sunken: #0d0b12; }
+:root[data-theme="amoled"][data-visual-theme="muertos"] { --hg-surface-sunken: #060608; }
+:root[data-theme="light"][data-visual-theme="muertos"]  { --hg-surface-sunken: #f5ece0; }
+
+:root[data-visual-theme="muertos-v2"]                     { --hg-surface-sunken: #1b1226; }
+:root[data-theme="amoled"][data-visual-theme="muertos-v2"] { --hg-surface-sunken: #020202; }
+:root[data-theme="light"][data-visual-theme="muertos-v2"]  { --hg-surface-sunken: #fbf1e0; }
+
+:root[data-visual-theme="azure-oni"]                     { --hg-surface-sunken: #0c111f; }
+:root[data-theme="amoled"][data-visual-theme="azure-oni"] { --hg-surface-sunken: #020408; }
+:root[data-theme="light"][data-visual-theme="azure-oni"]  { --hg-surface-sunken: #e9edf7; }
+
+:root[data-visual-theme="azure-oni-v2"]                     { --hg-surface-sunken: #0c111f; }
+:root[data-theme="amoled"][data-visual-theme="azure-oni-v2"] { --hg-surface-sunken: #020408; }
+:root[data-theme="light"][data-visual-theme="azure-oni-v2"]  { --hg-surface-sunken: #e9edf7; }
+
+:root[data-visual-theme="oni"]                     { --hg-surface-sunken: #0a1223; }
+:root[data-theme="amoled"][data-visual-theme="oni"] { --hg-surface-sunken: #040307; }
+:root[data-theme="light"][data-visual-theme="oni"]  { --hg-surface-sunken: #e5edf7; }
 
 html,
 body,

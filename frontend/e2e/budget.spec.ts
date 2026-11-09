@@ -128,9 +128,13 @@ test.describe('transfer budget', () => {
     */
     await page.addInitScript(() => {
       try {
-        localStorage.setItem('hellogitty-visual-theme', 'vermilion')
+        // Vermilion is the amoled appearance of the Oni pack post-2b;
+        // ThemeProvider migrates the old identity name on load, but we can
+        // set the migrated shape directly to avoid the migration step.
+        localStorage.setItem('hellogitty-visual-theme', 'oni')
+        localStorage.setItem('hellogitty-theme', 'amoled')
       } catch {
-        /* a blocked-storage browser falls back to the default identity */
+        /* a blocked-storage browser falls back to the default pack */
       }
     })
 
@@ -140,14 +144,14 @@ test.describe('transfer budget', () => {
     })
     await page.goto('/app/', { waitUntil: 'networkidle' })
     expect(
-      await page.evaluate(() => document.documentElement.dataset.identity),
-      'the identity did not take; the rest of this test would measure nothing',
-    ).toBe('vermilion')
+      await page.evaluate(() => document.documentElement.dataset.visualTheme),
+      'the pack did not take; the rest of this test would measure nothing',
+    ).toBe('oni')
 
     const foreign = artRequests.filter((n) => n.includes('bone') || n.includes('azure'))
     expect(
       foreign,
-      `the vermilion identity fetched art belonging to others: ${foreign.join(', ')}`,
+      `the vermilion appearance fetched art belonging to others: ${foreign.join(', ')}`,
     ).toHaveLength(0)
   })
 })
