@@ -328,6 +328,57 @@ test.describe('dead controls', () => {
   })
 
   /**
+   * /list refuses invalid query shapes server-side, the way the templated page did.
+   *
+   * The dead-controls audit flagged this: on dev, every variant of /list answered 200 and
+   * the SPA fallback rendered a chunked ListPage behind a permanent "Loading…" placeholder.
+   * A mistyped link quietly looked like a hung page rather than a 404 — the exact failure
+   * class this suite exists to catch.
+   *
+   * The generic target-resolves check above cannot fire here: nothing in the app LINKS to
+   * a bare /list or a typo like /list?pr=open, so those URLs never enter the dedup set. This
+   * test probes them directly.
+   *
+   * The valid shapes (prs=opened|open|merged|closed|decided, or any non-empty stage=…) stay
+   * 200. Only the shapes a user would reach by hand — bare, typo, nonsense key, or a `prs=`
+   * value not in the kind set — 404.
+   */
+  test('/list refuses invalid query shapes the templated page refused', async ({ request }) => {
+    const ok = [
+      '/list?prs=opened',
+      '/list?prs=open',
+      '/list?prs=merged',
+      '/list?prs=closed',
+      '/list?prs=decided',
+      '/list?stage=review',
+    ]
+    const notFound = [
+      '/list',
+      '/list?pr=open', // typo: pr vs prs — the shape the sibling audit flagged by name
+      '/list?what=x',
+      '/list?prs=my-open',
+      '/list?prs=', // present but empty
+      '/list?stage=',
+    ]
+    const badOk: string[] = []
+    for (const u of ok) {
+      const r = await request.get(u, { maxRedirects: 0 })
+      if (r.status() >= 400) badOk.push(`${u} → ${r.status()}`)
+    }
+    expect(badOk, `valid /list variants that stopped resolving:\n${badOk.join('\n')}`).toHaveLength(0)
+
+    const badNotFound: string[] = []
+    for (const u of notFound) {
+      const r = await request.get(u, { maxRedirects: 0 })
+      if (r.status() !== 404) badNotFound.push(`${u} → ${r.status()} (want 404)`)
+    }
+    expect(
+      badNotFound,
+      `invalid /list variants that still answer 200 — the fallback is swallowing them again:\n${badNotFound.join('\n')}`,
+    ).toHaveLength(0)
+  })
+
+  /**
    * The settings page claims a "templated settings page" link. The original
    * shipped as `href="/legacy"`, which served the templated DASHBOARD. This
    * is the one semantic check that cannot be generic — only this page knows
