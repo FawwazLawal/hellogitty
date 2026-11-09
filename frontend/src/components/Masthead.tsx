@@ -178,11 +178,21 @@ function LiveClock() {
   const { prefs } = useClockPreferences()
   const now = useLiveClock()
   const { time, meridiem, date, iso } = formatClock(now, prefs)
+  /*
+   * `data-clock-style` drives the per-style CSS overrides in index.css, whose
+   * selectors target `.hg-clock-time` / `.hg-clock-date` inside the subtree.
+   * `default` is the absence of an override, so the attribute is omitted in
+   * that case; any other selector matches and takes over colour / weight /
+   * text-shadow.
+   */
+  const styleAttr = prefs.style === 'default' ? undefined : prefs.style
   return (
-    <div className="flex flex-col items-center gap-0.5 select-none">
+    <div
+      className="flex flex-col items-center gap-0.5 select-none"
+      data-clock-style={styleAttr}
+    >
       <time
-        className="block font-mono text-[28px] font-bold leading-none tabular-nums"
-        style={{ color: 'var(--hg-text)', letterSpacing: '0.04em' }}
+        className="hg-clock-time block font-mono text-[28px] font-bold leading-none tabular-nums"
         dateTime={iso}
       >
         {/*
@@ -194,10 +204,7 @@ function LiveClock() {
         {time}{meridiem && ` ${meridiem}`}
       </time>
       {date && (
-        <span
-          className="block font-sans text-[12px] font-medium leading-none uppercase"
-          style={{ color: 'var(--hg-text-muted)', letterSpacing: '0.05em' }}
-        >
+        <span className="hg-clock-date block font-sans text-[12px] font-medium leading-none uppercase">
           {date}
         </span>
       )}
