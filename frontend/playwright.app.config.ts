@@ -18,7 +18,7 @@ import { defineConfig, devices } from '@playwright/test'
  */
 export default defineConfig({
   testDir: './e2e',
-  testMatch: ['app.spec.ts', 'budget.spec.ts', 'conversations.spec.ts', 'settings-clock.spec.ts', 'dead-controls.spec.ts', 'pipeline-stages.spec.ts', 'settings-readouts.spec.ts', 'clock-styles.spec.ts', 'settings-sidebar.spec.ts'],
+  testMatch: ['app.spec.ts', 'budget.spec.ts', 'conversations.spec.ts', 'settings-clock.spec.ts', 'dead-controls.spec.ts', 'pipeline-stages.spec.ts', 'settings-readouts.spec.ts', 'clock-styles.spec.ts', 'settings-sidebar.spec.ts', 'clock-pack-color.spec.ts'],
   workers: 1,
   fullyParallel: false,
   forbidOnly: !!process.env.CI,

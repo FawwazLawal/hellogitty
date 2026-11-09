@@ -275,6 +275,12 @@
     --mascot-bg: #0b0710;
     --pack-crimson: #ff3d4c;        /* identity mark: 8.57:1 on --panel        */
     --pack-crimson-fill: #d9242f;   /* pennant surface: white ink 4.95:1       */
+
+    /* Clock treatment — see the §Clock block in the dark-oni rule below for the
+       full rationale. Amoled inherits the same identity crimson as dark so the
+       three appearances share one clock. */
+    --hg-clock-color:      var(--pack-crimson);
+    --hg-clock-date-color: var(--pack-crimson);
   }
 
 :root[data-visual-theme="oni"] {
@@ -323,6 +329,15 @@
   --pack-cobalt:      #267fb5;   /* sampled identity cobalt (ornament role) */
   --pack-cobalt-fill: #2873a8;   /* NEW — pennant fill, white ink safe (see §PENNANT) */
   --pack-crimson:     #ff3d4c;   /* the ONE warm mark (demand count, rivets, clock) */
+  /* Clock colour tokens. The templated side paints `.hclock-time` / `.hclock-date`
+     in --pack-crimson at specificity (0,2,1) directly; React reads these tokens
+     from its `.hg-clock-time` / `.hg-clock-date` base rules, which fall back to
+     --text when a pack states no treatment. The clock-style layer continues to
+     override via `[data-clock-style="neon"] .hg-clock-time { color: #0ff }` at
+     (0,2,0), beating the base (0,1,0) regardless of what value the token carries.
+     Style over pack over default — one cascade, no race. */
+  --hg-clock-color:      var(--pack-crimson);
+  --hg-clock-date-color: var(--pack-crimson);
   --pack-torii:       #bb2c38;   /* the gate in the scene art */
   --pack-blossom:     #d14351;   /* corner blossoms — red plum, not pink */
   --pack-branch:      #5a2a35;
@@ -373,6 +388,11 @@
   /* Scene palette (the identity). Sampled from the reference render;
      sampling notes at the bottom of this file. */
   --pack-crimson:      #a81f35;  /* the one warm mark — passes 4.5:1 on --panel */
+  /* Clock colour tokens, darker crimson for paper — matches templated oni/light
+     at `:root[data-theme="light"][data-visual-theme="oni"] .hclock-time`. Same
+     mechanism as dark oni (block above); see that comment for cascade rules. */
+  --hg-clock-color:      var(--pack-crimson);
+  --hg-clock-date-color: var(--pack-crimson);
   --pack-sky-high:     #eef3fd;
   --pack-sky-low:      #c7d6f7;
   --pack-torii:        #a81f35;
