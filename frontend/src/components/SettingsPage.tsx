@@ -7,10 +7,12 @@ import { useTheme } from '../theme/ThemeProvider'
 import type { Appearance } from '../theme/ThemeProvider'
 import { useSettings, useSession, useRepoMutation } from '../data/settings'
 import {
+  CLOCK_STYLES,
   WORLD_ZONES,
   useClockPreferences,
   useWorldClocks,
   type ClockFormat,
+  type ClockStyle,
 } from '../data/clock'
 
 /**
@@ -23,18 +25,12 @@ import {
  * WHAT CARRIES OVER AND WHAT DOES NOT. The templated page has six sections:
  * Appearance, Clock, Repositories, Polling & API, Server and About.
  *
- * Appearance, Clock and Repositories are here. The three primary clock
- * controls (time format, show seconds, show date) write the same
- * `hellogitty-clock` key the templated page already used, and the React
- * Masthead now reads it — so a visitor crossing from /legacy finds their saved
- * preference honoured, and flipping a toggle here reflects in the masthead
- * immediately.
- *
- * The 15 clock-style variants and the world-clocks list stay on /legacy for
- * now and are called out in the PR body as deliberate deferrals. The identity
- * system already drives the clock's colour, so styles would stack a second
- * mood on top of the first; world clocks are a functional feature with a
- * masthead-layout cost that deserves its own change.
+ * Appearance, Clock and Repositories are here. The clock controls (time
+ * format, show seconds, show date, fifteen visual styles, world clocks) write
+ * the same `hellogitty-clock` / `hellogitty-worldclocks` keys the templated
+ * page already used, and the React Masthead now reads them — so a visitor
+ * crossing from /legacy finds their saved preference honoured, and flipping a
+ * toggle here reflects in the masthead immediately.
  *
  * Everything shown read-only is read-only on both pages. The two write actions
  * are the ones the templated page already had, calling the same endpoints.
@@ -199,6 +195,7 @@ export function SettingsPage() {
               ]}
             />
           </Row>
+          <ClockStyleRow value={clock.prefs.style} onChange={clock.setStyle} />
         </Panel>
 
         <Panel>
@@ -481,14 +478,107 @@ export function SettingsPage() {
           <Row label="Version"><Readout value={d?.version ?? ''} /></Row>
         </Panel>
 
-        <p className="px-1 text-[11px]" style={{ color: 'var(--hg-text-muted)' }}>
-          The {' '}
-          <a href="/legacy/settings" style={{ color: 'var(--hg-accent)' }}>templated settings page</a>
-          {' '}still carries the 15 clock-style variants (Neon, Matrix, Nixie, LED, Flip and so on).
-          Whether those come across is an open owner decision, called out in the PR that added this
-          page. Both pages read the same storage, so a saved style still applies on /legacy either way.
-        </p>
       </div>
     </main>
   )
+}
+
+/**
+ * The 15 clock-style swatches, reinstated per the owner's reversal of the
+ * decision that #268 was built on. Fifteen visual variants (Default plus
+ * fourteen named: Neon / Matrix / Nixie / LED / Flip and the rest). Each
+ * swatch previews the style as a live "12:34" string using the same
+ * `data-clock-style` attribute the Masthead reads — so what the picker
+ * shows is what the user gets when they select it, and a future change to
+ * one of the CSS blocks reflects in both surfaces with no second place to
+ * edit.
+ *
+ * Grid is `minmax(120px, 1fr)` on auto-fit; the picker's own 390px gate is
+ * covered by the overall /settings overflow check, so this does not need a
+ * horizontal scroll container.
+ */
+function ClockStyleRow({ value, onChange }: { value: ClockStyle; onChange: (v: ClockStyle) => void }) {
+  return (
+    <div className="flex flex-col gap-2 border-b px-4 py-3 last:border-b-0" style={{ borderColor: 'var(--hg-line)' }}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="text-[12.5px]" style={{ color: 'var(--hg-text)' }}>Clock style</div>
+          <div className="mt-0.5 text-[11px]" style={{ color: 'var(--hg-text-muted)' }}>
+            Fifteen visual variants on the masthead clock.
+          </div>
+        </div>
+      </div>
+      <ul
+        role="radiogroup"
+        aria-label="Clock style"
+        className="grid gap-2"
+        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}
+      >
+        {CLOCK_STYLES.map((s) => {
+          const active = s.id === value
+          const styleAttr = s.id === 'default' ? undefined : s.id
+          return (
+            <li key={s.id}>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => onChange(s.id)}
+                className="flex w-full flex-col items-center gap-1 border px-2 py-2.5 transition-colors"
+                style={{
+                  background: s.id === 'default' ? 'var(--hg-surface-sunken)' : stylePreviewBg(s.id),
+                  borderColor: active ? 'var(--hg-accent)' : 'var(--hg-line)',
+                  color: 'var(--hg-text)',
+                }}
+                data-clock-style={styleAttr}
+              >
+                {/*
+                  The preview uses the exact same markup+classes the Masthead
+                  uses, so the `data-clock-style` CSS rules apply identically.
+                  No stand-in "preview style" that could drift from the real one.
+                */}
+                <span className="hg-clock-time block font-mono text-[18px] font-bold leading-none tabular-nums">
+                  12:34
+                </span>
+                <span className="hg-clock-date block font-sans text-[10px] font-medium leading-none">
+                  {s.name}
+                </span>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
+/**
+ * Backgrounds the templated picker swatches use so a dark-on-dark style like
+ * Neon or Matrix reads at all inside a bright panel. Mirrors the inline
+ * styles the templated `.clock-swatch[data-style="neon"]` etc. CSS set on
+ * the swatch container, not on the clock itself.
+ */
+function stylePreviewBg(id: ClockStyle): string {
+  switch (id) {
+    case 'neon':
+    case 'led':
+      return '#0a0a0a'
+    case 'ember':
+      return '#1a0a00'
+    case 'matrix':
+    case 'terminal':
+      return '#0a0f0a'
+    case 'arctic':
+      return '#0a1520'
+    case 'midnight':
+      return '#0f0a1a'
+    case 'rose':
+      return '#1a0a10'
+    case 'nixie':
+      return '#0f0800'
+    case 'flip':
+      return '#111'
+    default:
+      return 'var(--hg-surface-sunken)'
+  }
 }

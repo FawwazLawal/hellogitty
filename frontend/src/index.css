@@ -140,3 +140,84 @@ body {
   pointer-events: none;
   user-select: none;
 }
+
+/**
+ * BASE clock rules.
+ *
+ * Colour and letter-spacing live here, not on the inline React `style` prop,
+ * because the fourteen per-style overrides below are CSS and cannot beat an
+ * inline style on a <time> element without !important — which is the wrong
+ * lever to pull. A per-style rule MUST be free to change colour, weight,
+ * letter-spacing, font-family and text-shadow; the base rule puts the
+ * defaults in a place the overrides can reach.
+ *
+ * Templated's equivalent lives at index.html .hclock-time / .hclock-date.
+ */
+.hg-clock-time {
+  color: var(--hg-text);
+  letter-spacing: 0.04em;
+}
+.hg-clock-date {
+  color: var(--hg-text-muted);
+  letter-spacing: 0.05em;
+}
+
+/**
+ * The fourteen clock-style variants the templated page offers (plus `default`,
+ * which is the absence of any of these rules). Copied verbatim from the
+ * templated `.hclock.clock-<id>` blocks in web/index.html, retargeted to the
+ * React masthead clock's `data-clock-style` attribute and its `.hg-clock-time`
+ * / `.hg-clock-date` descendants.
+ *
+ * Why match character-for-character: the whole point of the fourteen is that
+ * they are a visual choice the owner cares about, reviewed on screen. A
+ * "cleaner" variant that drops the text-shadow or tightens the gradient reads
+ * on sight as a different design, which is the regression this PR exists to
+ * reverse. Any change here needs to happen on both surfaces at once.
+ *
+ * Also used inside the Settings picker swatch previews, scoped by the same
+ * selector against a static "12:34" string — so what the user sees in the
+ * picker is what they get in the masthead.
+ */
+[data-clock-style="neon"] .hg-clock-time { color: #0ff; text-shadow: 0 0 7px #0ff, 0 0 20px #0ff, 0 0 42px #0099cc; }
+[data-clock-style="neon"] .hg-clock-date { color: #0ff; opacity: .7; }
+
+[data-clock-style="ember"] .hg-clock-time { color: #ff6b35; text-shadow: 0 0 8px rgba(255,107,53,.6), 0 0 24px rgba(255,60,0,.3); }
+[data-clock-style="ember"] .hg-clock-date { color: #ff9966; }
+
+[data-clock-style="matrix"] .hg-clock-time { color: #00ff41; text-shadow: 0 0 5px #00ff41, 0 0 15px rgba(0,255,65,.4); font-family: "Courier New", monospace; }
+[data-clock-style="matrix"] .hg-clock-date { color: #00cc33; }
+
+[data-clock-style="arctic"] .hg-clock-time { color: #88ccff; text-shadow: 0 0 10px rgba(136,204,255,.5); letter-spacing: 0.08em; }
+[data-clock-style="arctic"] .hg-clock-date { color: #aaddff; }
+
+[data-clock-style="sunset"] .hg-clock-time { background: linear-gradient(135deg, #ff6b6b, #ffa07a, #ffd93d); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent; }
+[data-clock-style="sunset"] .hg-clock-date { color: #ffa07a; }
+
+[data-clock-style="midnight"] .hg-clock-time { color: #c4b5fd; text-shadow: 0 0 12px rgba(196,181,253,.4), 0 0 30px rgba(139,92,246,.2); }
+[data-clock-style="midnight"] .hg-clock-date { color: #a78bfa; }
+
+[data-clock-style="terminal"] .hg-clock-time { color: #4ade80; font-family: "Courier New", monospace; letter-spacing: 0.1em; }
+[data-clock-style="terminal"] .hg-clock-time::before { content: "> "; font-weight: 400; opacity: .5; }
+[data-clock-style="terminal"] .hg-clock-date { color: #86efac; font-family: "Courier New", monospace; }
+
+[data-clock-style="golden"] .hg-clock-time { background: linear-gradient(180deg, #ffd700, #b8860b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent; filter: drop-shadow(0 1px 2px rgba(184,134,11,.3)); }
+[data-clock-style="golden"] .hg-clock-date { color: #daa520; }
+
+[data-clock-style="rose"] .hg-clock-time { color: #fb7185; text-shadow: 0 0 8px rgba(251,113,133,.4); }
+[data-clock-style="rose"] .hg-clock-date { color: #fda4af; }
+
+[data-clock-style="ocean"] .hg-clock-time { background: linear-gradient(135deg, #06b6d4, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent; }
+[data-clock-style="ocean"] .hg-clock-date { color: #67e8f9; }
+
+[data-clock-style="mono"] .hg-clock-time { color: var(--hg-text-muted); font-weight: 400; letter-spacing: 0.12em; }
+[data-clock-style="mono"] .hg-clock-date { color: var(--hg-text-muted); opacity: .5; }
+
+[data-clock-style="nixie"] .hg-clock-time { color: #ff8c42; text-shadow: 0 0 4px #ff8c42, 0 0 12px rgba(255,140,66,.5), 0 0 28px rgba(255,100,20,.3); font-weight: 400; letter-spacing: 0.06em; }
+[data-clock-style="nixie"] .hg-clock-date { color: #ff8c42; opacity: .6; }
+
+[data-clock-style="led"] .hg-clock-time { color: var(--hg-text); font-weight: 800; letter-spacing: 0.1em; text-shadow: 0 0 6px currentColor, 0 0 18px currentColor; }
+[data-clock-style="led"] .hg-clock-date { color: var(--hg-accent); font-weight: 600; letter-spacing: 0.08em; }
+
+[data-clock-style="flip"] .hg-clock-time { color: #f5f0e8; font-weight: 700; letter-spacing: 0.14em; background: #1a1a1a; padding: 4px 10px; border-radius: 4px; border: 1px solid #333; box-shadow: 0 2px 8px rgba(0,0,0,.5); }
+[data-clock-style="flip"] .hg-clock-date { color: #a09880; }

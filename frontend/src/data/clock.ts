@@ -20,10 +20,78 @@ import { z } from 'zod'
 export const ClockFormat = z.enum(['24h', '12h'])
 export type ClockFormat = z.infer<typeof ClockFormat>
 
+/**
+ * The fifteen clock styles the templated page ships, in the same order the
+ * templated picker renders them.
+ *
+ * `default` is not a CSS class — it is the absence of one. The other fourteen
+ * add `data-clock-style="<id>"` to the clock root and let the matching CSS
+ * block in `index.css` take over the time and date colour / weight / shadow.
+ * The id strings match the templated `.hclock.clock-<id>` selectors so a
+ * saved preference crosses from /legacy into / without being renamed.
+ */
+export const CLOCK_STYLE_IDS = [
+  'default',
+  'neon',
+  'ember',
+  'matrix',
+  'arctic',
+  'sunset',
+  'midnight',
+  'terminal',
+  'golden',
+  'rose',
+  'ocean',
+  'mono',
+  'nixie',
+  'led',
+  'flip',
+] as const
+export const ClockStyle = z.enum(CLOCK_STYLE_IDS)
+export type ClockStyle = z.infer<typeof ClockStyle>
+
+export interface ClockStyleEntry {
+  id: ClockStyle
+  name: string
+  desc: string
+}
+
+/**
+ * Names and descriptions from the templated settings.html CLOCK_STYLES array
+ * (settings.html:681 on dev at the point this landed). Copied verbatim so the
+ * picker reads the same.
+ */
+export const CLOCK_STYLES: ClockStyleEntry[] = [
+  { id: 'default', name: 'Default', desc: 'Clean monospace' },
+  { id: 'neon', name: 'Neon', desc: 'Cyan glow' },
+  { id: 'ember', name: 'Ember', desc: 'Warm fire tones' },
+  { id: 'matrix', name: 'Matrix', desc: 'Green terminal rain' },
+  { id: 'arctic', name: 'Arctic', desc: 'Cool ice blue' },
+  { id: 'sunset', name: 'Sunset', desc: 'Warm gradient' },
+  { id: 'midnight', name: 'Midnight', desc: 'Purple haze' },
+  { id: 'terminal', name: 'Terminal', desc: 'Retro prompt' },
+  { id: 'golden', name: 'Golden', desc: 'Luxury gold' },
+  { id: 'rose', name: 'Rosé', desc: 'Soft pink' },
+  { id: 'ocean', name: 'Ocean', desc: 'Deep sea gradient' },
+  { id: 'mono', name: 'Mono', desc: 'Minimal gray' },
+  { id: 'nixie', name: 'Nixie', desc: 'Vintage tube glow' },
+  { id: 'led', name: 'LED', desc: 'Wall clock bright' },
+  { id: 'flip', name: 'Flip', desc: 'Retro split-flap' },
+]
+
 export const ClockPreferences = z.object({
   format: ClockFormat.default('24h'),
   seconds: z.boolean().default(true),
   date: z.boolean().default(true),
+  /**
+   * Fourteen-way visual variant on the main clock. The templated page writes
+   * the id into `hellogitty-clock.style` and applies a `.clock-<id>` class on
+   * `.hclock`. An unknown value (e.g. a style that was renamed or removed)
+   * falls back to `default` via a `.catch()` — a garbage string must not
+   * flatten the whole preference object to defaults, which would quietly
+   * reset format and seconds too.
+   */
+  style: ClockStyle.catch('default').default('default'),
 })
 export type ClockPreferences = z.infer<typeof ClockPreferences>
 
@@ -62,6 +130,7 @@ export const CLOCK_DEFAULTS: ClockPreferences = {
   format: '24h',
   seconds: true,
   date: true,
+  style: 'default',
 }
 
 function read(): ClockPreferences {
@@ -128,6 +197,7 @@ export function useClockPreferences() {
     setFormat: (format: ClockFormat) => update({ format }),
     setSeconds: (seconds: boolean) => update({ seconds }),
     setDate: (date: boolean) => update({ date }),
+    setStyle: (style: ClockStyle) => update({ style }),
   }
 }
 
@@ -304,8 +374,17 @@ export interface FormattedClock {
  *
  * Kept pure so the Masthead and tests can share one definition. The templated
  * page uses the browser's local time, so this does too.
+ *
+ * `style` is NOT a parameter here. The style is a presentation layer applied
+ * via `data-clock-style` + CSS; format is text. Taking the full
+ * `ClockPreferences` as input would force every test fixture to carry a
+ * `style` value that the function never reads, which is noise at the call
+ * site and an invitation for a reader to think the formatter depends on it.
  */
-export function formatClock(now: Date, prefs: ClockPreferences): FormattedClock {
+export function formatClock(
+  now: Date,
+  prefs: Pick<ClockPreferences, 'format' | 'seconds' | 'date'>,
+): FormattedClock {
   const hours = now.getHours()
   const minutes = now.getMinutes()
   const secs = now.getSeconds()

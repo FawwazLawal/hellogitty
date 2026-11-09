@@ -37,10 +37,47 @@ afterEach(() => {
 })
 
 describe('useClockPreferences — templated-key parity', () => {
-  it('reads defaults when the storage is empty (24h, seconds on, date on)', () => {
+  it('reads defaults when the storage is empty (24h, seconds on, date on, default style)', () => {
     const { result } = renderHook(() => useClockPreferences())
     expect(result.current.prefs).toEqual(CLOCK_DEFAULTS)
-    expect(CLOCK_DEFAULTS).toEqual({ format: '24h', seconds: true, date: true })
+    expect(CLOCK_DEFAULTS).toEqual({ format: '24h', seconds: true, date: true, style: 'default' })
+  })
+
+  it('reads a saved `style` the templated page wrote (style=neon)', () => {
+    // Templated page writes {format, seconds, date, style} as a partial object.
+    // A saved style must survive the round-trip or a visitor's choice silently
+    // reverts to default when they move from /legacy to /.
+    localStorage.setItem('hellogitty-clock', JSON.stringify({ style: 'neon' }))
+    const { result } = renderHook(() => useClockPreferences())
+    expect(result.current.prefs.style).toBe('neon')
+    // Other fields fall back on defaults.
+    expect(result.current.prefs.format).toBe('24h')
+    expect(result.current.prefs.seconds).toBe(true)
+  })
+
+  it('an unknown style falls back on default without clobbering the other fields', () => {
+    // The zod `.catch('default')` on the style field exists for this exact
+    // case: a style that was renamed or removed must NOT cause the whole
+    // preference object to reset. A bare `.default()` without `.catch()` would
+    // throw on an unknown enum value and wipe format and seconds with it.
+    localStorage.setItem(
+      'hellogitty-clock',
+      JSON.stringify({ format: '12h', seconds: false, date: true, style: 'ghostbusters' }),
+    )
+    const { result } = renderHook(() => useClockPreferences())
+    expect(result.current.prefs.style).toBe('default')
+    expect(result.current.prefs.format).toBe('12h')
+    expect(result.current.prefs.seconds).toBe(false)
+    expect(result.current.prefs.date).toBe(true)
+  })
+
+  it('setStyle writes under hellogitty-clock and leaves other fields intact', () => {
+    const { result } = renderHook(() => useClockPreferences())
+    act(() => result.current.setFormat('12h'))
+    act(() => result.current.setStyle('matrix'))
+    const raw = localStorage.getItem('hellogitty-clock')
+    expect(raw).not.toBeNull()
+    expect(JSON.parse(raw!)).toMatchObject({ format: '12h', seconds: true, date: true, style: 'matrix' })
   })
 
   it('reads a preference the templated page has already written (format=12h)', () => {
