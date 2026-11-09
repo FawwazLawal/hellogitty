@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { AlertTriangle, Copy } from 'lucide-react'
-import { useHelp, type HelpSection, type HelpTerm } from '../data/help'
+import { useHelp } from '../data/help'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { buildChunks, rank, snippet } from '../lib/helpSearch'
 
 /**
  * The /help page.
@@ -9,25 +10,20 @@ import { usePageTitle } from '../hooks/usePageTitle'
  * Most of this is server-rendered HTML — a goldmark pass over the guide
  * Markdown with the server's own link rewriter. The reasons that stays
  * on the server are in `data/help.ts`. The React side's job is layout,
- * TOC navigation, the simple search, and the one write-free action —
- * copying the AI prompt to the clipboard.
+ * TOC navigation, search, and the one write-free action — copying the
+ * AI prompt to the clipboard.
  *
- * SEARCH IS NOT THE TEMPLATED PAGE'S RANKER. The templated page carries
- * a stemmed, scored ranker over ~200 lines of JS. The React page swaps
- * that for a substring-match filter over section text and glossary
- * labels. The ranker is a feature worth preserving but not worth
- * blocking this port on; follow it up when the templated page itself
- * is removed.
+ * Search is ported from the templated page's ranker: stop words, a
+ * tiny stemmer, an alternatives table ("adding repos" → add + repo
+ * → "add a repository"), and a scored chunk match. See
+ * `lib/helpSearch.ts` for the logic and the reason each weight has
+ * the value it does; this component only runs it and renders hits.
  *
  * KNOWN IS NOT A STATUS. The About section's live rows (Last check,
  * GitHub API this hour, Notifications) carry their own `known` flag.
  * A row that has not been learned yet renders an em-dash rather than
  * a server-typed string that could read as a real answer.
  */
-
-type SearchMatch =
-  | { kind: 'section'; section: HelpSection }
-  | { kind: 'term'; term: HelpTerm }
 
 export function HelpPage() {
   usePageTitle('HelloGitty help')
@@ -37,20 +33,14 @@ export function HelpPage() {
 
   const d = q.data
 
-  const matches = useMemo<SearchMatch[]>(() => {
-    if (!d) return []
-    const needle = search.trim().toLowerCase()
-    if (!needle) return []
-    const hits: SearchMatch[] = []
-    for (const section of d.sections) {
-      const hay = (section.title + ' ' + section.text).toLowerCase()
-      if (hay.includes(needle)) hits.push({ kind: 'section', section })
-    }
-    for (const term of d.glossary) {
-      if (term.search.includes(needle)) hits.push({ kind: 'term', term })
-    }
-    return hits.slice(0, 20)
-  }, [d, search])
+  // Chunks come from parsing section HTML, so rebuild them only when
+  // the doc itself changes — not on every keystroke.
+  const chunks = useMemo(() => (d ? buildChunks(d) : []), [d])
+
+  const results = useMemo(() => {
+    if (!d || !search.trim()) return null
+    return rank(search, chunks)
+  }, [d, search, chunks])
 
   const onCopyPrompt = async () => {
     if (!d) return
@@ -103,52 +93,60 @@ export function HelpPage() {
         </div>
       )}
 
-      {search.trim() && matches.length === 0 && d && (
+      {results && results.hits.length === 0 && d && (
         <p
           role="status"
           className="text-[12.5px]"
           style={{ color: 'var(--hg-text-muted)' }}
         >
-          Nothing matches "{search.trim()}".
+          Nothing in Help mentions that. Try another word, or browse the contents.
         </p>
       )}
 
-      {search.trim() && matches.length > 0 && (
+      {results && results.hits.length > 0 && (
         <section className="mb-6" aria-label="Search results">
           <p className="mb-2 text-[12px]" style={{ color: 'var(--hg-text-muted)' }}>
-            {matches.length} {matches.length === 1 ? 'match' : 'matches'} for "{search.trim()}".
+            {results.exact
+              ? `${results.hits.length} ${results.hits.length === 1 ? 'answer' : 'answers'}, best first.`
+              : 'Nothing mentions all of that. Closest matches:'}
           </p>
           <ol className="list-none p-0">
-            {matches.map((m) => (
+            {results.hits.map((h) => (
               <li
-                key={m.kind === 'section' ? `s-${m.section.id}` : `t-${m.term.id}`}
+                key={h.chunk.key}
                 className="border-t py-2"
                 style={{ borderColor: 'var(--hg-line)' }}
               >
-                {m.kind === 'section' ? (
-                  <a href={`#${m.section.id}`} className="block no-underline hover:underline"
-                     style={{ color: 'var(--hg-text)' }}>
-                    <span className="text-[11px] uppercase tracking-wider"
-                          style={{ color: 'var(--hg-text-muted)' }}>
-                      Section
-                    </span>
-                    <span className="block text-[13px]">{m.section.title}</span>
-                  </a>
-                ) : (
-                  <a
-                    href={`#term-${m.term.id}`}
-                    className="block no-underline hover:underline"
-                    style={{ color: 'var(--hg-text)' }}
+                <a
+                  href={h.chunk.linkId}
+                  className="block no-underline hover:underline"
+                  style={{ color: 'var(--hg-text)' }}
+                >
+                  <span
+                    className="text-[11px] uppercase tracking-wider"
+                    style={{ color: 'var(--hg-text-muted)' }}
                   >
-                    <span
-                      className="text-[11px] uppercase tracking-wider"
-                      style={{ color: 'var(--hg-text-muted)' }}
-                    >
-                      {m.term.kind}
-                    </span>
-                    <span className="block text-[13px]">{m.term.label}</span>
-                  </a>
-                )}
+                    {h.chunk.sectionTitle}
+                    {h.chunk.sub ? ` › ${h.chunk.sub}` : ''}
+                  </span>
+                  <span className="block text-[13px]">
+                    {snippet(h.chunk, results.ideas).map((piece, i) =>
+                      piece.mark ? (
+                        <mark
+                          key={i}
+                          style={{
+                            background: 'var(--hg-highlight, var(--hg-surface-raised))',
+                            color: 'var(--hg-text)',
+                          }}
+                        >
+                          {piece.text}
+                        </mark>
+                      ) : (
+                        <span key={i}>{piece.text}</span>
+                      ),
+                    )}
+                  </span>
+                </a>
               </li>
             ))}
           </ol>
