@@ -32,8 +32,11 @@ const (
 
 // Telemetry is the poller's view of its own most recent cycle.
 type Telemetry struct {
-	LastPoll      time.Time
-	Errors        map[string]string
+	LastPoll time.Time
+	Errors   map[string]string
+	// Retried names the repositories whose check failed once this cycle and passed on the
+	// retry. They are not errors: the cycle finished for them.
+	Retried       map[string]string
 	CycleDuration time.Duration
 	CycleRequests int64
 	RateRemaining int
@@ -662,15 +665,18 @@ func (h *Handler) serveHealth(w http.ResponseWriter, r *http.Request) {
 	board, _, partial := h.Source.Work()
 
 	type loopOut struct {
-		Name           string `json:"name"`
-		Interval       int    `json:"interval_minutes"`
-		Last           string `json:"last_success,omitempty"`
-		Age            int    `json:"age_minutes"`
-		Stale          bool   `json:"stale"`
-		Errors         int    `json:"errors"`
-		Partial        *bool  `json:"partial,omitempty"`
-		NeverPolled    bool   `json:"never_polled,omitempty"`
-		NeverRefreshed bool   `json:"never_refreshed,omitempty"`
+		Name     string `json:"name"`
+		Interval int    `json:"interval_minutes"`
+		Last     string `json:"last_success,omitempty"`
+		Age      int    `json:"age_minutes"`
+		Stale    bool   `json:"stale"`
+		Errors   int    `json:"errors"`
+		// Retried counts repositories that failed once and passed on the retry: finished
+		// checks, kept apart from Errors so that number can reach zero on a recovered cycle.
+		Retried        *int  `json:"retried,omitempty"`
+		Partial        *bool `json:"partial,omitempty"`
+		NeverPolled    bool  `json:"never_polled,omitempty"`
+		NeverRefreshed bool  `json:"never_refreshed,omitempty"`
 	}
 	type fileOut struct {
 		Name        string `json:"name"`
@@ -713,7 +719,8 @@ func (h *Handler) serveHealth(w http.ResponseWriter, r *http.Request) {
 	uptime := now.Sub(h.StartedAt)
 	withinGrace := func(interval time.Duration) bool { return uptime <= 5*interval/2 }
 
-	repoLoop := loopOut{Name: "repo_poll", Interval: int(repoInterval / time.Minute), Errors: len(tel.Errors)}
+	retried := len(tel.Retried)
+	repoLoop := loopOut{Name: "repo_poll", Interval: int(repoInterval / time.Minute), Errors: len(tel.Errors), Retried: &retried}
 	if !tel.LastPoll.IsZero() {
 		repoLoop.Last = tel.LastPoll.UTC().Format(time.RFC3339)
 		repoLoop.Age = int(now.Sub(tel.LastPoll) / time.Minute)

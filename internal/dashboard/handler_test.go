@@ -572,6 +572,21 @@ func TestHealthEndpoint(t *testing.T) {
 			filesAbsent: []string{"unreplied.json"},
 			wantHasNot:  []string{`"name":"unreplied.json"`},
 		},
+		{
+			// A repository that failed once and passed on the retry is reported as retried, not
+			// as an error, so a cycle that recovered can read errors:0.
+			name: "retried_repo_is_not_an_error",
+			src: fakeSource{
+				tel:   Telemetry{LastPoll: polled, Retried: map[string]string{"big/repo": "pull requests: context deadline exceeded"}},
+				board: board,
+				writes: []WriteStatus{
+					{Name: "inbox.json", LastAttempt: now.Add(-2 * time.Minute), LastSuccess: now.Add(-2 * time.Minute), Outcome: "written", Detail: "25 entries"},
+				},
+			},
+			wantCode:   200,
+			wantStatus: "ok",
+			wantHas:    []string{`"errors":0`, `"retried":1`},
+		},
 	}
 
 	for _, tc := range cases {
@@ -759,7 +774,7 @@ func TestHealthFirstCycleGrace(t *testing.T) {
 			wantStatus:   "ok",
 			wantHas: []string{
 				// repo_poll must carry never_polled:true with no last_success key.
-				`"name":"repo_poll","interval_minutes":60,"age_minutes":0,"stale":false,"errors":0,"never_polled":true}`,
+				`"name":"repo_poll","interval_minutes":60,"age_minutes":0,"stale":false,"errors":0,"retried":0,"never_polled":true}`,
 			},
 		},
 		{
