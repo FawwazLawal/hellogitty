@@ -218,6 +218,11 @@ func (c *Config) Targets() ([]Repo, error) {
 
 // ReadReposFile accepts any of: ["owner/name", ...], {"repos": [...]}, where each entry is a
 // string or an object with a "repo", "url" or "upstream" field.
+//
+// An object entry that marks itself as no longer worked on is skipped: "active": false,
+// a "retired" that is true or a non-empty note, or a non-empty "pruned_note". Files kept by
+// other tools record every repository they have ever listed and mark the ones they dropped;
+// polling those is a 404 every cycle for a repository that may no longer exist.
 func ReadReposFile(path string) ([]string, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -244,9 +249,12 @@ func ReadReposFile(path string) ([]string, error) {
 			out = append(out, s)
 			continue
 		}
-		var obj struct{ Repo, URL, Upstream string }
+		var obj reposFileEntry
 		if err := json.Unmarshal(e, &obj); err != nil {
 			return nil, fmt.Errorf("%s: unreadable entry %s", path, e)
+		}
+		if obj.inactive() {
+			continue
 		}
 		for _, v := range []string{obj.Repo, obj.URL, obj.Upstream} {
 			if v != "" {
@@ -256,6 +264,45 @@ func ReadReposFile(path string) ([]string, error) {
 		}
 	}
 	return out, nil
+}
+
+// reposFileEntry is one object entry of a repos file: the reference, plus the marks another
+// tool leaves on a repository it stopped working on. Unknown keys are ignored.
+type reposFileEntry struct {
+	Repo, URL, Upstream string
+	Active              *bool           `json:"active"`
+	Retired             json.RawMessage `json:"retired"`
+	PrunedNote          string          `json:"pruned_note"`
+}
+
+// inactive reports whether the entry asks not to be polled.
+func (e reposFileEntry) inactive() bool {
+	if e.Active != nil && !*e.Active {
+		return true
+	}
+	if strings.TrimSpace(e.PrunedNote) != "" {
+		return true
+	}
+	return retiredMark(e.Retired)
+}
+
+// retiredMark reads a "retired" value that is written as a boolean by some tools and as a
+// dated note by others. Absent, null, false and a blank note mean not retired; any other
+// value is the record of a retirement.
+func retiredMark(raw json.RawMessage) bool {
+	s := strings.TrimSpace(string(raw))
+	if s == "" || s == "null" {
+		return false
+	}
+	var b bool
+	if json.Unmarshal(raw, &b) == nil {
+		return b
+	}
+	var note string
+	if json.Unmarshal(raw, &note) == nil {
+		return strings.TrimSpace(note) != ""
+	}
+	return true
 }
 
 // ParseRepo accepts "owner/name", "github.com/owner/name" or a full GitHub URL.
