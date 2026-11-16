@@ -1,6 +1,7 @@
 import { useAlerts } from '../../data/alerts'
 import { AlertPage, type Stat } from '../AlertPage'
 import { AlertList, EmptyNote } from './parts'
+import { usePageTitle } from '../../hooks/usePageTitle'
 
 /** /alerts/stage-failed — pipeline repos with a failed stage. */
 export function StageFailedAlert() {
@@ -8,6 +9,8 @@ export function StageFailedAlert() {
   const d = q.data
   const p = d?.pipeline
   const failedLabel = d?.labels.failed || 'Stage failed'
+  // Templated title uses the same pipeline-configurable label as the H1.
+  usePageTitle(`${failedLabel} · HelloGitty`)
 
   const stats: Stat[] = p
     ? [

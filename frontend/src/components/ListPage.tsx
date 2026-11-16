@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { List as ListIcon, AlertTriangle, ExternalLink } from 'lucide-react'
 import { Panel, PanelHeader } from './chrome/Chrome'
 import { useDashboard } from '../data/dashboard'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /**
  * The /list page: what a Pipeline number counts, opened on a page of its own.
@@ -186,6 +187,9 @@ export function ListPage() {
         ? `Repositories at ${mode.value}`
         : null
       : 'Lists'
+  // Templated /list sets `<title>{{.ListTitle}} · HelloGitty</title>` with
+  // the same string the H1 uses — same convention here.
+  usePageTitle(`${title ?? 'Unknown stage'} · HelloGitty`)
   const sub =
     mode.kind === 'prs'
       ? 'In tracked repositories, newest first.'

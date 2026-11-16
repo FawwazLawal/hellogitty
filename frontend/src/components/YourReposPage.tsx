@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
+import { usePageTitle } from '../hooks/usePageTitle'
 import {
   Boxes,
   AlertTriangle,
@@ -233,6 +234,7 @@ const SORTS: { id: SortKey; label: string }[] = [
 ]
 
 export function YourReposPage() {
+  usePageTitle('Your repositories · HelloGitty')
   const q = useYourRepos()
   const [kind, setKind] = useState<Kind>('all')
   const [search, setSearch] = useState('')

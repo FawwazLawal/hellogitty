@@ -20,10 +20,78 @@ import { z } from 'zod'
 export const ClockFormat = z.enum(['24h', '12h'])
 export type ClockFormat = z.infer<typeof ClockFormat>
 
+/**
+ * The fifteen clock styles the templated page ships, in the same order the
+ * templated picker renders them.
+ *
+ * `default` is not a CSS class — it is the absence of one. The other fourteen
+ * add `data-clock-style="<id>"` to the clock root and let the matching CSS
+ * block in `index.css` take over the time and date colour / weight / shadow.
+ * The id strings match the templated `.hclock.clock-<id>` selectors so a
+ * saved preference crosses from /legacy into / without being renamed.
+ */
+export const CLOCK_STYLE_IDS = [
+  'default',
+  'neon',
+  'ember',
+  'matrix',
+  'arctic',
+  'sunset',
+  'midnight',
+  'terminal',
+  'golden',
+  'rose',
+  'ocean',
+  'mono',
+  'nixie',
+  'led',
+  'flip',
+] as const
+export const ClockStyle = z.enum(CLOCK_STYLE_IDS)
+export type ClockStyle = z.infer<typeof ClockStyle>
+
+export interface ClockStyleEntry {
+  id: ClockStyle
+  name: string
+  desc: string
+}
+
+/**
+ * Names and descriptions from the templated settings.html CLOCK_STYLES array
+ * (settings.html:681 on dev at the point this landed). Copied verbatim so the
+ * picker reads the same.
+ */
+export const CLOCK_STYLES: ClockStyleEntry[] = [
+  { id: 'default', name: 'Default', desc: 'Clean monospace' },
+  { id: 'neon', name: 'Neon', desc: 'Cyan glow' },
+  { id: 'ember', name: 'Ember', desc: 'Warm fire tones' },
+  { id: 'matrix', name: 'Matrix', desc: 'Green terminal rain' },
+  { id: 'arctic', name: 'Arctic', desc: 'Cool ice blue' },
+  { id: 'sunset', name: 'Sunset', desc: 'Warm gradient' },
+  { id: 'midnight', name: 'Midnight', desc: 'Purple haze' },
+  { id: 'terminal', name: 'Terminal', desc: 'Retro prompt' },
+  { id: 'golden', name: 'Golden', desc: 'Luxury gold' },
+  { id: 'rose', name: 'Rosé', desc: 'Soft pink' },
+  { id: 'ocean', name: 'Ocean', desc: 'Deep sea gradient' },
+  { id: 'mono', name: 'Mono', desc: 'Minimal gray' },
+  { id: 'nixie', name: 'Nixie', desc: 'Vintage tube glow' },
+  { id: 'led', name: 'LED', desc: 'Wall clock bright' },
+  { id: 'flip', name: 'Flip', desc: 'Retro split-flap' },
+]
+
 export const ClockPreferences = z.object({
   format: ClockFormat.default('24h'),
   seconds: z.boolean().default(true),
   date: z.boolean().default(true),
+  /**
+   * Fourteen-way visual variant on the main clock. The templated page writes
+   * the id into `hellogitty-clock.style` and applies a `.clock-<id>` class on
+   * `.hclock`. An unknown value (e.g. a style that was renamed or removed)
+   * falls back to `default` via a `.catch()` — a garbage string must not
+   * flatten the whole preference object to defaults, which would quietly
+   * reset format and seconds too.
+   */
+  style: ClockStyle.catch('default').default('default'),
 })
 export type ClockPreferences = z.infer<typeof ClockPreferences>
 
@@ -62,6 +130,7 @@ export const CLOCK_DEFAULTS: ClockPreferences = {
   format: '24h',
   seconds: true,
   date: true,
+  style: 'default',
 }
 
 function read(): ClockPreferences {
@@ -128,33 +197,59 @@ export function useClockPreferences() {
     setFormat: (format: ClockFormat) => update({ format }),
     setSeconds: (seconds: boolean) => update({ seconds }),
     setDate: (date: boolean) => update({ date }),
+    setStyle: (style: ClockStyle) => update({ style }),
   }
 }
 
 /**
  * The live clock.
  *
- * Ticks every second when `seconds` is true, every fifteen seconds otherwise.
- * The slower interval exists because re-rendering twice a minute to flip the
- * same minute digit is noise — React does no visible work, but every tick
- * crosses a VDOM pass and schedules a reconciliation we don't need.
+ * Ticks every second, always — matching the templated clock-js at
+ * web/index.html:4596 (`setInterval(tick, 1000)`), which is what the owner's
+ * eye compares against. An earlier iteration here slowed the tick to 15s
+ * when seconds were off, which saved a handful of re-renders a minute and
+ * created a visible bug: changing the FORMAT preference (24h ↔ 12h) took up
+ * to 15 seconds to show on the masthead, because the effect depended on
+ * `seconds` and nothing re-ran the tick on a format change. A clock that
+ * disagrees with its own setting after a click is worse than 59 React
+ * reconciliations per minute on a quiet masthead.
  *
- * `now` is a `Date`, not a formatted string, because the Masthead decides how
- * it wants to display it (and the tests want to assert on parts of it
+ * `now` is a `Date`, not a formatted string, because the Masthead decides
+ * how it wants to display it (and the tests want to assert on parts of it
  * without re-implementing the formatting).
  */
-export function useLiveClock({ seconds }: { seconds: boolean }): Date {
+export function useLiveClock(): Date {
   const [now, setNow] = useState<Date>(() => new Date())
 
   useEffect(() => {
-    const periodMs = seconds ? 1000 : 15_000
-    const id = window.setInterval(() => setNow(new Date()), periodMs)
-    // One tick straight away so a prefs change takes effect without waiting
-    // for the next interval. Without this, flipping seconds-on would show a
-    // stale minute until the next second boundary — small but visible.
-    setNow(new Date())
-    return () => window.clearInterval(id)
-  }, [seconds])
+    const id = window.setInterval(() => setNow(new Date()), 1000)
+
+    /*
+     * Visibility resync. Chrome clamps background-tab `setInterval` to 1Hz
+     * and will go to one tick per minute under battery-saver or memory-
+     * saver mode; machine sleep halts timers entirely. On return to a
+     * visible tab the next interval firing can be anywhere between
+     * instant and a full throttled period away, during which the clock
+     * reads the time it last ticked. A `visibilitychange` listener closes
+     * that gap by force-sampling `new Date()` the moment the tab becomes
+     * visible, independent of whatever the interval is doing.
+     *
+     * This is a correctness improvement, NOT a known fix for the stale-
+     * clock screenshots on #307 — the cause of those was never
+     * reproduced; see #319 for the scoping. Here it's filed as "do the
+     * obvious thing a visible-tab tick ought to do" and is sabotage-
+     * proven green by `clock-visibility.spec.ts`.
+     */
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') setNow(new Date())
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+
+    return () => {
+      window.clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [])
 
   return now
 }
@@ -304,8 +399,17 @@ export interface FormattedClock {
  *
  * Kept pure so the Masthead and tests can share one definition. The templated
  * page uses the browser's local time, so this does too.
+ *
+ * `style` is NOT a parameter here. The style is a presentation layer applied
+ * via `data-clock-style` + CSS; format is text. Taking the full
+ * `ClockPreferences` as input would force every test fixture to carry a
+ * `style` value that the function never reads, which is noise at the call
+ * site and an invitation for a reader to think the formatter depends on it.
  */
-export function formatClock(now: Date, prefs: ClockPreferences): FormattedClock {
+export function formatClock(
+  now: Date,
+  prefs: Pick<ClockPreferences, 'format' | 'seconds' | 'date'>,
+): FormattedClock {
   const hours = now.getHours()
   const minutes = now.getMinutes()
   const secs = now.getSeconds()

@@ -1,6 +1,7 @@
 import { useAlerts } from '../../data/alerts'
 import { AlertPage, type Stat } from '../AlertPage'
 import { AlertList, EmptyNote } from './parts'
+import { usePageTitle } from '../../hooks/usePageTitle'
 
 /** /alerts/repo-flagged — repositories the pipeline tool flagged. */
 export function RepoFlaggedAlert() {
@@ -8,6 +9,8 @@ export function RepoFlaggedAlert() {
   const d = q.data
   const p = d?.pipeline
   const flaggedLabel = d?.labels.flagged || 'Flagged'
+  // Templated title uses the same pipeline-configurable label as the H1.
+  usePageTitle(`${flaggedLabel} · HelloGitty`)
 
   const stats: Stat[] = p
     ? [

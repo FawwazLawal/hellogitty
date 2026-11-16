@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { ExternalLink, AlertTriangle } from 'lucide-react'
 import type { AlertItem, HealthItem, WatchItem } from '../../data/alerts'
+import { humanTime } from '../../lib/humanTime'
 
 /**
  * Row primitives shared across the alert pages.
@@ -142,10 +143,11 @@ export function WatchRow({ item }: { item: WatchItem }) {
         {item.changedAt && (
           <time
             dateTime={item.changedAt}
+            title={item.changedAt}
             className="shrink-0 whitespace-nowrap font-mono text-[11px] tabular-nums"
             style={{ color: 'var(--hg-text-muted)' }}
           >
-            {formatDate(item.changedAt)}
+            {humanTime(item.changedAt)}
           </time>
         )}
       </div>
@@ -262,12 +264,3 @@ function isUrl(s: string): boolean {
   return /^https?:\/\//.test(s)
 }
 
-function formatDate(iso: string): string {
-  try {
-    const d = new Date(iso)
-    if (Number.isNaN(d.getTime())) return iso
-    return d.toISOString().slice(0, 10)
-  } catch {
-    return iso
-  }
-}

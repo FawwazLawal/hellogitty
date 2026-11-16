@@ -1,22 +1,62 @@
-import { lazy, Suspense } from 'react'
+import type { ReactNode } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { Masthead } from './components/Masthead'
 import { NavTabs } from './components/NavTabs'
-import { SettingsPage } from './components/SettingsPage'
-import { PipelinePage } from './components/PipelinePage'
-import { WorkPage } from './components/WorkPage'
-import { IssuesPage } from './components/IssuesPage'
-import { HelpPage } from './components/HelpPage'
-import { YourReposPage } from './components/YourReposPage'
-import { ConversationsPage } from './components/ConversationsPage'
-import { FeedPage } from './components/FeedPage'
 import { KpiRail } from './components/KpiRail'
+import { ChecksPanel } from './components/ChecksPanel'
+import { SecurityPanel } from './components/SecurityPanel'
+import { WatchedPanel } from './components/WatchedPanel'
+import { RecentIssuesPanel } from './components/RecentIssuesPanel'
+import { FeedPanel } from './components/FeedPanel'
+import { YourReposPanel } from './components/YourReposPanel'
+import { useSettings } from './data/settings'
+import { useSecurity } from './data/security'
+import { useRecentIssues } from './data/recentIssues'
+import { useFeed } from './data/feed'
 import { ConversationsPanel } from './components/ConversationsPanel'
 import { TrackedRepos } from './components/TrackedRepos'
 import { PipelinePanel } from './components/PipelinePanel'
 import { YourWorkPanel } from './components/YourWorkPanel'
+import { DashboardFooter } from './components/DashboardFooter'
 import { useDashboard, toTrackedRepo, toPipelineView, toWorkView } from './data/dashboard'
 import { useArt } from './art'
 import { DASHBOARD } from './fixtures/dashboard'
+import { usePageTitle } from './hooks/usePageTitle'
+import { useLayout } from './layout/useLayout'
+import { useShortcuts } from './layout/useShortcuts'
+import { PanelSlot } from './layout/PanelSlot'
+import type { PanelId } from './layout/schema'
+
+/*
+  Display names for the Grip / Fold / Resize labels. Names are a
+  UI concern; the panel ids are vocabulary the storage and the Go
+  side share, so they are not reused as labels. If a panel is
+  renamed in product, only this map changes.
+*/
+const PANEL_NAMES: Record<PanelId, string> = {
+  'your-work': 'Your work',
+  conversations: 'Conversations',
+  'your-repos': 'Your repositories',
+  tracked: 'Tracked repositories',
+  feed: 'Live',
+  watched: 'Watched issues',
+  issues: 'Recent issues',
+  security: 'DevSecOps',
+  pipeline: 'Pipeline',
+  checks: 'Checks',
+}
+
+/*
+  The dashboard panel-layout dialog. Lazy because it opens on a
+  user action — a Layout button in the dashboard header — and
+  keeping it out of the entry chunk saves the budget for the
+  work it enables. See /src/layout/* for the storage boundary,
+  reducer, hook, Grip and keyboard shortcuts this dialog sits on
+  top of; #282 ships them together.
+*/
+const LayoutDialog = lazy(() =>
+  import('./layout/LayoutDialog').then((m) => ({ default: m.LayoutDialog })),
+)
 
 /**
  * The dashboard shell.
@@ -72,6 +112,39 @@ import { DASHBOARD } from './fixtures/dashboard'
   works for every page without a per-page marker, and a future lazy page gets
   it for free by using this same fallback shape.
 */
+/*
+  The help page, on demand.
+
+  It carries the stemmed search ranker — a stemmer, a stop-word list, an
+  alternatives table and a scoring pass — which exists to serve one search box
+  on one page that a reader opens when they are stuck. Everyone else was paying
+  for it on every page load.
+
+  Same reasoning as /repos and /alerts below: weight that serves one destination
+  belongs in that destination's chunk.
+*/
+/*
+  Every page component is lazy, with ONE exception: the dashboard is the
+  landing route and lives inline in App — splitting it off would add a
+  round trip on the one page where that is felt. Everything else below
+  takes the same shape: `lazy()` wrapping a dynamic import that unwraps
+  the named export back to a default. The pattern is one line of real
+  work; the repetition is the point. A `map` would hide one piece of
+  copy-paste risk behind a worse one (a missing route silently doing
+  nothing while the entry chunk gets smaller).
+
+  The seven below were eager until #322. The size budget caught the
+  previous four one at a time, each under deadline from unrelated work;
+  converting the rest together ends it, and means ONE decision about the
+  `<Suspense>` fallback instead of seven. The fallback is load-bearing —
+  `data-loading="true"` is what lets gates wait for real content rather
+  than asserting against a spinner — so getting it wrong seven times is
+  more likely than getting it wrong once.
+*/
+const HelpPage = lazy(() =>
+  import('./components/HelpPage').then((m) => ({ default: m.HelpPage })),
+)
+
 const AlertsRouter = lazy(() =>
   import('./components/alerts/AlertsRouter').then((m) => ({ default: m.AlertsRouter })),
 )
@@ -80,17 +153,70 @@ const ReposPage = lazy(() =>
   import('./components/ReposPage').then((m) => ({ default: m.ReposPage })),
 )
 
-/*
-  ListPage is lazy for the same reason as ReposPage: it is not an entry
-  point. Readers arrive at /list from a pipeline number or a /your-repos
-  overview tile, and the fetch happens while they are already reading. The
-  page itself is small, but keeping it out of the entry chunk leaves the
-  150 KB budget with the headroom it needs for the pages that are entry
-  points.
-*/
 const ListPage = lazy(() =>
   import('./components/ListPage').then((m) => ({ default: m.ListPage })),
 )
+
+const SettingsPage = lazy(() =>
+  import('./components/SettingsPage').then((m) => ({ default: m.SettingsPage })),
+)
+
+const PipelinePage = lazy(() =>
+  import('./components/PipelinePage').then((m) => ({ default: m.PipelinePage })),
+)
+
+const WorkPage = lazy(() =>
+  import('./components/WorkPage').then((m) => ({ default: m.WorkPage })),
+)
+
+const IssuesPage = lazy(() =>
+  import('./components/IssuesPage').then((m) => ({ default: m.IssuesPage })),
+)
+
+const YourReposPage = lazy(() =>
+  import('./components/YourReposPage').then((m) => ({ default: m.YourReposPage })),
+)
+
+const ConversationsPage = lazy(() =>
+  import('./components/ConversationsPage').then((m) => ({ default: m.ConversationsPage })),
+)
+
+const FeedPage = lazy(() =>
+  import('./components/FeedPage').then((m) => ({ default: m.FeedPage })),
+)
+
+/**
+ * The one place the Suspense fallback is written.
+ *
+ * `data-loading="true"` is the signal gates and tests wait on to tell a
+ * placeholder from real content. Every lazy route goes through this
+ * component so the attribute cannot be forgotten on a new page — the same
+ * reasoning as colocating the lazy() calls above: the repetition is where
+ * mistakes land, and one source of truth for the markup means one place
+ * to audit.
+ *
+ * `label` is per-route only because the earlier manual fallbacks already
+ * varied ("Loading repositories…", "Loading help…", "Loading…"). Keeping
+ * them honours what readers were seeing before the refactor; a generic
+ * "Loading…" is the no-label default.
+ */
+function Lazy({ children, label = 'Loading…' }: { children: ReactNode; label?: string }) {
+  return (
+    <Suspense
+      fallback={
+        <main
+          data-loading="true"
+          className="px-4 py-10 text-[12px]"
+          style={{ color: 'var(--hg-text-muted)' }}
+        >
+          {label}
+        </main>
+      }
+    >
+      {children}
+    </Suspense>
+  )
+}
 
 /**
  * Which view this URL is.
@@ -158,6 +284,13 @@ function viewFor(pathname: string): View {
 export default function App() {
   const pathname = typeof location !== 'undefined' ? location.pathname : '/'
   const view = viewFor(pathname)
+  // The dashboard is the only view with no per-page component — it is
+  // inline JSX in this function — so App owns its title. Every other
+  // view's page component sets its own via usePageTitle, and gets the
+  // null branch here so the parent effect does not clobber the child's.
+  // The templated /legacy dashboard has `<title>HelloGitty</title>`, same
+  // as the shell's static default in index.html.
+  usePageTitle(view === 'dashboard' ? 'HelloGitty' : null)
   // No `identity` read here any more: the registry resolves per identity, so
   // this component no longer needs to know which one it is in.
   const footerArt = useArt('footer')
@@ -182,6 +315,26 @@ export default function App() {
     `answered` below, which is the distinction that replaced it.
   */
   const dashboard = useDashboard()
+  const settings = useSettings()
+  const security = useSecurity()
+  const recentIssues = useRecentIssues()
+  const feed = useFeed()
+
+  /*
+    The panel-layout engine. `useLayout` reads storage on mount
+    (or forces `focus` in extension-popup mode via ?ext=popup),
+    and `useShortcuts` attaches one window-level listener for
+    c/e/1–9. The dialog state is here so the Layout button can
+    toggle it; the dialog is lazy, so mounting the suspense
+    boundary at `layoutOpen` means the chunk only loads when
+    the user asks.
+  */
+  const layout = useLayout({
+    configDefault: settings.data?.config.layoutDefault ?? null,
+    search: typeof location !== 'undefined' ? location.search : '',
+  })
+  useShortcuts({ state: layout.state, dispatch: layout.dispatch })
+  const [layoutOpen, setLayoutOpen] = useState(false)
 
   const liveTiles = dashboard.isSuccess ? dashboard.data?.kpis : undefined
   const tiles = liveTiles
@@ -251,55 +404,132 @@ export default function App() {
       <Masthead data={DASHBOARD} />
       <NavTabs pathname={pathname} />
 
-      {view === 'settings' && <SettingsPage />}
-      {view === 'pipeline' && <PipelinePage />}
-      {view === 'work' && <WorkPage />}
-      {view === 'issues' && <IssuesPage />}
-      {view === 'repos' && (
-        <Suspense fallback={<main data-loading="true" className="px-4 py-10 text-[12px]" style={{ color: 'var(--hg-text-muted)' }}>Loading repositories…</main>}>
-          <ReposPage />
-        </Suspense>
-      )}
-      {view === 'your-repos' && <YourReposPage />}
-      {view === 'conversations' && <ConversationsPage />}
-      {view === 'help' && <HelpPage />}
-      {view === 'alerts' && (
-        <Suspense fallback={<main data-loading="true" className="px-4 py-10 text-[12px]" style={{ color: 'var(--hg-text-muted)' }}>Loading…</main>}>
-          <AlertsRouter pathname={pathname} />
-        </Suspense>
-      )}
-      {view === 'feed' && <FeedPage />}
-      {view === 'list' && (
-        <Suspense fallback={<main data-loading="true" className="px-4 py-10 text-[12px]" style={{ color: 'var(--hg-text-muted)' }}>Loading…</main>}>
-          <ListPage />
-        </Suspense>
-      )}
+      {view === 'settings' && <Lazy><SettingsPage /></Lazy>}
+      {view === 'pipeline' && <Lazy><PipelinePage /></Lazy>}
+      {view === 'work' && <Lazy><WorkPage /></Lazy>}
+      {view === 'issues' && <Lazy><IssuesPage /></Lazy>}
+      {view === 'repos' && <Lazy label="Loading repositories…"><ReposPage /></Lazy>}
+      {view === 'your-repos' && <Lazy><YourReposPage /></Lazy>}
+      {view === 'conversations' && <Lazy><ConversationsPage /></Lazy>}
+      {view === 'help' && <Lazy label="Loading help…"><HelpPage /></Lazy>}
+      {view === 'alerts' && <Lazy><AlertsRouter pathname={pathname} /></Lazy>}
+      {view === 'feed' && <Lazy><FeedPage /></Lazy>}
+      {view === 'list' && <Lazy><ListPage /></Lazy>}
 
       {view === 'dashboard' && (
       <main className="min-w-0 overflow-x-hidden px-4 pb-[200px] pt-3">
-        <KpiRail
-          tiles={tiles}
-          state={{
-            loading: dashboard.isPending,
-            error: dashboard.error ? dashboard.error.message : null,
-            unknown,
-            onRetry: () => void dashboard.refetch(),
-          }}
-        />
-
-        <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
-          <div className="flex min-w-0 flex-col gap-3">
-            <ConversationsPanel data={conversations} />
-            <TrackedRepos repos={repos} totals={repoTotals} />
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <PipelinePanel pipeline={pipeline} />
-            <YourWorkPanel work={work} user={answered ? dashboard.data.work.login || DASHBOARD.user : DASHBOARD.user} />
-          </div>
+        <div className="flex items-center justify-between gap-2">
+          <KpiRail
+            tiles={tiles}
+            state={{
+              loading: dashboard.isPending,
+              error: dashboard.error ? dashboard.error.message : null,
+              unknown,
+              onRetry: () => void dashboard.refetch(),
+            }}
+          />
         </div>
+
+        <div className="mt-2 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setLayoutOpen(true)}
+            className="border px-2 py-1 text-[11px]"
+            style={{
+              borderColor: 'var(--hg-line-strong)',
+              color: 'var(--hg-text)',
+              background: 'var(--hg-surface-raised)',
+            }}
+            aria-haspopup="dialog"
+          >
+            Layout
+          </button>
+        </div>
+
+        {(() => {
+          /*
+            Build the panels map once per render. Each entry is the
+            JSX for a panel id; the layout state picks which are
+            rendered, in which order, and whether hidden / folded.
+            Hidden panels are skipped entirely — they are
+            re-mountable by unhiding — folded panels render but
+            carry a data attribute the CSS reads to hide the body.
+          */
+          const panels: Partial<Record<PanelId, ReactNode>> = {
+            'your-work': <YourWorkPanel work={work} user={answered ? dashboard.data.work.login || DASHBOARD.user : DASHBOARD.user} />,
+            conversations: <ConversationsPanel data={conversations} />,
+            'your-repos': answered ? <YourReposPanel work={dashboard.data.work} /> : null,
+            tracked: <TrackedRepos repos={repos} totals={repoTotals} />,
+            feed: feed.data ? <FeedPanel rows={feed.data.rows} known={feed.data.known} /> : null,
+            watched: answered ? <WatchedPanel rows={dashboard.data.watched} /> : null,
+            issues: recentIssues.data ? <RecentIssuesPanel rows={recentIssues.data.issues} total={recentIssues.data.total} /> : null,
+            security: security.data ? <SecurityPanel data={security.data} /> : null,
+            pipeline: <PipelinePanel pipeline={pipeline} />,
+            checks: settings.data ? <ChecksPanel data={settings.data} /> : null,
+          }
+          const render = (col: 'main' | 'rail') =>
+            layout.state[col].map((id) => {
+              if (layout.state.hidden.includes(id)) return null
+              const node = panels[id]
+              if (!node) return null
+              // Your-work is the only panel that opts in to row
+              // snapping, matching web/index.html:4506's
+              // data-snap-rows attribute (the <section> on the
+              // your-work panel; three later occurrences read the
+              // attribute from JS). Every other panel's
+              // resize commits a raw height; snap is a Your-work
+              // decoration for rows that would otherwise slice.
+              const snap = id === 'your-work'
+              return (
+                <PanelSlot
+                  key={id}
+                  id={id}
+                  panelName={PANEL_NAMES[id]}
+                  state={layout.state}
+                  dispatch={layout.dispatch}
+                  snapRows={snap}
+                >
+                  {node}
+                </PanelSlot>
+              )
+            })
+          return (
+            <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
+              <div className="flex min-w-0 flex-col gap-3">{render('main')}</div>
+              <div className="flex flex-col gap-3">{render('rail')}</div>
+            </div>
+          )
+        })()}
+
+        {/*
+          The dialog is lazy: the Suspense boundary is only reached
+          when `layoutOpen` is true, so the chunk loads on the
+          first Layout click, not before.
+        */}
+        {layoutOpen && (
+          <Suspense fallback={null}>
+            <LayoutDialog
+              open={layoutOpen}
+              onClose={() => setLayoutOpen(false)}
+              state={layout.state}
+              dispatch={layout.dispatch}
+            />
+          </Suspense>
+        )}
       </main>
       )}
+
+      {/*
+        Dashboard footer: Last check · GitHub API · repo count. Sits OUTSIDE
+        the <main> so its own <footer> element gets the `contentinfo` role
+        (a `<footer>` nested inside `<main>` has no landmark role; moving it
+        here is the cheapest way to make it one). Repo count comes from the
+        SAME document the repository table reads — the footer takes the
+        prop from here, not from the settings doc, so the two numbers
+        can't disagree. See DashboardFooter for the one-fact-one-source
+        rule.
+      */}
+      {view === 'dashboard' && <DashboardFooter repoCount={repoTotals.repoCount} />}
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { useChrome } from '../../theme/ThemeProvider'
 
 /**
  * The ornament library: chrome as geometry, not as pictures.
@@ -77,6 +78,13 @@ export function ArmourPlate({
   height?: number
 }) {
   const id = useId().replace(/:/g, '')
+  // Chrome gate: ArmourPlate reads --hg-plate / --hg-plate-hi / --hg-plate-lo
+  // etc., which only the chrome-carrying packs (Oni and Azure-Oni-v2) declare.
+  // Rendering with the tokens unset paints `currentColor` through the SVG
+  // gradient stops — a worse outcome than nothing at all. Return null and let
+  // the tile carry its own (non-chromed) silhouette on non-chrome packs.
+  const chrome = useChrome()
+  if (!chrome) return null
   return (
     <svg
       aria-hidden="true"

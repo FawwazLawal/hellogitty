@@ -89,7 +89,12 @@ const AckResponse = z.object({
  * un-roll logic. The cost of the extra fetch is tiny against the cost
  * of writing a rollback that is wrong on an edge case.
  */
-export function useAck(token: string | undefined) {
+export type AckResult = z.infer<typeof AckResult>
+
+export function useAck(
+  token: string | undefined,
+  onSuccess?: (results: AckResult[]) => void,
+) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (ids: string[]) => {
@@ -130,6 +135,13 @@ export function useAck(token: string | undefined) {
     },
     onError: (_err, _ids, ctx) => {
       if (ctx?.prev) qc.setQueryData(['feed'], ctx.prev)
+    },
+    onSuccess: (results) => {
+      // The callback carries the server's per-id verdict so the page
+      // can render "N also marked read on GitHub; M kept here only;
+      // K couldn't be marked read" — the ack confirmation issue #295
+      // calls out as missing from the React port.
+      onSuccess?.(results)
     },
     onSettled: () => {
       // The server reconciles with GitHub (marking notifications read, or

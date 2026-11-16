@@ -1,16 +1,28 @@
 @import 'tailwindcss';
 
+/*
+ * The pack-and-appearance token cascade, shared with the Go-rendered pages.
+ * One source, both surfaces — see `web/themes.css`. This import brings
+ * every pack × appearance block into the Vite bundle, so a user's choice of
+ * `data-visual-theme` + `data-theme` resolves the same declared values in
+ * React that `/legacy` does.
+ *
+ * The bridge below maps the template's token names (--bg, --panel, --text…)
+ * to React's own (--hg-canvas, --hg-surface, --hg-text…) so every existing
+ * `var(--hg-*)` read keeps working. The bridge is the whole adapter; no
+ * component rewriting beyond `ThemeProvider` was needed.
+ */
+@import '../../web/themes.css';
+
 /**
  * Tailwind v4 theme mapping.
  *
- * The tokens themselves live in `theme/tokens.ts`, which is the source of truth
- * and the thing the contrast test reads. This file only tells Tailwind how to
- * name them, so a component can write `bg-surface` instead of
- * `bg-[var(--hg-surface)]` and the utility classes stay readable in the markup.
+ * Tells Tailwind how to name the React-side tokens, so a component can write
+ * `bg-surface` instead of `bg-[var(--hg-surface)]` and the utility classes
+ * stay readable in the markup.
  *
- * Every value here is `var(--hg-*)`, never a literal. `ThemeProvider` sets
- * those variables on :root at runtime, so switching identity repaints without
- * rebuilding and without remounting anything.
+ * Every value here is `var(--hg-*)`, never a literal. The bridge below
+ * resolves them from the shared cascade.
  */
 @theme {
   --color-canvas: var(--hg-canvas);
@@ -28,6 +40,16 @@
   --color-warning: var(--hg-warning);
   --color-danger: var(--hg-danger);
   --color-focus: var(--hg-focus);
+  --color-header-surface: var(--hg-header-surface);
+  --color-header-muted: var(--hg-header-muted);
+  --color-warning-fill: var(--hg-warning-fill);
+  --color-warning-ink: var(--hg-warning-ink);
+  --color-danger-fill: var(--hg-danger-fill);
+  --color-danger-ink: var(--hg-danger-ink);
+  --color-tag-fill: var(--hg-tag-fill);
+  --color-tag-ink: var(--hg-tag-ink);
+  --color-tag-rule: var(--hg-tag-rule);
+  --color-mascot-bg: var(--hg-mascot-bg);
 
   --radius-chamfer: 10px;
 
@@ -38,31 +60,139 @@
 }
 
 /**
- * Fallbacks, so the page is never unstyled.
+ * Bridge — template token names → React token names.
  *
- * ThemeProvider sets these in an effect, which runs after first paint. Without
- * a declared default there is one frame of unresolved `var()` — transparent
- * backgrounds and invisible text. Vermilion is the default identity and the
- * first implementation benchmark, so it is the one declared here.
+ * The shared cascade (web/themes.css) declares `--bg`, `--panel`, `--text`
+ * etc. Every React component already reads `--hg-canvas`, `--hg-surface`,
+ * `--hg-text` etc., so the bridge aliases one onto the other at :root.
+ * `var(fallback)` makes an unset pack value resolve to the base dark
+ * template values rather than rendering an empty string.
+ *
+ * ChromeTokens (plate / rivet / scrim / plateHi / plateLo / plateEdge) stay
+ * written by ThemeProvider as inline styles: packs don't declare them, they
+ * are React's own invention for the Oni chrome, and keeping them typed in
+ * TypeScript is the only place they exist.
+ *
+ * Order matters: @import for themes.css is above so the base `:root` block
+ * paints first; the bridge below resolves through it.
  */
 :root {
-  --hg-canvas: #0a070c;
-  --hg-surface: #151016;
-  --hg-surface-sunken: #0f0b0f;
-  --hg-surface-raised: #1d1620;
-  --hg-line: #3a2730;
-  --hg-line-strong: #7d5560;
-  --hg-text: #ffffff;
-  --hg-text-muted: #cbb2b9;
-  --hg-accent: #ff3e3d;
-  --hg-accent-fill: #b81d24;
-  --hg-accent-ink: #ffffff;
-  --hg-success: #6ee7a0;
-  --hg-warning: #ffc266;
-  --hg-danger: #ff8a93;
-  --hg-focus: #ff6f7c;
-  color-scheme: dark;
+  /* Bridged from the shared cascade. */
+  --hg-canvas:          var(--bg,             #0a0a0b);
+  --hg-surface:         var(--panel,          #101011);
+  /*
+   * `--hg-surface-sunken` is intentionally NOT bridged. See the authored
+   * per-pack block below — surfaceSunken is a React concept the CSS packs
+   * do not model, and bridging it onto `--track` or `--raised` either
+   * fails contrast or collapses the panel hierarchy.
+   */
+  --hg-surface-raised:  var(--raised,         #141416);
+  --hg-line:            var(--rule,           #2a2a2b);
+  --hg-line-strong:     var(--rule-hi,        #4a4a4b);
+  --hg-text:            var(--text,           #e2e2e0);
+  --hg-text-muted:      var(--dim,            #a0a09c);
+  --hg-accent:          var(--head-accent,    #7d7d75);
+  --hg-accent-fill:     var(--head-accent,    #7d7d75);
+  --hg-accent-ink:      var(--mascot-bg,      #ffffff);
+  --hg-success:         var(--nom,            #4bc67a);
+  --hg-warning:         var(--caution,        #e9aa3b);
+  --hg-danger:          var(--warn,           #c4271d);
+  --hg-focus:           var(--head-accent,    #7d7d75);
+  --hg-header-surface:  var(--head,           var(--panel, #101011));
+  --hg-header-muted:    var(--head-dim,       var(--dim, #a0a09c));
+  --hg-warning-fill:    var(--caution-fill,   var(--caution, #e9aa3b));
+  --hg-warning-ink:     var(--caution-ink,    #ffffff);
+  --hg-danger-fill:     var(--warn-fill,      var(--warn, #c4271d));
+  --hg-danger-ink:      var(--warn-ink,       #ffffff);
+  --hg-tag-fill:        var(--tag-fill,       var(--raised, #141416));
+  --hg-tag-ink:         var(--tag-ink,        var(--text, #e2e2e0));
+  --hg-tag-rule:        var(--tag-rule,       var(--rule-hi, #4a4a4b));
+  --hg-mascot-bg:       var(--mascot-bg,      var(--panel, #101011));
 }
+
+/*
+ * Chrome tokens — plate, rivet, scrim.
+ *
+ * Not in the CSS packs: these were invented for the Oni armour chrome and
+ * the two `@tanstack`-style primitives live only in React. Declared here
+ * scoped to the pack that uses them; non-Oni packs render no chrome so the
+ * tokens staying unset is correct. 2c will gate the Ornament components
+ * off the declared presence rather than the pack id, but the per-pack
+ * declaration here is the cheapest way to make them resolve today.
+ *
+ * Values are the ones React carried pre-2b for vermilion / azure / bone,
+ * renamed to the pack+appearance pair they always meant.
+ */
+:root[data-visual-theme="oni"] {
+  /* Oni dark (azure) */
+  --hg-plate:       #2c4066;
+  --hg-plate-hi:    #7596c4;
+  --hg-plate-lo:    #121c30;
+  --hg-plate-edge:  #8fb4dd;
+  --hg-rivet:       #e8c07f;
+  --hg-scrim:       rgba(3, 7, 14, 0.72);
+}
+:root[data-theme="amoled"][data-visual-theme="oni"] {
+  /* Oni amoled (vermilion) */
+  --hg-plate:       #413039;
+  --hg-plate-hi:    #8f717e;
+  --hg-plate-lo:    #1a1219;
+  --hg-plate-edge:  #a77483;
+  --hg-rivet:       #f0c489;
+  --hg-scrim:       rgba(6, 3, 7, 0.72);
+}
+:root[data-theme="light"][data-visual-theme="oni"] {
+  /* Oni light (bone) */
+  --hg-plate:       #aebfdd;
+  --hg-plate-hi:    #ffffff;
+  --hg-plate-lo:    #8fa0c4;
+  --hg-plate-edge:  #4a5c87;
+  --hg-rivet:       #a06f28;
+  --hg-scrim:       rgba(10, 15, 28, 0.38);
+}
+
+/*
+ * `--hg-surface-sunken` — the rail-panel surface, one step quieter than
+ * `--hg-surface`. Not bridged: CSS packs model only two surface levels
+ * (panel + raised + scrollbar track), none matching React's "one step
+ * quieter". Bridging onto `--track` fails contrast on four packs;
+ * bridging onto `--raised` collapses sunken into raised and loses the
+ * three-tier hierarchy React has depended on since Phase 2.
+ *
+ * So React owns it. Authored per (pack × appearance), each value picked
+ * between the pack's `--panel` and `--bg` so the surface sits BELOW
+ * `--panel` in lightness (on dark packs) or BELOW it in warmth (on light
+ * packs). The `theme-cascade.spec.ts` suite asserts text and textMuted
+ * clear 4.5:1 on every sunken value.
+ *
+ * Base (no pack) carries its own value because the templated app's base
+ * dark/light have no declared sunken either.
+ */
+:root                                { --hg-surface-sunken: #0c0c0c; }
+:root[data-theme="light"]            { --hg-surface-sunken: #ecece8; }
+
+:root[data-visual-theme="pink"]                      { --hg-surface-sunken: #1c0b15; }
+:root[data-theme="light"][data-visual-theme="pink"]  { --hg-surface-sunken: #fef1f6; }
+
+:root[data-visual-theme="muertos"]                     { --hg-surface-sunken: #0d0b12; }
+:root[data-theme="amoled"][data-visual-theme="muertos"] { --hg-surface-sunken: #060608; }
+:root[data-theme="light"][data-visual-theme="muertos"]  { --hg-surface-sunken: #f5ece0; }
+
+:root[data-visual-theme="muertos-v2"]                     { --hg-surface-sunken: #1b1226; }
+:root[data-theme="amoled"][data-visual-theme="muertos-v2"] { --hg-surface-sunken: #020202; }
+:root[data-theme="light"][data-visual-theme="muertos-v2"]  { --hg-surface-sunken: #fbf1e0; }
+
+:root[data-visual-theme="azure-oni"]                     { --hg-surface-sunken: #0c111f; }
+:root[data-theme="amoled"][data-visual-theme="azure-oni"] { --hg-surface-sunken: #020408; }
+:root[data-theme="light"][data-visual-theme="azure-oni"]  { --hg-surface-sunken: #e9edf7; }
+
+:root[data-visual-theme="azure-oni-v2"]                     { --hg-surface-sunken: #0c111f; }
+:root[data-theme="amoled"][data-visual-theme="azure-oni-v2"] { --hg-surface-sunken: #020408; }
+:root[data-theme="light"][data-visual-theme="azure-oni-v2"]  { --hg-surface-sunken: #e9edf7; }
+
+:root[data-visual-theme="oni"]                     { --hg-surface-sunken: #0a1223; }
+:root[data-theme="amoled"][data-visual-theme="oni"] { --hg-surface-sunken: #040307; }
+:root[data-theme="light"][data-visual-theme="oni"]  { --hg-surface-sunken: #e5edf7; }
 
 html,
 body,
@@ -120,3 +250,338 @@ body {
   pointer-events: none;
   user-select: none;
 }
+
+/**
+ * BASE clock rules.
+ *
+ * Colour and letter-spacing live here, not on the inline React `style` prop,
+ * because the fourteen per-style overrides below are CSS and cannot beat an
+ * inline style on a <time> element without !important — which is the wrong
+ * lever to pull. A per-style rule MUST be free to change colour, weight,
+ * letter-spacing, font-family and text-shadow; the base rule puts the
+ * defaults in a place the overrides can reach.
+ *
+ * Templated's equivalent lives at index.html .hclock-time / .hclock-date.
+ *
+ * COLOUR IS A TOKEN READ, not a bridged value. A pack that wants to paint
+ * the clock (Oni is the current one; see `--hg-clock-color` in web/themes.css)
+ * declares the token; this base rule reads it and falls back to --hg-text
+ * when a pack states nothing. The alternative — a selector-based pack rule
+ * like `[data-visual-theme="oni"] .hg-clock-time { color: ... }` — would be
+ * specificity (0,2,0), the same as the per-style rules below, and whichever
+ * stylesheet the browser applied last would win. That is a load-order race
+ * in a cascade neither stylesheet controls (one served by Go, one bundled
+ * by Vite), latent until an unrelated asset-ordering change flips it. The
+ * token approach removes the race entirely: pack sets a value, style
+ * overrides `color` directly at higher specificity than the base, default
+ * falls through to --hg-text. Style > pack > default, one cascade, no race.
+ * See #307.
+ */
+.hg-clock-time {
+  color: var(--hg-clock-color, var(--hg-text));
+  letter-spacing: 0.04em;
+}
+.hg-clock-date {
+  color: var(--hg-clock-date-color, var(--hg-text-muted));
+  letter-spacing: 0.05em;
+}
+
+/**
+ * The fourteen clock-style variants the templated page offers (plus `default`,
+ * which is the absence of any of these rules). Copied verbatim from the
+ * templated `.hclock.clock-<id>` blocks in web/index.html, retargeted to the
+ * React masthead clock's `data-clock-style` attribute and its `.hg-clock-time`
+ * / `.hg-clock-date` descendants.
+ *
+ * Why match character-for-character: the whole point of the fourteen is that
+ * they are a visual choice the owner cares about, reviewed on screen. A
+ * "cleaner" variant that drops the text-shadow or tightens the gradient reads
+ * on sight as a different design, which is the regression this PR exists to
+ * reverse. Any change here needs to happen on both surfaces at once.
+ *
+ * Also used inside the Settings picker swatch previews, scoped by the same
+ * selector against a static "12:34" string — so what the user sees in the
+ * picker is what they get in the masthead.
+ */
+[data-clock-style="neon"] .hg-clock-time { color: #0ff; text-shadow: 0 0 7px #0ff, 0 0 20px #0ff, 0 0 42px #0099cc; }
+[data-clock-style="neon"] .hg-clock-date { color: #0ff; opacity: .7; }
+
+[data-clock-style="ember"] .hg-clock-time { color: #ff6b35; text-shadow: 0 0 8px rgba(255,107,53,.6), 0 0 24px rgba(255,60,0,.3); }
+[data-clock-style="ember"] .hg-clock-date { color: #ff9966; }
+
+[data-clock-style="matrix"] .hg-clock-time { color: #00ff41; text-shadow: 0 0 5px #00ff41, 0 0 15px rgba(0,255,65,.4); font-family: "Courier New", monospace; }
+[data-clock-style="matrix"] .hg-clock-date { color: #00cc33; }
+
+[data-clock-style="arctic"] .hg-clock-time { color: #88ccff; text-shadow: 0 0 10px rgba(136,204,255,.5); letter-spacing: 0.08em; }
+[data-clock-style="arctic"] .hg-clock-date { color: #aaddff; }
+
+[data-clock-style="sunset"] .hg-clock-time { background: linear-gradient(135deg, #ff6b6b, #ffa07a, #ffd93d); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent; }
+[data-clock-style="sunset"] .hg-clock-date { color: #ffa07a; }
+
+[data-clock-style="midnight"] .hg-clock-time { color: #c4b5fd; text-shadow: 0 0 12px rgba(196,181,253,.4), 0 0 30px rgba(139,92,246,.2); }
+[data-clock-style="midnight"] .hg-clock-date { color: #a78bfa; }
+
+[data-clock-style="terminal"] .hg-clock-time { color: #4ade80; font-family: "Courier New", monospace; letter-spacing: 0.1em; }
+[data-clock-style="terminal"] .hg-clock-time::before { content: "> "; font-weight: 400; opacity: .5; }
+[data-clock-style="terminal"] .hg-clock-date { color: #86efac; font-family: "Courier New", monospace; }
+
+[data-clock-style="golden"] .hg-clock-time { background: linear-gradient(180deg, #ffd700, #b8860b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent; filter: drop-shadow(0 1px 2px rgba(184,134,11,.3)); }
+[data-clock-style="golden"] .hg-clock-date { color: #daa520; }
+
+[data-clock-style="rose"] .hg-clock-time { color: #fb7185; text-shadow: 0 0 8px rgba(251,113,133,.4); }
+[data-clock-style="rose"] .hg-clock-date { color: #fda4af; }
+
+[data-clock-style="ocean"] .hg-clock-time { background: linear-gradient(135deg, #06b6d4, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent; }
+[data-clock-style="ocean"] .hg-clock-date { color: #67e8f9; }
+
+[data-clock-style="mono"] .hg-clock-time { color: var(--hg-text-muted); font-weight: 400; letter-spacing: 0.12em; }
+[data-clock-style="mono"] .hg-clock-date { color: var(--hg-text-muted); opacity: .5; }
+
+[data-clock-style="nixie"] .hg-clock-time { color: #ff8c42; text-shadow: 0 0 4px #ff8c42, 0 0 12px rgba(255,140,66,.5), 0 0 28px rgba(255,100,20,.3); font-weight: 400; letter-spacing: 0.06em; }
+[data-clock-style="nixie"] .hg-clock-date { color: #ff8c42; opacity: .6; }
+
+[data-clock-style="led"] .hg-clock-time { color: var(--hg-text); font-weight: 800; letter-spacing: 0.1em; text-shadow: 0 0 6px currentColor, 0 0 18px currentColor; }
+[data-clock-style="led"] .hg-clock-date { color: var(--hg-accent); font-weight: 600; letter-spacing: 0.08em; }
+
+[data-clock-style="flip"] .hg-clock-time { color: #f5f0e8; font-weight: 700; letter-spacing: 0.14em; background: #1a1a1a; padding: 4px 10px; border-radius: 4px; border: 1px solid #333; box-shadow: 0 2px 8px rgba(0,0,0,.5); }
+[data-clock-style="flip"] .hg-clock-date { color: #a09880; }
+
+/*
+ * /help — Copy-on-every-<pre> styles, TOC scroll-spy active state, and the
+ * flash a search hit emits when the reader opens it. The DOM nodes carrying
+ * these classes are owned by HelpPage's effects (see its header comment for
+ * why), so the selectors stay here rather than inline-styled on each node.
+ */
+.hg-help-copy-wrap { position: relative; }
+.hg-help-copy {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 2px 8px;
+  font-size: 11.5px;
+  line-height: 1.3;
+  border: 1px solid var(--hg-line-strong);
+  background: var(--hg-surface-raised);
+  color: var(--hg-text);
+  cursor: pointer;
+}
+.hg-help-copy:hover { background: var(--hg-surface); }
+.hg-help-copy:focus-visible { outline: 2px solid var(--hg-accent); outline-offset: 1px; }
+
+.hg-help-toc-link[aria-current="true"] {
+  color: var(--hg-text);
+  background: var(--hg-surface-raised);
+}
+
+@keyframes hg-help-flash-kf {
+  0%   { background: var(--hg-highlight, var(--hg-accent-muted, var(--hg-surface-raised))); }
+  100% { background: transparent; }
+}
+.hg-help-flash { animation: hg-help-flash-kf 1.4s ease-out; }
+
+/*
+ * The watch-eye control (#292, #295). Outlined and dim until watched,
+ * then filled — same two states and the same SVG primitives as the
+ * templated page, so the control reads identically next to the two
+ * remaining templated surfaces (/legacy/*).
+ */
+.hg-watch-eye {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  color: var(--hg-text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  vertical-align: middle;
+}
+.hg-watch-eye svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.hg-watch-eye:hover {
+  color: var(--hg-text);
+  background: var(--hg-surface-raised);
+  border-color: var(--hg-line-strong);
+}
+.hg-watch-eye:focus-visible {
+  outline: 2px solid var(--hg-text);
+  outline-offset: 1px;
+}
+.hg-watch-eye.on { color: var(--hg-text); }
+.hg-watch-eye.on circle { fill: currentColor; }
+.hg-watch-eye:disabled { opacity: .5; cursor: progress; }
+
+/*
+ * The one banner all WatchEyeButton events feed into. Fixed to the
+ * bottom-centre so any eye on any page uses the same location —
+ * matches the templated .eyemsg so a reader who learned the one
+ * reads the other without re-learning where confirmation appears.
+ */
+.hg-watch-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 20;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--hg-text);
+  background: var(--hg-surface-raised);
+  border: 1px solid var(--hg-line-strong);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .35);
+}
+.hg-watch-banner.bad { color: var(--hg-warning); }
+
+/*
+ * Fresh-row flash on /feed (#295). Matches the templated page's
+ * `fresh` animation: a one-cycle background pulse from raised to
+ * transparent, suppressed under reduced-motion.
+ */
+@keyframes hg-feed-fresh-kf {
+  from { background: var(--hg-surface-raised); }
+  to   { background: transparent; }
+}
+.hg-feed-fresh { animation: hg-feed-fresh-kf 2.4s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .hg-feed-fresh { animation: none; }
+}
+
+/*
+ * Panel folding (#282). A folded panel shows only its header; the
+ * body collapses. The dashboard writes `[data-folded="true"]` on
+ * the slot wrapper and this rule hides every direct child of the
+ * panel that isn't the heading. Matches the templated `.folded`
+ * class behaviour at web/index.html around :5339 while keeping the
+ * selector DOM-structure-agnostic — the templated rule targeted
+ * `.folded > *:not(h2)`, which is the shape every panel chrome
+ * in this codebase already produces (PanelHeader renders a <header>
+ * containing an <h2>; the body is a sibling <div>).
+ */
+.hg-panel-slot[data-folded="true"] > section > *:not(header) {
+  display: none;
+}
+
+/*
+ * In-place panel controls (#335): grip, fold toggle, resize handle.
+ * Mirrors web/index.html:22-46 — the templated decoration CSS for
+ * .pgrip, .pfold and .presize — with the react-side peculiarity
+ * that these controls sit on the SLOT wrapper rather than inside
+ * the panel's own <section>. The slot is position: relative so
+ * the absolute-positioned grip and fold sit at the panel's own
+ * top corners; the resize handle sits at the bottom edge of the
+ * slot and can therefore cover the panel's natural flow bottom.
+ */
+
+.hg-panel-slot { position: relative; }
+
+.hg-panel-slot__grip,
+.hg-panel-slot__fold {
+  position: absolute;
+  top: 6px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--hg-text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+  cursor: pointer;
+}
+.hg-panel-slot__grip { left: 6px; cursor: grab; }
+.hg-panel-slot__fold { right: 6px; }
+
+/* Reveal on hover, focus-visible, or while resizing — same
+ * discipline as the templated page: the controls are quiet by
+ * default so they do not compete with the panel's own content,
+ * and declare themselves the moment the user approaches. */
+.hg-panel-slot:hover > .hg-panel-slot__grip,
+.hg-panel-slot:hover > .hg-panel-slot__fold,
+.hg-panel-slot__grip:focus-visible,
+.hg-panel-slot__fold:focus-visible,
+.hg-panel-slot__grip:hover,
+.hg-panel-slot__fold:hover {
+  opacity: 1;
+  color: var(--hg-text);
+  background: var(--hg-surface-raised);
+  border-color: var(--hg-line);
+}
+
+.hg-panel-slot__grip:focus-visible,
+.hg-panel-slot__fold:focus-visible,
+.hg-panel-slot .presize:focus-visible {
+  outline: 2px solid var(--hg-text);
+  outline-offset: 1px;
+}
+
+/* The fold toggle's chevron reads direction visually: points up
+ * when expanded (click to collapse), down when collapsed (click
+ * to expand). Rotation suppressed under reduced motion. */
+.hg-panel-slot__fold svg { transition: transform 120ms ease-out; }
+.hg-panel-slot__fold[aria-expanded="false"] svg { transform: rotate(180deg); }
+
+/* Resize handle. touch-action: none keeps a touch drag from
+ * scrolling the page instead of resizing the panel — the single
+ * property that makes mobile resize possible at all. */
+.hg-panel-slot .presize {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 10px;
+  z-index: 3;
+  cursor: ns-resize;
+  touch-action: none;
+  background: transparent;
+  outline-offset: -1px;
+}
+.hg-panel-slot .presize::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  width: 36px;
+  height: 3px;
+  margin-left: -18px;
+  border-radius: 2px;
+  background: var(--hg-text-muted);
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+.hg-panel-slot:hover > .presize::after,
+.hg-panel-slot .presize:focus-visible::after,
+.hg-panel-slot > section.resizing ~ .presize::after,
+.hg-panel-slot > section.resizing + .presize::after {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hg-panel-slot__grip,
+  .hg-panel-slot__fold,
+  .hg-panel-slot__fold svg,
+  .hg-panel-slot .presize::after {
+    transition: none;
+  }
+}
+
+/* A folded panel hides its resize handle — resizing a header
+ * row is meaningless. The handle itself is also removed from the
+ * DOM when folded (see PanelSlot), this rule is belt-and-braces
+ * for a future change that mounts it unconditionally. */
+.hg-panel-slot[data-folded="true"] .presize { display: none; }

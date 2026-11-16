@@ -169,19 +169,19 @@ export function KpiRail({
   tiles: KpiTile[]
   state?: KpiRailState
 }) {
-  const { identity } = useTheme()
+  const { pack, resolvedScheme } = useTheme()
   /*
     The seigaiha tile is an SVG data URI, which is parsed outside the document
     and so cannot resolve `var(--hg-*)`. The accent is read off the computed
     root style instead, after the theme has painted, and re-read whenever the
-    identity changes. This is the one place in the prototype that needs a
-    resolved colour rather than a token reference.
+    pack or appearance changes. This is the one place in the prototype that
+    needs a resolved colour rather than a token reference.
   */
   const [waveColor, setWaveColor] = useState('#ffffff')
   useEffect(() => {
     const v = getComputedStyle(document.documentElement).getPropertyValue('--hg-accent').trim()
     if (v) setWaveColor(v)
-  }, [identity])
+  }, [pack, resolvedScheme])
 
   /*
     Resolved per tile through the registry. An identity with no asset for a
@@ -192,6 +192,10 @@ export function KpiRail({
   const artFor = (id: KpiTile['id']): string | undefined => {
     const slot = TILE_SLOT[id]
     if (!slot) return undefined
+    // The KPI rail's scenic art is only shipped under the Oni pack today;
+    // derive the identity key from the current (pack, appearance) pair.
+    if (pack !== 'oni') return undefined
+    const identity = resolvedScheme === 'amoled' ? 'vermilion' : resolvedScheme === 'light' ? 'bone' : 'azure'
     const r = resolveArt(identity, slot)
     return r.kind === 'present' ? r.url : undefined
   }

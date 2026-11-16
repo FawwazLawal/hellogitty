@@ -176,6 +176,11 @@ type Conversations struct {
 	Total   int `json:"total"`
 }
 
+// WatchItem (defined in alerts_api.go) is reused as the row type here. The
+// alerts page carries a pre-filtered subset (claimed / closed only), the
+// dashboard's Watched panel carries all watched items, and both share one
+// shape so the React side has a single row component to render.
+
 // DashboardAPI is the document served at /app/api/dashboard.json.
 type DashboardAPI struct {
 	// GeneratedAt is when the snapshot this is derived from was written, in
@@ -195,6 +200,12 @@ type DashboardAPI struct {
 	Pipeline      Pipeline      `json:"pipeline"`
 	Work          Work          `json:"work"`
 	Conversations Conversations `json:"conversations"`
+	// Watched is the Watched panel's rows: issues and PRs the owner has flagged
+	// with the eye, plus ones the backend attached because something changed
+	// state on them. Empty when nothing is watched. Not gated on `known` —
+	// the list is an accumulating set, not a periodic refresh, so there is no
+	// "before the first fetch" condition to signal.
+	Watched []WatchItem `json:"watched"`
 }
 
 // serveDashboardAPI writes the KPI slice as JSON.
@@ -327,6 +338,11 @@ func (h *Handler) serveDashboardAPI(w http.ResponseWriter, r *http.Request) {
 		Total:   len(p.Work.ConvYou) + len(p.Work.ConvThem),
 	}
 
+	// Watched. toWatchItems (alerts_api.go) already turns []watchRow into a
+	// non-nil []WatchItem with ChangedAt formatted the same way, so the
+	// dashboard and alerts documents cannot disagree on row shape.
+	doc.Watched = toWatchItems(p.Watch)
+
 	// No caching. These figures move on every poll, and a cached document is a
 	// dashboard that quietly stops updating — the failure mode hardest to
 	// notice, because it looks exactly like nothing happening.
@@ -433,15 +449,51 @@ type SettingsAPI struct {
 		Inbox     string `json:"inbox"`
 		// LayoutDefault is JSON from the config file, or empty when unset.
 		LayoutDefault string `json:"layoutDefault"`
+		// Maintain is the `maintain:` list from hellogitty.json — orgs and
+		// repositories ("owner" or "owner/name") whose open PRs and issues
+		// land under "Waiting on you" on top of the owner's own. Read-only
+		// here; editing it means editing the config file and restarting.
+		// Empty when the list is empty — the React page gates the display
+		// on length rather than a separate `hasMaintain` flag, matching how
+		// the templated page gated on `{{if .ConfigMaintain}}`.
+		Maintain []string `json:"maintain"`
 	} `json:"config"`
 
 	Polling struct {
-		IntervalMinutes int    `json:"intervalMinutes"`
-		LastPollUTC     string `json:"lastPollUtc"`
-		NextPollUTC     string `json:"nextPollUtc"`
+		IntervalMinutes int `json:"intervalMinutes"`
+		// WorkIntervalMinutes is the work-board loop's cadence, which is
+		// SEPARATE from the repo poll interval above. The templated Checks
+		// panel calls it "Your work refresh". Zero when the field is unset
+		// on the Handler (the binary sets it from a default; a bare Default
+		// in config never ships a zero, but the field defaults to zero so
+		// the test fakes do).
+		WorkIntervalMinutes int `json:"workIntervalMinutes"`
+		// LastPollUnix is the full unix-seconds moment of the last poll. The
+		// dashboard footer subtracts it from `Date.now()/1000` to compute
+		// "N minutes ago" at any age, matching the templated page's
+		// `data-since` mechanism at web/index.html:4739 (which emits
+		// `.LastPollUnix` and does `Date.now()/1000 - dataset.since` from
+		// JS). The alternative — sending `LastPollUTC` and reconstructing a
+		// date in the client — caps the computed age at 24 hours, since the
+		// client has to assume "today" and roll back a day if the result is
+		// in the future. A poll that actually happened three days ago then
+		// reads as "3 hours ago": confident, plausible, wrong by three
+		// days. #284.
+		LastPollUnix int64  `json:"lastPollUnix"`
+		LastPollUTC  string `json:"lastPollUtc"`
+		NextPollUTC  string `json:"nextPollUtc"`
 		// Known is false before the first poll completes. Without it a fresh
 		// start looks identical to a stalled one.
 		Known bool `json:"known"`
+		// LastCycleMs is how long the last repo-poll cycle took, in
+		// milliseconds. Zero when no cycle has reached the point of recording
+		// a duration — the first one has not finished, or an earlier one
+		// aborted on rate-limit before the final tally. This is a DIFFERENT
+		// signal from `Known` above, which only says "some repo poll
+		// completed" (a rate-limited run still ticks that), so the client
+		// gates its em-dash on `lastCycleMs == 0` rather than on `!known`.
+		// The templated Checks panel calls this "Last check took".
+		LastCycleMs int64 `json:"lastCycleMs"`
 	} `json:"polling"`
 
 	API struct {
@@ -450,6 +502,12 @@ type SettingsAPI struct {
 		Limit    int    `json:"limit"`
 		Percent  int    `json:"percent"`
 		ResetUTC string `json:"resetUtc"`
+		// CallsPerCycle is the number of API requests the last poll cycle
+		// charged against the hour's budget. Zero under the same conditions
+		// as polling.lastCycleMs above (no cycle has finished recording
+		// telemetry), and the client gates its em-dash the same way. The
+		// templated Checks panel calls this "API calls per check".
+		CallsPerCycle int64 `json:"callsPerCycle"`
 	} `json:"api"`
 
 	Repos struct {
@@ -467,8 +525,17 @@ type SettingsAPI struct {
 		// that happened rather than one that did nothing.
 		Removed []string `json:"removed"`
 		// InPipeline is how many of them the pipeline command knows about.
+		// Only meaningful when `hasPipeline` is true — zero without a
+		// configured pipeline is ambiguous with zero WITH one and no
+		// matches, and conflating the two is exactly the "unknown is zero"
+		// trap the React side is careful to avoid.
 		InPipeline int `json:"inPipeline"`
 	} `json:"repos"`
+
+	// HasPipeline gates the "pipeline targets" readout. False for a dashboard
+	// with no `pipeline_command` configured; the React page hides the line
+	// rather than showing "0 targets" against a user who has no pipeline.
+	HasPipeline bool `json:"hasPipeline"`
 }
 
 func (h *Handler) serveSettingsAPI(w http.ResponseWriter, r *http.Request) {
@@ -496,17 +563,23 @@ func (h *Handler) serveSettingsAPI(w http.ResponseWriter, r *http.Request) {
 	// explicitly rather than silently: whatever reads this field is doing its
 	// own escaping.
 	doc.Config.LayoutDefault = string(p.LayoutDefault)
+	doc.Config.Maintain = []string{}
+	doc.Config.Maintain = append(doc.Config.Maintain, p.ConfigMaintain...)
 
 	doc.Polling.IntervalMinutes = p.PollInterval
+	doc.Polling.WorkIntervalMinutes = p.WorkInterval
+	doc.Polling.LastPollUnix = p.LastPollUnix
 	doc.Polling.LastPollUTC = p.LastPollUTC
 	doc.Polling.NextPollUTC = p.NextPollUTC
 	doc.Polling.Known = p.LastPollUnix > 0
+	doc.Polling.LastCycleMs = p.CycleDurationMs
 
 	doc.API.Known = p.APIKnown
 	doc.API.Used = p.APIUsed
 	doc.API.Limit = p.APILimit
 	doc.API.Percent = p.APIPct
 	doc.API.ResetUTC = p.APIResetUTC
+	doc.API.CallsPerCycle = p.CycleRequests
 
 	doc.Repos.Tracked = []string{}
 	doc.Repos.Removed = []string{}
@@ -526,6 +599,7 @@ func (h *Handler) serveSettingsAPI(w http.ResponseWriter, r *http.Request) {
 	}
 	doc.Repos.Count = len(doc.Repos.Tracked)
 	doc.Repos.InPipeline = p.TargetCount
+	doc.HasPipeline = p.HasPipeline
 
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")

@@ -44,10 +44,11 @@ const APPEARANCES: { value: Appearance; label: string }[] = [
   { value: 'auto', label: 'Auto' },
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
+  { value: 'amoled', label: 'AMOLED' },
 ]
 
 export function Masthead({ data }: { data: DashboardData }) {
-  const { identity, identities, order, setIdentity, appearance, setAppearance } = useTheme()
+  const { appearance, setAppearance, packHasAmoled } = useTheme()
   const headerArt = useArt('header')
 
   return (
@@ -130,28 +131,23 @@ export function Masthead({ data }: { data: DashboardData }) {
             <Settings size={14} aria-hidden="true" />
           </a>
 
-          {/* Appearance: auto / light / dark. Independent of identity. */}
+          {/*
+            Appearance: four options (Auto | Light | Dark | AMOLED), one
+            row. AMOLED is HIDDEN, not disabled, when the active pack
+            ships no AMOLED block — the templated side removes the fourth
+            button the same way, and a permanently-disabled control is a
+            dead button we spent #244 deleting. Pack selection lives on
+            the Settings page, matching where the templated app has
+            always put it; the Masthead carries appearance alone.
+          */}
           <ToggleGroup
             aria-label="Appearance"
             value={appearance}
             onValueChange={(v) => v && setAppearance(v as Appearance)}
           >
-            {APPEARANCES.map(({ value, label }) => (
+            {APPEARANCES.filter(({ value }) => value !== 'amoled' || packHasAmoled).map(({ value, label }) => (
               <ToggleGroupItem key={value} value={value}>
                 {label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-
-          {/* Identity. A separate control, by §5. */}
-          <ToggleGroup
-            aria-label="Visual identity"
-            value={identity}
-            onValueChange={(v) => v && setIdentity(v as typeof identity)}
-          >
-            {order.map((id) => (
-              <ToggleGroupItem key={id} value={id} title={identities[id].description}>
-                {identities[id].label}
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
@@ -176,23 +172,35 @@ export function Masthead({ data }: { data: DashboardData }) {
  */
 function LiveClock() {
   const { prefs } = useClockPreferences()
-  const now = useLiveClock({ seconds: prefs.seconds })
+  const now = useLiveClock()
   const { time, meridiem, date, iso } = formatClock(now, prefs)
+  /*
+   * `data-clock-style` drives the per-style CSS overrides in index.css, whose
+   * selectors target `.hg-clock-time` / `.hg-clock-date` inside the subtree.
+   * `default` is the absence of an override, so the attribute is omitted in
+   * that case; any other selector matches and takes over colour / weight /
+   * text-shadow.
+   */
+  const styleAttr = prefs.style === 'default' ? undefined : prefs.style
   return (
-    <div className="text-center">
+    <div
+      className="flex flex-col items-center gap-0.5 select-none"
+      data-clock-style={styleAttr}
+    >
       <time
-        className="block font-mono text-[27px] font-bold leading-none tabular-nums tracking-tight"
-        style={{ color: 'var(--hg-accent)' }}
+        className="hg-clock-time block font-mono text-[28px] font-bold leading-none tabular-nums"
         dateTime={iso}
       >
-        {time}
-        {meridiem && <> <span className="text-[16px]">{meridiem}</span></>}
+        {/*
+          Templated clock-js at index.html:4596 appends the meridiem into the
+          same string at the same font size (`t += suffix`), and the owner
+          reviewed the page against that. A smaller inline span reads as a
+          different design, which is what "the clock is off" picked up on.
+        */}
+        {time}{meridiem && ` ${meridiem}`}
       </time>
       {date && (
-        <span
-          className="mt-1 block text-[10px] uppercase tracking-widest"
-          style={{ color: 'var(--hg-text-muted)' }}
-        >
+        <span className="hg-clock-date block font-sans text-[12px] font-medium leading-none uppercase">
           {date}
         </span>
       )}
@@ -212,7 +220,7 @@ function LiveClock() {
  */
 function WorldClocks() {
   const { clocks } = useWorldClocks()
-  const now = useLiveClock({ seconds: false })
+  const now = useLiveClock()
   if (clocks.length === 0) return null
   return (
     <ul

@@ -19,27 +19,43 @@ import { expectNoHorizontalOverflow } from './overflow'
 const IDENTITIES = ['vermilion', 'azure', 'bone'] as const
 const APPEARANCES = ['dark', 'light'] as const
 
+/**
+ * The identity-to-pair map from ThemeProvider, written here as data so the
+ * spec can translate the pre-2b identity names it was written around into
+ * the pack + appearance pair the cascade now reads.
+ */
+const IDENTITY_TO_PAIR: Record<string, { pack: string; appearance: string }> = {
+  vermilion: { pack: 'oni', appearance: 'amoled' },
+  azure: { pack: 'oni', appearance: 'dark' },
+  bone: { pack: 'oni', appearance: 'light' },
+}
+
 /** Set identity and appearance the way the app itself stores them, then reload. */
 async function useTheme(page: Page, identity: string, appearance?: string) {
+  const pair = IDENTITY_TO_PAIR[identity] ?? { pack: identity, appearance: appearance ?? '' }
+  // ThemeProvider migrates `vermilion | azure | bone` on load; we could set
+  // either shape. The pair shape is what the cascade actually reads, and
+  // matches what post-migration storage looks like — set it directly.
   await page.addInitScript(
-    ([id, app]) => {
+    ([pack, app]) => {
       try {
-        localStorage.setItem('hellogitty-visual-theme', id as string)
+        if (pack) localStorage.setItem('hellogitty-visual-theme', pack as string)
+        else localStorage.removeItem('hellogitty-visual-theme')
         if (app) localStorage.setItem('hellogitty-theme', app as string)
         else localStorage.removeItem('hellogitty-theme')
       } catch {
-        /* a blocked-storage browser still renders the default identity */
+        /* a blocked-storage browser still renders the default pack */
       }
     },
-    [identity, appearance ?? ''],
+    [pair.pack, pair.appearance || (appearance ?? '')],
   )
   await page.goto('/app/', { waitUntil: 'networkidle' })
-  // The theme is applied in an effect, so wait for it to have landed rather
-  // than for a fixed delay. Reading a computed style too early was the single
-  // most common source of wrong measurements while building this.
+  // Attribute change in 2b: React now writes data-visual-theme (not
+  // data-identity) and data-theme (not data-appearance). Read the one
+  // that actually sets the cascade.
   await expect
-    .poll(() => page.evaluate(() => document.documentElement.dataset.identity))
-    .toBe(identity)
+    .poll(() => page.evaluate(() => document.documentElement.dataset.visualTheme))
+    .toBe(pair.pack)
 }
 
 test.describe('the React app', () => {

@@ -37,10 +37,47 @@ afterEach(() => {
 })
 
 describe('useClockPreferences — templated-key parity', () => {
-  it('reads defaults when the storage is empty (24h, seconds on, date on)', () => {
+  it('reads defaults when the storage is empty (24h, seconds on, date on, default style)', () => {
     const { result } = renderHook(() => useClockPreferences())
     expect(result.current.prefs).toEqual(CLOCK_DEFAULTS)
-    expect(CLOCK_DEFAULTS).toEqual({ format: '24h', seconds: true, date: true })
+    expect(CLOCK_DEFAULTS).toEqual({ format: '24h', seconds: true, date: true, style: 'default' })
+  })
+
+  it('reads a saved `style` the templated page wrote (style=neon)', () => {
+    // Templated page writes {format, seconds, date, style} as a partial object.
+    // A saved style must survive the round-trip or a visitor's choice silently
+    // reverts to default when they move from /legacy to /.
+    localStorage.setItem('hellogitty-clock', JSON.stringify({ style: 'neon' }))
+    const { result } = renderHook(() => useClockPreferences())
+    expect(result.current.prefs.style).toBe('neon')
+    // Other fields fall back on defaults.
+    expect(result.current.prefs.format).toBe('24h')
+    expect(result.current.prefs.seconds).toBe(true)
+  })
+
+  it('an unknown style falls back on default without clobbering the other fields', () => {
+    // The zod `.catch('default')` on the style field exists for this exact
+    // case: a style that was renamed or removed must NOT cause the whole
+    // preference object to reset. A bare `.default()` without `.catch()` would
+    // throw on an unknown enum value and wipe format and seconds with it.
+    localStorage.setItem(
+      'hellogitty-clock',
+      JSON.stringify({ format: '12h', seconds: false, date: true, style: 'ghostbusters' }),
+    )
+    const { result } = renderHook(() => useClockPreferences())
+    expect(result.current.prefs.style).toBe('default')
+    expect(result.current.prefs.format).toBe('12h')
+    expect(result.current.prefs.seconds).toBe(false)
+    expect(result.current.prefs.date).toBe(true)
+  })
+
+  it('setStyle writes under hellogitty-clock and leaves other fields intact', () => {
+    const { result } = renderHook(() => useClockPreferences())
+    act(() => result.current.setFormat('12h'))
+    act(() => result.current.setStyle('matrix'))
+    const raw = localStorage.getItem('hellogitty-clock')
+    expect(raw).not.toBeNull()
+    expect(JSON.parse(raw!)).toMatchObject({ format: '12h', seconds: true, date: true, style: 'matrix' })
   })
 
   it('reads a preference the templated page has already written (format=12h)', () => {
@@ -165,10 +202,10 @@ describe('formatInTz — midnight edge case', () => {
   })
 })
 
-describe('useLiveClock — seconds controls the tick cadence', () => {
-  it('seconds=true ticks every second', () => {
+describe('useLiveClock — always 1s cadence (matches the templated clock-js)', () => {
+  it('ticks every second', () => {
     vi.useFakeTimers()
-    const { result } = renderHook(() => useLiveClock({ seconds: true }))
+    const { result } = renderHook(() => useLiveClock())
     const start = result.current.getTime()
     act(() => {
       vi.advanceTimersByTime(1_500)
@@ -176,22 +213,22 @@ describe('useLiveClock — seconds controls the tick cadence', () => {
     expect(result.current.getTime()).toBeGreaterThan(start)
   })
 
-  it('seconds=false does NOT tick at the 1s boundary — the quieter cadence is the point', () => {
+  it('a 5-second advance moves the clock forward by ~5 seconds, not zero', () => {
+    // An earlier iteration here slowed the tick to 15s when `seconds` was off.
+    // That created a visible bug: flipping FORMAT (24h↔12h) with seconds off
+    // took up to 15 seconds to show, because the effect depended on `seconds`
+    // and nothing re-ran the tick on a format change. A clock that disagrees
+    // with its own setting after a click is worse than a few extra renders
+    // per minute on a quiet masthead. This test guards the fix.
     vi.useFakeTimers()
-    vi.setSystemTime(new Date(2026, 10, 6, 12, 0, 0))
-    const { result } = renderHook(() => useLiveClock({ seconds: false }))
+    vi.setSystemTime(new Date(2026, 10, 7, 12, 0, 0))
+    const { result } = renderHook(() => useLiveClock())
     const start = result.current.getTime()
-    // Advance 5s — still within one quiet tick window. The clock must not have
-    // rendered a new time, which is the exact noise the slower cadence saves
-    // React from. (A one-second interval would have re-rendered 5 times.)
     act(() => {
       vi.advanceTimersByTime(5_000)
     })
-    expect(result.current.getTime()).toBe(start)
-    // At the quiet cadence, the clock catches up on its own interval.
-    act(() => {
-      vi.advanceTimersByTime(15_000)
-    })
-    expect(result.current.getTime()).toBeGreaterThan(start)
+    const delta = result.current.getTime() - start
+    expect(delta).toBeGreaterThanOrEqual(4_000)
+    expect(delta).toBeLessThanOrEqual(6_000)
   })
 })

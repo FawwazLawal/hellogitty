@@ -32,8 +32,11 @@ const (
 
 // Telemetry is the poller's view of its own most recent cycle.
 type Telemetry struct {
-	LastPoll      time.Time
-	Errors        map[string]string
+	LastPoll time.Time
+	Errors   map[string]string
+	// Retried names the repositories whose check failed once this cycle and passed on the
+	// retry. They are not errors: the cycle finished for them.
+	Retried       map[string]string
 	CycleDuration time.Duration
 	CycleRequests int64
 	RateRemaining int
@@ -249,8 +252,19 @@ type page struct {
 	LastPollUTC  string
 	NextPollUTC  string
 	PollInterval int
+	// WorkInterval is the SEPARATE work-board loop cadence (Handler.WorkRefresh
+	// in minutes). The Checks panel calls it "Your work refresh". Zero if the
+	// field was not set on the Handler (test fakes mostly).
+	WorkInterval int
 	CycleText    string
 	CycleCalls   string
+	// CycleDurationMs and CycleRequests are the raw forms of CycleText and
+	// CycleCalls — the same numbers before `duration()` and strconv ran over
+	// them. The templated page keeps using the formatted strings; the JSON API
+	// serves these so clients format consistently with the rest of the page.
+	// Both are zero before the first repo-poll cycle has completed.
+	CycleDurationMs int64
+	CycleRequests   int64
 	APIKnown     bool
 	APIUsed      int
 	APILimit     int
@@ -651,15 +665,18 @@ func (h *Handler) serveHealth(w http.ResponseWriter, r *http.Request) {
 	board, _, partial := h.Source.Work()
 
 	type loopOut struct {
-		Name           string `json:"name"`
-		Interval       int    `json:"interval_minutes"`
-		Last           string `json:"last_success,omitempty"`
-		Age            int    `json:"age_minutes"`
-		Stale          bool   `json:"stale"`
-		Errors         int    `json:"errors"`
-		Partial        *bool  `json:"partial,omitempty"`
-		NeverPolled    bool   `json:"never_polled,omitempty"`
-		NeverRefreshed bool   `json:"never_refreshed,omitempty"`
+		Name     string `json:"name"`
+		Interval int    `json:"interval_minutes"`
+		Last     string `json:"last_success,omitempty"`
+		Age      int    `json:"age_minutes"`
+		Stale    bool   `json:"stale"`
+		Errors   int    `json:"errors"`
+		// Retried counts repositories that failed once and passed on the retry: finished
+		// checks, kept apart from Errors so that number can reach zero on a recovered cycle.
+		Retried        *int  `json:"retried,omitempty"`
+		Partial        *bool `json:"partial,omitempty"`
+		NeverPolled    bool  `json:"never_polled,omitempty"`
+		NeverRefreshed bool  `json:"never_refreshed,omitempty"`
 	}
 	type fileOut struct {
 		Name        string `json:"name"`
@@ -702,7 +719,8 @@ func (h *Handler) serveHealth(w http.ResponseWriter, r *http.Request) {
 	uptime := now.Sub(h.StartedAt)
 	withinGrace := func(interval time.Duration) bool { return uptime <= 5*interval/2 }
 
-	repoLoop := loopOut{Name: "repo_poll", Interval: int(repoInterval / time.Minute), Errors: len(tel.Errors)}
+	retried := len(tel.Retried)
+	repoLoop := loopOut{Name: "repo_poll", Interval: int(repoInterval / time.Minute), Errors: len(tel.Errors), Retried: &retried}
 	if !tel.LastPoll.IsZero() {
 		repoLoop.Last = tel.LastPoll.UTC().Format(time.RFC3339)
 		repoLoop.Age = int(now.Sub(tel.LastPoll) / time.Minute)
@@ -822,6 +840,18 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// /list takes ?prs=... or ?stage=... query parameters; the React
 		// shell receives them in location.search and routes on them client-
 		// side, so deep links survive.
+		//
+		// REFUSE INVALID QUERIES THE WAY THE TEMPLATED PAGE DOES. Without
+		// this, the SPA fallback would answer 200 for bare /list, for the
+		// pr=open typo, and for any other junk, and the chunked ListPage
+		// would render its "Pick a count" placeholder forever behind a
+		// Suspense "Loading…" during the first lazy fetch. The templated
+		// serveList 404s all of those, and so does `listQueryIsValid` here —
+		// one check both routes share, so they cannot drift.
+		if !listQueryIsValid(r.URL.Query()) {
+			http.NotFound(w, r)
+			return
+		}
 		h.serveAppIndex(w, r)
 	case r.URL.Path == "/legacy/list":
 		h.serveList(w, r)
@@ -887,6 +917,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.serveYourReposAPI(w, r)
 	case r.URL.Path == "/app/api/alerts.json":
 		h.serveAlertsAPI(w, r)
+	case r.URL.Path == "/app/api/security.json":
+		h.serveSecurityAPI(w, r)
 	case strings.HasPrefix(r.URL.Path, "/app") && h.App != nil:
 		h.serveApp(w, r)
 	case r.URL.Path == "/feed" && h.ReactIsDefault && h.App != nil:
@@ -1065,6 +1097,7 @@ func (h *Handler) build() (*page, error) {
 		NowUTC:       now.Format("2006-01-02 15:04:05Z"),
 		NowUnix:      now.Unix(),
 		PollInterval: int(h.PollInterval / time.Minute),
+		WorkInterval: int(h.WorkRefresh / time.Minute),
 		RepoCount:    len(reports),
 		CycleText:    "—",
 		CycleCalls:   "—",
@@ -1097,6 +1130,8 @@ func (h *Handler) build() (*page, error) {
 	if tel.CycleDuration > 0 {
 		p.CycleText = duration(tel.CycleDuration)
 		p.CycleCalls = strconv.FormatInt(tel.CycleRequests, 10)
+		p.CycleDurationMs = tel.CycleDuration.Milliseconds()
+		p.CycleRequests = tel.CycleRequests
 	}
 	if tel.RateLimit > 0 {
 		p.APIKnown = true

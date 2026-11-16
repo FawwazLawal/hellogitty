@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Calendar, AlertTriangle, ExternalLink } from 'lucide-react'
 import { LayoutGroup, motion, useReducedMotion } from 'motion/react'
+import { usePageTitle } from '../hooks/usePageTitle'
 import { Panel, PanelHeader } from './chrome/Chrome'
 import { useDashboard, type RepoFromApi } from '../data/dashboard'
 
@@ -195,6 +196,7 @@ function renderCardBody(
 }
 
 export function ReposPage() {
+  usePageTitle('Tracked repositories · HelloGitty')
   const q = useDashboard()
   const [search, setSearch] = useState('')
   const [health, setHealth] = useState<'' | Health>('')

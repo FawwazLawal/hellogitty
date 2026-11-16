@@ -1,6 +1,7 @@
 import { useAlerts } from '../../data/alerts'
 import { AlertPage } from '../AlertPage'
 import { AlertList, Fact } from './parts'
+import { usePageTitle } from '../../hooks/usePageTitle'
 
 /**
  * /alerts/data-stale — last-poll facts, next-scheduled-poll, interval, and
@@ -11,6 +12,7 @@ import { AlertList, Fact } from './parts'
  * other isn't, which the templates could not express.
  */
 export function DataStaleAlert() {
+  usePageTitle('Data is stale · HelloGitty')
   const q = useAlerts()
   const d = q.data
   const poll = d?.poll
