@@ -34,9 +34,12 @@ var ErrRateLimited = errors.New("github: rate limited beyond max wait")
 type Client struct {
 	BaseURL string
 	HTTP    *http.Client
-	token   string
-	sleep   func(context.Context, time.Duration) error
-	now     func() time.Time
+	// RequestTimeout bounds each HTTP attempt. A caller that knows a repository is unusually
+	// large widens it for its own requests with WithRequestTimeout.
+	RequestTimeout time.Duration
+	token          string
+	sleep          func(context.Context, time.Duration) error
+	now            func() time.Time
 
 	requests atomic.Int64
 
@@ -49,13 +52,61 @@ type Client struct {
 
 func New(token string) *Client {
 	return &Client{
-		BaseURL:   defaultBaseURL,
-		HTTP:      &http.Client{Timeout: 30 * time.Second},
-		token:     token,
-		sleep:     sleepCtx,
-		now:       time.Now,
-		remaining: -1,
+		BaseURL: defaultBaseURL,
+		// No http.Client.Timeout: each attempt is bounded by a context deadline instead, so a
+		// caller can widen the bound for one repository without widening it for all.
+		HTTP:           &http.Client{},
+		RequestTimeout: 30 * time.Second,
+		token:          token,
+		sleep:          sleepCtx,
+		now:            time.Now,
+		remaining:      -1,
 	}
+}
+
+type requestTimeoutKey struct{}
+
+// WithRequestTimeout returns a context whose requests through a Client get d instead of the
+// Client's RequestTimeout.
+func WithRequestTimeout(ctx context.Context, d time.Duration) context.Context {
+	return context.WithValue(ctx, requestTimeoutKey{}, d)
+}
+
+// RequestTimeoutFrom reports the per-request timeout WithRequestTimeout put on ctx, if any.
+func RequestTimeoutFrom(ctx context.Context) (time.Duration, bool) {
+	d, ok := ctx.Value(requestTimeoutKey{}).(time.Duration)
+	return d, ok && d > 0
+}
+
+// attemptContext bounds one HTTP attempt: the context's own timeout if a caller set one, else
+// the Client's. A zero timeout leaves the attempt unbounded.
+func (c *Client) attemptContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	d := c.RequestTimeout
+	if o, ok := RequestTimeoutFrom(ctx); ok {
+		d = o
+	}
+	if d <= 0 {
+		return ctx, func() {}
+	}
+	return context.WithTimeout(ctx, d)
+}
+
+// Retryable reports whether err is the passing kind of failure, one more attempt later in the
+// same cycle has a fair chance of clearing: a request that timed out, or a 502, 503 or 504 from
+// GitHub. A 404, a 422, bad credentials, a cancelled context and an exhausted rate limit are not.
+func Retryable(err error) bool {
+	if err == nil || errors.Is(err, ErrRateLimited) || errors.Is(err, context.Canceled) {
+		return false
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var se *StatusError
+	if errors.As(err, &se) {
+		return se.Code == http.StatusBadGateway || se.Code == http.StatusServiceUnavailable || se.Code == http.StatusGatewayTimeout
+	}
+	var timedOut interface{ Timeout() bool }
+	return errors.As(err, &timedOut) && timedOut.Timeout()
 }
 
 // Requests counts every HTTP attempt made, retries included.
@@ -362,8 +413,10 @@ func (c *Client) send(ctx context.Context, method, rawURL string, payload []byte
 		if payload != nil {
 			reqBody = bytes.NewReader(payload)
 		}
-		req, err := http.NewRequestWithContext(ctx, method, rawURL, reqBody)
+		attemptCtx, cancel := c.attemptContext(ctx)
+		req, err := http.NewRequestWithContext(attemptCtx, method, rawURL, reqBody)
 		if err != nil {
+			cancel()
 			return "", nil, false, err
 		}
 		if payload != nil {
@@ -381,6 +434,7 @@ func (c *Client) send(ctx context.Context, method, rawURL string, payload []byte
 		c.requests.Add(1)
 		resp, err := c.HTTP.Do(req)
 		if err != nil {
+			cancel()
 			if attempt < maxAttempts && ctx.Err() == nil {
 				if err := c.sleep(ctx, backoff(attempt)); err != nil {
 					return "", nil, false, err
@@ -392,6 +446,7 @@ func (c *Client) send(ctx context.Context, method, rawURL string, payload []byte
 		c.recordRate(resp.Header)
 		body, readErr := io.ReadAll(io.LimitReader(resp.Body, 32<<20))
 		resp.Body.Close()
+		cancel()
 		if readErr != nil {
 			// A slow answer that times out halfway through is worth another try, like a failed
 			// connection; one slow moment shouldn't fail the whole repository's check.

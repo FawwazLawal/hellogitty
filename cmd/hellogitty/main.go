@@ -220,8 +220,8 @@ func run() int {
 		}
 		ps := pl.Status()
 		rem, lim, _ := gh.RateLimit()
-		log.Printf("poll cycle done in %s: %d repos, %d failed, %d requests, %d of your PRs, rate %d/%d",
-			time.Since(start).Round(time.Second), len(ps.Targets), len(ps.Errors), ps.CycleRequests, len(ps.OurPRs), rem, lim)
+		log.Printf("poll cycle done in %s: %d repos, %d failed, %d retried, %d requests, %d of your PRs, rate %d/%d",
+			time.Since(start).Round(time.Second), len(ps.Targets), len(ps.Errors), len(ps.Retried), ps.CycleRequests, len(ps.OurPRs), rem, lim)
 		return failed + len(ps.Errors)
 	}
 
@@ -718,7 +718,7 @@ func (s source) Telemetry() dashboard.Telemetry {
 	ps := s.p.Status()
 	rem, lim, reset := s.gh.RateLimit()
 	t := dashboard.Telemetry{
-		LastPoll: ps.LastPoll, Errors: ps.Errors, CycleDuration: ps.CycleDuration, CycleRequests: ps.CycleRequests,
+		LastPoll: ps.LastPoll, Errors: ps.Errors, Retried: ps.Retried, CycleDuration: ps.CycleDuration, CycleRequests: ps.CycleRequests,
 		RateRemaining: rem, RateLimit: lim, RateReset: reset, PRsKnown: ps.PRsKnown, PRError: ps.PRError,
 	}
 	for _, pr := range ps.OurPRs {
