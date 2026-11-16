@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -32,7 +33,40 @@ type PR struct {
 
 type File struct {
 	GeneratedAt string `json:"generated_at"`
-	OurOpenPRs  []PR   `json:"our_open_prs"`
+	// BoardPartial is true when this file was written from a work-board refresh that GitHub refused
+	// part of: OurOpenPRs is the best-available merge of the last-good set and whatever the partial
+	// produced, not a claim of completeness. Omitted on a full-cycle write.
+	BoardPartial bool `json:"board_partial,omitempty"`
+	OurOpenPRs   []PR `json:"our_open_prs"`
+}
+
+// MergePRs returns every unique PR across prev and next, keyed by repo + "#" + number; next wins
+// per key. Order is prev first (preserving its order), then any PRs new to next appended at the
+// end. Nil inputs are treated as empty.
+//
+// A partial work-board refresh may replace OurOpenPRs with a smaller subset because the prsOpen
+// sub-query errored while others succeeded; merging preserves the last complete cycle's PRs so a
+// script reading the file does not watch 18 threads shrink to 0 and panic.
+func MergePRs(prev, next []PR) []PR {
+	if len(prev) == 0 {
+		return append([]PR(nil), next...)
+	}
+	key := func(p PR) string { return strings.ToLower(p.Repo) + "#" + strconv.Itoa(p.Number) }
+	idx := make(map[string]int, len(prev)+len(next))
+	out := make([]PR, 0, len(prev)+len(next))
+	for _, p := range prev {
+		idx[key(p)] = len(out)
+		out = append(out, p)
+	}
+	for _, p := range next {
+		if i, ok := idx[key(p)]; ok {
+			out[i] = p
+			continue
+		}
+		idx[key(p)] = len(out)
+		out = append(out, p)
+	}
+	return out
 }
 
 func Build(b *work.Board) File {

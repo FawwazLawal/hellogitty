@@ -88,8 +88,43 @@ type File struct {
 	// RefreshIntervalMinutes is how often the work-board refresh rewrites this file. It is not a
 	// poll interval (snapshot.json carries the poll loop's own value under its own key); every entry
 	// here comes from the work-board fetch that runs on this cadence.
-	RefreshIntervalMinutes int     `json:"refresh_interval_minutes"`
-	Entries                []Entry `json:"entries"`
+	RefreshIntervalMinutes int `json:"refresh_interval_minutes"`
+	// BoardPartial is true when this file was written from a work-board refresh that GitHub refused
+	// part of: the entries are the best available — the last-good set merged with whatever the
+	// partial cycle produced — not fabricated as complete. Omitted on a full-cycle write so a tolerant
+	// consumer can read every file without special-casing, while a consumer that needs a full view
+	// can wait for a file where this is absent or false.
+	BoardPartial bool    `json:"board_partial,omitempty"`
+	Entries      []Entry `json:"entries"`
+}
+
+// MergeEntries returns every unique entry across prev and next, keyed by Entry.ID; where the id
+// appears in both, next wins (its data is fresher). The result is Sorted, so a caller writing
+// the file reads the same order it would from a single fetch. Nil inputs are treated as empty.
+//
+// A partial work-board refresh may drop entries wholesale rather than evict them one by one, so
+// merging the last-good set with the partial's output preserves what is really pertinent now
+// without relying on the partial fetch to have included it. Where it did, next's version (same id,
+// possibly newer Body / Priority / Replied) replaces prev's.
+func MergeEntries(prev, next []Entry) []Entry {
+	if len(prev) == 0 {
+		return append([]Entry(nil), next...)
+	}
+	byID := make(map[string]int, len(prev)+len(next))
+	out := make([]Entry, 0, len(prev)+len(next))
+	for _, e := range prev {
+		byID[e.ID] = len(out)
+		out = append(out, e)
+	}
+	for _, e := range next {
+		if i, ok := byID[e.ID]; ok {
+			out[i] = e
+			continue
+		}
+		byID[e.ID] = len(out)
+		out = append(out, e)
+	}
+	return Sorted(out)
 }
 
 // FirstSeen returns a stable time for an event GitHub does not timestamp (the first time it was
