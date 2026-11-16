@@ -5,6 +5,41 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (44) · Black Bombay (baby) · 2026-11-16
+
+Tag `v0.2.44`.
+
+### Fixed
+
+- Polling classifies retryable failures (context deadline, `net.Timeout()`, 502/503/504) and retries each affected repository once per cycle; a repository that passes on the retry is not counted as an error. (#341, #343)
+- Repos-file entries marked `active:false`, `retired`, or carrying a non-blank `pruned_note` are skipped instead of polled every cycle. (#344, #345)
+- First-load JavaScript budget sums every first-paint chunk (the entry script plus every `modulepreload`) rather than measuring the first one. (#339)
+- `/feed` and `/alerts/watched-*` restore time-of-day precision. (#296, #327)
+- `/feed` restores watch, ack confirmation, filter persistence, and flash. (#295, #321)
+- `/help` restores keyboard navigation, Copy on every `<pre>`, and scroll-spy. (#294, #315)
+- `/help` restores the stemmed search the templated page had. (#293, #310)
+- The React masthead clock resyncs on `visibilitychange`. (#319, #320)
+- The React masthead clock matches the templated one. (#274)
+- The React clock colour reads from the pack-stated token. (#307, #316)
+- `/list` refuses invalid queries, matching the templated page. (#279)
+- Tracker preserves the last board across a failed Refresh. (#317)
+
+### Added
+
+- Six dashboard panels on one layout engine, with per-panel grip, fold, and resize; an Appearance row and pack picker surface the owner's model. (#281, #282, #331, #333, #335, #336, #337)
+- `/api` project response gains Checks fields, a Watched array, and a security feed. (#324)
+- Dashboard footer status line in React. (#326)
+- Settings sidebar in React (six panes); the fifteen clock-style swatches and the maintain-list plus pipeline-targets readouts are carried over. (#273, #277, #299, #309)
+
+### Changed
+
+- Per-request HTTP bound moves off `http.Client.Timeout` to a per-attempt context deadline; a caller widens its own bound via `WithRequestTimeout(ctx, d)`. The poller sizes each repository's per-request timeout from the pages of open issues it took last cycle (30 s baseline, +10 s per page, capped at 120 s). (#341, #343)
+- `/health`'s `repo_poll` entry gains a `retried` count beside `errors`; the end-of-cycle log prints it. (#341, #343)
+- Pack token cascade lives at `web/themes.css`, one source for both surfaces; React consumes it. (#276, #308)
+- Ten pack-stated tokens are promoted into `ColorTokens`. (#275)
+- Lazy-load the seven eager non-entry pages; `/help` loads on demand. (#312, #313, #328)
+- Per-page document title on every React route. (#278)
+
 ## v0.2.0 (43) · Black Bombay (baby) · 2026-11-07
 
 Tag `v0.2.43`.
