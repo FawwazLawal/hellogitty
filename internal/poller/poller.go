@@ -57,9 +57,11 @@ type Poller struct {
 	commentReplies []store.CommentReply
 
 	// sleep and poll are replaceable in tests so a retry can be exercised without waiting on a
-	// clock or a server. nil means the real thing.
+	// clock or a server. nil means the real thing. The two ints are, in order, how many pages
+	// of open issues the repository read and how many PR-side pages it read; the next cycle sizes
+	// each phase's request timeout from the matching count (see requestTimeoutFor).
 	sleep func(context.Context, time.Duration) error
-	poll  func(context.Context, Target) (*IssueTotals, int, error)
+	poll  func(context.Context, Target) (*IssueTotals, int, int, error)
 }
 
 // OurPR is a pull request the token's account opened in a tracked repo.
@@ -92,7 +94,14 @@ type Status struct {
 	Retried map[string]string
 	// Pages holds how many pages of open issues each repository took last cycle, by lowercase
 	// owner/name; the next cycle sizes that repository's request timeout from it.
-	Pages         map[string]int
+	Pages map[string]int
+	// PRPages holds the PR-side request count (ClosedPRs + per-denied-PR Reviews and
+	// IssueComments pagination) each repository took last cycle, keyed the same way. The PR
+	// phase is budgeted from it, separately from Pages — a repo with few open issues but
+	// deep PR history (meshtastic, coraza) was burning the issue-sized budget on PR comment
+	// pagination; measurements showed a fixed ~138s per attempt, 11–13 failures a cycle, and
+	// ~30% of a 100-minute cycle wasted on a retry that could not help.
+	PRPages       map[string]int
 	LastPoll      time.Time
 	CycleDuration time.Duration
 	CycleRequests int64
@@ -126,6 +135,10 @@ func (p *Poller) Status() Status {
 	for k, v := range p.status.Pages {
 		st.Pages[k] = v
 	}
+	st.PRPages = make(map[string]int, len(p.status.PRPages))
+	for k, v := range p.status.PRPages {
+		st.PRPages[k] = v
+	}
 	return st
 }
 
@@ -141,7 +154,8 @@ const (
 )
 
 // requestTimeoutFor sizes a repository's per-request timeout from the pages of open issues it
-// took last cycle. Unknown (0) and one page read as the base.
+// took last cycle. Unknown (0) and one page read as the base. The PR phase (pollPRs) is sized
+// from its own count via the same function.
 func requestTimeoutFor(pages int) time.Duration {
 	if pages <= 1 {
 		return baseRequestTimeout
@@ -153,6 +167,27 @@ func requestTimeoutFor(pages int) time.Duration {
 	return d
 }
 
+// prBudgetKey carries the PR-phase per-request timeout through pollTarget / pollRepo into
+// pollPRs. Separate from github.WithRequestTimeout because the issue phase runs first on the
+// same ctx; the PR phase overrides at its boundary without disturbing OpenIssues.
+type prBudgetKey struct{}
+
+// withPRBudget attaches the PR-phase per-request timeout to ctx. pollPRs reads it at its
+// entry and re-wraps the ctx through github.WithRequestTimeout so every github call inside
+// pollPRs uses the PR budget instead of the issue budget.
+func withPRBudget(ctx context.Context, d time.Duration) context.Context {
+	if d <= 0 {
+		return ctx
+	}
+	return context.WithValue(ctx, prBudgetKey{}, d)
+}
+
+// prBudgetFrom reports the PR-phase budget withPRBudget put on ctx, if any.
+func prBudgetFrom(ctx context.Context) (time.Duration, bool) {
+	d, ok := ctx.Value(prBudgetKey{}).(time.Duration)
+	return d, ok && d > 0
+}
+
 func (p *Poller) retryBackoff() time.Duration {
 	if p.RetryBackoff > 0 {
 		return p.RetryBackoff
@@ -160,7 +195,7 @@ func (p *Poller) retryBackoff() time.Duration {
 	return defaultRetryBackoff
 }
 
-func (p *Poller) pollTarget(ctx context.Context, t Target) (*IssueTotals, int, error) {
+func (p *Poller) pollTarget(ctx context.Context, t Target) (*IssueTotals, int, int, error) {
 	if p.poll != nil {
 		return p.poll(ctx, t)
 	}
@@ -199,6 +234,7 @@ func (p *Poller) PollAll(ctx context.Context) error {
 	retried := map[string]string{}
 	totals := map[string]IssueTotals{}
 	pages := map[string]int{}
+	prPages := map[string]int{}
 	p.mu.Lock()
 	open := make(map[string][]github.PullRequest, len(p.status.OpenPRs))
 	for k, v := range p.status.OpenPRs {
@@ -207,6 +243,10 @@ func (p *Poller) PollAll(ctx context.Context) error {
 	lastPages := make(map[string]int, len(p.status.Pages))
 	for k, v := range p.status.Pages {
 		lastPages[k] = v
+	}
+	lastPRPages := make(map[string]int, len(p.status.PRPages))
+	for k, v := range p.status.PRPages {
+		lastPRPages[k] = v
 	}
 	p.mu.Unlock()
 	for _, t := range targets {
@@ -217,25 +257,47 @@ func (p *Poller) PollAll(ctx context.Context) error {
 		start := time.Now()
 		// A very large repository gets a longer bound on each of its requests, sized from the
 		// pages it took last time; the bound is logged so a slow check can be read against it.
+		// The PR phase has its own count (PRPages) and so its own budget, attached as a ctx
+		// value and picked up at pollPRs's boundary — the issue phase runs first on the same
+		// ctx and must keep its own budget.
 		rctx := ctx
 		if d := requestTimeoutFor(lastPages[key]); d > baseRequestTimeout {
 			rctx = github.WithRequestTimeout(ctx, d)
 			log.Printf("poll %s/%s: request timeout %s (%d issue pages last cycle)", t.Owner, t.Name, d, lastPages[key])
 		}
-		tot, seen, err := p.pollTarget(rctx, t)
+		if d := requestTimeoutFor(lastPRPages[key]); d > baseRequestTimeout {
+			rctx = withPRBudget(rctx, d)
+			log.Printf("poll %s/%s: PR request timeout %s (%d PR pages last cycle)", t.Owner, t.Name, d, lastPRPages[key])
+		}
+		tot, seen, prSeen, err := p.pollTarget(rctx, t)
 		// A timeout or a 5xx is a passing failure: check once more after a pause before calling
 		// the repository failed. Only a failure that survives the retry counts as an error.
+		// Exception: a DeadlineExceeded on a repo whose PR phase already sat at the cap last
+		// cycle has no room to buy more time on the retry — measurements showed ~150s wasted
+		// per such retry, ~30% of a long cycle. Skip the retry and record the error.
 		if err != nil && ctx.Err() == nil && github.Retryable(err) {
 			first := err
-			log.Printf("poll %s/%s: %v; retrying once after %s", t.Owner, t.Name, first, p.retryBackoff())
-			if p.doSleep(ctx, p.retryBackoff()) == nil {
-				if tot, seen, err = p.pollTarget(rctx, t); err == nil {
-					retried[key] = first.Error()
+			atCap := errors.Is(err, context.DeadlineExceeded) &&
+				lastPRPages[key] > 0 &&
+				requestTimeoutFor(lastPRPages[key]) >= maxRequestTimeout
+			if atCap {
+				log.Printf("poll %s/%s: %v; not retrying — PR budget is already at the cap (%d PR pages last cycle)", t.Owner, t.Name, first, lastPRPages[key])
+			} else {
+				log.Printf("poll %s/%s: %v; retrying once after %s", t.Owner, t.Name, first, p.retryBackoff())
+				if p.doSleep(ctx, p.retryBackoff()) == nil {
+					var retSeen, retPRSeen int
+					if tot, retSeen, retPRSeen, err = p.pollTarget(rctx, t); err == nil {
+						retried[key] = first.Error()
+						seen, prSeen = retSeen, retPRSeen
+					}
 				}
 			}
 		}
 		if seen > 0 {
 			pages[key] = seen
+		}
+		if prSeen > 0 {
+			prPages[key] = prSeen
 		}
 		if tot != nil {
 			totals[key] = *tot
@@ -286,6 +348,7 @@ func (p *Poller) PollAll(ctx context.Context) error {
 		Errors:        errs,
 		Retried:       retried,
 		Pages:         pages,
+		PRPages:       prPages,
 		Totals:        totals,
 		LastPoll:      p.now(),
 		CycleDuration: time.Since(cycleStart),
@@ -308,7 +371,7 @@ func (p *Poller) PollAll(ctx context.Context) error {
 // a repository you just added shows up without waiting for the next check.
 func (p *Poller) PollOne(ctx context.Context, t Target) error {
 	key := strings.ToLower(t.Owner + "/" + t.Name)
-	tot, pages, err := p.pollRepo(ctx, t)
+	tot, pages, _, err := p.pollRepo(ctx, t)
 	var prs []github.PullRequest
 	if err == nil {
 		prs, _ = p.GH.OpenPRs(ctx, t.Owner, t.Name, openPRsShown)
@@ -497,22 +560,23 @@ func (p *Poller) now() time.Time {
 	return time.Now().UTC()
 }
 
-// pollRepo checks one repository. The int is how many pages of open issues it read (the page cap
-// when the list ran past it), which sizes the repository's request timeout next cycle.
-func (p *Poller) pollRepo(ctx context.Context, t Target) (*IssueTotals, int, error) {
+// pollRepo checks one repository. The two ints are, in order, how many pages of open issues
+// it read (the page cap when the list ran past it) and how many pages the PR phase read —
+// each sizes its own phase's request timeout next cycle.
+func (p *Poller) pollRepo(ctx context.Context, t Target) (*IssueTotals, int, int, error) {
 	now := p.now()
 	repoID, err := p.Store.UpsertRepo(t.Owner, t.Name, t.Upstream)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 	lastCommit, err := p.GH.LastCommit(ctx, t.Owner, t.Name)
 	if err != nil {
-		return nil, 0, fmt.Errorf("last commit: %w", err)
+		return nil, 0, 0, fmt.Errorf("last commit: %w", err)
 	}
 
 	watch, err := p.Store.WatchList(repoID)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 	watched := map[int]bool{}
 	for _, w := range watch {
@@ -525,7 +589,7 @@ func (p *Poller) pollRepo(ctx context.Context, t Target) (*IssueTotals, int, err
 	}
 	issues, complete, err := p.GH.OpenIssues(ctx, t.Owner, t.Name, pages)
 	if err != nil {
-		return nil, 0, fmt.Errorf("open issues: %w", err)
+		return nil, 0, 0, fmt.Errorf("open issues: %w", err)
 	}
 	seen := (len(issues) + 99) / 100
 	if !complete {
@@ -537,10 +601,10 @@ func (p *Poller) pollRepo(ctx context.Context, t Target) (*IssueTotals, int, err
 		openNumbers = append(openNumbers, gi.Number)
 		row, err := p.issueRow(ctx, t, repoID, gi, watched[gi.Number], now)
 		if err != nil {
-			return nil, seen, fmt.Errorf("issue #%d: %w", gi.Number, err)
+			return nil, seen, 0, fmt.Errorf("issue #%d: %w", gi.Number, err)
 		}
 		if err := p.Store.UpsertIssue(row); err != nil {
-			return nil, seen, err
+			return nil, seen, 0, err
 		}
 		signals[gi.Number] = row.ClaimSignal
 		delete(watched, gi.Number)
@@ -549,7 +613,7 @@ func (p *Poller) pollRepo(ctx context.Context, t Target) (*IssueTotals, int, err
 	var totalsErr error
 	if complete {
 		if err := p.Store.MarkMissingIssuesClosed(repoID, openNumbers); err != nil {
-			return nil, seen, err
+			return nil, seen, 0, err
 		}
 	} else {
 		totals, totalsErr = p.exactTotals(ctx, t)
@@ -559,14 +623,14 @@ func (p *Poller) pollRepo(ctx context.Context, t Target) (*IssueTotals, int, err
 	for number := range watched {
 		gi, err := p.GH.Issue(ctx, t.Owner, t.Name, number)
 		if err != nil {
-			return nil, seen, fmt.Errorf("watched issue #%d: %w", number, err)
+			return nil, seen, 0, fmt.Errorf("watched issue #%d: %w", number, err)
 		}
 		row, err := p.issueRow(ctx, t, repoID, *gi, true, now)
 		if err != nil {
-			return nil, seen, fmt.Errorf("watched issue #%d: %w", number, err)
+			return nil, seen, 0, fmt.Errorf("watched issue #%d: %w", number, err)
 		}
 		if err := p.Store.UpsertIssue(row); err != nil {
-			return nil, seen, err
+			return nil, seen, 0, err
 		}
 		signals[number] = row.ClaimSignal
 		if row.State == "closed" && row.ClaimSignal == "" {
@@ -579,24 +643,25 @@ func (p *Poller) pollRepo(ctx context.Context, t Target) (*IssueTotals, int, err
 		if next != w.Status {
 			log.Printf("watch %s/%s#%d: %s -> %s", t.Owner, t.Name, w.IssueNumber, w.Status, next)
 			if err := p.Store.SetWatchStatus(w.ID, next, now); err != nil {
-				return nil, seen, err
+				return nil, seen, 0, err
 			}
 		}
 	}
 
 	p.pollCommentReplies(ctx, t, repoID)
 
-	if err := p.pollPRs(ctx, t, repoID); err != nil {
-		return nil, seen, fmt.Errorf("pull requests: %w", err)
+	prSeen, err := p.pollPRs(ctx, t, repoID)
+	if err != nil {
+		return nil, seen, prSeen, fmt.Errorf("pull requests: %w", err)
 	}
 
 	if err := p.Store.SetRepoPoll(repoID, now, lastCommit, health(lastCommit, now)); err != nil {
-		return totals, seen, err
+		return totals, seen, prSeen, err
 	}
 	if totalsErr != nil {
-		return nil, seen, fmt.Errorf("open issues exceed %d pages and exact totals are unavailable: %w", pages, totalsErr)
+		return nil, seen, prSeen, fmt.Errorf("open issues exceed %d pages and exact totals are unavailable: %w", pages, totalsErr)
 	}
-	return totals, seen, nil
+	return totals, seen, prSeen, nil
 }
 
 func (p *Poller) exactTotals(ctx context.Context, t Target) (*IssueTotals, error) {
@@ -814,10 +879,24 @@ func (p *Poller) CommentReplies() []store.CommentReply {
 	return append([]store.CommentReply(nil), p.commentReplies...)
 }
 
-func (p *Poller) pollPRs(ctx context.Context, t Target, repoID int64) error {
+// pollPRs checks a repository's closed-PR denials and their detail. The int it returns is the
+// number of HTTP requests it made to the GitHub client — the PR-side analogue of pollRepo's
+// issue-page count — which sizes the PR phase's per-request timeout next cycle via PollAll's
+// withPRBudget wrapping. The count is derived from the client's own request counter (serial
+// polling across repositories, so the delta is attributable to this call alone).
+func (p *Poller) pollPRs(ctx context.Context, t Target, repoID int64) (int, error) {
+	// A PR budget attached by PollAll overrides the ctx's inherited issue budget for every
+	// github call the rest of this function makes. withPRBudget stores a time.Duration;
+	// github.WithRequestTimeout then applies it to each request.
+	if d, ok := prBudgetFrom(ctx); ok {
+		ctx = github.WithRequestTimeout(ctx, d)
+	}
+	before := p.GH.Requests()
+	pages := func() int { return int(p.GH.Requests() - before) }
+
 	prs, err := p.GH.ClosedPRs(ctx, t.Owner, t.Name)
 	if err != nil {
-		return err
+		return pages(), err
 	}
 	var denied []github.PullRequest
 	for _, pr := range prs {
@@ -837,7 +916,7 @@ func (p *Poller) pollPRs(ctx context.Context, t Target, repoID int64) error {
 			Body:              pr.Body,
 		}
 		if err := p.Store.UpsertPR(row); err != nil {
-			return err
+			return pages(), err
 		}
 		if pr.MergedAt == nil && pr.State == "closed" && outsideAssociations[pr.AuthorAssociation] {
 			denied = append(denied, pr)
@@ -856,24 +935,24 @@ func (p *Poller) pollPRs(ctx context.Context, t Target, repoID int64) error {
 		}
 		done, err := p.Store.PRDetailFetched(repoID, pr.Number)
 		if err != nil {
-			return err
+			return pages(), err
 		}
 		if done {
 			continue
 		}
 		reviews, err := p.GH.Reviews(ctx, t.Owner, t.Name, pr.Number)
 		if err != nil {
-			return fmt.Errorf("reviews #%d: %w", pr.Number, err)
+			return pages(), fmt.Errorf("reviews #%d: %w", pr.Number, err)
 		}
 		comments, err := p.GH.IssueComments(ctx, t.Owner, t.Name, pr.Number, nil)
 		if err != nil {
-			return fmt.Errorf("comments #%d: %w", pr.Number, err)
+			return pages(), fmt.Errorf("comments #%d: %w", pr.Number, err)
 		}
 		if err := p.Store.SetPRDetail(repoID, pr.Number, closingComment(comments, pr), reviewVerdict(reviews, pr.ClosedAt)); err != nil {
-			return err
+			return pages(), err
 		}
 	}
-	return nil
+	return pages(), nil
 }
 
 // findClaim returns the newest comment since since that claims the issue. Your own comments

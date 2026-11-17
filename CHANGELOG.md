@@ -5,6 +5,15 @@ Newest first. Each milestone has a semantic version and a codename; see
 
 ## Unreleased
 
+## v0.2.0 (45) · Black Bombay (baby) · 2026-11-17
+
+Tag `v0.2.45`.
+
+### Fixed
+
+- The pull-request fetch sizes its per-request timeout from the pages of pull requests a repository took last cycle, the way the issue fetch already does, and skips the one retry when the first attempt already spent the whole budget — so a repository with a deep pull-request history no longer fails every cycle on a retry that cannot help. (#355)
+- A polling cycle that reads a repository's board only partially now merges the new entries into the last good board instead of skipping the write, so a partial cycle no longer blanks a repository's row. (#342)
+
 ## v0.2.0 (44) · Black Bombay (baby) · 2026-11-16
 
 Tag `v0.2.44`.

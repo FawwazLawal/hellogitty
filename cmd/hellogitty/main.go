@@ -431,36 +431,44 @@ func applyTotals(reports []store.RepoReport, totals map[string]poller.IssueTotal
 // inboxWriter returns a function that rewrites the inbox file from the latest work board, watch
 // list, overlap reports and new issues, or does nothing when no inbox is configured. Both loops call
 // it; the mutex keeps one write at a time, and the file itself is replaced atomically. Nothing is
-// written before the first board and the first overlap check, so a fresh start never replaces a full
-// inbox with a partial one. A refresh that replaced the board with a partial one is skipped the same
-// way: the Tracker already distinguishes new-and-incomplete from old-and-whole, and a downstream
-// script reading this file cannot tell a partial write from the state it claims to describe.
+// written before the first board or the first overlap check — a fresh start has no last-good to
+// merge with and no entries to say. On a partial refresh the writer still runs: it merges the
+// last complete cycle's entries with whatever the partial produced and marks the file board_partial
+// true. A consumer polling the file for freshness (our customer's HG DOWN check) keeps seeing
+// generated_at tick; a tolerant consumer reads entries, a strict one waits for board_partial to
+// drop. See internal/inbox.MergeEntries for the exact merge rule.
 func inboxWriter(path string, src source, writes *writeRecorder) func() {
 	if path == "" {
 		return func() {}
 	}
 	var mu sync.Mutex
+	var lastGood []inbox.Entry
 	return func() {
 		mu.Lock()
 		defer mu.Unlock()
 		now := time.Now().UTC()
-		if _, _, partial := src.board.Snapshot(); partial {
-			log.Printf("inbox: not written, the work board is the partial result of a failed refresh")
-			writes.record("inbox.json", now, "skipped: partial work board", "")
-			return
-		}
+		_, _, partial := src.board.Snapshot()
 		entries, ok := src.entries(now)
 		if !ok {
 			writes.record("inbox.json", now, "skipped: overlap check not ready", "")
 			return
 		}
 		f := inbox.File{GeneratedAt: now, RefreshIntervalMinutes: int(workRefresh / time.Minute), Entries: entries}
+		if partial {
+			f.BoardPartial = true
+			f.Entries = inbox.MergeEntries(lastGood, entries)
+		} else {
+			lastGood = append([]inbox.Entry(nil), entries...)
+		}
 		if err := inbox.Write(path, f); err != nil {
 			log.Printf("inbox: %v", err)
 			writes.record("inbox.json", now, "error: "+err.Error(), err.Error())
 			return
 		}
-		detail := fmt.Sprintf("%d entries", len(entries))
+		detail := fmt.Sprintf("%d entries", len(f.Entries))
+		if partial {
+			detail = "best-available (partial board), " + detail
+		}
 		log.Printf("inbox: %s written to %s", detail, path)
 		writes.record("inbox.json", now, "written", detail)
 	}
@@ -471,17 +479,23 @@ func unrepliedWriter(path string, board *work.Tracker, writes *writeRecorder) fu
 		return func() {}
 	}
 	var mu sync.Mutex
+	var lastGood []unreplied.PR
 	return func() {
 		mu.Lock()
 		defer mu.Unlock()
 		now := time.Now().UTC()
 		b, _, partial := board.Snapshot()
-		if partial {
-			log.Printf("unreplied: not written, the work board is the partial result of a failed refresh")
-			writes.record("unreplied.json", now, "skipped: partial work board", "")
+		if b == nil {
+			writes.record("unreplied.json", now, "skipped: no board yet", "")
 			return
 		}
 		f := unreplied.Build(b)
+		if partial {
+			f.BoardPartial = true
+			f.OurOpenPRs = unreplied.MergePRs(lastGood, f.OurOpenPRs)
+		} else {
+			lastGood = append([]unreplied.PR(nil), f.OurOpenPRs...)
+		}
 		if err := unreplied.Write(path, f); err != nil {
 			log.Printf("unreplied: %v", err)
 			writes.record("unreplied.json", now, "error: "+err.Error(), err.Error())
@@ -492,6 +506,9 @@ func unrepliedWriter(path string, board *work.Tracker, writes *writeRecorder) fu
 			total += len(pr.UnrepliedThreads)
 		}
 		detail := fmt.Sprintf("%d PRs, %d threads", len(f.OurOpenPRs), total)
+		if partial {
+			detail = "best-available (partial board), " + detail
+		}
 		log.Printf("unreplied: %s written to %s", detail, path)
 		writes.record("unreplied.json", now, "written", detail)
 	}
