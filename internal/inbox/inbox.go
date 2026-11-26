@@ -144,7 +144,7 @@ func Build(b *work.Board, reports []store.RepoReport, seen FirstSeen) []Entry {
 		for _, it := range b.Sent {
 			if it.PR && it.Role == work.RoleAuthor {
 				out = append(out, prEntries(it, b.Login, seen)...)
-				out = append(out, labelEntries(it, seen)...)
+				out = append(out, labelEntries(it, b.Login, seen)...)
 				if e, ok := botEntry(it); ok {
 					out = append(out, e)
 				}
@@ -526,8 +526,9 @@ func benign(label string) bool {
 }
 
 // labelEntries reports each label on a pull request of yours that isn't known to be benign, one
-// entry per label, for as long as the label stays.
-func labelEntries(it work.Item, seen FirstSeen) []Entry {
+// entry per label, for as long as the label stays. A label you added yourself is not reported: it
+// is your own action, not news. A label whose author is unknown still is.
+func labelEntries(it work.Item, login string, seen FirstSeen) []Entry {
 	var out []Entry
 	base := "hg-" + slug(it.Repo) + "-" + strconv.Itoa(it.Number) + "-label-"
 	for _, l := range it.Labels {
@@ -536,6 +537,9 @@ func labelEntries(it work.Item, seen FirstSeen) []Entry {
 		}
 		id := base + strings.Trim(nonWord.ReplaceAllString(strings.ToLower(l), "-"), "-")
 		ev, known := it.LabeledBy[l]
+		if login != "" && strings.EqualFold(ev.Actor, login) {
+			continue
+		}
 		when := ev.At
 		if !known || when.IsZero() {
 			when = seen(id)
