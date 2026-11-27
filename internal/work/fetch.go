@@ -100,6 +100,23 @@ query($%s: String!) {
 }`, name, name, name, first, body)
 }
 
+// openPRPage is the page size of the open-PR search. Its nodes are the board's heaviest (checks,
+// review threads, timeline), and a page of 50 of them is what came back as a 502 or as a body
+// cut off in transit. Smaller pages ask the same question in pieces; the board's cap, the search's
+// First, is unchanged.
+const openPRPage = 20
+
+// pagedSubQuery is subQuery for a search read page by page: one page of up to `page` nodes after
+// the $after cursor, with the page info to ask for the next.
+func pagedSubQuery(name string, page int, body string, frags []string) string {
+	return strings.Join(frags, "\n") + fmt.Sprintf(
+		`
+query($%s: String!, $after: String) {
+  %s: search(type: ISSUE, query: $%s, first: %d, after: $after) { pageInfo { hasNextPage endCursor } nodes { __typename %s } }
+  rateLimit { cost remaining }
+}`, name, name, name, page, body)
+}
+
 // boardQuery is the all-in-one query Request() still returns to the Chrome extension. It is kept
 // in step with the per-search queries by using the same fragments and page sizes.
 const boardQuery = fragWho + "\n" + fragPR + "\n" + fragDetail + "\n" + fragMine + "\n" + fragIssue + `
@@ -292,6 +309,11 @@ type node struct {
 }
 
 type search struct {
+	// PageInfo is only asked for by a paged search (see pagedSubQuery).
+	PageInfo struct {
+		HasNextPage bool   `json:"hasNextPage"`
+		EndCursor   string `json:"endCursor"`
+	} `json:"pageInfo"`
 	Nodes []node `json:"nodes"`
 }
 
@@ -365,11 +387,15 @@ func fetch(ctx context.Context, gh *github.Client, login string, maintain []stri
 	var msgs []string
 	for _, s := range boardSearches {
 		var sub boardData
-		q := subQuery(s.Name, s.First, s.Body, s.Frags)
-		v := map[string]any{s.Name: vars[s.Name]}
+		var err error
+		if s.Name == "prsOpen" {
+			err = fetchPaged(ctx, gh, s.Name, vars[s.Name], s.First, s.Body, s.Frags, &sub)
+		} else {
+			err = gh.GraphQL(ctx, subQuery(s.Name, s.First, s.Body, s.Frags), map[string]any{s.Name: vars[s.Name]}, &sub)
+		}
 		// A failed sub-request still leaves the other seven useful, so the board is partial, not
 		// absent. The errors are collected and returned so a caller can log them.
-		if err := gh.GraphQL(ctx, q, v, &sub); err != nil {
+		if err != nil {
 			msgs = append(msgs, fmt.Sprintf("%s: %s", s.Name, err.Error()))
 		}
 		mergeSubData(&data, &sub, s.Name)
@@ -383,6 +409,40 @@ func fetch(ctx context.Context, gh *github.Client, login string, maintain []stri
 		return b, &github.GraphQLError{Messages: msgs}
 	}
 	return b, nil
+}
+
+// fetchPaged reads the open-PR search in pages of openPRPage until it has max nodes or the search
+// has no more, into out.PRsOpen; rate-limit cost is summed over the pages. A page that fails
+// keeps the pages before it, so the board shows what arrived.
+func fetchPaged(ctx context.Context, gh *github.Client, name string, q any, max int, body string, frags []string, out *boardData) error {
+	after := ""
+	for len(out.PRsOpen.Nodes) < max {
+		size := min(openPRPage, max-len(out.PRsOpen.Nodes))
+		// The first page sends no cursor ($after is nullable), so its variables are the same one
+		// the unpaged search sent.
+		vars := map[string]any{name: q}
+		if after != "" {
+			vars["after"] = after
+		}
+		var page boardData
+		err := gh.GraphQL(ctx, pagedSubQuery(name, size, body, frags), vars, &page)
+		out.PRsOpen.Nodes = append(out.PRsOpen.Nodes, page.PRsOpen.Nodes...)
+		out.RateLimit.Cost += page.RateLimit.Cost
+		if page.RateLimit.Remaining != 0 {
+			out.RateLimit.Remaining = page.RateLimit.Remaining
+		}
+		if err != nil {
+			return err
+		}
+		if !page.PRsOpen.PageInfo.HasNextPage || page.PRsOpen.PageInfo.EndCursor == "" || len(page.PRsOpen.Nodes) == 0 {
+			break
+		}
+		after = page.PRsOpen.PageInfo.EndCursor
+	}
+	if len(out.PRsOpen.Nodes) > max {
+		out.PRsOpen.Nodes = out.PRsOpen.Nodes[:max]
+	}
+	return nil
 }
 
 // mergeSubData copies the one populated search field, and the rate-limit totals, from a sub-

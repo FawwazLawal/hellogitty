@@ -462,6 +462,15 @@ func (c *Client) send(ctx context.Context, method, rawURL string, payload []byte
 		switch {
 		case resp.StatusCode == http.StatusOK:
 			if err := json.Unmarshal(body, out); err != nil {
+				// A body cut off in transit is a passing failure, like a 502: the same request a
+				// moment later returns the whole answer. A whole body that does not decode is not
+				// retried; asking again returns the same thing.
+				if truncated(err, body) && attempt < maxAttempts && ctx.Err() == nil {
+					if err := c.sleep(ctx, backoff(attempt)); err != nil {
+						return "", nil, false, err
+					}
+					continue
+				}
 				return "", nil, false, fmt.Errorf("github: decode %s: %w", rawURL, err)
 			}
 			return nextLink(resp.Header.Get("Link")), resp.Header, false, nil
@@ -495,6 +504,13 @@ func (c *Client) send(ctx context.Context, method, rawURL string, payload []byte
 			return "", nil, false, &StatusError{Code: resp.StatusCode, URL: rawURL, Body: msg}
 		}
 	}
+}
+
+// truncated reports whether err is the decoder running out of body: a syntax error at the very
+// end ("unexpected end of JSON input"), which is what a response cut off in transit gives.
+func truncated(err error, body []byte) bool {
+	var se *json.SyntaxError
+	return errors.As(err, &se) && se.Offset >= int64(len(bytes.TrimRight(body, " \t\r\n")))
 }
 
 func isRateLimited(resp *http.Response) bool {
